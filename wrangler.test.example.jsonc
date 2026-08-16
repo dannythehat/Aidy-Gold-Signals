@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aidy-signals-test",
+  "main": "src/entry.py",
+  "compatibility_date": "2026-08-16",
+  "compatibility_flags": ["python_workers"],
+  "vars": {
+    "AIDY_ENV": "test"
+  },
+  "d1_databases": [
+    {
+      "binding": "AIDY_OPS",
+      "database_name": "aidy-ops-test",
+      "database_id": "REPLACE_WITH_AIDY_OPS_TEST_DATABASE_ID",
+      "migrations_dir": "migrations/d1"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AIDY_MEMORY",
+      "bucket_name": "aidy-memory-test"
+    }
+  ]
+}

@@ -17,8 +17,8 @@ from typing import Protocol
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from .market_repository import AidyMarketRepository
 from .metaapi_read_gateway import MetaApiReadError, MetaApiReadGateway
+from .storage_contracts import AidyMarketRepository
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +243,7 @@ class AidyMarketRecorderService:
         except MetaApiReadError as exc:
             availability["region"] = exc.code
             return CaptureResult(
-                self._store_unavailable(captured_at, availability),
+                await self._store_unavailable(captured_at, availability),
                 "unavailable",
                 False,
                 0,
@@ -299,7 +299,7 @@ class AidyMarketRecorderService:
                 )
                 if candle is None:
                     continue
-                _, _, created = self._repository.store_candle(candle)
+                _, _, created = await self._repository.store_candle(candle)
                 stored_candles += int(created)
 
         quote = quote_payload if isinstance(quote_payload, dict) else {}
@@ -323,7 +323,9 @@ class AidyMarketRecorderService:
             if isinstance(positions_payload, list)
             else []
         )
-        event_ids = self._repository.event_observation_ids_known_at(captured_at=captured_at)
+        event_ids = await self._repository.event_observation_ids_known_at(
+            captured_at=captured_at
+        )
         availability["external_events"] = "point_in_time_linked"
         availability["external_event_observation_count"] = len(event_ids)
         available_components = sum(1 for value in availability.values() if value == "available")
@@ -335,7 +337,7 @@ class AidyMarketRecorderService:
             if available_components > 0
             else "unavailable"
         )
-        latest_candle_ids = self._repository.latest_candle_ids(symbol=SYMBOL)
+        latest_candle_ids = await self._repository.latest_candle_ids(symbol=SYMBOL)
         candle_ids = {
             column: latest_candle_ids.get(timeframe)
             for timeframe, column in _SNAPSHOT_CANDLE_KEYS.items()
@@ -365,13 +367,15 @@ class AidyMarketRecorderService:
                 if key not in {"captured_at", "snapshot_digest"}
             }
         )
-        snapshot_id = self._repository.store_snapshot(snapshot)
+        snapshot_id = await self._repository.store_snapshot(snapshot)
         return CaptureResult(snapshot_id, status, market_open, stored_candles)
 
-    def _store_unavailable(
+    async def _store_unavailable(
         self, captured_at: datetime, availability: dict[str, object]
     ) -> UUID:
-        event_ids = self._repository.event_observation_ids_known_at(captured_at=captured_at)
+        event_ids = await self._repository.event_observation_ids_known_at(
+            captured_at=captured_at
+        )
         snapshot = {
             "captured_at": captured_at,
             "symbol": SYMBOL,
@@ -394,9 +398,13 @@ class AidyMarketRecorderService:
             "latest_d1_id": None,
         }
         snapshot["snapshot_digest"] = _digest(
-            {key: str(value) if isinstance(value, datetime) else value for key, value in snapshot.items() if key != "captured_at"}
+            {
+                key: str(value) if isinstance(value, datetime) else value
+                for key, value in snapshot.items()
+                if key != "captured_at"
+            }
         )
-        return self._repository.store_snapshot(snapshot)
+        return await self._repository.store_snapshot(snapshot)
 
 
 class AidyMarketRecorderManager:
@@ -454,5 +462,9 @@ class AidyMarketRecorderManager:
                 logger.exception("AIDY market recorder cycle failed safely")
                 delay = self._market_closed_backoff_seconds
             else:
-                delay = self._poll_seconds if result.market_open else self._market_closed_backoff_seconds
+                delay = (
+                    self._poll_seconds
+                    if result.market_open
+                    else self._market_closed_backoff_seconds
+                )
             await self._sleep(delay)

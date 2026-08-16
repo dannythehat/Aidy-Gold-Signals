@@ -1,60 +1,60 @@
+"""Portable AIDY recorder orchestration.
+
+Cloudflare Workers own production scheduling. This module contains no database
+engine creation and no long-running server process; callers inject the portable
+storage repository explicitly.
+"""
+
 from __future__ import annotations
 
-import asyncio
-import logging
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from .config import AidySettings
-from .db import build_session_factory
-from .fed_recorder import AidyFedRssRecorderManager, AidyFedRssRecorderService
-from .fed_rss import FedRssGateway
-from .market_recorder import AidyMarketRecorderManager, AidyMarketRecorderService, MetaApiAccount
-from .market_repository import AidyMarketRepository
+from .fed_recorder import AidyFedRssRecorderService
+from .fed_rss import FedRssCaptureResult, FedRssGateway
+from .market_recorder import ALL_TIMEFRAMES, AidyMarketRecorderService, CaptureResult, MetaApiAccount
 from .metaapi_read_gateway import MetaApiReadGateway
+from .storage_contracts import AidyMarketRepository, ArchiveFlushResult
 
-logger = logging.getLogger(__name__)
+
+@dataclass(frozen=True, slots=True)
+class RecorderCycleResult:
+    market: CaptureResult
+    fed: FedRssCaptureResult
+    archive: ArchiveFlushResult
 
 
-async def run_recorder(settings: AidySettings) -> None:
+async def run_capture_cycle(
+    settings: AidySettings,
+    *,
+    repository: AidyMarketRepository,
+    now: datetime | None = None,
+    market_gateway: MetaApiReadGateway | None = None,
+    fed_gateway: FedRssGateway | None = None,
+) -> RecorderCycleResult | None:
+    """Run one deterministic recorder cycle for a scheduler such as Workers Cron."""
+
     if not settings.capture_enabled:
-        logger.info("AIDY capture is disabled")
-        return
-
-    engine, session_factory = build_session_factory(settings.database_url)
-    repository = AidyMarketRepository(session_factory)
+        return None
+    captured_at = (now or datetime.now(UTC)).astimezone(UTC)
     market_service = AidyMarketRecorderService(
         account=MetaApiAccount(
             token=settings.metaapi_token,
             account_id=settings.metaapi_account_id,
         ),
         repository=repository,
-        gateway=MetaApiReadGateway(),
+        gateway=market_gateway or MetaApiReadGateway(),
         market_closed_stale_seconds=settings.market_stale_seconds,
     )
-    market_manager = AidyMarketRecorderManager(
-        market_service,
-        poll_seconds=settings.market_poll_seconds,
-        slow_poll_seconds=settings.slow_poll_seconds,
-        market_closed_backoff_seconds=settings.market_closed_backoff_seconds,
+    fed_service = AidyFedRssRecorderService(
+        repository=repository,
+        gateway=fed_gateway or FedRssGateway(),
     )
-    fed_manager = AidyFedRssRecorderManager(
-        AidyFedRssRecorderService(repository=repository, gateway=FedRssGateway()),
-        poll_seconds=settings.fed_rss_poll_seconds,
+    market = await market_service.capture_once(
+        timeframes=ALL_TIMEFRAMES,
+        now=captured_at,
     )
-
-    await market_manager.start()
-    await fed_manager.start()
-    try:
-        await asyncio.Event().wait()
-    finally:
-        await fed_manager.stop()
-        await market_manager.stop()
-        engine.dispose()
-
-
-def main() -> None:
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(run_recorder(AidySettings.from_env()))
-
-
-if __name__ == "__main__":
-    main()
+    fed = await fed_service.capture_once(now=captured_at)
+    archive = await repository.flush_archive_outbox(limit=settings.archive_flush_limit)
+    return RecorderCycleResult(market=market, fed=fed, archive=archive)

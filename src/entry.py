@@ -1,0 +1,59 @@
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from urllib.parse import urlparse
+
+from workers import Response, WorkerEntrypoint
+
+from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
+from aidy.storage_contracts import AidyMarketRepository
+
+
+def _repository(env):
+    operational = D1OperationalEvidenceStore(env.AIDY_OPS)
+    return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
+
+
+class Default(WorkerEntrypoint):
+    async def fetch(self, request):
+        url = urlparse(request.url)
+        if request.method == "GET" and url.path == "/health":
+            return Response.json(
+                {
+                    "service": "aidy-signals",
+                    "status": "ok",
+                    "runtime": "cloudflare-workers",
+                }
+            )
+
+        if request.method == "POST" and url.path == "/day1/storage-smoke":
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            operational, repository = _repository(self.env)
+            probe = await operational.create_storage_smoke_probe(now=datetime.now(UTC))
+            flushed = await repository.flush_archive_outbox(limit=100)
+            if probe.outbox_id is None or probe.archive_key is None:
+                return Response.json({"ok": False, "error": "probe_commit_invalid"}, status=500)
+            status = await operational.archive_status(outbox_id=probe.outbox_id)
+            archived_object = await self.env.AIDY_MEMORY.head(probe.archive_key)
+            ok = status == "archived" and archived_object is not None
+            return Response.json(
+                {
+                    "ok": ok,
+                    "probe_id": str(probe.evidence_id),
+                    "archive_key": probe.archive_key,
+                    "outbox_status": status,
+                    "flush": {
+                        "attempted": flushed.attempted,
+                        "archived": flushed.archived,
+                        "failed": flushed.failed,
+                    },
+                },
+                status=200 if ok else 503,
+            )
+
+        return Response("Not found", status=404)
+
+    async def scheduled(self, controller, env, ctx):
+        _, repository = _repository(env)
+        await repository.flush_archive_outbox(limit=100)

@@ -4,8 +4,14 @@ import asyncio
 import logging
 from datetime import UTC, datetime
 
-from .fed_rss import FED_RSS_FEEDS, FedRssCaptureResult, FedRssError, FedRssGateway, parse_fed_rss
-from .market_repository import AidyMarketRepository
+from .fed_rss import (
+    FED_RSS_FEEDS,
+    FedRssCaptureResult,
+    FedRssError,
+    FedRssGateway,
+    parse_fed_rss,
+)
+from .storage_contracts import AidyMarketRepository
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +40,7 @@ class AidyFedRssRecorderService:
                 continue
             seen += len(observations)
             for observation in observations:
-                _, _, created = self._repository.store_event_observation(
+                _, _, created = await self._repository.store_event_observation(
                     source=str(observation["source"]),
                     external_id=str(observation["external_id"]),
                     event_type=str(observation["event_type"]),
@@ -60,7 +66,13 @@ class AidyFedRssRecorderService:
 
 
 class AidyFedRssRecorderManager:
-    def __init__(self, service: AidyFedRssRecorderService, *, poll_seconds: float = 120.0, sleep=asyncio.sleep) -> None:
+    def __init__(
+        self,
+        service: AidyFedRssRecorderService,
+        *,
+        poll_seconds: float = 120.0,
+        sleep=asyncio.sleep,
+    ) -> None:
         self._service = service
         self._poll_seconds = max(float(poll_seconds), 30.0)
         self._sleep = sleep
