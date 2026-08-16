@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any
 from uuid import UUID
 
 from sqlalchemy import text
@@ -202,11 +201,16 @@ class AidyMarketRepository:
                     """
                 ),
                 {
-                    "source": source,"external_id": external_id,"event_type": event_type,
-                    "published_at": published_at,"first_observed_at": first_observed_at,
-                    "revision_index": revision_index,"headline": headline,
+                    "source": source,
+                    "external_id": external_id,
+                    "event_type": event_type,
+                    "published_at": published_at,
+                    "first_observed_at": first_observed_at,
+                    "revision_index": revision_index,
+                    "headline": headline,
                     "structured_data_json": structured_data_json,
-                    "raw_payload_json": raw_payload_json,"payload_digest": payload_digest,
+                    "raw_payload_json": raw_payload_json,
+                    "payload_digest": payload_digest,
                 },
             ).scalar_one()
             session.commit()
