@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "aidy-gold-signals"
 version = "0.1.0"
@@ -17,8 +21,15 @@ dev = [
   "ruff>=0.6",
 ]
 
+[project.scripts]
+aidy-recorder = "aidy.runtime:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.ruff]
