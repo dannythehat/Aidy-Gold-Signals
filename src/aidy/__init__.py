@@ -1,0 +1,1 @@
+"""AIDY Gold Signals package."""
