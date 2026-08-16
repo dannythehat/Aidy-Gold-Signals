@@ -18,11 +18,8 @@ class AidySettings:
 
     @classmethod
     def from_env(cls) -> "AidySettings":
-        def required(name: str) -> str:
-            value = os.getenv(name, "").strip()
-            if not value:
-                raise RuntimeError(f"Missing required environment variable: {name}")
-            return value
+        def optional(name: str) -> str:
+            return os.getenv(name, "").strip()
 
         def positive_float(name: str, default: float) -> float:
             raw = os.getenv(name, str(default)).strip()
@@ -35,12 +32,32 @@ class AidySettings:
             return value
 
         enabled = os.getenv("AIDY_CAPTURE_ENABLED", "").strip().lower() in {
-            "1", "true", "yes", "on"
+            "1",
+            "true",
+            "yes",
+            "on",
         }
+        database_url = optional("AIDY_DATABASE_URL")
+        metaapi_token = optional("AIDY_METAAPI_TOKEN")
+        metaapi_account_id = optional("AIDY_METAAPI_ACCOUNT_ID")
+
+        if enabled:
+            required = {
+                "AIDY_DATABASE_URL": database_url,
+                "AIDY_METAAPI_TOKEN": metaapi_token,
+                "AIDY_METAAPI_ACCOUNT_ID": metaapi_account_id,
+            }
+            missing = [name for name, value in required.items() if not value]
+            if missing:
+                raise RuntimeError(
+                    "AIDY capture is enabled but required environment variables are missing: "
+                    + ", ".join(missing)
+                )
+
         return cls(
-            database_url=required("AIDY_DATABASE_URL"),
-            metaapi_token=required("AIDY_METAAPI_TOKEN"),
-            metaapi_account_id=required("AIDY_METAAPI_ACCOUNT_ID"),
+            database_url=database_url,
+            metaapi_token=metaapi_token,
+            metaapi_account_id=metaapi_account_id,
             capture_enabled=enabled,
             market_poll_seconds=positive_float("AIDY_MARKET_POLL_SECONDS", 60.0),
             slow_poll_seconds=positive_float("AIDY_SLOW_POLL_SECONDS", 300.0),
