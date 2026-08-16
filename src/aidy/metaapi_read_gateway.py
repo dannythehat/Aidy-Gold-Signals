@@ -6,6 +6,7 @@ trade, order, close, modify, or broker-mutation method.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from urllib.parse import quote
 
@@ -18,6 +19,7 @@ _ALLOWED_CANDLE_TIMEFRAMES = {
     "1m", "2m", "3m", "4m", "5m", "6m", "10m", "12m", "15m", "20m",
     "30m", "1h", "2h", "3h", "4h", "6h", "8h", "12h", "1d", "1w", "1mn",
 }
+_REGION_PATTERN = re.compile(r"^[a-z0-9-]+$")
 
 
 class MetaApiReadError(RuntimeError):
@@ -25,6 +27,13 @@ class MetaApiReadError(RuntimeError):
         super().__init__(code)
         self.code = code
         self.retryable = retryable
+
+
+def _normalize_region(region: str) -> str:
+    normalized = region.strip().lower()
+    if not normalized or _REGION_PATTERN.fullmatch(normalized) is None:
+        raise MetaApiReadError("metaapi_region_unavailable")
+    return normalized
 
 
 class MetaApiReadGateway:
@@ -40,10 +49,7 @@ class MetaApiReadGateway:
         payload = self._json(response)
         if not isinstance(payload, dict):
             raise MetaApiReadError("metaapi_invalid_response")
-        region = str(payload.get("region") or "").strip().lower()
-        if not region:
-            raise MetaApiReadError("metaapi_region_unavailable")
-        return region
+        return _normalize_region(str(payload.get("region") or ""))
 
     async def read_positions(
         self, *, token: str, account_id: str, region: str
@@ -82,10 +88,11 @@ class MetaApiReadGateway:
             query_parts.append(f"startTime={encoded_start}")
         query_parts.append(f"limit={limit}")
         query = "&".join(query_parts)
+        normalized_region = _normalize_region(region)
         response = await self._request(
             "GET",
             (
-                f"https://mt-market-data-client-api-v1.{region}.agiliumtrade.ai"
+                f"https://mt-market-data-client-api-v1.{normalized_region}.agiliumtrade.ai"
                 f"/users/current/accounts/{account_id}/historical-market-data/"
                 f"symbols/{encoded_symbol}/timeframes/{encoded_timeframe}/candles?{query}"
             ),
@@ -118,9 +125,10 @@ class MetaApiReadGateway:
         return payload
 
     async def _read_terminal_json(self, *, token: str, region: str, path: str) -> object:
+        normalized_region = _normalize_region(region)
         response = await self._request(
             "GET",
-            f"https://mt-client-api-v1.{region}.agiliumtrade.ai{path}",
+            f"https://mt-client-api-v1.{normalized_region}.agiliumtrade.ai{path}",
             token=token,
         )
         return self._json(response)
