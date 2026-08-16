@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import Callable
+
+
+ValueGetter = Callable[[str, str], str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,12 +21,12 @@ class AidySettings:
     archive_flush_limit: int = 100
 
     @classmethod
-    def from_env(cls) -> "AidySettings":
+    def _from_getter(cls, getter: ValueGetter) -> "AidySettings":
         def optional(name: str) -> str:
-            return os.getenv(name, "").strip()
+            return getter(name, "").strip()
 
         def positive_float(name: str, default: float) -> float:
-            raw = os.getenv(name, str(default)).strip()
+            raw = getter(name, str(default)).strip()
             try:
                 value = float(raw)
             except ValueError as exc:
@@ -32,7 +36,7 @@ class AidySettings:
             return value
 
         def positive_int(name: str, default: int) -> int:
-            raw = os.getenv(name, str(default)).strip()
+            raw = getter(name, str(default)).strip()
             try:
                 value = int(raw)
             except ValueError as exc:
@@ -41,7 +45,7 @@ class AidySettings:
                 raise RuntimeError(f"Invalid positive integer: {name}")
             return value
 
-        enabled = os.getenv("AIDY_CAPTURE_ENABLED", "").strip().lower() in {
+        enabled = optional("AIDY_CAPTURE_ENABLED").lower() in {
             "1",
             "true",
             "yes",
@@ -75,3 +79,22 @@ class AidySettings:
             fed_rss_poll_seconds=positive_float("AIDY_FED_RSS_POLL_SECONDS", 120.0),
             archive_flush_limit=positive_int("AIDY_ARCHIVE_FLUSH_LIMIT", 100),
         )
+
+    @classmethod
+    def from_env(cls) -> "AidySettings":
+        return cls._from_getter(lambda name, default: os.getenv(name, default))
+
+    @classmethod
+    def from_worker_env(cls, environment: object) -> "AidySettings":
+        """Load config from Cloudflare Worker vars/secrets without exposing them."""
+
+        def getter(name: str, default: str) -> str:
+            try:
+                value = getattr(environment, name)
+            except (AttributeError, TypeError):
+                return default
+            if value is None:
+                return default
+            return str(value)
+
+        return cls._from_getter(getter)

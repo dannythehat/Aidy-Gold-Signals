@@ -2,6 +2,12 @@
 .env
 .env.*
 !.env.example
+.dev.vars
+.dev.vars.*
+
+# Cloudflare local/auth state and generated account-specific config
+.wrangler/
+wrangler.*.local.jsonc
 
 # Python
 __pycache__/

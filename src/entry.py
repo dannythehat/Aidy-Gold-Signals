@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 from workers import Response, WorkerEntrypoint
 
 from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
+from aidy.config import AidySettings
+from aidy.runtime import run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
 
 
@@ -14,15 +16,23 @@ def _repository(env):
     return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
 
 
+def _scheduled_at(controller) -> datetime:
+    milliseconds = float(controller.scheduledTime)
+    return datetime.fromtimestamp(milliseconds / 1000.0, tz=UTC)
+
+
 class Default(WorkerEntrypoint):
     async def fetch(self, request):
         url = urlparse(request.url)
         if request.method == "GET" and url.path == "/health":
+            settings = AidySettings.from_worker_env(self.env)
             return Response.json(
                 {
                     "service": "aidy-signals",
                     "status": "ok",
                     "runtime": "cloudflare-workers",
+                    "environment": str(getattr(self.env, "AIDY_ENV", "unknown")),
+                    "capture_enabled": settings.capture_enabled,
                 }
             )
 
@@ -56,4 +66,9 @@ class Default(WorkerEntrypoint):
 
     async def scheduled(self, controller, env, ctx):
         _, repository = _repository(env)
-        await repository.flush_archive_outbox(limit=100)
+        settings = AidySettings.from_worker_env(env)
+        await run_worker_scheduled_cycle(
+            settings,
+            repository=repository,
+            scheduled_at=_scheduled_at(controller),
+        )
