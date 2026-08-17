@@ -1,0 +1,79 @@
+name: AIDY Day 2 MetaAPI Direct Probe
+
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-metaapi-direct-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  metaapi-read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      AIDY_METAAPI_TOKEN: ${{ secrets.AIDY_METAAPI_TOKEN }}
+      AIDY_METAAPI_ACCOUNT_ID: 9bcef441-1821-4479-88c7-bcf3d210e9a3
+    steps:
+      - name: Probe existing DEMO MetaAPI account read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_METAAPI_TOKEN:-}" || { echo "MetaAPI token missing"; exit 1; }
+          auth="auth-token: ${AIDY_METAAPI_TOKEN}"
+          acct="${AIDY_METAAPI_ACCOUNT_ID}"
+
+          code="$(curl --max-time 20 -sS -o /tmp/account.json -w '%{http_code}' -H "$auth" -H 'Accept: application/json' \
+            "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts/${acct}")"
+          echo "account_http=${code}"
+          test "$code" = "200"
+
+          region="$(python - <<'PY'
+          import json,re
+          p=json.load(open('/tmp/account.json',encoding='utf-8'))
+          r=str(p.get('region') or '').strip().lower()
+          if not re.fullmatch(r'[a-z0-9-]+',r):
+              raise SystemExit('valid MetaAPI region missing')
+          print(r)
+          PY
+          )"
+          echo "account_region_resolved=true"
+
+          pos_code="$(curl --max-time 20 -sS -o /tmp/positions.json -w '%{http_code}' -H "$auth" -H 'Accept: application/json' \
+            "https://mt-client-api-v1.${region}.agiliumtrade.ai/users/current/accounts/${acct}/positions")"
+          price_code="$(curl --max-time 20 -sS -o /tmp/price.json -w '%{http_code}' -H "$auth" -H 'Accept: application/json' \
+            "https://mt-client-api-v1.${region}.agiliumtrade.ai/users/current/accounts/${acct}/symbols/XAUUSD/current-price")"
+          candle_code="$(curl --max-time 20 -sS -o /tmp/candles.json -w '%{http_code}' -H "$auth" -H 'Accept: application/json' \
+            "https://mt-market-data-client-api-v1.${region}.agiliumtrade.ai/users/current/accounts/${acct}/historical-market-data/symbols/XAUUSD/timeframes/1m/candles?limit=3")"
+
+          echo "positions_http=${pos_code}"
+          echo "price_http=${price_code}"
+          echo "candles_http=${candle_code}"
+          test "$pos_code" = "200"
+          test "$price_code" = "200"
+          test "$candle_code" = "200"
+
+          python - <<'PY'
+          import json
+          positions=json.load(open('/tmp/positions.json',encoding='utf-8'))
+          price=json.load(open('/tmp/price.json',encoding='utf-8'))
+          candles=json.load(open('/tmp/candles.json',encoding='utf-8'))
+          if not isinstance(positions,list): raise SystemExit('positions not list')
+          if not isinstance(price,dict): raise SystemExit('price not object')
+          if not isinstance(candles,list): raise SystemExit('candles not list')
+          print(f'positions_count={len(positions)}')
+          print(f'price_has_bid={price.get("bid") is not None}')
+          print(f'price_has_ask={price.get("ask") is not None}')
+          print(f'price_has_time={bool(price.get("time"))}')
+          print(f'm1_candle_count={len(candles)}')
+          if candles:
+              c=candles[0]
+              print(f'm1_has_ohlc={all(c.get(k) is not None for k in ("open","high","low","close"))}')
+              print(f'm1_has_time={bool(c.get("time"))}')
+          PY
+
+          echo "Direct MetaAPI read-only probe passed; no broker mutation methods were called."
