@@ -61,3 +61,23 @@ scheduler Cron is also disabled in source until the independent AIDY market-data
 boundary is accepted.
 
 Do not commit generated local Wrangler configs, `.dev.vars`, Cloudflare auth state, API tokens or account-specific resource IDs.
+
+## Day 3 continuity gate
+
+Day 3 adds a deterministic evidence-health auditor before any trading
+intelligence is allowed to trust the recorder. The test Worker exposes the
+read-only aggregate endpoint below only when `AIDY_ENV=test`:
+
+```text
+GET /day3/continuity?minutes=10&archive_limit=40
+```
+
+The endpoint returns HTTP `200` only when the configured source is explicitly
+AIDY-owned, capture is enabled, every expected scheduler cycle is present,
+quotes are fresh, snapshots are complete, required M1/M5 candle continuity is
+intact, no source errors are recorded, the archive outbox is caught up, and the
+bounded D1 archive sample exists in R2. Any failed condition returns HTTP `503`
+with stable machine-readable failure reasons.
+
+The endpoint never exposes quote payloads, credentials, broker state or raw
+evidence. See `docs/continuity-auditor.md` for the exact contract.
