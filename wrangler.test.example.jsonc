@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aidy-signals-test",
+  "main": "src/entry.py",
+  "compatibility_date": "2026-08-16",
+  "compatibility_flags": ["python_workers"],
+  "vars": {
+    "AIDY_ENV": "test",
+    "AIDY_CAPTURE_ENABLED": "false",
+    "AIDY_MARKET_POLL_SECONDS": "60",
+    "AIDY_SLOW_POLL_SECONDS": "300",
+    "AIDY_MARKET_CLOSED_BACKOFF_SECONDS": "900",
+    "AIDY_MARKET_STALE_SECONDS": "300",
+    "AIDY_FED_RSS_POLL_SECONDS": "120",
+    "AIDY_ARCHIVE_FLUSH_LIMIT": "100"
+  },
+  "secrets": {
+    "required": []
+  },
+  "triggers": {
+    "crons": []
+  },
+  "queues": {
+    "consumers": [
+      {
+        "queue": "aidy-capture-test",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 3,
+        "max_concurrency": 1,
+        "retry_delay": 30
+      }
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "AIDY_OPS",
+      "migrations_dir": "migrations/d1"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AIDY_MEMORY"
+    }
+  ]
+}

@@ -1,0 +1,245 @@
+name: AIDY Day 1 Cloudflare Test Gate
+
+# Test-only Cloudflare gate. Ordinary AIDY pushes do not trigger it.
+on:
+  push:
+    branches:
+      - feature/day-1-aidy-foundation
+    paths:
+      - ".github/workflows/day1-cloudflare-test.yml"
+      - "ops/day1-cloudflare-trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day1-cloudflare-test
+  cancel-in-progress: false
+
+jobs:
+  cloudflare-test-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Checkout Day 1 branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install uv and project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Resolve Cloudflare account safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Missing CLOUDFLARE_API_TOKEN secret"; exit 1; }
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "Using CLOUDFLARE_ACCOUNT_ID supplied through GitHub Actions secrets."
+            exit 0
+          fi
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts?per_page=50" \
+            > /tmp/cloudflare-accounts.json
+          python - <<'PY'
+          import json, os
+          p = json.load(open('/tmp/cloudflare-accounts.json', encoding='utf-8'))
+          rows = p.get('result') or []
+          if not p.get('success') or len(rows) != 1:
+              raise SystemExit(f"Expected one scoped Cloudflare account, found {len(rows)}")
+          account_id = rows[0]['id']
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f'CLOUDFLARE_ACCOUNT_ID={account_id}\n')
+          print(f"Resolved Cloudflare account: {rows[0].get('name', 'unnamed')} ({account_id})")
+          PY
+
+      - name: Run Day 1 tests
+        run: uv run pytest -q
+
+      - name: Verify Cloudflare authentication
+        run: uv run pywrangler whoami
+
+      - name: Ensure test D1 exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "${API}?name=aidy-ops-test&per_page=100" > /tmp/d1.json
+          D1_ID="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/d1.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          rows=[r for r in (p.get('result') or []) if r.get('name')=='aidy-ops-test']
+          if len(rows)>1:
+              raise SystemExit('More than one aidy-ops-test database exists')
+          print(rows[0].get('uuid','') if rows else '')
+          PY
+          )"
+          if [ -z "$D1_ID" ]; then
+            echo "Creating test-only D1 database aidy-ops-test"
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"name":"aidy-ops-test"}' \
+              "$API" > /tmp/d1-create.json
+            D1_ID="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/d1-create.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          print((p.get('result') or {}).get('uuid',''))
+          PY
+          )"
+          fi
+          test -n "$D1_ID" || { echo "::error::Could not resolve aidy-ops-test D1 ID"; exit 1; }
+          echo "AIDY_D1_ID=$D1_ID" >> "$GITHUB_ENV"
+          echo "D1 ready: aidy-ops-test ($D1_ID)"
+
+      - name: Ensure test R2 bucket exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/r2/buckets"
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$API" > /tmp/r2.json
+          EXISTS="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/r2.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          result=p.get('result') or {}
+          rows=result.get('buckets', []) if isinstance(result, dict) else result
+          print('yes' if any(r.get('name')=='aidy-memory-test' for r in rows) else 'no')
+          PY
+          )"
+          if [ "$EXISTS" != "yes" ]; then
+            echo "Creating test-only R2 bucket aidy-memory-test"
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d '{"name":"aidy-memory-test"}' \
+              "$API" > /tmp/r2-create.json
+            python - <<'PY'
+          import json
+          p=json.load(open('/tmp/r2-create.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          print('R2 ready: aidy-memory-test')
+          PY
+          else
+            echo "R2 ready: aidy-memory-test"
+          fi
+
+      - name: Build ephemeral test Wrangler config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_ID']
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          with open('wrangler.test.ci.jsonc','w',encoding='utf-8') as fh:
+              json.dump(cfg, fh, indent=2)
+              fh.write('\n')
+          PY
+
+      - name: Apply D1 migrations
+        run: npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.test.ci.jsonc
+
+      - name: Deploy test Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          # pywrangler expects the canonical config filename in the project root.
+          # This copy exists only inside the disposable GitHub runner and is never committed.
+          cp wrangler.test.ci.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/deploy.log
+          WORKER_URL="$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' /tmp/deploy.log | tail -1 || true)"
+          test -n "$WORKER_URL" || { echo "::error::No workers.dev URL found after deploy"; exit 1; }
+          echo "AIDY_TEST_WORKER_URL=$WORKER_URL" >> "$GITHUB_ENV"
+          echo "Test Worker: $WORKER_URL"
+
+      - name: Verify test health boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health.json
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          assert h.get('status')=='ok', h
+          assert h.get('environment')=='test', h
+          assert h.get('capture_enabled') is False, h
+          print(json.dumps(h, indent=2))
+          PY
+
+      - name: Run real D1 to outbox to R2 smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST "${AIDY_TEST_WORKER_URL}/day1/storage-smoke" > /tmp/smoke.json
+          cat /tmp/smoke.json
+          python - <<'PY'
+          import json, os
+          s=json.load(open('/tmp/smoke.json', encoding='utf-8'))
+          assert s.get('ok') is True, s
+          assert s.get('outbox_status')=='archived', s
+          key=s.get('archive_key')
+          assert key, s
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as fh:
+              fh.write(f'AIDY_SMOKE_ARCHIVE_KEY={key}\n')
+          PY
+
+      - name: Verify D1 evidence directly
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS \
+            --remote --json --config wrangler.test.ci.jsonc \
+            --command "SELECT p.id,p.archive_key,o.status,o.attempts FROM storage_smoke_probes p JOIN archive_outbox o ON o.evidence_id=p.id WHERE p.archive_key='${AIDY_SMOKE_ARCHIVE_KEY}' LIMIT 1" \
+            | tee /tmp/d1-evidence.json
+          grep -q 'archived' /tmp/d1-evidence.json
+
+      - name: Verify archived object directly in R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/${AIDY_SMOKE_ARCHIVE_KEY}" --remote --file /tmp/aidy-smoke.json
+          test -s /tmp/aidy-smoke.json
+          echo "Verified R2 object: aidy-memory-test/${AIDY_SMOKE_ARCHIVE_KEY}"
+
+      - name: Day 1 evidence summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## AIDY Day 1 Cloudflare test gate"
+            echo "- Branch: ${GITHUB_REF_NAME}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Worker: aidy-signals-test"
+            echo "- D1: aidy-ops-test"
+            echo "- R2: aidy-memory-test"
+            [ -n "${AIDY_TEST_WORKER_URL:-}" ] && echo "- Worker URL: ${AIDY_TEST_WORKER_URL}" || true
+            [ -f /tmp/smoke.json ] && { echo '```json'; cat /tmp/smoke.json; echo; echo '```'; } || true
+          } >> "$GITHUB_STEP_SUMMARY"
