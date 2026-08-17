@@ -16,7 +16,7 @@ dev = [
   "pytest>=8.0",
   "pytest-asyncio>=0.23",
   "ruff>=0.6",
-  "workers-py>=1.72.0",
+  "workers-py",
   "workers-runtime-sdk",
 ]
 
