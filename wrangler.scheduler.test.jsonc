@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aidy-signals-scheduler-test",
+  "main": "src/day2_scheduler.js",
+  "compatibility_date": "2026-08-16",
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "AIDY_CAPTURE_QUEUE",
+        "queue": "aidy-capture-test"
+      }
+    ]
+  }
+}
