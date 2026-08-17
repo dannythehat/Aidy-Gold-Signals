@@ -1,0 +1,98 @@
+name: AIDY Day 2 Free One Cloudflare Cron Slot
+
+# One-shot infrastructure normalization.
+# content-engine-ingest currently runs at 06:00 and 18:00 UTC using two triggers.
+# Cloudflare supports comma-separated hour lists, so one trigger preserves both times.
+# A prior read-only safety gate proved the Worker does not branch on cron literals.
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-free-cron-slot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consolidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SCRIPT_NAME: content-engine-ingest
+
+    steps:
+      - name: Consolidate 06:00 and 18:00 UTC schedules and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts"
+          schedule_url="${base}/${SCRIPT_NAME}/schedules"
+
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$schedule_url" > /tmp/before.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/before.json',encoding='utf-8'))
+          rows=(p.get('result') or {}).get('schedules',[])
+          crons=sorted(s.get('cron') for s in rows)
+          expected=sorted(['0 6 * * *','0 18 * * *'])
+          if crons != expected:
+              raise SystemExit(f'Fail closed: expected existing ingest schedules {expected}, found {crons}')
+          print('Precondition verified: ingest runs at 06:00 and 18:00 UTC via two triggers.')
+          PY
+
+          curl -fsS -X PUT \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '[{"cron":"0 6,18 * * *"}]' \
+            "$schedule_url" > /tmp/update.json
+
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/update.json',encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          rows=(p.get('result') or {}).get('schedules',[])
+          crons=[s.get('cron') for s in rows]
+          if crons != ['0 6,18 * * *']:
+              raise SystemExit(f'Unexpected update result: {crons}')
+          print('Update accepted: one trigger now represents both 06:00 and 18:00 UTC.')
+          PY
+
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$schedule_url" > /tmp/after.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/after.json',encoding='utf-8'))
+          rows=(p.get('result') or {}).get('schedules',[])
+          crons=[s.get('cron') for s in rows]
+          if crons != ['0 6,18 * * *']:
+              raise SystemExit(f'Read-back verification failed: {crons}')
+          print('Read-back verified: content-engine-ingest = 0 6,18 * * *')
+          PY
+
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$base" > /tmp/workers.json
+          python - <<'PY'
+          import json, subprocess, os, urllib.parse
+          p=json.load(open('/tmp/workers.json',encoding='utf-8'))
+          ids=sorted(str(r.get('id')) for r in (p.get('result') or []) if r.get('id'))
+          total=0
+          active=[]
+          for worker in ids:
+              url=f"https://api.cloudflare.com/client/v4/accounts/{os.environ['CLOUDFLARE_ACCOUNT_ID']}/workers/scripts/{urllib.parse.quote(worker,safe='')}/schedules"
+              out=subprocess.check_output(['curl','-fsS','-H',f"Authorization: Bearer {os.environ['CLOUDFLARE_API_TOKEN']}",url])
+              data=json.loads(out)
+              rows=(data.get('result') or {}).get('schedules',[])
+              for s in rows:
+                  total += 1
+                  active.append((worker,s.get('cron')))
+          print(f'Account cron count after consolidation: {total}')
+          for worker,cron in active:
+              print(f'{worker} | {cron}')
+          if total != 4:
+              raise SystemExit(f'Expected exactly 4 cron triggers after consolidation, found {total}')
+          PY
