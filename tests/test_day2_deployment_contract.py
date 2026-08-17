@@ -24,7 +24,7 @@ def test_day2_capture_worker_is_queue_consumer_and_capture_enabled() -> None:
     assert isinstance(vars_, dict)
     assert vars_["AIDY_ENV"] == "test"
     assert vars_["AIDY_CAPTURE_ENABLED"] == "true"
-    assert "triggers" not in config
+    assert config["triggers"] == {"crons": []}
     consumers = config["queues"]["consumers"]
     assert consumers == [
         {
