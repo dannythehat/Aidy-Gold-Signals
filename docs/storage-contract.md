@@ -63,3 +63,16 @@ The test Worker exposes `POST /day1/storage-smoke` only when `AIDY_ENV=test`. A 
 4. `R2.head(archive_key)` confirms the object exists.
 
 Mocks and local SQLite tests are useful preflight evidence but are not sufficient to mark Day 1 Passed.
+
+## Day 3 D1/R2 reconciliation
+
+The Day 3 auditor reads aggregate snapshot/candle/outbox facts from D1 and
+checks a bounded, explicitly reported sample of archived outbox keys with
+`R2.head()`. The maximum sample is 40 objects per request so the Worker remains
+inside a conservative subrequest budget. Reports always disclose both
+`archive_population` and `archive_checked`; a sample is never described as the
+entire archive when it is not.
+
+Any pending outbox row is included before archived rows, even when it predates
+the requested continuity window. A pending row, retry/error marker, missing R2
+object or unverified archived row fails the Day 3 gate.
