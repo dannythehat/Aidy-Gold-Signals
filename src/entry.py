@@ -32,10 +32,10 @@ def _scheduled_at_from_queue_body(body: object) -> datetime:
     return scheduled_at
 
 
-async def _write_test_queue_error(env, settings: AidySettings, exc: Exception) -> None:
+async def _write_test_queue_error(env, settings: AidySettings | None, exc: Exception) -> None:
     if str(getattr(env, "AIDY_ENV", "")).lower() != "test":
         return
-    token = settings.metaapi_token or ""
+    token = (settings.metaapi_token if settings is not None else None) or ""
     message = str(exc)
     trace = traceback.format_exc()
     if token:
@@ -47,10 +47,11 @@ async def _write_test_queue_error(env, settings: AidySettings, exc: Exception) -
         "message": message[:1000],
         "traceback": trace[-6000:],
     }
+    # Deliberately use the exact plain R2 put shape already proven by AIDY's
+    # append-only archive writer, so diagnostic metadata cannot mask the error.
     await env.AIDY_MEMORY.put(
         "diagnostics/day2-queue-consumer-error.json",
         json.dumps(payload, sort_keys=True),
-        httpMetadata={"contentType": "application/json"},
     )
 
 
@@ -99,16 +100,12 @@ class Default(WorkerEntrypoint):
         return Response("Not found", status=404)
 
     async def queue(self, batch):
-        _, repository = _repository(self.env)
-        settings = AidySettings.from_worker_env(self.env)
+        settings: AidySettings | None = None
         for message in batch.messages:
             try:
+                settings = AidySettings.from_worker_env(self.env)
+                _, repository = _repository(self.env)
                 scheduled_at = _scheduled_at_from_queue_body(message.body)
-            except ValueError:
-                message.ack()
-                continue
-
-            try:
                 await run_worker_scheduled_cycle(
                     settings,
                     repository=repository,
