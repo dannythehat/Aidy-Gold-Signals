@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import traceback
 from datetime import UTC, datetime
 from urllib.parse import urlparse
 
@@ -16,9 +18,39 @@ def _repository(env):
     return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
 
 
-def _scheduled_at(controller) -> datetime:
-    milliseconds = float(controller.scheduledTime)
-    return datetime.fromtimestamp(milliseconds / 1000.0, tz=UTC)
+def _scheduled_at_from_queue_body(body: object) -> datetime:
+    if not isinstance(body, dict):
+        raise ValueError("AIDY queue message body must be an object.")
+    raw = body.get("scheduledTime")
+    if isinstance(raw, bool) or raw is None:
+        raise ValueError("AIDY queue message is missing scheduledTime.")
+    try:
+        milliseconds = float(raw)
+        scheduled_at = datetime.fromtimestamp(milliseconds / 1000.0, tz=UTC)
+    except (TypeError, ValueError, OverflowError, OSError) as exc:
+        raise ValueError("AIDY queue scheduledTime is invalid.") from exc
+    return scheduled_at
+
+
+async def _write_test_queue_error(env, settings: AidySettings | None, exc: Exception) -> None:
+    if str(getattr(env, "AIDY_ENV", "")).lower() != "test":
+        return
+    token = (settings.metaapi_token if settings is not None else None) or ""
+    message = str(exc)
+    trace = traceback.format_exc()
+    if token:
+        message = message.replace(token, "[redacted]")
+        trace = trace.replace(token, "[redacted]")
+    payload = {
+        "observed_at": datetime.now(UTC).isoformat(),
+        "exception_type": type(exc).__name__,
+        "message": message[:1000],
+        "traceback": trace[-6000:],
+    }
+    await env.AIDY_MEMORY.put(
+        "diagnostics/day2-queue-consumer-error.json",
+        json.dumps(payload, sort_keys=True),
+    )
 
 
 class Default(WorkerEntrypoint):
@@ -33,6 +65,7 @@ class Default(WorkerEntrypoint):
                     "runtime": "cloudflare-workers",
                     "environment": str(getattr(self.env, "AIDY_ENV", "unknown")),
                     "capture_enabled": settings.capture_enabled,
+                    "scheduler": "queue-consumer",
                 }
             )
 
@@ -64,11 +97,26 @@ class Default(WorkerEntrypoint):
 
         return Response("Not found", status=404)
 
-    async def scheduled(self, controller, env, ctx):
-        _, repository = _repository(env)
-        settings = AidySettings.from_worker_env(env)
-        await run_worker_scheduled_cycle(
-            settings,
-            repository=repository,
-            scheduled_at=_scheduled_at(controller),
-        )
+    async def queue(self, batch, env, ctx):
+        """Consume one scheduled-capture message using Cloudflare's Python queue ABI."""
+        # Cloudflare supplies env/ctx as ABI arguments, but WorkerEntrypoint wraps
+        # the constructor environment as self.env. AIDY bindings must use that
+        # wrapped environment for D1/R2/secret conversion.
+        del env, ctx
+        worker_env = self.env
+        settings: AidySettings | None = None
+        for message in batch.messages:
+            try:
+                settings = AidySettings.from_worker_env(worker_env)
+                _, repository = _repository(worker_env)
+                scheduled_at = _scheduled_at_from_queue_body(message.body)
+                await run_worker_scheduled_cycle(
+                    settings,
+                    repository=repository,
+                    scheduled_at=scheduled_at,
+                )
+            except Exception as exc:
+                await _write_test_queue_error(worker_env, settings, exc)
+                message.retry(delaySeconds=30)
+            else:
+                message.ack()
