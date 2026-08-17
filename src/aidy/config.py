@@ -12,6 +12,7 @@ class AidySettings:
     metaapi_token: str
     metaapi_account_id: str
     market_data_ownership: str = ""
+    market_data_source: str = "metaapi"
     capture_enabled: bool = False
     market_poll_seconds: float = 60.0
     slow_poll_seconds: float = 300.0
@@ -54,6 +55,7 @@ class AidySettings:
         metaapi_token = optional("AIDY_METAAPI_TOKEN")
         metaapi_account_id = optional("AIDY_METAAPI_ACCOUNT_ID")
         market_data_ownership = optional("AIDY_MARKET_DATA_OWNERSHIP").lower()
+        market_data_source = optional("AIDY_MARKET_DATA_SOURCE").lower() or "metaapi"
 
         if enabled:
             required = {
@@ -73,11 +75,17 @@ class AidySettings:
                     "AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated only for credentials "
                     "that are not owned or shared by Super Signals."
                 )
+            if market_data_source != "metaapi":
+                raise RuntimeError(
+                    "AIDY capture is enabled but the configured market-data source "
+                    "does not match the installed adapter."
+                )
 
         return cls(
             metaapi_token=metaapi_token,
             metaapi_account_id=metaapi_account_id,
             market_data_ownership=market_data_ownership,
+            market_data_source=market_data_source,
             capture_enabled=enabled,
             market_poll_seconds=positive_float("AIDY_MARKET_POLL_SECONDS", 60.0),
             slow_poll_seconds=positive_float("AIDY_SLOW_POLL_SECONDS", 300.0),
