@@ -1,0 +1,72 @@
+name: AIDY Day 2 Live Tail Diagnostic
+
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-live-tail-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tail-one-minute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_NAME: aidy-signals-test
+    steps:
+      - name: Tail AIDY Worker for at most 75 seconds
+        shell: bash
+        run: |
+          set -u
+          : > /tmp/tail.log
+          echo "Starting bounded live tail for ${WORKER_NAME}; hard shell timeout=75s, job timeout=2m."
+          timeout --signal=INT --kill-after=5s 75s \
+            npx --yes wrangler@4 tail "${WORKER_NAME}" --format json \
+            > /tmp/tail.log 2>&1 || rc=$?
+          rc="${rc:-0}"
+          echo "tail_exit_code=${rc}"
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          text=Path('/tmp/tail.log').read_text(encoding='utf-8',errors='replace')
+          rows=[]
+          for line in text.splitlines():
+              line=line.strip()
+              if not line.startswith('{'):
+                  continue
+              try:
+                  obj=json.loads(line)
+              except Exception:
+                  continue
+              event=obj.get('event') or {}
+              row={
+                  'outcome':obj.get('outcome'),
+                  'scriptName':obj.get('scriptName'),
+                  'exceptions':obj.get('exceptions') or [],
+                  'eventTimestamp':obj.get('eventTimestamp'),
+                  'cron':event.get('cron') if isinstance(event,dict) else None,
+                  'scheduledTime':event.get('scheduledTime') if isinstance(event,dict) else None,
+                  'logs':obj.get('logs') or [],
+              }
+              rows.append(row)
+          print(f'parsed_tail_events={len(rows)}')
+          for row in rows:
+              print('tail_event='+json.dumps(row,separators=(',',':'),default=str))
+          if not rows:
+              # Print only short non-secret Wrangler diagnostics if no JSON event arrived.
+              safe=[]
+              for line in text.splitlines():
+                  if any(token in line.lower() for token in ('error','tail','connected','expired','permission','auth')):
+                      safe.append(line[:500])
+              for line in safe[:20]:
+                  print('tail_info='+line)
+          PY
+
+          echo "Live-tail diagnostic finished; timeout is expected and does not fail this diagnostic."
