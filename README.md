@@ -8,7 +8,7 @@ AIDY and Super Signals are separate systems. AIDY produces signals; Super Signal
 
 - Separate repository and runtime from Super Signals.
 - No Render dependency for AIDY. Render remains Super Signals infrastructure only.
-- No GitHub Actions.
+- GitHub Actions is permitted only for CI, automated tests, Cloudflare provisioning/migrations and deployment. AIDY runtime and trading intelligence never execute in GitHub Actions.
 - No direct MT5 execution from the AIDY intelligence layer.
 - No live-money capability during build and paper testing.
 - Point-in-time market evidence and decision auditability are mandatory.
@@ -25,22 +25,22 @@ The earlier PostgreSQL/Alembic extraction from the 15 August prototype is preser
 
 ## Day 1 Cloudflare test bootstrap
 
-The ChatGPT Cloudflare connector is not required. The repository carries an account-neutral Wrangler template and a Windows PowerShell bootstrap.
+GitHub Actions is the browser/cloud-only deployment bridge for the Day 1 test gate. It may run tests, provision the named Cloudflare test resources, apply D1 migrations, deploy the test Worker and execute the storage smoke test. It is not an AIDY runtime.
 
-From the repository root on an authenticated development machine:
+The repository also carries an account-neutral Wrangler template and a Windows PowerShell bootstrap as a fallback for an authenticated development machine:
 
 ```powershell
 .\scripts\bootstrap-cloudflare-test.ps1
 ```
 
-The script:
+The bootstrap path:
 
 1. checks Cloudflare CLI authentication and opens browser login when required;
 2. copies `wrangler.test.example.jsonc` to ignored `wrangler.test.local.jsonc`;
-3. deploys `aidy-signals-test` and lets Wrangler provision its draft D1/R2 bindings;
+3. deploys `aidy-signals-test` and provisions its test D1/R2 bindings;
 4. applies `migrations/d1` to the real test D1 database;
 5. calls `POST /day1/storage-smoke` and requires a real D1 -> outbox -> R2 round trip.
 
 `AIDY_CAPTURE_ENABLED` remains `false` in the Day 1 test config, so this proof does not call MetaAPI or start live recording.
 
-Do not commit the generated local Wrangler config, `.dev.vars`, Cloudflare auth state, API tokens or account-specific resource IDs.
+Do not commit generated local Wrangler configs, `.dev.vars`, Cloudflare auth state, API tokens or account-specific resource IDs.
