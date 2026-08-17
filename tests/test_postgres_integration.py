@@ -111,7 +111,7 @@ def test_schema_preserves_unknown_position_truth(scratch_engine) -> None:
     assert candle_columns["spread"]["nullable"] is True
 
 
-def test_repository_persists_known_and_unknown_position_states(scratch_engine) -> None:
+def test_legacy_repository_discards_all_broker_position_states(scratch_engine) -> None:
     factory = sessionmaker(bind=scratch_engine, expire_on_commit=False)
     repository = AidyMarketRepository(factory)
     base = datetime(2026, 8, 16, 9, 0, tzinfo=UTC)
@@ -156,10 +156,7 @@ def test_repository_persists_known_and_unknown_position_states(scratch_engine) -
             {"ids": ids},
         ).mappings().all()
 
-    assert rows[0]["position_state_json"] == []
-    assert rows[1]["position_state_json"] == [{"id": "123", "symbol": "XAUUSD"}]
-    assert rows[2]["position_state_json"] is None
-    assert rows[3]["position_state_json"] is None
+    assert all(row["position_state_json"] is None for row in rows)
 
 
 def test_candle_revisions_are_idempotent_and_append_only(scratch_engine) -> None:

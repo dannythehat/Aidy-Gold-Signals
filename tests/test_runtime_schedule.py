@@ -16,6 +16,7 @@ def test_worker_env_loader_is_disabled_without_secrets() -> None:
     assert settings.capture_enabled is False
     assert settings.metaapi_token == ""
     assert settings.metaapi_account_id == ""
+    assert settings.market_data_ownership == ""
     assert settings.archive_flush_limit == 25
 
 

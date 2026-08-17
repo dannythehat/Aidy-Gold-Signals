@@ -6,7 +6,7 @@
   "compatibility_flags": ["python_workers"],
   "vars": {
     "AIDY_ENV": "test",
-    "AIDY_CAPTURE_ENABLED": "true",
+    "AIDY_CAPTURE_ENABLED": "false",
     "AIDY_MARKET_POLL_SECONDS": "60",
     "AIDY_SLOW_POLL_SECONDS": "300",
     "AIDY_MARKET_CLOSED_BACKOFF_SECONDS": "900",
@@ -15,10 +15,7 @@
     "AIDY_ARCHIVE_FLUSH_LIMIT": "100"
   },
   "secrets": {
-    "required": [
-      "AIDY_METAAPI_TOKEN",
-      "AIDY_METAAPI_ACCOUNT_ID"
-    ]
+    "required": []
   },
   "triggers": {
     "crons": []

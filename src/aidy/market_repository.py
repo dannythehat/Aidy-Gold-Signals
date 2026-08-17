@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from uuid import UUID
 
@@ -9,21 +8,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 
 def _persisted_position_state_json(snapshot: dict[str, object]) -> object | None:
-    """Persist positions only when the broker read explicitly succeeded.
+    """Discard broker-position payloads in the retained PostgreSQL prototype."""
 
-    [] means AIDY checked and there were no positions. SQL NULL means AIDY did not
-    know the position state at capture time, including read failure/not attempted.
-    """
-    raw_availability = snapshot.get("data_availability_json")
-    if not isinstance(raw_availability, str):
-        return None
-    try:
-        availability = json.loads(raw_availability)
-    except (json.JSONDecodeError, TypeError):
-        return None
-    if not isinstance(availability, dict) or availability.get("positions") != "available":
-        return None
-    return snapshot.get("position_state_json")
+    del snapshot
+    return None
 
 
 class AidyMarketRepository:

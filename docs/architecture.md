@@ -8,6 +8,19 @@ AIDY Signals is a standalone Gold signal provider. Super Signals is a downstream
 
 AIDY does not share Super Signals code, database, runtime, risk engine, parser, broker execution layer, or deployment stack.
 
+## Market-data boundary
+
+AIDY requires XAUUSD quotes and closed candles, not a broker execution account.
+
+- AIDY never reads broker/follower positions, orders or account state.
+- Vantage execution and actual position reconciliation belong only to Super Signals.
+- Super Signals MetaAPI/Vantage credentials must never be copied into AIDY.
+- Any enabled AIDY market-data connection must be separately owned, separately
+  credentialed and explicitly confirmed with
+  `AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated`.
+- The MetaAPI adapter retained from Day 2 is a disabled market-only adapter, not
+  the permanent production-source decision.
+
 ## Runtime and data layer
 
 ### Cloudflare Workers
@@ -51,10 +64,17 @@ BigQuery is analytical memory, not the low-latency operational transaction store
 
 AIDY publishes provider-style trade and management messages to the private AIDY Signals Telegram group. Super Signals may later onboard that group exactly like any other approved external provider.
 
+## Intelligence boundary
+
+ChatGPT is not part of the AIDY runtime. OpenAI API reasoning is planned for Day
+21 as AIDY's trading intelligence. It does not store evidence and does not access
+Vantage or Super Signals.
+
 ## Explicit exclusions
 
 - No Render service, database, worker or deployment for AIDY unless the owner explicitly reverses this decision.
-- No GitHub Actions.
+- No GitHub Actions runtime. Actions may be used only as explicitly approved CI
+  or deployment transport.
 - No direct follower-trade execution from AIDY.
 - No live-money capability during build and paper evaluation.
 

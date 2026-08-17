@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from .storage_contracts import ArchiveItem, EvidenceCommit, persisted_position_state_json
+from .storage_contracts import ArchiveItem, EvidenceCommit
 
 _SAFE_SEGMENT = re.compile(r"[^A-Za-z0-9._=-]+")
 
@@ -303,7 +303,9 @@ class D1OperationalEvidenceStore:
         evidence_id = uuid4()
         outbox_id = uuid4()
         archive_key = snapshot_archive_key(snapshot, evidence_id)
-        position_state = persisted_position_state_json(snapshot)
+        # The column is retained for historical Day 2 compatibility only.
+        # AIDY is a signal provider and never stores broker/follower positions.
+        position_state = None
         insert = self._stmt(
             """
             INSERT INTO market_snapshots (
@@ -573,13 +575,12 @@ class D1OperationalEvidenceStore:
         elif record_type == "snapshot":
             sql = """
             SELECT json_object(
-              'schema_version',1,'record_type','snapshot','evidence_id',id,
+              'schema_version',2,'record_type','snapshot','evidence_id',id,
               'archive_key',archive_key,'payload_digest',snapshot_digest,
               'payload',json_object(
                 'captured_at',captured_at,'symbol',symbol,'capture_status',capture_status,
                 'bid',bid,'ask',ask,'mid',mid,'spread',spread,'quote_time',quote_time,
                 'quote_age_seconds',quote_age_seconds,'session_code',session_code,
-                'position_state',CASE WHEN position_state_json IS NULL THEN NULL ELSE json(position_state_json) END,
                 'data_availability',json(data_availability_json),
                 'event_observation_ids',json(event_observation_ids_json),
                 'latest_m1_id',latest_m1_id,'latest_m5_id',latest_m5_id,

@@ -32,9 +32,13 @@ Partition by open date. Cluster by symbol, timeframe and source.
 
 ### `market_snapshots`
 
-Core fields: evidence ID, capture timestamp, quote values/timestamp/age, session code, nullable position state, data-availability object, linked event-observation IDs, latest candle IDs, snapshot digest, archive key.
+Core fields: evidence ID, capture timestamp, quote values/timestamp/age, session
+code, data-availability object, linked event-observation IDs, latest candle IDs,
+snapshot digest and archive key.
 
-`NULL` position state means unknown. An empty array means checked and no positions. The two states must never be coalesced.
+Broker/follower positions are deliberately excluded. AIDY's later watcher uses
+its own versioned signal-lifecycle ledger; actual follower-account state remains
+inside Super Signals.
 
 Partition by capture date. Cluster by symbol, capture status and session code.
 

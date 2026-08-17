@@ -1,7 +1,7 @@
 """AIDY point-in-time XAUUSD market recorder.
 
-This recorder is read-only. It captures evidence for AIDY's future reasoning and
-cannot publish Telegram messages or mutate a broker account.
+This recorder captures independent market evidence for AIDY's future reasoning.
+It does not read broker positions, publish Telegram messages, or mutate accounts.
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ _SNAPSHOT_CANDLE_KEYS = {
 
 
 @dataclass(frozen=True, slots=True)
-class MetaApiAccount:
+class MetaApiMarketDataConnection:
     token: str
     account_id: str
 
@@ -178,24 +178,6 @@ def _session_code(now: datetime) -> str:
     return "off_hours"
 
 
-def _sanitize_positions(payloads: list[dict[str, object]]) -> list[dict[str, object]]:
-    allowed = (
-        "id",
-        "symbol",
-        "type",
-        "volume",
-        "openPrice",
-        "currentPrice",
-        "stopLoss",
-        "takeProfit",
-        "profit",
-        "time",
-        "updateTime",
-        "clientId",
-    )
-    return [{key: row.get(key) for key in allowed if key in row} for row in payloads]
-
-
 def _closed_candle(
     payload: dict[str, object],
     *,
@@ -256,12 +238,12 @@ class AidyMarketRecorderService:
     def __init__(
         self,
         *,
-        account: MetaApiAccount,
+        connection: MetaApiMarketDataConnection,
         repository: AidyMarketRepository,
         gateway: MetaApiReadGateway,
         market_closed_stale_seconds: float = 300.0,
     ) -> None:
-        self._account = account
+        self._connection = connection
         self._repository = repository
         self._gateway = gateway
         self._market_closed_stale_seconds = max(float(market_closed_stale_seconds), 60.0)
@@ -283,8 +265,8 @@ class AidyMarketRecorderService:
         }
         try:
             region = await self._gateway.resolve_account_region(
-                token=self._account.token,
-                account_id=self._account.account_id,
+                token=self._connection.token,
+                account_id=self._connection.account_id,
             )
         except MetaApiReadError as exc:
             availability["region"] = exc.code
@@ -304,19 +286,11 @@ class AidyMarketRecorderService:
             availability[name] = "available"
             return value
 
-        positions_payload = await read(
-            "positions",
-            self._gateway.read_positions(
-                token=self._account.token,
-                account_id=self._account.account_id,
-                region=region,
-            ),
-        )
         quote_payload = await read(
             "quote",
             self._gateway.read_symbol_price(
-                token=self._account.token,
-                account_id=self._account.account_id,
+                token=self._connection.token,
+                account_id=self._connection.account_id,
                 region=region,
                 symbol=SYMBOL,
             ),
@@ -327,8 +301,8 @@ class AidyMarketRecorderService:
             payloads = await read(
                 f"candles_{timeframe}",
                 self._gateway.read_historical_candles(
-                    token=self._account.token,
-                    account_id=self._account.account_id,
+                    token=self._connection.token,
+                    account_id=self._connection.account_id,
                     region=region,
                     symbol=SYMBOL,
                     timeframe=timeframe,
@@ -353,9 +327,7 @@ class AidyMarketRecorderService:
         ask = _decimal(quote.get("ask"))
         quote_time = _parse_utc(quote.get("time"))
         quote_age = (
-            max(0.0, (captured_at - quote_time).total_seconds())
-            if quote_time is not None
-            else None
+            max(0.0, (captured_at - quote_time).total_seconds()) if quote_time is not None else None
         )
         market_open = (
             bid is not None
@@ -364,18 +336,11 @@ class AidyMarketRecorderService:
             and quote_age <= self._market_closed_stale_seconds
         )
         availability["market_state"] = "open" if market_open else "closed_or_stale"
-        positions = (
-            _sanitize_positions(positions_payload)
-            if isinstance(positions_payload, list)
-            else []
-        )
-        event_ids = await self._repository.event_observation_ids_known_at(
-            captured_at=captured_at
-        )
+        event_ids = await self._repository.event_observation_ids_known_at(captured_at=captured_at)
         availability["external_events"] = "point_in_time_linked"
         availability["external_event_observation_count"] = len(event_ids)
         available_components = sum(1 for value in availability.values() if value == "available")
-        expected_components = 2 + len(timeframes)
+        expected_components = 1 + len(timeframes)
         status = (
             "complete"
             if available_components == expected_components
@@ -388,7 +353,7 @@ class AidyMarketRecorderService:
             column: latest_candle_ids.get(timeframe)
             for timeframe, column in _SNAPSHOT_CANDLE_KEYS.items()
         }
-        mid = (bid + ask) / Decimal("2") if bid is not None and ask is not None else None
+        mid = (bid + ask) / Decimal(2) if bid is not None and ask is not None else None
         spread = ask - bid if bid is not None and ask is not None else None
         snapshot = {
             "captured_at": captured_at,
@@ -401,7 +366,9 @@ class AidyMarketRecorderService:
             "quote_time": quote_time,
             "quote_age_seconds": quote_age,
             "session_code": _session_code(captured_at),
-            "position_state_json": _canonical_json(positions),
+            # Legacy D1 field retained only so Day 2 evidence remains readable.
+            # AIDY is a provider and never records follower/broker position state.
+            "position_state_json": None,
             "data_availability_json": _canonical_json(availability),
             "event_observation_ids_json": _canonical_json([str(item) for item in event_ids]),
             **candle_ids,
@@ -419,9 +386,7 @@ class AidyMarketRecorderService:
     async def _store_unavailable(
         self, captured_at: datetime, availability: dict[str, object]
     ) -> UUID:
-        event_ids = await self._repository.event_observation_ids_known_at(
-            captured_at=captured_at
-        )
+        event_ids = await self._repository.event_observation_ids_known_at(captured_at=captured_at)
         snapshot = {
             "captured_at": captured_at,
             "symbol": SYMBOL,

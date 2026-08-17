@@ -1,30 +1,9 @@
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID
-
-
-def persisted_position_state_json(snapshot: dict[str, object]) -> str | None:
-    """Persist positions only when the broker read explicitly succeeded.
-
-    ``[]`` means AIDY checked and found no positions. ``None`` means AIDY did not
-    know the position state at capture time, including read failure/not attempted.
-    """
-
-    raw_availability = snapshot.get("data_availability_json")
-    if not isinstance(raw_availability, str):
-        return None
-    try:
-        availability = json.loads(raw_availability)
-    except (json.JSONDecodeError, TypeError):
-        return None
-    if not isinstance(availability, dict) or availability.get("positions") != "available":
-        return None
-    value = snapshot.get("position_state_json")
-    return value if isinstance(value, str) else None
 
 
 @dataclass(frozen=True, slots=True)

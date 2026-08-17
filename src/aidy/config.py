@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
-
 
 ValueGetter = Callable[[str, str], str]
 
@@ -12,6 +11,7 @@ ValueGetter = Callable[[str, str], str]
 class AidySettings:
     metaapi_token: str
     metaapi_account_id: str
+    market_data_ownership: str = ""
     capture_enabled: bool = False
     market_poll_seconds: float = 60.0
     slow_poll_seconds: float = 300.0
@@ -21,7 +21,7 @@ class AidySettings:
     archive_flush_limit: int = 100
 
     @classmethod
-    def _from_getter(cls, getter: ValueGetter) -> "AidySettings":
+    def _from_getter(cls, getter: ValueGetter) -> AidySettings:
         def optional(name: str) -> str:
             return getter(name, "").strip()
 
@@ -53,6 +53,7 @@ class AidySettings:
         }
         metaapi_token = optional("AIDY_METAAPI_TOKEN")
         metaapi_account_id = optional("AIDY_METAAPI_ACCOUNT_ID")
+        market_data_ownership = optional("AIDY_MARKET_DATA_OWNERSHIP").lower()
 
         if enabled:
             required = {
@@ -65,10 +66,18 @@ class AidySettings:
                     "AIDY capture is enabled but required environment variables are missing: "
                     + ", ".join(missing)
                 )
+            if market_data_ownership != "aidy_dedicated":
+                raise RuntimeError(
+                    "AIDY capture is enabled but the market-data connection is not "
+                    "explicitly confirmed as AIDY-dedicated. Set "
+                    "AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated only for credentials "
+                    "that are not owned or shared by Super Signals."
+                )
 
         return cls(
             metaapi_token=metaapi_token,
             metaapi_account_id=metaapi_account_id,
+            market_data_ownership=market_data_ownership,
             capture_enabled=enabled,
             market_poll_seconds=positive_float("AIDY_MARKET_POLL_SECONDS", 60.0),
             slow_poll_seconds=positive_float("AIDY_SLOW_POLL_SECONDS", 300.0),
@@ -81,11 +90,11 @@ class AidySettings:
         )
 
     @classmethod
-    def from_env(cls) -> "AidySettings":
+    def from_env(cls) -> AidySettings:
         return cls._from_getter(lambda name, default: os.getenv(name, default))
 
     @classmethod
-    def from_worker_env(cls, environment: object) -> "AidySettings":
+    def from_worker_env(cls, environment: object) -> AidySettings:
         """Load config from Cloudflare Worker vars/secrets without exposing them."""
 
         def getter(name: str, default: str) -> str:

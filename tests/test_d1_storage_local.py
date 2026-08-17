@@ -109,7 +109,7 @@ async def test_d1_candle_revision_and_idempotency(operational) -> None:
 
 
 @pytest.mark.asyncio
-async def test_d1_snapshot_preserves_unknown_position_truth(operational) -> None:
+async def test_d1_snapshot_discards_broker_position_payload(operational) -> None:
     captured = datetime(2026, 8, 16, 9, 0, tzinfo=UTC)
     snapshot = {
         "captured_at": captured,
@@ -123,7 +123,7 @@ async def test_d1_snapshot_preserves_unknown_position_truth(operational) -> None
         "quote_age_seconds": None,
         "session_code": "off_hours",
         "position_state_json": "[]",
-        "data_availability_json": '{"positions":"metaapi_timeout"}',
+        "data_availability_json": '{"positions":"available"}',
         "event_observation_ids_json": "[]",
         "latest_m1_id": None,
         "latest_m5_id": None,

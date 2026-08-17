@@ -22,8 +22,10 @@ The recorder does **not** require R2 to be healthy before operational evidence c
 - Event revisions are append-only and keyed by source + external ID.
 - Identical payload digests are idempotent and do not create a new revision.
 - Event lookups use only observations whose `first_observed_at` was known at the requested capture time.
-- `position_state_json = "[]"` is persisted only when the MetaAPI positions read explicitly succeeded.
-- Failed or unattempted position reads persist as SQL `NULL`, meaning unknown.
+- Broker/follower position state is outside AIDY's product boundary and is never
+  captured. The nullable `position_state_json` D1 column remains only so the
+  historical Day 2 record can be read; every new AIDY snapshot writes `NULL`.
+- Snapshot R2 schema version 2 omits position state entirely.
 
 ## D1 tables
 

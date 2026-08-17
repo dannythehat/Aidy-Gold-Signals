@@ -4,4 +4,6 @@ Problem proven 2026-08-17: direct one-minute Cron exists on aidy-signals-test bu
 
 Repair: tiny JavaScript Cron producer -> Cloudflare Queue -> existing Python aidy-signals-test Queue consumer.
 
-Safety boundaries remain unchanged: test resources only; MetaAPI read-only; no broker mutation; no Telegram; no OpenAI; no Super Signals changes.
+Safety boundary correction: test resources only; checked-in Cron and capture are
+safe-off; any MetaAPI adapter is market-only and AIDY-dedicated; no broker account
+state, broker mutation, Telegram, OpenAI, or Super Signals changes.

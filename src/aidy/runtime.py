@@ -18,7 +18,7 @@ from .market_recorder import (
     FAST_TIMEFRAMES,
     AidyMarketRecorderService,
     CaptureResult,
-    MetaApiAccount,
+    MetaApiMarketDataConnection,
 )
 from .metaapi_read_gateway import MetaApiReadGateway
 from .storage_contracts import AidyMarketRepository, ArchiveFlushResult
@@ -66,7 +66,7 @@ async def run_capture_cycle(
 
     if include_market:
         market_service = AidyMarketRecorderService(
-            account=MetaApiAccount(
+            connection=MetaApiMarketDataConnection(
                 token=settings.metaapi_token,
                 account_id=settings.metaapi_account_id,
             ),

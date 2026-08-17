@@ -12,6 +12,8 @@ AIDY and Super Signals are separate systems. AIDY produces signals; Super Signal
 - No direct MT5 execution from the AIDY intelligence layer.
 - No live-money capability during build and paper testing.
 - Point-in-time market evidence and decision auditability are mandatory.
+- AIDY never reads broker/follower positions and never uses Super Signals'
+  Vantage/MetaAPI credentials. Market-data credentials must be AIDY-owned.
 
 ## Locked AIDY data/runtime architecture
 
@@ -20,6 +22,19 @@ AIDY and Super Signals are separate systems. AIDY produces signals; Super Signal
 - **Cloudflare R2** — durable append-only raw and Parquet historical Gold archive.
 - **Google BigQuery** — historical analytics warehouse for regime research, feature studies, analogue retrieval, outcome analysis and evaluation datasets.
 - **Telegram** — provider publication boundary to Super Signals.
+
+## Market-data boundary correction — 17 August 2026
+
+AIDY needs independent XAUUSD quotes and closed candles. It does not need a
+broker execution account or follower-position state. The retained MetaAPI
+adapter is now market-only, contains no positions endpoint, and is disabled in
+the checked-in Cloudflare test configuration until an AIDY-dedicated source is
+explicitly approved. `AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated` is a fail-closed
+runtime gate; it must never be set for credentials owned or shared by Super
+Signals.
+
+ChatGPT is a build tool, not an AIDY runtime dependency. The OpenAI API remains
+future Day 21 trading intelligence and is unrelated to storage or broker access.
 
 The earlier PostgreSQL/Alembic extraction from the 15 August prototype is preserved only as design/reference evidence. PostgreSQL and Render are not AIDY production dependencies.
 
@@ -41,6 +56,8 @@ The bootstrap path:
 4. applies `migrations/d1` to the real test D1 database;
 5. calls `POST /day1/storage-smoke` and requires a real D1 -> outbox -> R2 round trip.
 
-`AIDY_CAPTURE_ENABLED` remains `false` in the Day 1 test config, so this proof does not call MetaAPI or start live recording.
+`AIDY_CAPTURE_ENABLED` remains `false` in the checked-in test config. The
+scheduler Cron is also disabled in source until the independent AIDY market-data
+boundary is accepted.
 
 Do not commit generated local Wrangler configs, `.dev.vars`, Cloudflare auth state, API tokens or account-specific resource IDs.

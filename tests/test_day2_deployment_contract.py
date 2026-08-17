@@ -4,12 +4,6 @@ import json
 from pathlib import Path
 
 
-REQUIRED_METAAPI_SECRETS = {
-    "AIDY_METAAPI_TOKEN",
-    "AIDY_METAAPI_ACCOUNT_ID",
-}
-
-
 def _test_config() -> dict[str, object]:
     return json.loads(Path("wrangler.test.example.jsonc").read_text(encoding="utf-8"))
 
@@ -18,12 +12,13 @@ def _scheduler_config() -> dict[str, object]:
     return json.loads(Path("wrangler.scheduler.test.jsonc").read_text(encoding="utf-8"))
 
 
-def test_day2_capture_worker_is_queue_consumer_and_capture_enabled() -> None:
+def test_boundary_correction_keeps_capture_worker_safe_off() -> None:
     config = _test_config()
     vars_ = config["vars"]
     assert isinstance(vars_, dict)
     assert vars_["AIDY_ENV"] == "test"
-    assert vars_["AIDY_CAPTURE_ENABLED"] == "true"
+    assert vars_["AIDY_CAPTURE_ENABLED"] == "false"
+    assert "AIDY_MARKET_DATA_OWNERSHIP" not in vars_
     assert config["triggers"] == {"crons": []}
     consumers = config["queues"]["consumers"]
     assert consumers == [
@@ -47,7 +42,7 @@ def test_day2_scheduler_is_minimal_one_minute_queue_producer() -> None:
     config = _scheduler_config()
     assert config["name"] == "aidy-signals-scheduler-test"
     assert config["main"] == "src/day2_scheduler.js"
-    assert config["triggers"] == {"crons": ["* * * * *"]}
+    assert config["triggers"] == {"crons": []}
     assert config["queues"] == {
         "producers": [
             {
@@ -62,21 +57,28 @@ def test_day2_scheduler_is_minimal_one_minute_queue_producer() -> None:
     assert "AIDY_METAAPI" not in source
 
 
-def test_day2_metaapi_values_are_required_secrets_not_plaintext_vars() -> None:
+def test_boundary_correction_does_not_require_metaapi_secrets() -> None:
     config = _test_config()
     vars_ = config["vars"]
     secrets = config["secrets"]
     assert isinstance(vars_, dict)
     assert isinstance(secrets, dict)
-    assert set(secrets["required"]) == REQUIRED_METAAPI_SECRETS
-    assert REQUIRED_METAAPI_SECRETS.isdisjoint(vars_)
+    assert secrets["required"] == []
+    assert "AIDY_METAAPI_TOKEN" not in vars_
+    assert "AIDY_METAAPI_ACCOUNT_ID" not in vars_
+
+
+def test_runtime_contains_no_broker_position_read() -> None:
+    gateway = Path("src/aidy/metaapi_read_gateway.py").read_text(encoding="utf-8")
+    recorder = Path("src/aidy/market_recorder.py").read_text(encoding="utf-8")
+    assert "read_positions" not in gateway
+    assert "read_positions" not in recorder
+    assert "_sanitize_positions" not in recorder
 
 
 def test_day2_keeps_test_d1_and_r2_bindings() -> None:
     config = _test_config()
-    assert config["d1_databases"] == [
-        {"binding": "AIDY_OPS", "migrations_dir": "migrations/d1"}
-    ]
+    assert config["d1_databases"] == [{"binding": "AIDY_OPS", "migrations_dir": "migrations/d1"}]
     assert config["r2_buckets"] == [{"binding": "AIDY_MEMORY"}]
 
 

@@ -14,7 +14,12 @@ def test_metaapi_gateway_public_surface_is_read_only() -> None:
 
     assert public_methods == {
         "read_historical_candles",
-        "read_positions",
         "read_symbol_price",
         "resolve_account_region",
     }
+
+
+def test_metaapi_adapter_has_no_broker_account_state_surface() -> None:
+    source = inspect.getsource(MetaApiReadGateway)
+    assert "positions" not in source
+    assert "orders" not in source

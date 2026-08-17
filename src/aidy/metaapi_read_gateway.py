@@ -1,7 +1,8 @@
-"""Read-only MetaAPI gateway for AIDY market observation.
+"""Temporary read-only MetaAPI adapter for AIDY market-price observation.
 
-This module intentionally exposes market/account reads only. It contains no
-trade, order, close, modify, or broker-mutation method.
+The adapter is quarantined to XAUUSD quotes and candles. It exposes no account
+position, order, trade, close, modify, or broker-mutation method and must never
+use Super Signals credentials.
 """
 
 from __future__ import annotations
@@ -12,12 +13,29 @@ from urllib.parse import quote
 
 import httpx
 
-DEFAULT_METAAPI_PROVISIONING_URL = (
-    "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai"
-)
+DEFAULT_METAAPI_PROVISIONING_URL = "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai"
 _ALLOWED_CANDLE_TIMEFRAMES = {
-    "1m", "2m", "3m", "4m", "5m", "6m", "10m", "12m", "15m", "20m",
-    "30m", "1h", "2h", "3h", "4h", "6h", "8h", "12h", "1d", "1w", "1mn",
+    "1m",
+    "2m",
+    "3m",
+    "4m",
+    "5m",
+    "6m",
+    "10m",
+    "12m",
+    "15m",
+    "20m",
+    "30m",
+    "1h",
+    "2h",
+    "3h",
+    "4h",
+    "6h",
+    "8h",
+    "12h",
+    "1d",
+    "1w",
+    "1mn",
 }
 _REGION_PATTERN = re.compile(r"^[a-z0-9-]+$")
 
@@ -51,18 +69,6 @@ class MetaApiReadGateway:
             raise MetaApiReadError("metaapi_invalid_response")
         return _normalize_region(str(payload.get("region") or ""))
 
-    async def read_positions(
-        self, *, token: str, account_id: str, region: str
-    ) -> list[dict[str, object]]:
-        payload = await self._read_terminal_json(
-            token=token,
-            region=region,
-            path=f"/users/current/accounts/{account_id}/positions",
-        )
-        if not isinstance(payload, list) or any(not isinstance(item, dict) for item in payload):
-            raise MetaApiReadError("metaapi_invalid_response")
-        return payload
-
     async def read_historical_candles(
         self,
         *,
@@ -82,9 +88,7 @@ class MetaApiReadGateway:
         encoded_timeframe = quote(timeframe, safe="")
         query_parts: list[str] = []
         if start_time is not None:
-            encoded_start = quote(
-                start_time.isoformat().replace("+00:00", "Z"), safe=":-T.Z+"
-            )
+            encoded_start = quote(start_time.isoformat().replace("+00:00", "Z"), safe=":-T.Z+")
             query_parts.append(f"startTime={encoded_start}")
         query_parts.append(f"limit={limit}")
         query = "&".join(query_parts)
@@ -115,10 +119,7 @@ class MetaApiReadGateway:
         payload = await self._read_terminal_json(
             token=token,
             region=region,
-            path=(
-                f"/users/current/accounts/{account_id}/symbols/"
-                f"{encoded_symbol}/current-price"
-            ),
+            path=(f"/users/current/accounts/{account_id}/symbols/{encoded_symbol}/current-price"),
         )
         if not isinstance(payload, dict):
             raise MetaApiReadError("metaapi_invalid_response")

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -11,24 +10,7 @@ from aidy.storage_contracts import (
     AidyMarketRepository,
     ArchiveItem,
     EvidenceCommit,
-    persisted_position_state_json,
 )
-
-
-def test_position_truth_known_empty_is_preserved() -> None:
-    snapshot = {
-        "position_state_json": "[]",
-        "data_availability_json": json.dumps({"positions": "available"}),
-    }
-    assert persisted_position_state_json(snapshot) == "[]"
-
-
-def test_position_truth_failed_read_is_unknown() -> None:
-    snapshot = {
-        "position_state_json": "[]",
-        "data_availability_json": json.dumps({"positions": "metaapi_timeout"}),
-    }
-    assert persisted_position_state_json(snapshot) is None
 
 
 def test_archive_keys_are_digest_bearing_and_partitioned() -> None:
@@ -68,7 +50,9 @@ class FakeOperational:
         self.failures: list[str] = []
 
     async def commit_candle(self, candle):
-        return EvidenceCommit(self.item.evidence_id, 1, True, self.item.outbox_id, self.item.object_key)
+        return EvidenceCommit(
+            self.item.evidence_id, 1, True, self.item.outbox_id, self.item.object_key
+        )
 
     async def latest_candle_ids(self, *, symbol):
         return {}
