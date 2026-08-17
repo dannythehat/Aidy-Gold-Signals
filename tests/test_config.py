@@ -60,3 +60,16 @@ def test_capture_rejects_unconfirmed_or_shared_market_data(
 
     with pytest.raises(RuntimeError, match="AIDY-dedicated"):
         AidySettings.from_env()
+
+
+def test_capture_rejects_source_without_installed_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AIDY_CAPTURE_ENABLED", "true")
+    monkeypatch.setenv("AIDY_METAAPI_TOKEN", "test-token")
+    monkeypatch.setenv("AIDY_METAAPI_ACCOUNT_ID", "test-account")
+    monkeypatch.setenv("AIDY_MARKET_DATA_OWNERSHIP", "aidy_dedicated")
+    monkeypatch.setenv("AIDY_MARKET_DATA_SOURCE", "super_signals_shared")
+
+    with pytest.raises(RuntimeError, match="installed adapter"):
+        AidySettings.from_env()
