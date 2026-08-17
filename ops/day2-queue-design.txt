@@ -1,0 +1,7 @@
+Day 2 scheduler repair design
+
+Problem proven 2026-08-17: direct one-minute Cron exists on aidy-signals-test but no scheduled capture reaches D1; the same Python capture path succeeds in Cloudflare when invoked outside the scheduled handler.
+
+Repair: tiny JavaScript Cron producer -> Cloudflare Queue -> existing Python aidy-signals-test Queue consumer.
+
+Safety boundaries remain unchanged: test resources only; MetaAPI read-only; no broker mutation; no Telegram; no OpenAI; no Super Signals changes.
