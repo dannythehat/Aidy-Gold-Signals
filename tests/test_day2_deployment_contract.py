@@ -18,6 +18,7 @@ def test_boundary_correction_keeps_capture_worker_safe_off() -> None:
     assert isinstance(vars_, dict)
     assert vars_["AIDY_ENV"] == "test"
     assert vars_["AIDY_CAPTURE_ENABLED"] == "false"
+    assert vars_["AIDY_MARKET_DATA_SOURCE"] == "metaapi"
     assert "AIDY_MARKET_DATA_OWNERSHIP" not in vars_
     assert config["triggers"] == {"crons": []}
     consumers = config["queues"]["consumers"]
@@ -74,6 +75,16 @@ def test_runtime_contains_no_broker_position_read() -> None:
     assert "read_positions" not in gateway
     assert "read_positions" not in recorder
     assert "_sanitize_positions" not in recorder
+
+
+def test_day3_audit_endpoint_is_test_only_and_read_only() -> None:
+    entry = Path("src/entry.py").read_text(encoding="utf-8")
+    auditor = Path("src/aidy/continuity_auditor.py").read_text(encoding="utf-8")
+    assert 'request.method == "GET" and url.path == "/day3/continuity"' in entry
+    assert 'str(self.env.AIDY_ENV).lower() != "test"' in entry
+    assert "read_positions" not in auditor
+    assert "MetaApi" not in auditor
+    assert "super_signals" not in auditor.lower()
 
 
 def test_day2_keeps_test_d1_and_r2_bindings() -> None:
