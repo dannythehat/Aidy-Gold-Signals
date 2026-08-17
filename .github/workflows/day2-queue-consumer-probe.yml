@@ -13,13 +13,40 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       QUEUE_ID: b7b899247ecd4f6f897cc468c3bcbb36
       D1_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test and deploy corrected Python consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pytest -q
+          python - <<'PY'
+          import json
+          p=json.load(open('wrangler.test.example.jsonc'))
+          p['d1_databases'][0]['database_name']='aidy-ops-test'
+          p['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          p['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          open('wrangler.jsonc','w').write(json.dumps(p,indent=2)+'\n')
+          PY
+          uv run pywrangler deploy
+          curl -fsS https://aidy-signals-test.dannythehat2.workers.dev/health \
+            | jq -e '.status=="ok" and .capture_enabled==true and .scheduler=="queue-consumer"' >/dev/null
+
       - name: Record baseline and push one JSON queue message
         shell: bash
         run: |
@@ -42,26 +69,21 @@ jobs:
           )"
           python - "$NOW_MS" <<'PY' >/tmp/message.json
           import json,sys
-          print(json.dumps({
-            'body': {'scheduledTime': int(sys.argv[1]), 'cron': 'manual-day2-queue-consumer-proof'},
-            'content_type': 'json'
-          }))
+          print(json.dumps({'body':{'scheduledTime':int(sys.argv[1]),'cron':'manual-day2-queue-consumer-proof-v2'},'content_type':'json'}))
           PY
           curl -fsS -X POST \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H 'Content-Type: application/json' \
             --data-binary @/tmp/message.json \
             "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues/${QUEUE_ID}/messages" \
-            | tee /tmp/push.json
-          jq -e '.success==true' /tmp/push.json >/dev/null
-          echo "Direct test message accepted by Cloudflare Queue; baseline=${BASELINE:-none}"
+            | jq -e '.success==true' >/dev/null
 
       - name: Prove Python consumer writes genuine evidence
         shell: bash
         run: |
           set -euo pipefail
           FOUND=no
-          for attempt in $(seq 1 8); do
+          for attempt in $(seq 1 10); do
             python - <<'PY' >/tmp/query.json
           import json,os
           sql="""SELECT id,captured_at,capture_status,bid,ask,spread,quote_age_seconds,position_state_json,latest_m1_id,latest_m5_id,archive_key FROM market_snapshots WHERE captured_at > ? AND bid IS NOT NULL AND ask IS NOT NULL ORDER BY captured_at DESC LIMIT 1"""
@@ -73,9 +95,9 @@ jobs:
               --data-binary @/tmp/query.json \
               "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_ID}/query" >/tmp/query-out.json
             if [ "$(jq '.result[0].results|length' /tmp/query-out.json)" -gt 0 ]; then FOUND=yes; break; fi
-            sleep 10
+            sleep 8
           done
-          test "$FOUND" = yes || { echo '::error::Direct queue message was accepted but Python consumer produced no D1 snapshot.'; exit 1; }
+          test "$FOUND" = yes || { echo '::error::Corrected Python queue consumer produced no D1 snapshot.'; exit 1; }
           jq '.result[0].results[0]' /tmp/query-out.json
           jq -e '.result[0].results[0].position_state_json=="[]"' /tmp/query-out.json >/dev/null
           jq -e '(.result[0].results[0].quote_age_seconds|tonumber)<=300' /tmp/query-out.json >/dev/null
