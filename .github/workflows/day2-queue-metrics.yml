@@ -34,17 +34,37 @@ jobs:
 
           START="$(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
           END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          python - "$START" "$END" <<'PY' >/tmp/graphql.json
+
+          python - "$START" "$END" <<'PY' >/tmp/scheduler-graphql.json
           import json,os,sys
-          query='''query Q($accountTag: string, $start: Time, $end: Time, $script: string, $queueId: string) {
+          query='''query Q($accountTag: string, $start: string, $end: string, $script: string) {
             viewer { accounts(filter:{accountTag:$accountTag}) {
               workersInvocationsScheduled(limit:100, filter:{scriptName:$script, datetime_geq:$start, datetime_leq:$end}) {
                 cpuTimeUs cron datetime scheduledDatetime scriptName status
               }
+            }}
+          }'''
+          print(json.dumps({'query':query,'variables':{
+            'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
+            'start':sys.argv[1],'end':sys.argv[2],
+            'script':os.environ['SCHEDULER_WORKER']
+          }}))
+          PY
+          echo '--- scheduler invocation analytics ---'
+          curl -fsS https://api.cloudflare.com/client/v4/graphql \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/scheduler-graphql.json \
+            | tee /tmp/scheduler-graphql-out.json | jq .
+
+          python - "$START" "$END" <<'PY' >/tmp/queue-graphql.json
+          import json,os,sys
+          query='''query Q($accountTag: string, $start: Time, $end: Time, $queueId: string) {
+            viewer { accounts(filter:{accountTag:$accountTag}) {
               queueMessageOperationsAdaptiveGroups(limit:1000, filter:{queueId:$queueId, datetime_geq:$start, datetime_leq:$end}, orderBy:[datetimeMinute_DESC]) {
                 count
                 dimensions { datetimeMinute actionType consumerType outcome }
-                avg { lagTime retryCount messageSize }
+                avg { lagTime retryCount }
+                max { messageSize }
                 sum { billableOperations bytes }
               }
             }}
@@ -52,10 +72,11 @@ jobs:
           print(json.dumps({'query':query,'variables':{
             'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
             'start':sys.argv[1],'end':sys.argv[2],
-            'script':os.environ['SCHEDULER_WORKER'],'queueId':os.environ['QUEUE_ID']
+            'queueId':os.environ['QUEUE_ID']
           }}))
           PY
-          echo '--- analytics ---'
+          echo '--- queue operation analytics ---'
           curl -fsS https://api.cloudflare.com/client/v4/graphql \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H 'Content-Type: application/json' --data-binary @/tmp/graphql.json | jq .
+            -H 'Content-Type: application/json' --data-binary @/tmp/queue-graphql.json \
+            | tee /tmp/queue-graphql-out.json | jq .
