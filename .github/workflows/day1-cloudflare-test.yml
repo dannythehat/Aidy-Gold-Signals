@@ -165,7 +165,7 @@ jobs:
           PY
 
       - name: Apply D1 migrations
-        run: npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --yes --config wrangler.test.ci.jsonc
+        run: npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.test.ci.jsonc
 
       - name: Deploy test Worker
         shell: bash
