@@ -47,8 +47,6 @@ async def _write_test_queue_error(env, settings: AidySettings | None, exc: Excep
         "message": message[:1000],
         "traceback": trace[-6000:],
     }
-    # Deliberately use the exact plain R2 put shape already proven by AIDY's
-    # append-only archive writer, so diagnostic metadata cannot mask the error.
     await env.AIDY_MEMORY.put(
         "diagnostics/day2-queue-consumer-error.json",
         json.dumps(payload, sort_keys=True),
@@ -99,12 +97,14 @@ class Default(WorkerEntrypoint):
 
         return Response("Not found", status=404)
 
-    async def queue(self, batch):
+    async def queue(self, batch, env, ctx):
+        """Consume one scheduled-capture message using Cloudflare's Python queue ABI."""
+        del ctx  # Context is not required by the deterministic capture cycle.
         settings: AidySettings | None = None
         for message in batch.messages:
             try:
-                settings = AidySettings.from_worker_env(self.env)
-                _, repository = _repository(self.env)
+                settings = AidySettings.from_worker_env(env)
+                _, repository = _repository(env)
                 scheduled_at = _scheduled_at_from_queue_body(message.body)
                 await run_worker_scheduled_cycle(
                     settings,
@@ -112,7 +112,7 @@ class Default(WorkerEntrypoint):
                     scheduled_at=scheduled_at,
                 )
             except Exception as exc:
-                await _write_test_queue_error(self.env, settings, exc)
+                await _write_test_queue_error(env, settings, exc)
                 message.retry(delaySeconds=30)
             else:
                 message.ack()
