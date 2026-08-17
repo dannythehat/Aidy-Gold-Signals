@@ -1,0 +1,61 @@
+name: AIDY Day 2 Queue Delivery Metrics
+
+on:
+  push:
+    branches:
+      - feature/day-2-queue-scheduler-fix
+    paths:
+      - '.github/workflows/day2-queue-metrics.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      QUEUE_ID: b7b899247ecd4f6f897cc468c3bcbb36
+      SCHEDULER_WORKER: aidy-signals-scheduler-test
+    steps:
+      - name: Read Cloudflare scheduler and queue telemetry
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '--- scheduler schedules ---'
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${SCHEDULER_WORKER}/schedules" | jq .
+
+          echo '--- realtime queue backlog ---'
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues/${QUEUE_ID}/metrics" | jq .
+
+          START="$(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
+          END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python - "$START" "$END" <<'PY' >/tmp/graphql.json
+          import json,os,sys
+          query='''query Q($accountTag: string, $start: Time, $end: Time, $script: string, $queueId: string) {
+            viewer { accounts(filter:{accountTag:$accountTag}) {
+              workersInvocationsScheduled(limit:100, filter:{scriptName:$script, datetime_geq:$start, datetime_leq:$end}) {
+                cpuTimeUs cron datetime scheduledDatetime scriptName status
+              }
+              queueMessageOperationsAdaptiveGroups(limit:1000, filter:{queueId:$queueId, datetime_geq:$start, datetime_leq:$end}, orderBy:[datetimeMinute_DESC]) {
+                count
+                dimensions { datetimeMinute actionType consumerType outcome }
+                avg { lagTime retryCount messageSize }
+                sum { billableOperations bytes }
+              }
+            }}
+          }'''
+          print(json.dumps({'query':query,'variables':{
+            'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
+            'start':sys.argv[1],'end':sys.argv[2],
+            'script':os.environ['SCHEDULER_WORKER'],'queueId':os.environ['QUEUE_ID']
+          }}))
+          PY
+          echo '--- analytics ---'
+          curl -fsS https://api.cloudflare.com/client/v4/graphql \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/graphql.json | jq .
