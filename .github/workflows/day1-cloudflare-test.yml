@@ -171,7 +171,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run pywrangler deploy --config wrangler.test.ci.jsonc 2>&1 | tee /tmp/deploy.log
+          # pywrangler expects the canonical config filename in the project root.
+          # This copy exists only inside the disposable GitHub runner and is never committed.
+          cp wrangler.test.ci.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/deploy.log
           WORKER_URL="$(grep -Eo 'https://[A-Za-z0-9.-]+\.workers\.dev' /tmp/deploy.log | tail -1 || true)"
           test -n "$WORKER_URL" || { echo "::error::No workers.dev URL found after deploy"; exit 1; }
           echo "AIDY_TEST_WORKER_URL=$WORKER_URL" >> "$GITHUB_ENV"
