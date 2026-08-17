@@ -1,0 +1,152 @@
+name: AIDY Day 2 Scheduled Evidence Final
+
+# Read-only acceptance: no deploy and no queue injection.
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - '.github/workflows/day2-scheduled-evidence-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      D1_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      R2_NAME: aidy-memory-test
+      QUEUE_ID: b7b899247ecd4f6f897cc468c3bcbb36
+      QUEUE_NAME: aidy-capture-test
+      CAPTURE_WORKER: aidy-signals-test
+      SCHEDULER_WORKER: aidy-signals-scheduler-test
+    steps:
+      - name: Verify live scheduler boundary and freeze baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${CAPTURE_WORKER}/schedules" >/tmp/capture-schedules.json
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${SCHEDULER_WORKER}/schedules" >/tmp/scheduler-schedules.json
+          jq -e '.success and ((.result.schedules // [])|length)==0' /tmp/capture-schedules.json >/dev/null
+          jq -e '.success and ((.result.schedules // [])|map(.cron)|index("* * * * *") != null)' /tmp/scheduler-schedules.json >/dev/null
+          npx --yes wrangler@4 queues consumer worker list "$QUEUE_NAME" --json >/tmp/consumers.json
+          jq -e 'map(select(.script=="aidy-signals-test"))|length==1' /tmp/consumers.json >/dev/null
+
+          BASELINE="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "BASELINE=$BASELINE" >> "$GITHUB_ENV"
+          echo "DAY2_FINAL_BASELINE=$BASELINE"
+
+      - name: Prove new scheduled point-in-time Gold evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          FOUND=no
+          for attempt in $(seq 1 14); do
+            python - <<'PY' >/tmp/snapshot-query.json
+          import json,os
+          sql='''SELECT id,captured_at,capture_status,bid,ask,mid,spread,quote_time,quote_age_seconds,session_code,position_state_json,event_observation_ids_json,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,archive_key FROM market_snapshots WHERE captured_at > ? AND capture_status IN ('complete','partial') AND bid IS NOT NULL AND ask IS NOT NULL ORDER BY captured_at DESC LIMIT 1'''
+          print(json.dumps({'sql':sql,'params':[os.environ['BASELINE']]}))
+          PY
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data-binary @/tmp/snapshot-query.json \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_ID}/query" >/tmp/snapshot-out.json
+            if [ "$(jq '.result[0].results|length' /tmp/snapshot-out.json)" -gt 0 ]; then FOUND=yes; break; fi
+            sleep 10
+          done
+          test "$FOUND" = yes || { echo '::error::No new scheduled snapshot after final baseline.'; exit 1; }
+
+          jq '.result[0].results[0]' /tmp/snapshot-out.json
+          jq -e '.result[0].results[0].position_state_json=="[]"' /tmp/snapshot-out.json >/dev/null
+          jq -e '(.result[0].results[0].quote_age_seconds|tonumber)<=300' /tmp/snapshot-out.json >/dev/null
+          jq -e '.result[0].results[0].spread!=null' /tmp/snapshot-out.json >/dev/null
+          jq -e '[.result[0].results[0].latest_m1_id,.result[0].results[0].latest_m5_id,.result[0].results[0].latest_m15_id,.result[0].results[0].latest_h1_id,.result[0].results[0].latest_h4_id,.result[0].results[0].latest_d1_id] | all(.!=null)' /tmp/snapshot-out.json >/dev/null
+          jq -e '(.result[0].results[0].event_observation_ids_json|fromjson|length)>0' /tmp/snapshot-out.json >/dev/null
+
+          SNAP_KEY="$(jq -r '.result[0].results[0].archive_key' /tmp/snapshot-out.json)"
+          SNAP_TS="$(jq -r '.result[0].results[0].captured_at' /tmp/snapshot-out.json)"
+          SNAP_ID="$(jq -r '.result[0].results[0].id' /tmp/snapshot-out.json)"
+          LINKED_EVENT_ID="$(jq -r '.result[0].results[0].event_observation_ids_json|fromjson|.[0]' /tmp/snapshot-out.json)"
+          echo "SNAP_KEY=$SNAP_KEY" >> "$GITHUB_ENV"
+          echo "SNAP_TS=$SNAP_TS" >> "$GITHUB_ENV"
+          echo "SNAP_ID=$SNAP_ID" >> "$GITHUB_ENV"
+          echo "LINKED_EVENT_ID=$LINKED_EVENT_ID" >> "$GITHUB_ENV"
+
+      - name: Prove D1 to R2 PIT integrity and clean queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >/tmp/final-query.json
+          import json,os
+          s=json.load(open('/tmp/snapshot-out.json'))['result'][0]['results'][0]
+          candle_ids=[s[k] for k in ('latest_m1_id','latest_m5_id','latest_m15_id','latest_h1_id','latest_h4_id','latest_d1_id')]
+          placeholders=','.join('?' for _ in candle_ids)
+          sql=f'''SELECT
+          (SELECT COUNT(*) FROM market_candles WHERE id IN ({placeholders})) AS linked_candle_count,
+          (SELECT COUNT(*) FROM market_event_observations WHERE id=? AND first_observed_at <= ?) AS linked_event_known_by_snapshot,
+          (SELECT archive_key FROM market_event_observations WHERE id=? LIMIT 1) AS event_archive_key,
+          (SELECT COUNT(*) FROM archive_outbox WHERE status='pending') AS pending_outbox,
+          (SELECT COUNT(*) FROM archive_outbox WHERE status='failed') AS failed_outbox'''
+          params=candle_ids+[os.environ['LINKED_EVENT_ID'],os.environ['SNAP_TS'],os.environ['LINKED_EVENT_ID']]
+          print(json.dumps({'sql':sql,'params':params}))
+          open('/tmp/candle-ids','w').write('\n'.join(candle_ids)+'\n')
+          PY
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/final-query.json \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_ID}/query" >/tmp/final-out.json
+          jq -e '.result[0].results[0].linked_candle_count==6' /tmp/final-out.json >/dev/null
+          jq -e '.result[0].results[0].linked_event_known_by_snapshot==1' /tmp/final-out.json >/dev/null
+          jq -e '.result[0].results[0].pending_outbox==0 and .result[0].results[0].failed_outbox==0' /tmp/final-out.json >/dev/null
+          EVENT_KEY="$(jq -r '.result[0].results[0].event_archive_key' /tmp/final-out.json)"
+
+          python - <<'PY' >/tmp/candle-archive-query.json
+          import json
+          ids=[x.strip() for x in open('/tmp/candle-ids') if x.strip()]
+          placeholders=','.join('?' for _ in ids)
+          print(json.dumps({'sql':f'SELECT id,archive_key FROM market_candles WHERE id IN ({placeholders})','params':ids}))
+          PY
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/candle-archive-query.json \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_ID}/query" >/tmp/candle-archives.json
+          jq -e '.result[0].results|length==6 and all(.archive_key!=null)' /tmp/candle-archives.json >/dev/null
+
+          mkdir -p /tmp/r2-proof
+          npx --yes wrangler@4 r2 object get "${R2_NAME}/${SNAP_KEY}" --remote --file /tmp/r2-proof/snapshot.json >/dev/null
+          npx --yes wrangler@4 r2 object get "${R2_NAME}/${EVENT_KEY}" --remote --file /tmp/r2-proof/event.json >/dev/null
+          i=0
+          while IFS= read -r key; do
+            [ -n "$key" ] || continue
+            i=$((i+1))
+            npx --yes wrangler@4 r2 object get "${R2_NAME}/${key}" --remote --file "/tmp/r2-proof/candle-${i}.json" >/dev/null
+          done < <(jq -r '.result[0].results[].archive_key' /tmp/candle-archives.json)
+          test "$i" -eq 6
+          find /tmp/r2-proof -type f -size +0c | wc -l | grep -qx '8'
+
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues/${QUEUE_ID}/metrics" >/tmp/queue-after.json
+          jq -e '.success and .result.backlog_count==0' /tmp/queue-after.json >/dev/null
+
+          echo "DAY2_FINAL_SNAPSHOT_ID=$SNAP_ID"
+          echo "DAY2_FINAL_SCHEDULED_CAPTURE=$SNAP_TS"
+          echo 'DAY2_FINAL_TIMEFRAMES=1m,5m,15m,1h,4h,1d'
+          echo 'DAY2_FINAL_POSITION_TRUTH=[]'
+          echo 'DAY2_FINAL_PIT_FED_LINK=PASS'
+          echo 'DAY2_FINAL_R2_OBJECTS_VERIFIED=8'
+          echo 'DAY2_FINAL_OUTBOX_PENDING=0'
+          echo 'DAY2_FINAL_OUTBOX_FAILED=0'
+          echo 'DAY 2 AUTHORITATIVE FINAL GATE PASSED'
