@@ -1,5 +1,6 @@
 name: AIDY Day 2 Queue Consumer Probe
 
+# v3 proves the Cloudflare ABI signature while AIDY uses WorkerEntrypoint's wrapped self.env.
 on:
   push:
     branches:
@@ -69,7 +70,7 @@ jobs:
           )"
           python - "$NOW_MS" <<'PY' >/tmp/message.json
           import json,sys
-          print(json.dumps({'body':{'scheduledTime':int(sys.argv[1]),'cron':'manual-day2-queue-consumer-proof-v2'},'content_type':'json'}))
+          print(json.dumps({'body':{'scheduledTime':int(sys.argv[1]),'cron':'manual-day2-queue-consumer-proof-v3'},'content_type':'json'}))
           PY
           curl -fsS -X POST \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
