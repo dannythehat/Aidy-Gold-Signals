@@ -118,11 +118,13 @@ jobs:
                           })
                       except Exception as exc:
                           code = exc.code if isinstance(exc, MetaApiReadError) else None
+                          safe_message = str(exc)[:240] if isinstance(exc, RuntimeError) else None
                           return Response.json({
                               "ok": False,
                               "stage": "capture_runtime",
                               "error_type": type(exc).__name__,
                               "error_code": code,
+                              "runtime_message": safe_message,
                           }, status=500)
 
                   return Response("Not found", status=404)
