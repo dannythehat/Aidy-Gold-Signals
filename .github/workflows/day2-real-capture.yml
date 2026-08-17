@@ -1,0 +1,356 @@
+name: AIDY Day 2 Real Capture Gate
+
+# Day 2 enables genuine read-only XAUUSD/Fed capture on the existing test stack.
+# No production resources, Telegram, OpenAI trading or broker mutation are allowed here.
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-real-capture.yml"
+      - "wrangler.test.example.jsonc"
+      - "src/**"
+      - "tests/**"
+      - "migrations/d1/**"
+      - "ops/day2-cloudflare-trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day2-real-capture
+  cancel-in-progress: false
+
+jobs:
+  real-capture-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Prefer AIDY-specific secret names, but accept legacy generic names if
+      # they already exist in this AIDY repository's own Actions secrets.
+      AIDY_METAAPI_TOKEN: ${{ secrets.AIDY_METAAPI_TOKEN || secrets.METAAPI_TOKEN }}
+      AIDY_METAAPI_ACCOUNT_ID: ${{ secrets.AIDY_METAAPI_ACCOUNT_ID || secrets.METAAPI_ACCOUNT_ID }}
+      WORKER_NAME: aidy-signals-test
+      WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+      D1_NAME: aidy-ops-test
+      R2_NAME: aidy-memory-test
+
+    steps:
+      - name: Checkout Day 2 branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Verify Day 2 code gate
+        run: uv run pytest -q
+
+      - name: Resolve scoped Cloudflare account
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Missing CLOUDFLARE_API_TOKEN secret"; exit 1; }
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "Using scoped Cloudflare account ID from Actions secret."
+            exit 0
+          fi
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/accounts?per_page=50" \
+            > /tmp/cloudflare-accounts.json
+          python - <<'PY'
+          import json, os
+          p = json.load(open('/tmp/cloudflare-accounts.json', encoding='utf-8'))
+          rows = p.get('result') or []
+          if not p.get('success') or len(rows) != 1:
+              raise SystemExit(f"Expected one scoped Cloudflare account, found {len(rows)}")
+          account_id = rows[0]['id']
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f'CLOUDFLARE_ACCOUNT_ID={account_id}\n')
+          print(f"Resolved one scoped Cloudflare account: {account_id}")
+          PY
+
+      - name: Resolve existing Day 2 test resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          D1_API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database"
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "${D1_API}?name=${D1_NAME}&per_page=100" > /tmp/d1.json
+          D1_ID="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/d1.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          rows=[r for r in (p.get('result') or []) if r.get('name')=='aidy-ops-test']
+          if len(rows) != 1:
+              raise SystemExit(f'Expected exactly one aidy-ops-test database, found {len(rows)}')
+          print(rows[0].get('uuid',''))
+          PY
+          )"
+          test -n "$D1_ID"
+          echo "AIDY_D1_ID=$D1_ID" >> "$GITHUB_ENV"
+
+          R2_API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/r2/buckets"
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$R2_API" > /tmp/r2.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/r2.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          result=p.get('result') or {}
+          rows=result.get('buckets', []) if isinstance(result, dict) else result
+          matches=[r for r in rows if r.get('name')=='aidy-memory-test']
+          if len(matches) != 1:
+              raise SystemExit(f'Expected exactly one aidy-memory-test bucket, found {len(matches)}')
+          print('Existing Day 2 D1/R2 resources verified.')
+          PY
+
+      - name: Record pre-Day-2 evidence baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['D1_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['R2_NAME']
+          with open('wrangler.day2.ci.jsonc','w',encoding='utf-8') as fh:
+              json.dump(cfg, fh, indent=2)
+              fh.write('\n')
+          PY
+
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day2.ci.jsonc \
+            --command "SELECT COALESCE(MAX(captured_at),'') AS ts FROM market_snapshots" \
+            > /tmp/baseline-snapshot.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day2.ci.jsonc \
+            --command "SELECT COUNT(*) AS n FROM market_event_observations" \
+            > /tmp/baseline-events.json
+          python - <<'PY'
+          import json, os
+          def first_result(path):
+              p=json.load(open(path, encoding='utf-8'))
+              block=p[0] if isinstance(p, list) else p
+              return (block.get('results') or [{}])[0]
+          snapshot=first_result('/tmp/baseline-snapshot.json').get('ts') or ''
+          events=int(first_result('/tmp/baseline-events.json').get('n') or 0)
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as fh:
+              fh.write(f'AIDY_DAY2_BASELINE_SNAPSHOT={snapshot}\n')
+              fh.write(f'AIDY_DAY2_BASELINE_EVENTS={events}\n')
+          print(f'Baseline latest snapshot: {snapshot or "none"}')
+          print(f'Baseline event observations: {events}')
+          PY
+
+      - name: Ensure MetaAPI secrets exist on the test Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 secret list --name "${WORKER_NAME}" --format json > /tmp/worker-secrets.json
+          HAVE_TOKEN="$(jq -r 'any(.[]; .name == "AIDY_METAAPI_TOKEN")' /tmp/worker-secrets.json)"
+          HAVE_ACCOUNT="$(jq -r 'any(.[]; .name == "AIDY_METAAPI_ACCOUNT_ID")' /tmp/worker-secrets.json)"
+
+          if [ "$HAVE_TOKEN" != "true" ]; then
+            test -n "${AIDY_METAAPI_TOKEN:-}" || {
+              echo "::error::AIDY_METAAPI_TOKEN is not already on the Worker and no AIDY_METAAPI_TOKEN/METAAPI_TOKEN Actions secret is available."
+              exit 1
+            }
+            printf '%s' "$AIDY_METAAPI_TOKEN" | npx --yes wrangler@4 secret put AIDY_METAAPI_TOKEN --name "${WORKER_NAME}"
+          fi
+
+          if [ "$HAVE_ACCOUNT" != "true" ]; then
+            test -n "${AIDY_METAAPI_ACCOUNT_ID:-}" || {
+              echo "::error::AIDY_METAAPI_ACCOUNT_ID is not already on the Worker and no AIDY_METAAPI_ACCOUNT_ID/METAAPI_ACCOUNT_ID Actions secret is available."
+              exit 1
+            }
+            printf '%s' "$AIDY_METAAPI_ACCOUNT_ID" | npx --yes wrangler@4 secret put AIDY_METAAPI_ACCOUNT_ID --name "${WORKER_NAME}"
+          fi
+
+          npx --yes wrangler@4 secret list --name "${WORKER_NAME}" --format json > /tmp/worker-secrets-after.json
+          jq -e 'any(.[]; .name == "AIDY_METAAPI_TOKEN") and any(.[]; .name == "AIDY_METAAPI_ACCOUNT_ID")' \
+            /tmp/worker-secrets-after.json >/dev/null
+          echo "Required MetaAPI secret names are present on the test Worker; values were not exposed."
+
+      - name: Apply D1 migrations
+        run: npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day2.ci.jsonc
+
+      - name: Deploy Day 2 capture Worker and Cron
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day2.ci.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/day2-deploy.log
+          grep -q 'aidy-signals-test' /tmp/day2-deploy.log
+          echo "Day 2 test Worker deployed with capture enabled and one-minute Cron declared."
+
+      - name: Verify live health boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=""
+          for attempt in $(seq 1 24); do
+            code="$(curl -sS -o /tmp/day2-health.json -w '%{http_code}' "${WORKER_URL}/health" || true)"
+            if [ "$code" = "200" ] && jq -e \
+              '.status == "ok" and .environment == "test" and .capture_enabled == true' \
+              /tmp/day2-health.json >/dev/null 2>&1; then
+              break
+            fi
+            sleep 5
+          done
+          cat /tmp/day2-health.json || true
+          test "$code" = "200"
+          jq -e '.status == "ok" and .environment == "test" and .capture_enabled == true' \
+            /tmp/day2-health.json >/dev/null
+
+      - name: Wait for genuine scheduled XAUUSD evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          FOUND="no"
+          for attempt in $(seq 1 30); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.day2.ci.jsonc \
+              --command "SELECT id,captured_at,capture_status,bid,ask,quote_age_seconds,latest_m1_id,latest_m5_id,position_state_json,data_availability_json,archive_key FROM market_snapshots WHERE captured_at > '${AIDY_DAY2_BASELINE_SNAPSHOT}' AND capture_status IN ('complete','partial') AND bid IS NOT NULL AND ask IS NOT NULL AND latest_m1_id IS NOT NULL AND latest_m5_id IS NOT NULL ORDER BY captured_at DESC LIMIT 1" \
+              > /tmp/day2-snapshot.json
+            COUNT="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/day2-snapshot.json', encoding='utf-8'))
+          block=p[0] if isinstance(p, list) else p
+          print(len(block.get('results') or []))
+          PY
+            )"
+            if [ "$COUNT" -gt 0 ]; then
+              FOUND="yes"
+              break
+            fi
+            sleep 30
+          done
+          test "$FOUND" = "yes" || { echo "::error::No qualifying scheduled XAUUSD snapshot arrived within the Cron propagation window."; exit 1; }
+          cat /tmp/day2-snapshot.json
+
+      - name: Verify genuine Fed evidence arrived
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day2.ci.jsonc \
+            --command "SELECT COUNT(*) AS n FROM market_event_observations" \
+            > /tmp/day2-events-count.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day2.ci.jsonc \
+            --command "SELECT id,source,event_type,published_at,first_observed_at,revision_index,headline,archive_key FROM market_event_observations ORDER BY first_observed_at DESC LIMIT 1" \
+            > /tmp/day2-event.json
+          python - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/day2-events-count.json', encoding='utf-8'))
+          block=p[0] if isinstance(p, list) else p
+          now=int((block.get('results') or [{}])[0].get('n') or 0)
+          baseline=int(os.environ['AIDY_DAY2_BASELINE_EVENTS'])
+          if now <= baseline:
+              raise SystemExit(f'No new Fed observations captured: baseline={baseline}, current={now}')
+          print(f'Fed observations increased from {baseline} to {now}.')
+          PY
+          cat /tmp/day2-event.json
+
+      - name: Verify D1 to R2 evidence round trips
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day2.ci.jsonc \
+            --command "SELECT archive_key FROM market_snapshots WHERE captured_at > '${AIDY_DAY2_BASELINE_SNAPSHOT}' ORDER BY captured_at DESC LIMIT 1" \
+            > /tmp/day2-snapshot-key.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day2.ci.jsonc \
+            --command "SELECT archive_key FROM market_candles WHERE first_observed_at > '${AIDY_DAY2_BASELINE_SNAPSHOT}' ORDER BY first_observed_at DESC LIMIT 1" \
+            > /tmp/day2-candle-key.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day2.ci.jsonc \
+            --command "SELECT archive_key FROM market_event_observations ORDER BY first_observed_at DESC LIMIT 1" \
+            > /tmp/day2-event-key.json
+          python - <<'PY'
+          import json, os
+          def key(path):
+              p=json.load(open(path, encoding='utf-8'))
+              block=p[0] if isinstance(p, list) else p
+              rows=block.get('results') or []
+              if not rows or not rows[0].get('archive_key'):
+                  raise SystemExit(f'Missing archive key in {path}')
+              return rows[0]['archive_key']
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as fh:
+              fh.write(f'AIDY_DAY2_SNAPSHOT_KEY={key("/tmp/day2-snapshot-key.json")}\n')
+              fh.write(f'AIDY_DAY2_CANDLE_KEY={key("/tmp/day2-candle-key.json")}\n')
+              fh.write(f'AIDY_DAY2_EVENT_KEY={key("/tmp/day2-event-key.json")}\n')
+          PY
+
+          npx --yes wrangler@4 r2 object get "${R2_NAME}/${AIDY_DAY2_SNAPSHOT_KEY}" --remote --file /tmp/day2-snapshot-r2.json
+          npx --yes wrangler@4 r2 object get "${R2_NAME}/${AIDY_DAY2_CANDLE_KEY}" --remote --file /tmp/day2-candle-r2.json
+          npx --yes wrangler@4 r2 object get "${R2_NAME}/${AIDY_DAY2_EVENT_KEY}" --remote --file /tmp/day2-event-r2.json
+          test -s /tmp/day2-snapshot-r2.json
+          test -s /tmp/day2-candle-r2.json
+          test -s /tmp/day2-event-r2.json
+          echo "Direct R2 downloads succeeded for snapshot, candle and Fed event evidence."
+
+      - name: Verify archive outbox is caught up
+        shell: bash
+        run: |
+          set -euo pipefail
+          CAUGHT_UP="no"
+          for attempt in $(seq 1 10); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.day2.ci.jsonc \
+              --command "SELECT COUNT(*) AS pending FROM archive_outbox WHERE status='pending'" \
+              > /tmp/day2-pending.json
+            PENDING="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/day2-pending.json', encoding='utf-8'))
+          block=p[0] if isinstance(p, list) else p
+          print(int((block.get('results') or [{}])[0].get('pending') or 0))
+          PY
+            )"
+            if [ "$PENDING" -eq 0 ]; then
+              CAUGHT_UP="yes"
+              break
+            fi
+            sleep 30
+          done
+          test "$CAUGHT_UP" = "yes" || { echo "::error::Archive outbox still has pending evidence after retry window."; exit 1; }
+          echo "Archive outbox caught up: pending=0."
+
+      - name: Day 2 evidence summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## AIDY Day 2 real evidence capture"
+            echo "- Branch: ${GITHUB_REF_NAME}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Worker: ${WORKER_NAME}"
+            echo "- D1: ${D1_NAME}"
+            echo "- R2: ${R2_NAME}"
+            echo "- Intended Cron: every minute (UTC)"
+            [ -f /tmp/day2-health.json ] && { echo "- Health:"; cat /tmp/day2-health.json; echo; } || true
+            [ -f /tmp/day2-snapshot.json ] && { echo "- Real snapshot evidence:"; cat /tmp/day2-snapshot.json; echo; } || true
+            [ -f /tmp/day2-event.json ] && { echo "- Real Fed evidence:"; cat /tmp/day2-event.json; echo; } || true
+            [ -f /tmp/day2-pending.json ] && { echo "- Archive pending check:"; cat /tmp/day2-pending.json; echo; } || true
+          } >> "$GITHUB_STEP_SUMMARY"
