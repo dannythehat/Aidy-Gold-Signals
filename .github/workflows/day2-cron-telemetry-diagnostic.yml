@@ -1,0 +1,100 @@
+name: AIDY Day 2 Cron Telemetry Diagnostic
+
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-cron-telemetry-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-cron-telemetry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_NAME: aidy-signals-test
+    steps:
+      - name: Query Cloudflare invocation telemetry read-only
+        shell: bash
+        run: |
+          set -u
+          base="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/observability/telemetry"
+          auth="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          python - <<'PY' > /tmp/query.json
+          import json, time, os
+          now=int(time.time()*1000)
+          body={
+            "queryId":"aidy-day2-cron-diagnostic",
+            "timeframe":{"from":now-45*60*1000,"to":now},
+            "dry":True,
+            "view":"events",
+            "limit":200,
+            "parameters":{
+              "datasets":["cloudflare-workers"],
+              "filterCombination":"and",
+              "filters":[{
+                "key":"$metadata.service",
+                "operation":"eq",
+                "type":"string",
+                "value":os.environ["WORKER_NAME"]
+              }]
+            }
+          }
+          print(json.dumps(body,separators=(',',':')))
+          PY
+
+          code="$(curl -sS -o /tmp/telemetry.json -w '%{http_code}' -X POST \
+            -H "$auth" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/query.json "${base}/query" || true)"
+          echo "telemetry_http_status=${code}"
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              p=json.loads(Path('/tmp/telemetry.json').read_text(encoding='utf-8'))
+          except Exception as exc:
+              print(f'telemetry_parse_error={exc}')
+              raise SystemExit(0)
+
+          if not p.get('success'):
+              print('telemetry_api_success=false')
+              print('telemetry_errors='+json.dumps(p.get('errors') or [],separators=(',',':')))
+              raise SystemExit(0)
+
+          print('telemetry_api_success=true')
+          result=p.get('result') or {}
+          events=result.get('events') or []
+          print(f'telemetry_event_count={len(events)}')
+          useful=[]
+          for e in events:
+              workers=e.get('$workers') or {}
+              meta=e.get('$metadata') or {}
+              source=e.get('source')
+              useful.append({
+                'timestamp':e.get('timestamp'),
+                'eventType':workers.get('eventType'),
+                'scriptName':workers.get('scriptName'),
+                'outcome':workers.get('outcome'),
+                'trigger':e.get('trigger') or meta.get('trigger'),
+                'message':meta.get('message'),
+                'error':meta.get('error'),
+                'source':source if isinstance(source,str) else None,
+              })
+          # Newest first, compact, and never print arbitrary structured source payloads.
+          useful.sort(key=lambda x: x.get('timestamp') or 0, reverse=True)
+          for row in useful[:100]:
+              print('event='+json.dumps(row,separators=(',',':'),default=str))
+          stats=result.get('statistics') or {}
+          if stats:
+              print('telemetry_statistics='+json.dumps(stats,separators=(',',':')))
+          PY
+
+          echo "Telemetry diagnostic completed; no Cloudflare or AIDY state was mutated."
