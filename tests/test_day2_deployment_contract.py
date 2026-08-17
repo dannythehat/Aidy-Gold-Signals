@@ -38,6 +38,11 @@ def test_day2_capture_worker_is_queue_consumer_and_capture_enabled() -> None:
     ]
 
 
+def test_day2_python_queue_handler_uses_cloudflare_runtime_signature() -> None:
+    source = Path("src/entry.py").read_text(encoding="utf-8")
+    assert "async def queue(self, batch, env, ctx):" in source
+
+
 def test_day2_scheduler_is_minimal_one_minute_queue_producer() -> None:
     config = _scheduler_config()
     assert config["name"] == "aidy-signals-scheduler-test"
