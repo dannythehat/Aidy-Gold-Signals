@@ -19,8 +19,9 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       QUEUE_ID: b7b899247ecd4f6f897cc468c3bcbb36
       SCHEDULER_WORKER: aidy-signals-scheduler-test
+      CAPTURE_WORKER: aidy-signals-test
     steps:
-      - name: Read Cloudflare scheduler and queue telemetry
+      - name: Read Cloudflare scheduler queue and Worker telemetry
         shell: bash
         run: |
           set -euo pipefail
@@ -54,7 +55,30 @@ jobs:
           curl -fsS https://api.cloudflare.com/client/v4/graphql \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H 'Content-Type: application/json' --data-binary @/tmp/scheduler-graphql.json \
-            | tee /tmp/scheduler-graphql-out.json | jq .
+            | jq .
+
+          python - "$START" "$END" <<'PY' >/tmp/worker-graphql.json
+          import json,os,sys
+          query='''query Q($accountTag: string, $start: string, $end: string, $script: string) {
+            viewer { accounts(filter:{accountTag:$accountTag}) {
+              workersInvocationsAdaptive(limit:100, filter:{scriptName:$script, datetime_geq:$start, datetime_leq:$end}) {
+                dimensions { datetime scriptName status }
+                quantiles { cpuTimeP50 cpuTimeP99 }
+                sum { errors requests subrequests }
+              }
+            }}
+          }'''
+          print(json.dumps({'query':query,'variables':{
+            'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
+            'start':sys.argv[1],'end':sys.argv[2],
+            'script':os.environ['CAPTURE_WORKER']
+          }}))
+          PY
+          echo '--- Python capture Worker invocation analytics ---'
+          curl -fsS https://api.cloudflare.com/client/v4/graphql \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' --data-binary @/tmp/worker-graphql.json \
+            | tee /tmp/worker-graphql-out.json | jq .
 
           python - "$START" "$END" <<'PY' >/tmp/queue-graphql.json
           import json,os,sys
@@ -79,4 +103,4 @@ jobs:
           curl -fsS https://api.cloudflare.com/client/v4/graphql \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H 'Content-Type: application/json' --data-binary @/tmp/queue-graphql.json \
-            | tee /tmp/queue-graphql-out.json | jq .
+            | jq .
