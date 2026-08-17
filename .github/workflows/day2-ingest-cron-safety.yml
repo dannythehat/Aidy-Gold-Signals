@@ -1,0 +1,53 @@
+name: AIDY Day 2 Ingest Cron Safety Check
+
+# Read-only check before consolidating two existing content-engine-ingest schedules.
+# It never prints Worker source; it only reports whether cron literals are referenced.
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-ingest-cron-safety.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-ingest-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SCRIPT_NAME: content-engine-ingest
+
+    steps:
+      - name: Check cron-expression dependencies without printing source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          url="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${SCRIPT_NAME}"
+          code="$(curl -sS -o /tmp/worker-content -w '%{http_code}' -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$url")"
+          test "$code" = "200" || { echo "::error::Worker download failed HTTP ${code}"; exit 1; }
+
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('/tmp/worker-content').read_bytes()
+          probes={
+            'literal_0600': b'0 6 * * *' in p,
+            'literal_1800': b'0 18 * * *' in p,
+            'combined_literal': b'0 6,18 * * *' in p,
+            'controller_dot_cron': b'controller.cron' in p,
+            'event_dot_cron': b'event.cron' in p,
+            'scheduledTime': b'scheduledTime' in p,
+          }
+          print('Cron dependency probes (source not printed):')
+          for k,v in probes.items():
+              print(f'{k}={str(v).lower()}')
+          # Fail closed if either existing schedule literal is embedded in code.
+          if probes['literal_0600'] or probes['literal_1800']:
+              raise SystemExit('Existing schedule literal is embedded in Worker content; do not consolidate without code-level review.')
+          PY
