@@ -1,0 +1,158 @@
+name: AIDY Day 2 Final Evidence Verify
+
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - '.github/workflows/day2-final-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-day2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      D1_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      R2_NAME: aidy-memory-test
+      DEPLOYED_AFTER: '2026-08-17T05:04:29+00:00'
+    steps:
+      - name: Query Day 2 evidence once
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python - <<'PY'
+          import json, os
+          threshold=os.environ['DEPLOYED_AFTER']
+          sql=f"""
+          SELECT id,captured_at,capture_status,bid,ask,mid,spread,quote_time,quote_age_seconds,
+                 session_code,position_state_json,event_observation_ids_json,
+                 latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,
+                 archive_key
+          FROM market_snapshots
+          WHERE captured_at > '{threshold}'
+            AND capture_status IN ('complete','partial')
+            AND bid IS NOT NULL AND ask IS NOT NULL
+          ORDER BY captured_at DESC LIMIT 1;
+          """
+          open('/tmp/snapshot-query.json','w').write(json.dumps({'sql':sql}))
+          sql=f"""
+          SELECT timeframe,id,first_observed_at,archive_key
+          FROM market_candles c
+          WHERE first_observed_at > '{threshold}'
+            AND open_time_utc=(SELECT MAX(c2.open_time_utc) FROM market_candles c2 WHERE c2.timeframe=c.timeframe)
+          ORDER BY timeframe;
+          """
+          open('/tmp/candles-query.json','w').write(json.dumps({'sql':sql}))
+          sql=f"""
+          SELECT id,source,event_type,published_at,first_observed_at,revision_index,archive_key
+          FROM market_event_observations
+          WHERE first_observed_at > '{threshold}'
+          ORDER BY first_observed_at DESC LIMIT 1;
+          """
+          open('/tmp/event-query.json','w').write(json.dumps({'sql':sql}))
+          open('/tmp/outbox-query.json','w').write(json.dumps({'sql':"SELECT status,COUNT(*) AS n FROM archive_outbox GROUP BY status ORDER BY status"}))
+          PY
+          query() {
+            curl -fsS -X POST \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              -H 'Content-Type: application/json' \
+              --data-binary "@$1" \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_ID}/query"
+          }
+          query /tmp/snapshot-query.json > /tmp/snapshot.json
+          query /tmp/candles-query.json > /tmp/candles.json
+          query /tmp/event-query.json > /tmp/event.json
+          query /tmp/outbox-query.json > /tmp/outbox.json
+
+          python - <<'PY'
+          import json, os
+          def rows(path):
+              p=json.load(open(path))
+              if not p.get('success'): raise SystemExit(f'{path}: D1 query failed: {p.get("errors")}')
+              return ((p.get('result') or [{}])[0].get('results') or [])
+          snap_rows=rows('/tmp/snapshot.json')
+          if not snap_rows: raise SystemExit('No qualifying scheduled snapshot after Day 2 deployment')
+          s=snap_rows[0]
+          required_ids=['latest_m1_id','latest_m5_id','latest_m15_id','latest_h1_id','latest_h4_id','latest_d1_id']
+          missing=[k for k in required_ids if not s.get(k)]
+          if missing: raise SystemExit(f'Snapshot missing timeframe links: {missing}')
+          if s.get('position_state_json') != '[]': raise SystemExit(f'Expected known-empty [] position truth, got {s.get("position_state_json")!r}')
+          age=s.get('quote_age_seconds')
+          if age is None or float(age)>300: raise SystemExit(f'Quote stale: age={age}')
+          if s.get('spread') is None: raise SystemExit('Spread missing')
+          event_ids=json.loads(s.get('event_observation_ids_json') or '[]')
+          if not event_ids: raise SystemExit('Latest scheduled snapshot has no PIT-linked Fed observations')
+
+          candle_rows=rows('/tmp/candles.json')
+          have={r.get('timeframe') for r in candle_rows}
+          expected={'1m','5m','15m','1h','4h','1d'}
+          if have != expected: raise SystemExit(f'Expected six timeframes, have={sorted(have)}')
+          if any(not r.get('archive_key') for r in candle_rows): raise SystemExit('A candle archive key is missing')
+
+          event_rows=rows('/tmp/event.json')
+          if not event_rows: raise SystemExit('No new Fed observation after Day 2 deployment')
+          e=event_rows[0]
+          if not e.get('archive_key'): raise SystemExit('Fed archive key missing')
+          if e.get('id') not in event_ids:
+              # The latest snapshot may link an earlier observation rather than the newest one.
+              # Prove at least one linked ID is known by querying it next.
+              open('/tmp/linked-event-id','w').write(str(event_ids[0]))
+          else:
+              open('/tmp/linked-event-id','w').write(str(e.get('id')))
+
+          out=rows('/tmp/outbox.json')
+          states={r['status']:int(r['n']) for r in out}
+          if states.get('pending',0) or states.get('failed',0): raise SystemExit(f'Archive backlog not clean: {states}')
+
+          keys=[s['archive_key']] + [r['archive_key'] for r in candle_rows] + [e['archive_key']]
+          open('/tmp/archive-keys','w').write('\n'.join(keys)+'\n')
+          print('DAY2_SNAPSHOT='+json.dumps({
+            'captured_at':s['captured_at'],'capture_status':s['capture_status'],
+            'quote_age_seconds':s['quote_age_seconds'],'session_code':s['session_code'],
+            'position_state_json':s['position_state_json'],'spread_present':s['spread'] is not None,
+            'pit_linked_event_count':len(event_ids),'all_six_timeframes_linked':True,
+          },separators=(',',':')))
+          print('DAY2_CANDLES='+json.dumps(sorted(have)))
+          print('DAY2_EVENT='+json.dumps({k:e.get(k) for k in ('source','event_type','published_at','first_observed_at','revision_index')},separators=(',',':')))
+          print('DAY2_OUTBOX='+json.dumps(states,separators=(',',':')))
+          PY
+
+          LINKED_ID="$(cat /tmp/linked-event-id)"
+          python - "$LINKED_ID" <<'PY' >/tmp/linked-event-query.json
+          import json,sys
+          print(json.dumps({'sql':'SELECT id,first_observed_at,archive_key FROM market_event_observations WHERE id=?','params':[sys.argv[1]]}))
+          PY
+          query /tmp/linked-event-query.json > /tmp/linked-event.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/linked-event.json'))
+          rows=((p.get('result') or [{}])[0].get('results') or [])
+          if not rows: raise SystemExit('PIT-linked event ID does not exist in D1')
+          if not rows[0].get('archive_key'): raise SystemExit('PIT-linked event lacks archive key')
+          print('DAY2_PIT_LINKED_EVENT='+json.dumps(rows[0],separators=(',',':')))
+          PY
+
+      - name: Verify D1 archive keys exist in R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/r2-proof
+          i=0
+          while IFS= read -r key; do
+            [ -n "$key" ] || continue
+            i=$((i+1))
+            npx --yes wrangler@4 r2 object get "${R2_NAME}/${key}" --file "/tmp/r2-proof/${i}.json" --remote >/dev/null
+            test -s "/tmp/r2-proof/${i}.json"
+          done < /tmp/archive-keys
+          echo "DAY2_R2_OBJECTS_VERIFIED=${i}"
+          test "$i" -eq 8
+
+      - name: Day 2 final acceptance
+        run: echo 'DAY 2 FINAL EVIDENCE VERIFY PASSED'
