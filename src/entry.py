@@ -99,12 +99,16 @@ class Default(WorkerEntrypoint):
 
     async def queue(self, batch, env, ctx):
         """Consume one scheduled-capture message using Cloudflare's Python queue ABI."""
-        del ctx  # Context is not required by the deterministic capture cycle.
+        # Cloudflare supplies env/ctx as ABI arguments, but WorkerEntrypoint wraps
+        # the constructor environment as self.env. AIDY bindings must use that
+        # wrapped environment for D1/R2/secret conversion.
+        del env, ctx
+        worker_env = self.env
         settings: AidySettings | None = None
         for message in batch.messages:
             try:
-                settings = AidySettings.from_worker_env(env)
-                _, repository = _repository(env)
+                settings = AidySettings.from_worker_env(worker_env)
+                _, repository = _repository(worker_env)
                 scheduled_at = _scheduled_at_from_queue_body(message.body)
                 await run_worker_scheduled_cycle(
                     settings,
@@ -112,7 +116,7 @@ class Default(WorkerEntrypoint):
                     scheduled_at=scheduled_at,
                 )
             except Exception as exc:
-                await _write_test_queue_error(env, settings, exc)
+                await _write_test_queue_error(worker_env, settings, exc)
                 message.retry(delaySeconds=30)
             else:
                 message.ack()
