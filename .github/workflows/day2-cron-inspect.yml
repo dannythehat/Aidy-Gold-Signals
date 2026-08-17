@@ -1,0 +1,71 @@
+name: AIDY Day 2 Cron Inspect
+
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - '.github/workflows/day2-cron-inspect.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_NAME: aidy-signals-test
+    steps:
+      - name: Read schedule and scheduled-invocation analytics
+        shell: bash
+        run: |
+          set -u
+          echo '--- schedules ---'
+          curl -sS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}/schedules" \
+            | tee /tmp/schedules.json | jq '{success,errors,result}'
+
+          START="$(date -u -d '45 minutes ago' +%Y-%m-%dT%H:%M:%SZ)"
+          END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python - "$START" "$END" <<'PY' >/tmp/graphql.json
+          import json,os,sys
+          query='''query Q($accountTag: string, $start: string, $end: string, $script: string) {
+            viewer { accounts(filter:{accountTag:$accountTag}) {
+              workersInvocationsScheduled(limit:100, filter:{scriptName:$script, datetime_geq:$start, datetime_leq:$end}) {
+                dimensions { datetime scriptName status }
+                sum { requests errors subrequests }
+              }
+            }}
+          }'''
+          print(json.dumps({'query':query,'variables':{
+            'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
+            'start':sys.argv[1],'end':sys.argv[2],'script':os.environ['WORKER_NAME']
+          }}))
+          PY
+          echo '--- scheduled analytics ---'
+          curl -sS https://api.cloudflare.com/client/v4/graphql \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/graphql.json \
+            | tee /tmp/graphql-out.json | jq .
+
+          python - <<'PY' >/tmp/settings.json
+          import json,os
+          query='''query Q($accountTag: string) {
+            viewer { accounts(filter:{accountTag:$accountTag}) {
+              settings { workersInvocationsScheduled { enabled availableFields maxPageSize maxNumberOfFields notOlderThan maxDuration } }
+            }}
+          }'''
+          print(json.dumps({'query':query,'variables':{'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID']}}))
+          PY
+          echo '--- scheduled dataset settings ---'
+          curl -sS https://api.cloudflare.com/client/v4/graphql \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/settings.json | jq .
+
+          echo 'Cron inspection finished; diagnostic is non-mutating.'
