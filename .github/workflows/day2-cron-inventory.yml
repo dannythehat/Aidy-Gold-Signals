@@ -1,0 +1,96 @@
+name: AIDY Day 2 Cloudflare Cron Inventory
+
+# Read-only inventory for resolving the Day 2 cron-capacity gate.
+# Lists Worker script names and their cron schedules; performs no mutations.
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-cron-inventory.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cron-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: Inventory Worker Cron triggers
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+
+          API="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts"
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$API" > /tmp/workers.json
+
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/workers.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          rows=p.get('result') or []
+          ids=sorted(str(r.get('id')) for r in rows if r.get('id'))
+          open('/tmp/worker-ids.txt','w',encoding='utf-8').write('\n'.join(ids)+'\n')
+          print(f'Workers discovered: {len(ids)}')
+          PY
+
+          : > /tmp/cron-inventory.jsonl
+          while IFS= read -r script; do
+            [ -n "$script" ] || continue
+            encoded="$(python -c 'import sys,urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$script")"
+            url="${API}/${encoded}/schedules"
+            code="$(curl -sS -o /tmp/schedules.json -w '%{http_code}' -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "$url")"
+            if [ "$code" != "200" ]; then
+              echo "::error::Failed to read schedules for Worker ${script}: HTTP ${code}"
+              cat /tmp/schedules.json
+              exit 1
+            fi
+            python - "$script" <<'PY' >> /tmp/cron-inventory.jsonl
+          import json,sys
+          script=sys.argv[1]
+          p=json.load(open('/tmp/schedules.json', encoding='utf-8'))
+          if not p.get('success'):
+              raise SystemExit(p.get('errors'))
+          result=p.get('result') or {}
+          schedules=result.get('schedules', []) if isinstance(result, dict) else result
+          print(json.dumps({
+              'worker': script,
+              'schedules': [
+                  {
+                      'cron': s.get('cron'),
+                      'created_on': s.get('created_on'),
+                      'modified_on': s.get('modified_on')
+                  }
+                  for s in (schedules or [])
+              ]
+          }, separators=(',',':')))
+          PY
+          done < /tmp/worker-ids.txt
+
+          python - <<'PY'
+          import json, os
+          rows=[json.loads(x) for x in open('/tmp/cron-inventory.jsonl',encoding='utf-8') if x.strip()]
+          active=[r for r in rows if r['schedules']]
+          total=sum(len(r['schedules']) for r in active)
+          print(f'Active cron triggers: {total}')
+          print('--- CRON INVENTORY ---')
+          for r in active:
+              for s in r['schedules']:
+                  print(f"{r['worker']} | {s.get('cron')} | created={s.get('created_on')} | modified={s.get('modified_on')}")
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf-8') as fh:
+              fh.write('## Cloudflare Worker Cron inventory\n\n')
+              fh.write(f'**Active cron triggers: {total}**\n\n')
+              fh.write('| Worker | Cron (UTC) | Created | Modified |\n|---|---|---|---|\n')
+              for r in active:
+                  for s in r['schedules']:
+                      fh.write(f"| `{r['worker']}` | `{s.get('cron')}` | {s.get('created_on') or ''} | {s.get('modified_on') or ''} |\n")
+          PY
