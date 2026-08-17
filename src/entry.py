@@ -16,9 +16,18 @@ def _repository(env):
     return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
 
 
-def _scheduled_at(controller) -> datetime:
-    milliseconds = float(controller.scheduledTime)
-    return datetime.fromtimestamp(milliseconds / 1000.0, tz=UTC)
+def _scheduled_at_from_queue_body(body: object) -> datetime:
+    if not isinstance(body, dict):
+        raise ValueError("AIDY queue message body must be an object.")
+    raw = body.get("scheduledTime")
+    if isinstance(raw, bool) or raw is None:
+        raise ValueError("AIDY queue message is missing scheduledTime.")
+    try:
+        milliseconds = float(raw)
+        scheduled_at = datetime.fromtimestamp(milliseconds / 1000.0, tz=UTC)
+    except (TypeError, ValueError, OverflowError, OSError) as exc:
+        raise ValueError("AIDY queue scheduledTime is invalid.") from exc
+    return scheduled_at
 
 
 class Default(WorkerEntrypoint):
@@ -33,6 +42,7 @@ class Default(WorkerEntrypoint):
                     "runtime": "cloudflare-workers",
                     "environment": str(getattr(self.env, "AIDY_ENV", "unknown")),
                     "capture_enabled": settings.capture_enabled,
+                    "scheduler": "queue-consumer",
                 }
             )
 
@@ -64,11 +74,27 @@ class Default(WorkerEntrypoint):
 
         return Response("Not found", status=404)
 
-    async def scheduled(self, controller, env, ctx):
-        _, repository = _repository(env)
-        settings = AidySettings.from_worker_env(env)
-        await run_worker_scheduled_cycle(
-            settings,
-            repository=repository,
-            scheduled_at=_scheduled_at(controller),
-        )
+    async def queue(self, batch):
+        _, repository = _repository(self.env)
+        settings = AidySettings.from_worker_env(self.env)
+        for message in batch.messages:
+            try:
+                scheduled_at = _scheduled_at_from_queue_body(message.body)
+            except ValueError:
+                # The producer is AIDY-owned. A malformed message is a poison
+                # message, not a transient market-data failure, so discard it.
+                message.ack()
+                continue
+
+            try:
+                await run_worker_scheduled_cycle(
+                    settings,
+                    repository=repository,
+                    scheduled_at=scheduled_at,
+                )
+            except Exception:
+                # D1/R2 writes are idempotent/revision-safe. Retry transient
+                # network/runtime failures without acknowledging the message.
+                message.retry(delaySeconds=30)
+            else:
+                message.ack()
