@@ -78,6 +78,19 @@ Vantage or Super Signals.
 - No direct follower-trade execution from AIDY.
 - No live-money capability during build and paper evaluation.
 
+## Day 3 evidence-health boundary
+
+The continuity auditor is deterministic and runs against D1/R2 bindings. It
+does not ask OpenAI whether the evidence is healthy. It calculates expected
+versus observed scheduler cycles, quote age, snapshot status, M1/M5 candle
+gaps, revision counts, source errors, archive backlog/retries and D1-to-R2
+object existence. A material unknown or mismatch fails closed.
+
+The live Day 3 gate additionally requires `AIDY_CAPTURE_ENABLED=true`,
+`AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated`, and an installed adapter whose
+name matches `AIDY_MARKET_DATA_SOURCE`. Super Signals credentials can never
+satisfy this gate.
+
 ## Superseded prototype
 
 The PostgreSQL/Alembic extraction from the 15 August prototype is retained temporarily as reference for recorder semantics, append-only revisions and tests. It is not the target persistence implementation and must be refactored behind Cloudflare/BigQuery storage interfaces before Day 1 is closed.
