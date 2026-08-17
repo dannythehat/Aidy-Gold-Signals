@@ -36,8 +36,13 @@ jobs:
           query='''query Q($accountTag: string, $start: string, $end: string, $script: string) {
             viewer { accounts(filter:{accountTag:$accountTag}) {
               workersInvocationsScheduled(limit:100, filter:{scriptName:$script, datetime_geq:$start, datetime_leq:$end}) {
-                dimensions { datetime scriptName status }
-                sum { requests errors subrequests }
+                cpuTimeUs
+                cron
+                datetime
+                environmentName
+                scheduledDatetime
+                scriptName
+                status
               }
             }}
           }'''
@@ -52,20 +57,5 @@ jobs:
             -H 'Content-Type: application/json' \
             --data-binary @/tmp/graphql.json \
             | tee /tmp/graphql-out.json | jq .
-
-          python - <<'PY' >/tmp/settings.json
-          import json,os
-          query='''query Q($accountTag: string) {
-            viewer { accounts(filter:{accountTag:$accountTag}) {
-              settings { workersInvocationsScheduled { enabled availableFields maxPageSize maxNumberOfFields notOlderThan maxDuration } }
-            }}
-          }'''
-          print(json.dumps({'query':query,'variables':{'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID']}}))
-          PY
-          echo '--- scheduled dataset settings ---'
-          curl -sS https://api.cloudflare.com/client/v4/graphql \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H 'Content-Type: application/json' \
-            --data-binary @/tmp/settings.json | jq .
 
           echo 'Cron inspection finished; diagnostic is non-mutating.'
