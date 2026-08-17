@@ -20,6 +20,9 @@
       "AIDY_METAAPI_ACCOUNT_ID"
     ]
   },
+  "triggers": {
+    "crons": []
+  },
   "queues": {
     "consumers": [
       {
