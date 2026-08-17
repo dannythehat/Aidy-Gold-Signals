@@ -1,0 +1,33 @@
+name: AIDY Day 2 Sync MetaAPI Token
+
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - '.github/workflows/day2-sync-metaapi-token.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sync-token:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_METAAPI_TOKEN: ${{ secrets.AIDY_METAAPI_TOKEN }}
+      WORKER_NAME: aidy-signals-test
+    steps:
+      - name: Sync rotated MetaAPI token to test Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AIDY_METAAPI_TOKEN:-}"
+          printf '%s' "$AIDY_METAAPI_TOKEN" | npx --yes wrangler@4 secret put AIDY_METAAPI_TOKEN --name "$WORKER_NAME" >/tmp/secret-put.log
+          npx --yes wrangler@4 secret list --name "$WORKER_NAME" --format json >/tmp/secret-list.json
+          jq -e 'any(.[]; .name == "AIDY_METAAPI_TOKEN") and any(.[]; .name == "AIDY_METAAPI_ACCOUNT_ID")' /tmp/secret-list.json >/dev/null
+          echo "Rotated MetaAPI token synchronized to AIDY test Worker; secret value not printed."
