@@ -1,0 +1,198 @@
+name: AIDY Day 2 ZoneInfo Fix Proof
+
+on:
+  push:
+    branches:
+      - feature/day-2-zoneinfo-fix
+    paths:
+      - '.github/workflows/day2-zoneinfo-fix-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prove-zoneinfo-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_METAAPI_TOKEN: ${{ secrets.AIDY_METAAPI_TOKEN }}
+      AIDY_METAAPI_ACCOUNT_ID: 9bcef441-1821-4479-88c7-bcf3d210e9a3
+      DIAG_WORKER: aidy-signals-zoneinfo-proof
+      DIAG_URL: https://aidy-signals-zoneinfo-proof.dannythehat2.workers.dev
+      D1_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Run fixed code test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pytest -q
+
+      - name: Deploy temporary fixed capture proof Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > src/day2_zoneinfo_proof_entry.py <<'PY'
+          from __future__ import annotations
+
+          from datetime import UTC, datetime
+          from urllib.parse import urlparse
+
+          from workers import Response, WorkerEntrypoint
+
+          from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
+          from aidy.config import AidySettings
+          from aidy.market_recorder import FAST_TIMEFRAMES
+          from aidy.runtime import run_capture_cycle
+          from aidy.storage_contracts import AidyMarketRepository
+
+
+          def _repository(env):
+              operational = D1OperationalEvidenceStore(env.AIDY_OPS)
+              return AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
+
+
+          class Default(WorkerEntrypoint):
+              async def fetch(self, request):
+                  path = urlparse(request.url).path
+                  if path == '/health':
+                      return Response.json({'ok': True})
+                  if path != '/probe/capture':
+                      return Response('Not found', status=404)
+                  try:
+                      settings = AidySettings.from_worker_env(self.env)
+                      result = await run_capture_cycle(
+                          settings,
+                          repository=_repository(self.env),
+                          now=datetime.now(UTC),
+                          timeframes=FAST_TIMEFRAMES,
+                          include_market=True,
+                          include_fed=False,
+                      )
+                      if result is None or result.market is None:
+                          return Response.json({'ok': False, 'error': 'no_market_result'}, status=500)
+                      return Response.json({
+                          'ok': True,
+                          'capture_status': result.market.status,
+                          'market_open': result.market.market_open,
+                          'stored_candles': result.market.stored_candles,
+                          'snapshot_written': result.market.snapshot_id is not None,
+                          'archive_attempted': result.archive.attempted,
+                          'archive_archived': result.archive.archived,
+                          'archive_failed': result.archive.failed,
+                      })
+                  except Exception as exc:
+                      return Response.json({
+                          'ok': False,
+                          'error_type': type(exc).__name__,
+                          'runtime_message': str(exc)[:240] if isinstance(exc, RuntimeError) else None,
+                      }, status=500)
+          PY
+
+          python - <<'PY'
+          import json, os
+          cfg={
+            'name': os.environ['DIAG_WORKER'],
+            'main': 'src/day2_zoneinfo_proof_entry.py',
+            'compatibility_date': '2026-08-16',
+            'compatibility_flags': ['python_workers'],
+            'vars': {
+              'AIDY_ENV': 'diagnostic',
+              'AIDY_CAPTURE_ENABLED': 'true',
+              'AIDY_MARKET_POLL_SECONDS': '60',
+              'AIDY_SLOW_POLL_SECONDS': '300',
+              'AIDY_MARKET_CLOSED_BACKOFF_SECONDS': '900',
+              'AIDY_MARKET_STALE_SECONDS': '300',
+              'AIDY_FED_RSS_POLL_SECONDS': '120',
+              'AIDY_ARCHIVE_FLUSH_LIMIT': '100'
+            },
+            'd1_databases': [{
+              'binding': 'AIDY_OPS',
+              'database_name': 'aidy-ops-test',
+              'database_id': os.environ['D1_ID'],
+              'migrations_dir': 'migrations/d1'
+            }],
+            'r2_buckets': [{'binding': 'AIDY_MEMORY', 'bucket_name': 'aidy-memory-test'}]
+          }
+          with open('wrangler.jsonc','w',encoding='utf-8') as f:
+              json.dump(cfg,f,indent=2); f.write('\n')
+          PY
+
+          uv run pywrangler deploy >/tmp/deploy.log 2>&1
+          printf '%s' "$AIDY_METAAPI_TOKEN" | npx --yes wrangler@4 secret put AIDY_METAAPI_TOKEN --name "$DIAG_WORKER" >/dev/null
+          printf '%s' "$AIDY_METAAPI_ACCOUNT_ID" | npx --yes wrangler@4 secret put AIDY_METAAPI_ACCOUNT_ID --name "$DIAG_WORKER" >/dev/null
+          echo 'Temporary proof Worker deployed without Cron; secrets not printed.'
+
+      - name: Prove one real fixed capture
+        shell: bash
+        run: |
+          set -euo pipefail
+          health='000'
+          for i in $(seq 1 30); do
+            health="$(curl --max-time 4 -sS -o /tmp/health.json -w '%{http_code}' "$DIAG_URL/health" || true)"
+            [ "$health" = '200' ] && break
+            sleep 3
+          done
+          echo "proof_health_http=${health}"
+          test "$health" = '200'
+
+          capture="$(curl --max-time 60 -sS -o /tmp/capture.json -w '%{http_code}' "$DIAG_URL/probe/capture" || true)"
+          echo "proof_capture_http=${capture}"
+          cat /tmp/capture.json
+          echo
+          test "$capture" = '200'
+          jq -e '.ok == true and .snapshot_written == true and .archive_failed == 0' /tmp/capture.json >/dev/null
+
+          python - <<'PY' >/tmp/query.json
+          import json
+          print(json.dumps({'sql':"SELECT id,captured_at,capture_status,bid,ask,quote_age_seconds,session_code,position_state_json,latest_m1_id,latest_m5_id,archive_key FROM market_snapshots ORDER BY captured_at DESC LIMIT 1"}))
+          PY
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/query.json \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_ID}/query" \
+            >/tmp/d1.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/d1.json',encoding='utf-8'))
+          block=(p.get('result') or [{}])[0]
+          rows=block.get('results') or []
+          if not rows:
+              raise SystemExit('No D1 snapshot after fixed capture')
+          row=rows[0]
+          safe={
+            'captured_at':row.get('captured_at'),
+            'capture_status':row.get('capture_status'),
+            'has_bid':row.get('bid') is not None,
+            'has_ask':row.get('ask') is not None,
+            'quote_age_seconds':row.get('quote_age_seconds'),
+            'session_code':row.get('session_code'),
+            'position_state_json':row.get('position_state_json'),
+            'has_m1':row.get('latest_m1_id') is not None,
+            'has_m5':row.get('latest_m5_id') is not None,
+            'archive_key':row.get('archive_key'),
+          }
+          print('fixed_d1_snapshot='+json.dumps(safe,separators=(',',':')))
+          PY
+
+      - name: Remove temporary proof Worker
+        if: always()
+        shell: bash
+        run: |
+          set -u
+          code="$(curl -sS -o /tmp/delete.json -w '%{http_code}' -X DELETE \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${DIAG_WORKER}" || true)"
+          echo "proof_worker_delete_http=${code}"
