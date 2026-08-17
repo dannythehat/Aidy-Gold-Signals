@@ -1,0 +1,93 @@
+name: AIDY Day 1 Live Verification
+
+# One-shot verification of the already deployed test Worker. No deploy and no schedules.
+on:
+  push:
+    branches:
+      - feature/day-1-aidy-foundation
+    paths:
+      - ".github/workflows/day1-live-verify.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+    steps:
+      - name: Wait for first workers.dev route and verify health
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=""
+          for attempt in $(seq 1 12); do
+            code="$(curl -sS -o /tmp/health.json -w '%{http_code}' "${WORKER_URL}/health" || true)"
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            echo "Health attempt ${attempt}: HTTP ${code}; waiting 5s"
+            sleep 5
+          done
+          echo "Health response:"
+          cat /tmp/health.json || true
+          echo
+          test "$code" = "200"
+          jq -e '.status == "ok" and .environment == "test" and .capture_enabled == false' /tmp/health.json >/dev/null
+
+      - name: Run real D1 to outbox to R2 smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST "${WORKER_URL}/day1/storage-smoke" > /tmp/smoke.json
+          cat /tmp/smoke.json
+          jq -e '.ok == true and .outbox_status == "archived" and (.archive_key | length > 0)' /tmp/smoke.json >/dev/null
+          echo "AIDY_SMOKE_ARCHIVE_KEY=$(jq -r '.archive_key' /tmp/smoke.json)" >> "$GITHUB_ENV"
+          echo "AIDY_SMOKE_PROBE_ID=$(jq -r '.probe_id' /tmp/smoke.json)" >> "$GITHUB_ENV"
+
+      - name: Resolve the scoped Cloudflare account
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts?per_page=50" > /tmp/accounts.json
+          count="$(jq '.result | length' /tmp/accounts.json)"
+          test "$(jq -r '.success' /tmp/accounts.json)" = "true"
+          test "$count" = "1"
+          echo "CLOUDFLARE_ACCOUNT_ID=$(jq -r '.result[0].id' /tmp/accounts.json)" >> "$GITHUB_ENV"
+
+      - name: Verify D1 evidence directly
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute aidy-ops-test \
+            --remote --json \
+            --command "SELECT p.id,p.archive_key,o.status,o.attempts FROM storage_smoke_probes p JOIN archive_outbox o ON o.evidence_id=p.id WHERE p.archive_key='${AIDY_SMOKE_ARCHIVE_KEY}' LIMIT 1" \
+            | tee /tmp/d1-evidence.json
+          grep -q 'archived' /tmp/d1-evidence.json
+          grep -q "${AIDY_SMOKE_PROBE_ID}" /tmp/d1-evidence.json
+
+      - name: Verify archived object directly in R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/${AIDY_SMOKE_ARCHIVE_KEY}" --remote --file /tmp/aidy-smoke.json
+          test -s /tmp/aidy-smoke.json
+          echo "Verified R2 object: aidy-memory-test/${AIDY_SMOKE_ARCHIVE_KEY}"
+
+      - name: Evidence summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## AIDY Day 1 live verification"
+            echo "- Worker: aidy-signals-test"
+            echo "- D1: aidy-ops-test"
+            echo "- R2: aidy-memory-test"
+            [ -f /tmp/health.json ] && { echo "- Health:"; cat /tmp/health.json; echo; } || true
+            [ -f /tmp/smoke.json ] && { echo "- Smoke:"; cat /tmp/smoke.json; echo; } || true
+          } >> "$GITHUB_STEP_SUMMARY"
