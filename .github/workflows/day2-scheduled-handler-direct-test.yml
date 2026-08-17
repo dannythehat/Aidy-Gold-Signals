@@ -50,10 +50,11 @@ jobs:
               f.write('AIDY_METAAPI_TOKEN="'+os.environ['AIDY_METAAPI_TOKEN']+'"\n')
               f.write('AIDY_METAAPI_ACCOUNT_ID="'+os.environ['AIDY_METAAPI_ACCOUNT_ID']+'"\n')
           PY
+          cp wrangler.day2.dev.jsonc wrangler.jsonc
 
           : >/tmp/pywrangler.log
           timeout --signal=INT --kill-after=5s 85s \
-            uv run pywrangler dev --remote --test-scheduled --port 8787 --config wrangler.day2.dev.jsonc \
+            uv run pywrangler dev --remote --test-scheduled --port 8787 \
             >/tmp/pywrangler.log 2>&1 &
           dev_pid=$!
 
