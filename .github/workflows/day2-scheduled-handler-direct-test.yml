@@ -1,0 +1,109 @@
+name: AIDY Day 2 Scheduled Handler Direct Test
+
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - '.github/workflows/day2-scheduled-handler-direct-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scheduled-direct-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_METAAPI_TOKEN: ${{ secrets.AIDY_METAAPI_TOKEN }}
+      AIDY_METAAPI_ACCOUNT_ID: ${{ secrets.AIDY_METAAPI_ACCOUNT_ID }}
+      D1_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Exercise Python scheduled handler directly
+        shell: bash
+        run: |
+          set -u
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync >/dev/null 2>&1 || true
+
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0].update({
+              'database_name':'aidy-ops-test',
+              'database_id':os.environ['D1_ID'],
+          })
+          cfg['r2_buckets'][0].update({'bucket_name':'aidy-memory-test'})
+          with open('wrangler.day2.dev.jsonc','w',encoding='utf-8') as f:
+              json.dump(cfg,f,indent=2); f.write('\n')
+          with open('.dev.vars','w',encoding='utf-8') as f:
+              f.write('AIDY_METAAPI_TOKEN="'+os.environ['AIDY_METAAPI_TOKEN']+'"\n')
+              f.write('AIDY_METAAPI_ACCOUNT_ID="'+os.environ['AIDY_METAAPI_ACCOUNT_ID']+'"\n')
+          PY
+
+          : >/tmp/pywrangler.log
+          timeout --signal=INT --kill-after=5s 85s \
+            uv run pywrangler dev --remote --test-scheduled --port 8787 --config wrangler.day2.dev.jsonc \
+            >/tmp/pywrangler.log 2>&1 &
+          dev_pid=$!
+
+          health_code=''
+          for i in $(seq 1 20); do
+            health_code="$(curl --max-time 2 -sS -o /tmp/dev-health.json -w '%{http_code}' http://127.0.0.1:8787/health || true)"
+            [ "$health_code" = '200' ] && break
+            sleep 2
+          done
+          echo "dev_health_http=${health_code}"
+
+          scheduled_code='not_attempted'
+          if [ "$health_code" = '200' ]; then
+            scheduled_code="$(curl --max-time 55 -sS -o /tmp/scheduled-response.txt -w '%{http_code}' \
+              'http://127.0.0.1:8787/cdn-cgi/handler/scheduled?cron=*%20*%20*%20*%20*&format=json' || true)"
+            echo "scheduled_test_http=${scheduled_code}"
+            echo 'scheduled_response_begin'
+            head -c 1000 /tmp/scheduled-response.txt 2>/dev/null || true
+            echo
+            echo 'scheduled_response_end'
+          fi
+
+          sleep 2
+          kill "$dev_pid" 2>/dev/null || true
+          wait "$dev_pid" 2>/dev/null || true
+
+          python - <<'PY' >/tmp/d1-payload.json
+          import json
+          print(json.dumps({'sql':'SELECT COUNT(*) AS snapshots, MAX(captured_at) AS latest FROM market_snapshots'}))
+          PY
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data-binary @/tmp/d1-payload.json \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/d1/database/${D1_ID}/query" \
+            >/tmp/d1-result.json || true
+          python - <<'PY'
+          import json
+          try:
+              p=json.load(open('/tmp/d1-result.json',encoding='utf-8'))
+              block=(p.get('result') or [{}])[0]
+              print('d1_after_direct_test='+json.dumps(block.get('results') or [],separators=(',',':')))
+          except Exception as exc:
+              print('d1_read_error='+type(exc).__name__)
+          PY
+
+          echo 'safe_runtime_diagnostics_begin'
+          grep -Ei 'error|exception|traceback|ready on|starting|scheduled|remote|warning' /tmp/pywrangler.log \
+            | sed -E 's/(auth-token|AIDY_METAAPI_TOKEN)[^[:space:]]*/\1=[MASKED]/Ig' \
+            | tail -n 60 || true
+          echo 'safe_runtime_diagnostics_end'
+          rm -f .dev.vars
+          echo 'Direct scheduled-handler diagnostic completed; job intentionally does not fail on diagnostic outcome.'
