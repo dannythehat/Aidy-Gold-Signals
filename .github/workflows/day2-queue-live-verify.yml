@@ -5,11 +5,7 @@ name: AIDY Day 2 Queue Live Verify
 # snapshot after BASELINE therefore has to come from the live one-minute Cron
 # producer -> Cloudflare Queue -> Python AIDY consumer path.
 on:
-  push:
-    branches:
-      - feature/day-2-queue-scheduler-fix
-    paths:
-      - '.github/workflows/day2-queue-live-verify.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
