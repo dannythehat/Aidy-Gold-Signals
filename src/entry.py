@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import traceback
 from datetime import UTC, datetime
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from workers import Response, WorkerEntrypoint
 
 from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
 from aidy.config import AidySettings
+from aidy.continuity_auditor import ContinuityPolicy, D1R2ContinuityReader, audit_window
 from aidy.runtime import run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
 
@@ -20,7 +21,7 @@ def _repository(env):
 
 def _scheduled_at_from_queue_body(body: object) -> datetime:
     if not isinstance(body, dict):
-        raise ValueError("AIDY queue message body must be an object.")
+        raise TypeError("AIDY queue message body must be an object.")
     raw = body.get("scheduledTime")
     if isinstance(raw, bool) or raw is None:
         raise ValueError("AIDY queue message is missing scheduledTime.")
@@ -95,6 +96,41 @@ class Default(WorkerEntrypoint):
                 status=200 if ok else 503,
             )
 
+        if request.method == "GET" and url.path == "/day3/continuity":
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            try:
+                query = parse_qs(url.query)
+                minutes = int(query.get("minutes", ["10"])[0])
+                archive_limit = int(query.get("archive_limit", ["40"])[0])
+                start, end = audit_window(end=datetime.now(UTC), minutes=minutes)
+                settings = AidySettings.from_worker_env(self.env)
+                report = await D1R2ContinuityReader(
+                    self.env.AIDY_OPS,
+                    self.env.AIDY_MEMORY,
+                ).load_and_audit(
+                    start=start,
+                    end=end,
+                    archive_limit=archive_limit,
+                    policy=ContinuityPolicy(
+                        expected_source=settings.market_data_source,
+                        capture_enabled=settings.capture_enabled,
+                        ownership_confirmed=(
+                            settings.market_data_ownership == "aidy_dedicated"
+                        ),
+                        stale_quote_seconds=settings.market_stale_seconds,
+                    ),
+                )
+            except (TypeError, ValueError, RuntimeError) as exc:
+                return Response.json(
+                    {"ok": False, "error": type(exc).__name__, "message": str(exc)},
+                    status=400,
+                )
+            return Response.json(
+                {"ok": report.passed, "report": report.as_dict()},
+                status=200 if report.passed else 503,
+            )
+
         return Response("Not found", status=404)
 
     async def queue(self, batch, env, ctx):
@@ -115,7 +151,7 @@ class Default(WorkerEntrypoint):
                     repository=repository,
                     scheduled_at=scheduled_at,
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - queue failures must retry safely
                 await _write_test_queue_error(worker_env, settings, exc)
                 message.retry(delaySeconds=30)
             else:
