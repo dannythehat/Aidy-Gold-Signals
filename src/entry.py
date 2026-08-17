@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import traceback
 from datetime import UTC, datetime
 from urllib.parse import urlparse
 
@@ -28,6 +30,28 @@ def _scheduled_at_from_queue_body(body: object) -> datetime:
     except (TypeError, ValueError, OverflowError, OSError) as exc:
         raise ValueError("AIDY queue scheduledTime is invalid.") from exc
     return scheduled_at
+
+
+async def _write_test_queue_error(env, settings: AidySettings, exc: Exception) -> None:
+    if str(getattr(env, "AIDY_ENV", "")).lower() != "test":
+        return
+    token = settings.metaapi_token or ""
+    message = str(exc)
+    trace = traceback.format_exc()
+    if token:
+        message = message.replace(token, "[redacted]")
+        trace = trace.replace(token, "[redacted]")
+    payload = {
+        "observed_at": datetime.now(UTC).isoformat(),
+        "exception_type": type(exc).__name__,
+        "message": message[:1000],
+        "traceback": trace[-6000:],
+    }
+    await env.AIDY_MEMORY.put(
+        "diagnostics/day2-queue-consumer-error.json",
+        json.dumps(payload, sort_keys=True),
+        httpMetadata={"contentType": "application/json"},
+    )
 
 
 class Default(WorkerEntrypoint):
@@ -81,8 +105,6 @@ class Default(WorkerEntrypoint):
             try:
                 scheduled_at = _scheduled_at_from_queue_body(message.body)
             except ValueError:
-                # The producer is AIDY-owned. A malformed message is a poison
-                # message, not a transient market-data failure, so discard it.
                 message.ack()
                 continue
 
@@ -92,9 +114,8 @@ class Default(WorkerEntrypoint):
                     repository=repository,
                     scheduled_at=scheduled_at,
                 )
-            except Exception:
-                # D1/R2 writes are idempotent/revision-safe. Retry transient
-                # network/runtime failures without acknowledging the message.
+            except Exception as exc:
+                await _write_test_queue_error(self.env, settings, exc)
                 message.retry(delaySeconds=30)
             else:
                 message.ack()
