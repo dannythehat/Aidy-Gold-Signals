@@ -1,5 +1,7 @@
 name: AIDY Day 2 Queue Scheduler Proof
 
+# The Python consumer explicitly sets triggers.crons=[] so its old direct Cron
+# is removed before the minimal scheduler Worker takes the account's fifth slot.
 on:
   push:
     branches:
