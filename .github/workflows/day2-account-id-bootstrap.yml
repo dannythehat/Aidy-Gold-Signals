@@ -1,0 +1,42 @@
+name: AIDY Day 2 Account ID Bootstrap
+
+# One-shot Day 2 helper. The MetaAPI account ID is an identifier, not a credential.
+# This workflow writes the already-verified existing Vantage DEMO MetaAPI account ID
+# into the Cloudflare test Worker secret store without exposing the MetaAPI token.
+on:
+  push:
+    branches:
+      - feature/day-2-real-evidence-capture
+    paths:
+      - ".github/workflows/day2-account-id-bootstrap.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap-account-id:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WORKER_NAME: aidy-signals-test
+      AIDY_METAAPI_ACCOUNT_ID: 9bcef441-1821-4479-88c7-bcf3d210e9a3
+
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install verified account ID on test Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+          printf '%s' "$AIDY_METAAPI_ACCOUNT_ID" | npx --yes wrangler@4 secret put AIDY_METAAPI_ACCOUNT_ID --name "$WORKER_NAME"
+          npx --yes wrangler@4 secret list --name "$WORKER_NAME" --format json > /tmp/worker-secrets.json
+          jq -e 'any(.[]; .name == "AIDY_METAAPI_ACCOUNT_ID")' /tmp/worker-secrets.json >/dev/null
+          echo "Verified AIDY_METAAPI_ACCOUNT_ID binding exists on ${WORKER_NAME}; value not printed."
