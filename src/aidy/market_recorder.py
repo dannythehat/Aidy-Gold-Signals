@@ -15,7 +15,6 @@ from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Protocol
 from uuid import UUID
-from zoneinfo import ZoneInfo
 
 from .metaapi_read_gateway import MetaApiReadError, MetaApiReadGateway
 from .storage_contracts import AidyMarketRepository
@@ -113,11 +112,58 @@ def _digest(value: object) -> str:
     return sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def _first_sunday(year: int, month: int) -> datetime:
+    first = datetime(year, month, 1, tzinfo=UTC)
+    return first + timedelta(days=(6 - first.weekday()) % 7)
+
+
+def _last_sunday(year: int, month: int) -> datetime:
+    if month == 12:
+        first_next_month = datetime(year + 1, 1, 1, tzinfo=UTC)
+    else:
+        first_next_month = datetime(year, month + 1, 1, tzinfo=UTC)
+    last = first_next_month - timedelta(days=1)
+    return last - timedelta(days=(last.weekday() - 6) % 7)
+
+
+def _london_utc_offset_hours(now: datetime) -> int:
+    """Return London offset without relying on host tzdata.
+
+    AIDY uses the modern UK rule: clocks advance at 01:00 UTC on the last
+    Sunday in March and return at 01:00 UTC on the last Sunday in October.
+    """
+
+    now = _utc(now)
+    start_day = _last_sunday(now.year, 3)
+    end_day = _last_sunday(now.year, 10)
+    start = start_day.replace(hour=1)
+    end = end_day.replace(hour=1)
+    return 1 if start <= now < end else 0
+
+
+def _new_york_utc_offset_hours(now: datetime) -> int:
+    """Return New York offset without relying on host tzdata.
+
+    AIDY uses the modern US rule (2007+): DST begins on the second Sunday in
+    March at 07:00 UTC and ends on the first Sunday in November at 06:00 UTC.
+    The live recorder and current research window are intentionally governed by
+    this explicit rule so Cloudflare runtime images cannot change session labels.
+    """
+
+    now = _utc(now)
+    first_march_sunday = _first_sunday(now.year, 3)
+    second_march_sunday = first_march_sunday + timedelta(days=7)
+    first_november_sunday = _first_sunday(now.year, 11)
+    start = second_march_sunday.replace(hour=7)
+    end = first_november_sunday.replace(hour=6)
+    return -4 if start <= now < end else -5
+
+
 def _session_code(now: datetime) -> str:
     now = _utc(now)
-    london = now.astimezone(ZoneInfo("Europe/London"))
-    new_york = now.astimezone(ZoneInfo("America/New_York"))
-    tokyo = now.astimezone(ZoneInfo("Asia/Tokyo"))
+    london = now + timedelta(hours=_london_utc_offset_hours(now))
+    new_york = now + timedelta(hours=_new_york_utc_offset_hours(now))
+    tokyo = now + timedelta(hours=9)
     london_open = 8 <= london.hour < 17 and london.weekday() < 5
     new_york_open = 8 <= new_york.hour < 17 and new_york.weekday() < 5
     tokyo_open = 9 <= tokyo.hour < 18 and tokyo.weekday() < 5
