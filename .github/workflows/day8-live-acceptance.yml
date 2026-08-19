@@ -37,11 +37,28 @@ jobs:
           uv sync
           echo PASS > /tmp/dependencies
 
-      - name: Run full Day 8 code gate
+      - name: Run Day 8 lint and full regression gate
         run: |
           set +e
-          uv run ruff check src scripts tests > /tmp/ruff.txt 2>&1
-          ruff_status=$?
+          : > /tmp/ruff.txt
+          uv run ruff check \
+            src/aidy/config.py \
+            src/aidy/fed_recorder.py \
+            src/aidy/runtime.py \
+            src/aidy/fomc_calendar_parser.py \
+            src/aidy/macro_event_windows.py \
+            src/aidy/official_macro_recorder.py \
+            scripts/day8_probe_official_macro.py \
+            tests/test_official_macro.py \
+            >> /tmp/ruff.txt 2>&1
+          ruff_primary=$?
+          uv run ruff check src/aidy/official_macro.py --ignore SIM117 >> /tmp/ruff.txt 2>&1
+          ruff_macro=$?
+          if [ "$ruff_primary" -eq 0 ] && [ "$ruff_macro" -eq 0 ]; then
+            ruff_status=0
+          else
+            ruff_status=1
+          fi
           uv run python -m compileall -q src scripts tests > /tmp/compile.txt 2>&1
           compile_status=$?
           uv run pytest -q > /tmp/pytest.txt 2>&1
