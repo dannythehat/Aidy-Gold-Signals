@@ -10,10 +10,11 @@ from aidy.cross_market import (
     SERIES_US10Y,
     SERIES_US10Y_REAL,
     SERIES_USD_BROAD,
+    SOURCE_FED_H10,
     CrossMarketError,
     CrossMarketGateway,
     CrossMarketObservation,
-    parse_fred_broad_dollar_csv,
+    parse_fed_h10_broad_dollar,
     parse_treasury_yield_xml,
 )
 from aidy.cross_market_asof import reconstruct_cross_market_as_of
@@ -21,10 +22,12 @@ from aidy.cross_market_bigquery import ArchivedCrossMarketEvidence
 from aidy.cross_market_recorder import AidyCrossMarketRecorderService
 from aidy.cross_market_storage import cross_market_archive_key
 
-FRED_CSV = b"""observation_date,DTWEXBGS
-2026-08-17,119.1000
-2026-08-18,119.2500
-"""
+FED_H10_HTML = b"""<html><body>
+<div>Release Date: August 17, 2026</div>
+<table>
+<tr><th>COUNTRY</th><th>CURRENCY</th><th>Aug. 10</th><th>Aug. 11</th><th>Aug. 12</th><th>Aug. 13</th><th>Aug. 14</th></tr>
+<tr><td>1) BROAD</td><td>JAN06=100</td><td>119.12</td><td>119.20</td><td>119.33</td><td>119.40</td><td>119.50</td></tr>
+</table></body></html>"""
 
 TREASURY_NOMINAL = b"""<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom"
@@ -48,12 +51,14 @@ TREASURY_REAL = b"""<?xml version="1.0"?>
 </feed>"""
 
 
-def test_fred_broad_dollar_uses_latest_real_daily_observation() -> None:
-    observation = parse_fred_broad_dollar_csv(FRED_CSV)
+def test_fed_h10_broad_dollar_uses_latest_released_daily_observation() -> None:
+    observation = parse_fed_h10_broad_dollar(FED_H10_HTML)
+    assert observation.source == SOURCE_FED_H10
     assert observation.series_id == SERIES_USD_BROAD
-    assert observation.observation_date == date(2026, 8, 18)
-    assert observation.value == "119.25"
+    assert observation.observation_date == date(2026, 8, 14)
+    assert observation.value == "119.5"
     assert observation.unit == "index_jan_2006_100"
+    assert observation.source_url.startswith("https://www.federalreserve.gov/")
     assert len(observation.source_document_digest) == 64
 
 
@@ -206,12 +211,12 @@ class _FakeRepository:
 class _FakeGateway:
     async def fetch_broad_dollar(self):
         return CrossMarketObservation(
-            source="fred_stlouisfed",
+            source=SOURCE_FED_H10,
             series_id=SERIES_USD_BROAD,
-            observation_date=date(2026, 8, 18),
-            value="119.25",
+            observation_date=date(2026, 8, 14),
+            value="119.5",
             unit="index_jan_2006_100",
-            source_url="https://fred.stlouisfed.org/source",
+            source_url="https://www.federalreserve.gov/releases/h10/current/default.htm",
             source_document_digest="a" * 64,
         )
 
