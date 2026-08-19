@@ -35,6 +35,12 @@ DEFAULT_LOCATION = "EU"
 DEFAULT_SYMBOL = "XAUUSD"
 DEFAULT_TIMEFRAMES = ("M1", "M5", "M15", "H1", "H4", "D1")
 DEFAULT_BATCH_SIZE = 25_000
+_DURABLE_DAY4_TABLES = (
+    "market_candles",
+    "market_snapshots",
+    "market_event_observations",
+    "export_manifest",
+)
 
 
 def _require_google() -> tuple[Any, Any, Any]:
@@ -107,6 +113,48 @@ def _ensure_dataset(
         raise RuntimeError(
             f"BigQuery dataset {dataset_id} exists in {existing.location}, expected {location}."
         )
+    update_fields: list[str] = []
+    if existing.default_table_expiration_ms is not None:
+        existing.default_table_expiration_ms = None
+        update_fields.append("default_table_expiration_ms")
+    if existing.default_partition_expiration_ms is not None:
+        existing.default_partition_expiration_ms = None
+        update_fields.append("default_partition_expiration_ms")
+    if update_fields:
+        client.update_dataset(existing, update_fields)
+
+
+def _clear_partition_expiration(
+    client: Any,
+    bigquery: Any,
+    *,
+    table: Any,
+) -> None:
+    partitioning = getattr(table, "time_partitioning", None)
+    if partitioning is None or partitioning.expiration_ms is None:
+        return
+    table.time_partitioning = bigquery.TimePartitioning(
+        type_=partitioning.type_,
+        field=partitioning.field,
+    )
+    client.update_table(table, ["time_partitioning"])
+
+
+def _clear_existing_day4_retention(
+    client: Any,
+    bigquery: Any,
+    not_found: type[Exception],
+    *,
+    project: str,
+    dataset: str,
+) -> None:
+    for name in _DURABLE_DAY4_TABLES:
+        table_id = _table_id(project, dataset, name)
+        try:
+            table = client.get_table(table_id)
+        except not_found:
+            continue
+        _clear_partition_expiration(client, bigquery, table=table)
 
 
 def _ensure_fact_table(
@@ -147,6 +195,7 @@ def _ensure_fact_table(
         raise RuntimeError(f"BigQuery partition drift detected for {table_id}.")
     if tuple(existing.clustering_fields or ()) != spec.clustering_fields:
         raise RuntimeError(f"BigQuery clustering drift detected for {table_id}.")
+    _clear_partition_expiration(client, bigquery, table=existing)
 
 
 def _ensure_stage_table(
@@ -179,6 +228,13 @@ def _ensure_stage_table(
 def ensure_warehouse(client: Any, *, project: str, dataset: str, location: str) -> None:
     bigquery, _, not_found = _require_google()
     _ensure_dataset(client, bigquery, project=project, dataset=dataset, location=location)
+    _clear_existing_day4_retention(
+        client,
+        bigquery,
+        not_found,
+        project=project,
+        dataset=dataset,
+    )
     for spec in (RESEARCH_CANDLES, RESEARCH_BACKFILL_MANIFEST):
         _ensure_fact_table(
             client,
