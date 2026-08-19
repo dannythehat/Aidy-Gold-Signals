@@ -4,9 +4,10 @@ import argparse
 import json
 import os
 import sys
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 from uuid import uuid4
 
 from aidy.bigquery_exporter import FieldSpec, TableSpec
@@ -415,8 +416,8 @@ def _client_from_env(project: str | None, location: str) -> tuple[Any, str]:
 
 
 def _iter_candle_rows(candles: dict[str, list[Any]]) -> Iterable[dict[str, object]]:
-    for timeframe in candles:
-        for candle in candles[timeframe]:
+    for values in candles.values():
+        for candle in values:
             yield candle.to_row()
 
 
@@ -478,7 +479,6 @@ def process_period(
     candle_merge_job: str | None = None
     manifest_merge_job: str | None = None
     query_bytes = 0
-    cleanup_errors: list[str] = []
     try:
         candle_load_jobs, loaded = _load_rows(
             client,
@@ -541,20 +541,22 @@ def process_period(
             backfill_id=str(manifest["backfill_identity"]),
         )
     finally:
-        for spec in (RESEARCH_CANDLES, RESEARCH_BACKFILL_MANIFEST):
-            try:
-                _cleanup_stage(
-                    client,
-                    bigquery,
-                    project=project,
-                    dataset=dataset,
-                    spec=spec,
-                    run_id=run_id,
-                )
-            except Exception as exc:
-                cleanup_errors.append(f"{spec.name}: {type(exc).__name__}: {exc}")
-    if cleanup_errors:
-        raise RuntimeError("BigQuery staging cleanup failed: " + " | ".join(cleanup_errors))
+        _cleanup_stage(
+            client,
+            bigquery,
+            project=project,
+            dataset=dataset,
+            spec=RESEARCH_CANDLES,
+            run_id=run_id,
+        )
+        _cleanup_stage(
+            client,
+            bigquery,
+            project=project,
+            dataset=dataset,
+            spec=RESEARCH_BACKFILL_MANIFEST,
+            run_id=run_id,
+        )
 
     return {
         "period": period.key,
