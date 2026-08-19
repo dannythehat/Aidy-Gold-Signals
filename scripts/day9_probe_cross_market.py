@@ -25,9 +25,9 @@ def _validate(observations: list[CrossMarketObservation]) -> dict[str, object]:
         if urlparse(item.source_url).hostname not in {"fred.stlouisfed.org", "home.treasury.gov"}:
             raise RuntimeError(f"Unexpected cross-market source host: {item.series_id}")
         value = Decimal(item.value)
-        if item.unit == "percent" and not Decimal("-20") < value < Decimal("30"):
+        if item.unit == "percent" and not Decimal(-20) < value < Decimal(30):
             raise RuntimeError(f"Implausible Treasury yield: {item.series_id}")
-        if item.unit == "index_jan_2006_100" and not Decimal("20") < value < Decimal("300"):
+        if item.unit == "index_jan_2006_100" and not Decimal(20) < value < Decimal(300):
             raise RuntimeError("Implausible broad-dollar index value.")
         output[item.series_id] = {
             "source": item.source,
