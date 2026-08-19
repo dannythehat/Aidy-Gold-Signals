@@ -16,6 +16,7 @@ from hashlib import sha256
 from uuid import UUID
 
 from .gold_api_gateway import GoldApiGateway, GoldApiReadError
+from .market_sessions import session_code_at
 from .storage_contracts import AidyMarketRepository
 
 SYMBOL = "XAUUSD"
@@ -45,21 +46,9 @@ def _digest(value: object) -> str:
 
 
 def _session_code(now: datetime) -> str:
-    """Provide a deterministic UTC session label without broker state."""
+    """Compatibility wrapper around the canonical Day 7 session clock."""
 
-    hour = now.astimezone(UTC).hour
-    weekday = now.astimezone(UTC).weekday()
-    if weekday >= 5:
-        return "weekend"
-    if 13 <= hour < 17:
-        return "london_new_york_overlap"
-    if 7 <= hour < 16:
-        return "london"
-    if 13 <= hour < 22:
-        return "new_york"
-    if 0 <= hour < 9:
-        return "asia"
-    return "off_hours"
+    return session_code_at(now)
 
 
 class AidyReferencePriceRecorderService:

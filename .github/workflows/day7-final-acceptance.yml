@@ -1,0 +1,317 @@
+name: AIDY Day 7 Final Feature Acceptance
+
+on:
+  push:
+    branches:
+      - feature/day-7-deterministic-gold-features
+    paths:
+      - "ops/day7-final-acceptance-trigger.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day7-final-feature-acceptance
+  cancel-in-progress: false
+
+jobs:
+  final-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-7-deterministic-gold-features
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          echo PASS > /tmp/dependencies
+
+      - name: Run full Day 7 code gate
+        run: |
+          set +e
+          uv run ruff check \
+            src/aidy/feature_engine.py \
+            src/aidy/market_sessions.py \
+            src/aidy/reference_price_recorder.py \
+            scripts/day7_build_feature_packet.py \
+            tests/test_feature_engine.py \
+            tests/test_market_sessions.py \
+            tests/test_reference_session_contract.py \
+            > /tmp/ruff.txt 2>&1
+          ruff_status=$?
+          uv run python -m compileall -q src scripts tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest.txt
+          exit 1
+
+      - name: Prove structural feature boundaries
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from datetime import UTC, datetime
+          from pathlib import Path
+          from aidy.feature_engine import FEATURE_DEFINITION_VERSION
+          from aidy.market_sessions import session_code_at
+
+          assert FEATURE_DEFINITION_VERSION == 'aidy_gold_features_v1'
+          assert session_code_at(datetime(2026, 7, 1, 12, 30, tzinfo=UTC)) == 'london_new_york_overlap'
+          core = Path('src/aidy/feature_engine.py').read_text(encoding='utf-8').lower()
+          adapter = Path('scripts/day7_build_feature_packet.py').read_text(encoding='utf-8').lower()
+          assert 'google.cloud' not in core
+          assert 'google.oauth2' not in core
+          assert 'super-signals' not in core
+          assert 'metaapi' not in core
+          assert 'pit_candle_source = "gold_api"' in adapter
+          assert "provenance_class = 'retrospective_history'" in adapter
+          assert 'pit_eligible = false' in adapter
+          PY
+          echo PASS > /tmp/structural-boundary
+
+      - name: Require Google credential and install BigQuery client
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo MISSING_AIDY_GCP_SERVICE_ACCOUNT_JSON > /tmp/credential-preflight; exit 1; }
+          python - <<'PY'
+          import json, os
+          info = json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('type') == 'service_account'
+          assert info.get('project_id')
+          assert info.get('client_email')
+          assert info.get('private_key')
+          PY
+          echo PASS > /tmp/credential-preflight
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+          echo PASS > /tmp/bigquery-dependency
+
+      - name: Locate real warehouse anchors
+        run: |
+          set +e
+          uv run python - <<'PY' > /tmp/day7-warehouse-anchor.json 2> /tmp/day7-warehouse-anchor.stderr
+          import json, os
+          from google.cloud import bigquery
+          from google.oauth2 import service_account
+
+          info = json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          creds = service_account.Credentials.from_service_account_info(info)
+          project = info['project_id']
+          dataset = os.environ['AIDY_BIGQUERY_DATASET']
+          client = bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
+
+          research = list(client.query(f'''SELECT MAX(open_time_utc) AS research_as_of,
+              COUNT(*) AS research_rows, COUNTIF(pit_eligible) AS research_pit_eligible_rows
+              FROM `{project}.{dataset}.research_candles`
+              WHERE symbol='XAUUSD' AND provenance_class='retrospective_history' ''').result())[0]
+          snapshot = list(client.query(f'''SELECT captured_at, load_identity, evidence_id, session_code
+              FROM `{project}.{dataset}.market_snapshots`
+              WHERE symbol='XAUUSD'
+              ORDER BY captured_at DESC, load_identity DESC LIMIT 1''').result())[0]
+          pit_candles = list(client.query(f'''SELECT COUNT(*) AS pit_candle_rows
+              FROM `{project}.{dataset}.market_candles`
+              WHERE symbol='XAUUSD' AND source='gold_api' ''').result())[0]
+
+          assert research['research_as_of'] is not None
+          assert int(research['research_rows']) > 0
+          assert int(research['research_pit_eligible_rows']) == 0
+          assert snapshot['captured_at'] is not None
+          print(json.dumps({
+              'project': project,
+              'dataset': dataset,
+              'research_as_of': research['research_as_of'].isoformat(),
+              'research_rows': int(research['research_rows']),
+              'research_pit_eligible_rows': int(research['research_pit_eligible_rows']),
+              'pit_as_of': snapshot['captured_at'].isoformat(),
+              'pit_snapshot_load_identity': snapshot['load_identity'],
+              'pit_snapshot_evidence_id': snapshot['evidence_id'],
+              'pit_snapshot_session_code': snapshot['session_code'],
+              'gold_api_pit_candle_rows': int(pit_candles['pit_candle_rows']),
+          }, sort_keys=True))
+          PY
+          anchor_status=$?
+          if [ "$anchor_status" -ne 0 ]; then
+            cat /tmp/day7-warehouse-anchor.stderr
+            exit "$anchor_status"
+          fi
+          python - <<'PY'
+          import json, os
+          anchor = json.load(open('/tmp/day7-warehouse-anchor.json', encoding='utf-8'))
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"AIDY_DAY7_RESEARCH_AS_OF={anchor['research_as_of']}\n")
+              fh.write(f"AIDY_DAY7_PIT_AS_OF={anchor['pit_as_of']}\n")
+          PY
+          echo PASS > /tmp/warehouse-anchor
+
+      - name: Build deterministic real retrospective packet twice
+        run: |
+          set -euo pipefail
+          uv run python scripts/day7_build_feature_packet.py \
+            --mode retrospective --as-of "$AIDY_DAY7_RESEARCH_AS_OF" \
+            > /tmp/day7-research-1.json 2> /tmp/day7-research-1.stderr
+          uv run python scripts/day7_build_feature_packet.py \
+            --mode retrospective --as-of "$AIDY_DAY7_RESEARCH_AS_OF" \
+            > /tmp/day7-research-2.json 2> /tmp/day7-research-2.stderr
+          cmp /tmp/day7-research-1.json /tmp/day7-research-2.json
+          python - <<'PY'
+          import json
+          first = json.load(open('/tmp/day7-research-1.json', encoding='utf-8'))
+          second = json.load(open('/tmp/day7-research-2.json', encoding='utf-8'))
+          assert first['feature_packet_digest'] == second['feature_packet_digest']
+          assert first['feature_definition_version'] == 'aidy_gold_features_v1'
+          assert first['mode'] == 'retrospective'
+          assert first['provenance_class'] == 'retrospective_history'
+          assert first['pit_eligible'] is False
+          assert first['quote_context']['state'] == 'unknown'
+          for timeframe in ('M1','M5','M15','H1','H4','D1'):
+              features = first['timeframes'][timeframe]
+              assert features['state'] == 'known', (timeframe, features)
+              assert features['return_1_bps'] is not None
+              assert features['return_5_bps'] is not None
+              assert features['atr_14_bps'] is not None
+              assert features['realized_vol_20_bps'] is not None
+              assert features['source_identities']
+              links = first['source_links'][timeframe]
+              assert links
+              assert all(link['pit_eligible'] is False for link in links)
+              assert all(link['provenance_class'] == 'retrospective_history' for link in links)
+          assert first['multi_timeframe_alignment']['state'] != 'insufficient'
+          PY
+          echo PASS > /tmp/research-packet
+
+      - name: Build real PIT packet with no retrospective leakage
+        run: |
+          set -euo pipefail
+          uv run python scripts/day7_build_feature_packet.py \
+            --mode pit --as-of "$AIDY_DAY7_PIT_AS_OF" \
+            > /tmp/day7-pit.json 2> /tmp/day7-pit.stderr
+          python - <<'PY'
+          import json
+          anchor = json.load(open('/tmp/day7-warehouse-anchor.json', encoding='utf-8'))
+          packet = json.load(open('/tmp/day7-pit.json', encoding='utf-8'))
+          assert packet['feature_definition_version'] == 'aidy_gold_features_v1'
+          assert packet['mode'] == 'pit'
+          assert packet['provenance_class'] == 'pit_observed'
+          assert packet['pit_eligible'] is True
+          assert packet['pit_candle_source'] == 'gold_api'
+          assert packet['quote_context']['state'] == 'known'
+          assert packet['quote_context']['source_identity'] == anchor['pit_snapshot_load_identity']
+          assert packet['quote_context']['recorded_session_code'] == anchor['pit_snapshot_session_code']
+          assert packet['quote_context']['session_code_consistent'] is True
+          text = json.dumps(packet, sort_keys=True).lower()
+          assert 'retrospective_history' not in text
+          assert 'histdata' not in text
+          assert 'metaapi' not in text
+          if anchor['gold_api_pit_candle_rows'] == 0:
+              assert packet['warehouse_input_rows'] == 0
+              assert all(value['state'] == 'unknown' for value in packet['timeframes'].values())
+          PY
+          echo PASS > /tmp/pit-packet
+
+      - name: Persist final Day 7 evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo "# Day 7 deterministic Gold feature engine final acceptance"
+            echo
+            echo "- Trigger commit: ${AIDY_ACCEPTANCE_HEAD_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
+            echo "- Structural boundary: $(cat /tmp/structural-boundary 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Credential preflight: $(cat /tmp/credential-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery dependency: $(cat /tmp/bigquery-dependency 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Warehouse anchors: $(cat /tmp/warehouse-anchor 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Deterministic retrospective packet: $(cat /tmp/research-packet 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- PIT packet / no retrospective leakage: $(cat /tmp/pit-packet 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            for name in ruff compile pytest; do
+              file="/tmp/${name}.txt"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```text'; tail -140 "$file"; echo '```'
+              fi
+            done
+            if [ -s /tmp/day7-warehouse-anchor.json ]; then
+              echo; echo "## warehouse anchor"; echo '```json'; cat /tmp/day7-warehouse-anchor.json; echo; echo '```'
+            fi
+            if [ -s /tmp/day7-warehouse-anchor.stderr ]; then
+              echo; echo "## warehouse anchor stderr"; echo '```text'; tail -140 /tmp/day7-warehouse-anchor.stderr; echo '```'
+            fi
+            if [ -s /tmp/day7-research-1.json ] && [ -s /tmp/day7-pit.json ]; then
+              echo; echo "## compact packet evidence"; echo '```json'
+              python - <<'PY'
+          import json
+          research = json.load(open('/tmp/day7-research-1.json', encoding='utf-8'))
+          pit = json.load(open('/tmp/day7-pit.json', encoding='utf-8'))
+          compact = {
+              'research': {
+                  'as_of_utc': research['as_of_utc'],
+                  'feature_packet_digest': research['feature_packet_digest'],
+                  'pit_eligible': research['pit_eligible'],
+                  'warehouse_input_rows': research['warehouse_input_rows'],
+                  'alignment': research['multi_timeframe_alignment'],
+                  'timeframes': {key: {
+                      'bars_available': value['bars_available'],
+                      'return_1_bps': value['return_1_bps'],
+                      'return_5_bps': value['return_5_bps'],
+                      'atr_14_bps': value['atr_14_bps'],
+                      'realized_vol_20_bps': value['realized_vol_20_bps'],
+                      'source_identity_count': len(value['source_identities']),
+                  } for key, value in research['timeframes'].items()},
+                  'session_code': research['range_context']['session']['code'],
+                  'session_range_bars': research['range_context']['session']['bars'],
+              },
+              'pit': {
+                  'as_of_utc': pit['as_of_utc'],
+                  'feature_packet_digest': pit['feature_packet_digest'],
+                  'pit_eligible': pit['pit_eligible'],
+                  'warehouse_input_rows': pit['warehouse_input_rows'],
+                  'pit_candle_source': pit['pit_candle_source'],
+                  'quote_context': pit['quote_context'],
+                  'timeframe_states': {key: value['state'] for key, value in pit['timeframes'].items()},
+              },
+          }
+          print(json.dumps(compact, sort_keys=True, indent=2))
+          PY
+              echo '```'
+            fi
+            for name in day7-research-1 day7-research-2 day7-pit; do
+              file="/tmp/${name}.stderr"
+              if [ -f "$file" ] && [ -s "$file" ]; then
+                echo; echo "## ${name}-stderr"; echo '```text'; tail -140 "$file"; echo '```'
+              fi
+            done
+          } > /tmp/day7-final-acceptance-evidence.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-7-deterministic-gold-features
+          git reset --hard origin/feature/day-7-deterministic-gold-features
+          cp /tmp/day7-final-acceptance-evidence.md ops/day7-live-acceptance-evidence.md
+          git add ops/day7-live-acceptance-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 7: record final deterministic feature acceptance"
+            git push origin HEAD:feature/day-7-deterministic-gold-features
+          fi
