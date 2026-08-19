@@ -1,9 +1,11 @@
 name: AIDY Day 3 Safe Deploy
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/day-3-continuity-auditor
+      - main
+    types:
+      - synchronize
     paths:
       - ".github/workflows/day3-safe-deploy.yml"
       - "ops/day3-safe-deploy-trigger.txt"
@@ -132,7 +134,7 @@ jobs:
         run: |
           {
             echo "## AIDY Day 3 safe deployment"
-            echo "- Branch: ${GITHUB_REF_NAME}"
+            echo "- Branch: ${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
             echo "- Commit: ${GITHUB_SHA}"
             echo "- Worker: aidy-signals-test"
             echo "- Scheduler: aidy-signals-scheduler-test"
