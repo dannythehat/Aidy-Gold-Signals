@@ -7,16 +7,17 @@ from urllib.parse import parse_qs, urlparse
 
 from workers import Response, WorkerEntrypoint
 
-from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
+from aidy.cloudflare_storage import R2ArchiveStore
 from aidy.config import AidySettings
 from aidy.continuity_auditor import audit_window
+from aidy.cross_market_storage import D1CrossMarketOperationalEvidenceStore
 from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
 from aidy.runtime import run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
 
 
 def _repository(env):
-    operational = D1OperationalEvidenceStore(env.AIDY_OPS)
+    operational = D1CrossMarketOperationalEvidenceStore(env.AIDY_OPS)
     return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
 
 
@@ -64,6 +65,7 @@ class Default(WorkerEntrypoint):
                     "capture_enabled": settings.capture_enabled,
                     "market_data_source": settings.market_data_source,
                     "market_data_ownership": settings.market_data_ownership,
+                    "cross_market_source": "public_official_daily",
                     "scheduler": "queue-consumer",
                 }
             )
