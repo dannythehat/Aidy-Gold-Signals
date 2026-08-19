@@ -376,17 +376,14 @@ def export_files(
         }
     finally:
         for spec in (*TABLE_SPECS.values(), EXPORT_MANIFEST):
-            try:
-                _cleanup_stage(
-                    client,
-                    bigquery,
-                    project=project,
-                    dataset=dataset,
-                    spec=spec,
-                    run_id=run_id,
-                )
-            except Exception:
-                pass
+            _cleanup_stage(
+                client,
+                bigquery,
+                project=project,
+                dataset=dataset,
+                spec=spec,
+                run_id=run_id,
+            )
 
     return {
         "ok": True,
