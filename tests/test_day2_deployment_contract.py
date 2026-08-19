@@ -74,7 +74,7 @@ def test_active_runtime_contains_no_metaapi_or_broker_position_path() -> None:
     entry = Path("src/entry.py").read_text(encoding="utf-8")
     gateway = Path("src/aidy/gold_api_gateway.py").read_text(encoding="utf-8")
     recorder = Path("src/aidy/reference_price_recorder.py").read_text(encoding="utf-8")
-    active = "\n".join((runtime, entry, gateway, recorder))
+    active = f"{runtime}\n{entry}\n{gateway}\n{recorder}"
     assert "MetaApi" not in active
     assert "metaapi" not in active.lower()
     assert "read_positions" not in active
