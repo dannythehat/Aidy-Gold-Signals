@@ -1,7 +1,7 @@
 # Day 5 historical XAUUSD backfill live-acceptance evidence
 
-- Trigger commit: add6ab85d80116b3fb79145044a4f4a82646458d
-- Observed at UTC: 2026-08-19T13:21:34Z
+- Trigger commit: 02a75acec3b897e1fb313e456cee5a4fda04440a
+- Observed at UTC: 2026-08-19T13:29:21Z
 - Dependencies: PASS
 - Code gate: PASS
 - Code gate status: ruff=0 compile=0 pytest=0
@@ -26,7 +26,7 @@ All checks passed!
 ```text
 ........................................................................ [ 93%]
 .....                                                                    [100%]
-77 passed in 0.63s
+77 passed in 0.62s
 ```
 
 ## day5-first
@@ -36,7 +36,7 @@ All checks passed!
 
 ## day5-first-stderr
 ```text
-DAY5_BACKFILL_ERROR=RuntimeError:Missing BigQuery research timeframe after load: M1
+DAY5_BACKFILL_ERROR=RuntimeError:Research reconciliation mismatch for M1: expected 355592, got rows=1777960 identities=355592.
 Traceback (most recent call last):
   File "/home/runner/work/Aidy-Gold-Signals/Aidy-Gold-Signals/scripts/day5_backfill_histdata.py", line 823, in <module>
     raise SystemExit(main())
@@ -63,7 +63,9 @@ Traceback (most recent call last):
     ...<5 lines>...
         expected=expected,
     )
-  File "/home/runner/work/Aidy-Gold-Signals/Aidy-Gold-Signals/scripts/day5_backfill_histdata.py", line 444, in _reconcile_candles
-    raise RuntimeError(f"Missing BigQuery research timeframe after load: {timeframe}")
-RuntimeError: Missing BigQuery research timeframe after load: M1
+  File "/home/runner/work/Aidy-Gold-Signals/Aidy-Gold-Signals/scripts/day5_backfill_histdata.py", line 446, in _reconcile_candles
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: Research reconciliation mismatch for M1: expected 355592, got rows=1777960 identities=355592.
 ```
