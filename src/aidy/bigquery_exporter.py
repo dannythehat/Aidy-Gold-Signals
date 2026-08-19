@@ -153,7 +153,7 @@ class ArchivedEvidence:
         except (TypeError, json.JSONDecodeError) as exc:
             raise ValueError("R2 evidence object is not valid JSON.") from exc
         if not isinstance(parsed, dict):
-            raise ValueError("R2 evidence object must be a JSON object.")
+            raise TypeError("R2 evidence object must be a JSON object.")
         required = (
             "schema_version",
             "record_type",
@@ -166,7 +166,7 @@ class ArchivedEvidence:
             raise ValueError("R2 evidence object is missing: " + ", ".join(missing))
         payload = parsed.get("payload")
         if not isinstance(payload, dict):
-            raise ValueError("R2 evidence object requires an object payload.")
+            raise TypeError("R2 evidence object requires an object payload.")
         try:
             schema_version = int(parsed["schema_version"])
         except (TypeError, ValueError) as exc:
@@ -217,9 +217,9 @@ def _timestamp(value: Any, *, required: bool = False) -> str | None:
             raise ValueError("Archived payload is missing a required timestamp.")
         return None
     if not isinstance(value, str):
-        raise ValueError("Archived timestamp must be an ISO-8601 string.")
+        raise TypeError("Archived timestamp must be an ISO-8601 string.")
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise ValueError(f"Invalid archived timestamp: {value}") from exc
     if parsed.tzinfo is None:
@@ -229,7 +229,7 @@ def _timestamp(value: Any, *, required: bool = False) -> str | None:
 
 def _json_object(value: Any, *, name: str) -> dict[str, Any]:
     if not isinstance(value, dict):
-        raise ValueError(f"{name} must be an object.")
+        raise TypeError(f"{name} must be an object.")
     return value
 
 
@@ -274,7 +274,7 @@ def analytical_row(evidence: ArchivedEvidence) -> dict[str, Any]:
         )
         event_ids = payload.get("event_observation_ids")
         if not isinstance(event_ids, list):
-            raise ValueError("event_observation_ids must be an array.")
+            raise TypeError("event_observation_ids must be an array.")
         row.update(
             {
                 "captured_at": _timestamp(_required(payload, "captured_at"), required=True),
