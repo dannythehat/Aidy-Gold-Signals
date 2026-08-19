@@ -1,7 +1,7 @@
 # Day 8 official macro evidence live-acceptance evidence
 
-- Trigger commit: ce99ede00948ddc33498d2fd55d4ee363b49a822
-- Observed at UTC: 2026-08-19T15:14:36Z
+- Trigger commit: c3f6d53d0f89b1f07bc7dd53fc86bb9d911e29c3
+- Observed at UTC: 2026-08-19T15:18:48Z
 - Dependencies: PASS
 - Code gate: PASS
 - Code gate status: ruff=0 compile=0 pytest=0
@@ -17,9 +17,9 @@ All checks passed!
 
 ## pytest
 ```text
-........................................................................ [ 60%]
-................................................                         [100%]
-120 passed in 0.90s
+........................................................................ [ 59%]
+..................................................                       [100%]
+122 passed in 0.87s
 ```
 
 ## live-probe.stderr
