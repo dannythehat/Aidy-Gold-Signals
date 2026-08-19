@@ -2,6 +2,11 @@ name: AIDY Day 5 Historical Backfill Acceptance
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/day-5-historical-xauusd-backfill
+    paths:
+      - "ops/day5-live-acceptance-trigger.txt"
 
 permissions:
   contents: write
@@ -176,20 +181,21 @@ jobs:
           project=info['project_id']
           dataset=os.environ['AIDY_BIGQUERY_DATASET']
           client=bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
-          research=list(client.query(f'''SELECT source_file, timeframe, COUNT(*) AS rows,
+          research=list(client.query(f'''SELECT source_file, timeframe, COUNT(*) AS row_count,
              COUNTIF(pit_eligible) AS pit_eligible_rows,
              COUNT(DISTINCT provenance_class) AS provenance_classes
           FROM `{project}.{dataset}.research_candles`
           WHERE source='histdata' AND (source_file LIKE '%_2024.zip' OR source_file LIKE '%_2025.zip')
           GROUP BY source_file,timeframe ORDER BY source_file,timeframe''').result())
-          manifests=list(client.query(f'''SELECT source_period, COUNT(*) AS rows,
-             COUNTIF(pit_eligible) AS pit_eligible_rows
+          manifests=list(client.query(f'''SELECT source_period, COUNT(*) AS row_count,
+             COUNTIF(pit_eligible) AS pit_eligible_rows,
+             MAX(COALESCE(out_of_order_rows, 0)) AS out_of_order_rows
           FROM `{project}.{dataset}.research_backfill_manifest`
           WHERE source='histdata' AND source_period IN ('2024','2025') AND status='success'
           GROUP BY source_period ORDER BY source_period''').result())
-          contamination=list(client.query(f'''SELECT COUNT(*) AS rows
+          contamination=list(client.query(f'''SELECT COUNT(*) AS row_count
           FROM `{project}.{dataset}.market_candles`
-          WHERE source='histdata' ''').result())[0]['rows']
+          WHERE source='histdata' ''').result())[0]['row_count']
           assert research, 'No HistData research facts found.'
           assert len(manifests) == 2, manifests
           assert all(int(row['pit_eligible_rows']) == 0 for row in research), research
@@ -236,9 +242,12 @@ jobs:
                 echo; echo "## ${name}"; echo '```json'; cat "$file"; echo; echo '```'
               fi
             done
-          } > ops/day5-live-acceptance-evidence.md
+          } > /tmp/day5-live-acceptance-evidence.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-5-historical-xauusd-backfill
+          git reset --hard origin/feature/day-5-historical-xauusd-backfill
+          cp /tmp/day5-live-acceptance-evidence.md ops/day5-live-acceptance-evidence.md
           git add ops/day5-live-acceptance-evidence.md
           if ! git diff --cached --quiet; then
             git commit -m "Day 5: record historical backfill live acceptance"
