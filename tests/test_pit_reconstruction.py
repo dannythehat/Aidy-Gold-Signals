@@ -243,8 +243,9 @@ def test_day6_runtime_module_does_not_import_google_client() -> None:
 
 
 def test_as_of_requires_timezone_awareness() -> None:
+    naive = BASE.replace(tzinfo=None)
     with pytest.raises(ValueError, match="timezone-aware"):
-        select_latest_events_as_of([], as_of=datetime(2026, 8, 19, 10, 0))
+        select_latest_events_as_of([], as_of=naive)
 
 
 def test_equal_observation_time_uses_revision_index_deterministically() -> None:
