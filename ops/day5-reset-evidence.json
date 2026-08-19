@@ -1,5 +1,0 @@
-{"stdout":
-{"after": {"research_backfill_manifest": 0, "research_candles": 0, "stage_research_backfill_manifest": 0, "stage_research_candles": 0}, "before": {"research_identities": 458285, "research_rows": 2291425, "stage_research_backfill_manifest": 0, "stage_research_candles": 0, "successful_manifests": 0}, "dataset": "aidy_analytics_test", "ok": true, "project": "aidy-signals"}
-,"stderr":
-""
-}
