@@ -1,0 +1,4 @@
+AIDY Day 4 BigQuery live acceptance.
+
+Attempt 2: code-quality corrections applied after 62/62 tests passed on attempt 1.
+Only this trigger-file change is allowed to start the corrected acceptance run.
