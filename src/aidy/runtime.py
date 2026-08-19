@@ -44,11 +44,16 @@ async def run_capture_cycle(
     market_gateway: GoldApiGateway | None = None,
     fed_gateway: FedRssGateway | None = None,
 ) -> RecorderCycleResult | None:
-    """Run one deterministic broker-free recorder cycle."""
+    """Run one broker-free recorder cycle.
+
+    `now` represents the scheduler/event evaluation time. Market evidence is
+    deliberately stamped by the market recorder after its HTTP response arrives,
+    not with this nominal scheduler timestamp.
+    """
 
     if not settings.capture_enabled:
         return None
-    captured_at = (now or datetime.now(UTC)).astimezone(UTC)
+    cycle_time = (now or datetime.now(UTC)).astimezone(UTC)
     market: ReferenceCaptureResult | None = None
     fed: FedRssCaptureResult | None = None
 
@@ -57,13 +62,13 @@ async def run_capture_cycle(
             repository=repository,
             gateway=market_gateway or GoldApiGateway(),
             stale_seconds=settings.market_stale_seconds,
-        ).capture_once(now=captured_at)
+        ).capture_once()
 
     if include_fed:
         fed = await AidyFedRssRecorderService(
             repository=repository,
             gateway=fed_gateway or FedRssGateway(),
-        ).capture_once(now=captured_at)
+        ).capture_once(now=cycle_time)
 
     archive = await repository.flush_archive_outbox(limit=settings.archive_flush_limit)
     return RecorderCycleResult(market=market, fed=fed, archive=archive)
