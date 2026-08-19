@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -54,6 +54,20 @@ class OperationalEvidenceStore(Protocol):
         headline: str | None,
         structured_data_json: str,
         raw_payload_json: str,
+        payload_digest: str,
+    ) -> EvidenceCommit: ...
+
+    async def commit_cross_market_observation(
+        self,
+        *,
+        source: str,
+        series_id: str,
+        observation_date: date,
+        value: str,
+        unit: str,
+        source_url: str,
+        source_document_digest: str,
+        first_observed_at: datetime,
         payload_digest: str,
     ) -> EvidenceCommit: ...
 
@@ -123,6 +137,32 @@ class AidyMarketRepository:
             headline=headline,
             structured_data_json=structured_data_json,
             raw_payload_json=raw_payload_json,
+            payload_digest=payload_digest,
+        )
+        return committed.evidence_id, committed.revision_index, committed.created
+
+    async def store_cross_market_observation(
+        self,
+        *,
+        source: str,
+        series_id: str,
+        observation_date: date,
+        value: str,
+        unit: str,
+        source_url: str,
+        source_document_digest: str,
+        first_observed_at: datetime,
+        payload_digest: str,
+    ) -> tuple[UUID, int, bool]:
+        committed = await self._operational.commit_cross_market_observation(
+            source=source,
+            series_id=series_id,
+            observation_date=observation_date,
+            value=value,
+            unit=unit,
+            source_url=source_url,
+            source_document_digest=source_document_digest,
+            first_observed_at=first_observed_at,
             payload_digest=payload_digest,
         )
         return committed.evidence_id, committed.revision_index, committed.created
