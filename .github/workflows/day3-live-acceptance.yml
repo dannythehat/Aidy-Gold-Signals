@@ -1,13 +1,14 @@
 name: AIDY Day 3 Live Acceptance
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/day-3-continuity-auditor
+      - main
+    types:
+      - synchronize
     paths:
       - ".github/workflows/day3-live-acceptance.yml"
       - "ops/day3-live-acceptance-trigger.txt"
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -28,7 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feature/day-3-continuity-auditor
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: actions/setup-python@v5
         with:
