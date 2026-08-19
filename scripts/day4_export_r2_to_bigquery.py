@@ -162,7 +162,7 @@ def _load_stage(
     run_id: str,
     rows: list[dict[str, Any]],
 ) -> Any:
-    stage_rows = [{"run_id": run_id, **row} for row in rows]
+    stage_rows = [{"_export_run_id": run_id, **row} for row in rows]
     config = bigquery.LoadJobConfig(
         schema=_schema(bigquery, staging_fields(spec)),
         write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
@@ -197,7 +197,10 @@ def _merge(client: Any, bigquery: Any, *, project: str, dataset: str, spec: Tabl
 
 
 def _cleanup_stage(client: Any, bigquery: Any, *, project: str, dataset: str, spec: TableSpec, run_id: str) -> None:
-    sql = f"DELETE FROM `{project}.{dataset}._stage_{spec.name}` WHERE run_id = @run_id"
+    sql = (
+        f"DELETE FROM `{project}.{dataset}._stage_{spec.name}` "
+        "WHERE _export_run_id = @run_id"
+    )
     config = bigquery.QueryJobConfig(
         query_parameters=[bigquery.ScalarQueryParameter("run_id", "STRING", run_id)]
     )
@@ -374,7 +377,7 @@ def export_files(
                     spec=spec,
                     run_id=run_id,
                 )
-            except Exception:  # cleanup cannot erase primary export evidence
+            except Exception:
                 pass
 
     return {
@@ -413,15 +416,19 @@ def _client_from_env(project: str, location: str) -> Any:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Export immutable AIDY R2 evidence into BigQuery.")
-    parser.add_argument("files", nargs="+", type=Path)
+    parser.add_argument("files", nargs="*", type=Path)
     parser.add_argument("--project", default=os.environ.get("AIDY_GCP_PROJECT_ID", ""))
-    parser.add_argument("--dataset", default=os.environ.get("AIDY_BIGQUERY_DATASET", "aidy_analytics_test"))
+    parser.add_argument(
+        "--dataset", default=os.environ.get("AIDY_BIGQUERY_DATASET", "aidy_analytics_test")
+    )
     parser.add_argument("--location", default=os.environ.get("AIDY_BIGQUERY_LOCATION", "EU"))
     parser.add_argument("--ensure-only", action="store_true")
     args = parser.parse_args()
 
     if not args.project.strip():
         raise RuntimeError("Missing AIDY_GCP_PROJECT_ID.")
+    if not args.ensure_only and not args.files:
+        raise RuntimeError("At least one R2 evidence file is required unless --ensure-only is used.")
     client = _client_from_env(args.project, args.location)
     tables = ensure_warehouse(
         client,
