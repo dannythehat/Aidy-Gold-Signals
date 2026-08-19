@@ -1,13 +1,13 @@
 # Day 4 BigQuery live-acceptance evidence
 
-- Trigger commit: 7a6f6955a39d1fa9c6a1e9b44fb26191bc4b1244
-- Observed at UTC: 2026-08-19T10:32:09Z
+- Trigger commit: 6181825069dde56e7387bdf12780cb9158f47fde
+- Observed at UTC: 2026-08-19T10:33:20Z
 - Dependencies: PASS
-- Code gate: FAIL
-- Code gate status: ruff=1 compile=0 pytest=0
-- Live-recorder/BigQuery import boundary: NOT_REACHED_OR_FAILED
-- Recorder health before export: NOT_REACHED_OR_FAILED
-- Credential preflight: NOT_REACHED_OR_FAILED
+- Code gate: PASS
+- Code gate status: ruff=0 compile=0 pytest=0
+- Live-recorder/BigQuery import boundary: PASS
+- Recorder health before export: PASS
+- Credential preflight: MISSING_AIDY_GCP_PROJECT_ID
 - Genuine R2 snapshot retrieval: NOT_REACHED_OR_FAILED
 - BigQuery dependency: NOT_REACHED_OR_FAILED
 - R2 -> BigQuery repeated round-trip: NOT_REACHED_OR_FAILED
@@ -15,29 +15,7 @@
 
 ## ruff
 ```text
-S110 `try`-`except`-`pass` detected, consider logging the exception
-   --> scripts/day4_export_r2_to_bigquery.py:388:13
-    |
-386 |                       run_id=run_id,
-387 |                   )
-388 | /             except Exception:
-389 | |                 pass
-    | |____________________^
-390 |
-391 |       return {
-    |
-
-BLE001 Do not catch blind exception: `Exception`
-   --> scripts/day4_export_r2_to_bigquery.py:388:20
-    |
-386 |                     run_id=run_id,
-387 |                 )
-388 |             except Exception:
-    |                    ^^^^^^^^^
-389 |                 pass
-    |
-
-Found 2 errors.
+All checks passed!
 ```
 
 ## compile
@@ -47,5 +25,10 @@ Found 2 errors.
 ## pytest
 ```text
 ..............................................................           [100%]
-62 passed in 0.56s
+62 passed in 0.47s
+```
+
+## health-before
+```json
+{"service": "aidy-signals", "status": "ok", "runtime": "cloudflare-workers", "environment": "test", "capture_enabled": true, "market_data_source": "gold_api", "market_data_ownership": "public_independent", "scheduler": "queue-consumer"}
 ```
