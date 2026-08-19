@@ -1,18 +1,18 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
 import json
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
 from aidy.cross_market import (
+    SERIES_US2Y,
+    SERIES_US10Y,
+    SERIES_US10Y_REAL,
+    SERIES_USD_BROAD,
     CrossMarketError,
     CrossMarketGateway,
     CrossMarketObservation,
-    SERIES_US10Y,
-    SERIES_US10Y_REAL,
-    SERIES_US2Y,
-    SERIES_USD_BROAD,
     parse_fred_broad_dollar_csv,
     parse_treasury_yield_xml,
 )
@@ -20,7 +20,6 @@ from aidy.cross_market_asof import reconstruct_cross_market_as_of
 from aidy.cross_market_bigquery import ArchivedCrossMarketEvidence
 from aidy.cross_market_recorder import AidyCrossMarketRecorderService
 from aidy.cross_market_storage import cross_market_archive_key
-
 
 FRED_CSV = b"""observation_date,DTWEXBGS
 2026-08-17,119.1000
@@ -280,4 +279,4 @@ async def test_recorder_stamps_first_observed_after_each_source_result() -> None
 async def test_gateway_rejects_unapproved_host() -> None:
     gateway = CrossMarketGateway()
     with pytest.raises(CrossMarketError, match="source_not_allowed"):
-        await gateway._fetch("https://example.com/fake")  # noqa: SLF001
+        await gateway._fetch("https://example.com/fake")
