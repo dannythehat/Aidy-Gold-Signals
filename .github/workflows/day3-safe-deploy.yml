@@ -139,10 +139,18 @@ jobs:
           assert h.get('environment') == 'test', h
           assert h.get('capture_enabled') is False, h
           PY
-          status="$(curl -sS -o /tmp/day3-continuity.json -w '%{http_code}' "${AIDY_TEST_WORKER_URL}/day3/continuity?minutes=5&archive_limit=40")"
-          echo "$status" > /tmp/day3-continuity-status
+
+          status=404
+          for attempt in $(seq 1 12); do
+            status="$(curl -sS -o /tmp/day3-continuity.json -w '%{http_code}' "${AIDY_TEST_WORKER_URL}/day3/continuity?minutes=5&archive_limit=40")"
+            echo "$status" > /tmp/day3-continuity-status
+            if [ "$status" != "404" ]; then
+              break
+            fi
+            sleep 3
+          done
           cat /tmp/day3-continuity.json
-          test "$status" = "503" || { echo "::error::Expected safe-off Day 3 gate to fail closed with HTTP 503, got $status"; exit 1; }
+          test "$status" = "503" || { echo "::error::Expected safe-off Day 3 gate to fail closed with HTTP 503 after propagation, got $status"; exit 1; }
           python - <<'PY'
           import json
           p=json.load(open('/tmp/day3-continuity.json', encoding='utf-8'))
@@ -173,7 +181,7 @@ jobs:
             echo "- Worker safe-off deploy: $(cat /tmp/worker-deploy 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Scheduler safe-off deploy: $(cat /tmp/scheduler-deploy 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Health + continuity fail-closed proof: $(cat /tmp/fail-closed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
-            for name in ruff compile pytest; do
+            for name in ruff compile pytest worker-deploy scheduler-deploy; do
               file="/tmp/${name}.txt"
               if [ -f "$file" ]; then
                 echo
