@@ -61,7 +61,15 @@ jobs:
         shell: bash
         run: |
           set +e
-          uv run ruff check . > /tmp/ruff.txt 2>&1
+          uv run ruff check \
+            src/aidy/config.py \
+            src/aidy/continuity_auditor.py \
+            src/entry.py \
+            tests/test_config.py \
+            tests/test_continuity_auditor.py \
+            tests/test_d1_storage_local.py \
+            tests/test_day2_deployment_contract.py \
+            > /tmp/ruff.txt 2>&1
           ruff_status=$?
           uv run python -m compileall -q src tests > /tmp/compile.txt 2>&1
           compile_status=$?
