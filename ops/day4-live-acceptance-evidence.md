@@ -1,7 +1,7 @@
 # Day 4 BigQuery live-acceptance evidence
 
-- Trigger commit: 2fd4a725ace3d20de19a02c26a9be74d7e2498aa
-- Observed at UTC: 2026-08-19T10:36:00Z
+- Trigger commit: ceef73ef5a29c476973d01d80c392052da911a4b
+- Observed at UTC: 2026-08-19T10:38:29Z
 - Dependencies: PASS
 - Code gate: PASS
 - Code gate status: ruff=0 compile=0 pytest=0
@@ -25,7 +25,7 @@ All checks passed!
 ## pytest
 ```text
 ..............................................................           [100%]
-62 passed in 0.58s
+62 passed in 0.59s
 ```
 
 ## health-before
