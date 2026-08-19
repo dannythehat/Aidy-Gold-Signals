@@ -1,0 +1,3 @@
+AIDY Day 4 BigQuery live acceptance.
+
+Opening the Day 4 PR is the bounded trigger. Ordinary source/evidence pushes do not match the workflow path filter.
