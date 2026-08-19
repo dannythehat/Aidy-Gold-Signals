@@ -1,7 +1,7 @@
 # Day 5 historical XAUUSD backfill live-acceptance evidence
 
-- Trigger commit: 096190affda487f9cdc8fc3d81ffa5e5a7d11b25
-- Observed at UTC: 2026-08-19T11:57:07Z
+- Trigger commit: 4cbb7598592dcde6b3cbd1f0f8dd3629d3cf3455
+- Observed at UTC: 2026-08-19T11:57:27Z
 - Dependencies: PASS
 - Code gate: PASS
 - Code gate status: ruff=0 compile=0 pytest=0
@@ -26,5 +26,5 @@ All checks passed!
 ```text
 ........................................................................ [ 94%]
 ....                                                                     [100%]
-76 passed in 0.65s
+76 passed in 0.63s
 ```
