@@ -176,7 +176,7 @@ class AidyMarketRepository:
         for item in items:
             try:
                 await self._archive.put_immutable(item)
-            except Exception as exc:  # archive provider errors are deliberately isolated
+            except Exception as exc:  # noqa: BLE001 - provider failures must remain isolated
                 failed += 1
                 await self._operational.mark_archive_failure(
                     outbox_id=item.outbox_id,
