@@ -1,7 +1,7 @@
 # Day 6 PIT as-of reconstruction live-acceptance evidence
 
-- Trigger commit: c202b53f5b9f4bf8f73fa762772785d45817f151
-- Observed at UTC: 2026-08-19T14:04:24Z
+- Trigger commit: ebf1e21e3c1846ee19a7f9facc7f80641e3bac82
+- Observed at UTC: 2026-08-19T14:06:36Z
 - Dependencies: PASS
 - Code gate: PASS
 - Code gate status: ruff=0 compile=0 pytest=0
@@ -11,7 +11,7 @@
 - Warehouse anchor/control rows: PASS
 - Before first snapshot -> explicit unknown: PASS
 - At first snapshot -> known with provenance: PASS
-- Retrospective history excluded: NOT_REACHED_OR_FAILED
+- Retrospective history excluded: PASS
 
 ## ruff
 ```text
@@ -26,7 +26,7 @@ All checks passed!
 ```text
 ........................................................................ [ 76%]
 ......................                                                   [100%]
-94 passed in 0.50s
+94 passed in 0.59s
 ```
 
 ## day6-warehouse-anchor
