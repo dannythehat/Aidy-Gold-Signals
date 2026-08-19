@@ -6,6 +6,7 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
+from aidy.bls_calendar_parser import parse_bls_official_calendar
 from aidy.fed_rss import FED_RSS_FEEDS, FedRssGateway, parse_fed_rss
 from aidy.fomc_calendar_parser import parse_fomc_calendar
 from aidy.official_macro import (
@@ -16,7 +17,6 @@ from aidy.official_macro import (
     OfficialMacroGateway,
     parse_bea_current_releases_html,
     parse_bea_schedule_html,
-    parse_bls_calendar_ics,
     parse_bls_release_rss,
     upcoming_fed_calendar_sources,
 )
@@ -44,7 +44,7 @@ async def probe() -> dict[str, Any]:
 
     fetched = await gateway.fetch(source_key="bls_calendar", url=BLS_CALENDAR_URL)
     assert fetched.text is not None
-    bls_calendar = parse_bls_calendar_ics(fetched.text)
+    bls_calendar = parse_bls_official_calendar(fetched.text)
     bls_schedule_classes = _class_set(bls_calendar)
     required_bls = {
         "cpi",
