@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import zipfile
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
@@ -10,7 +11,6 @@ from hashlib import sha256
 from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Iterable
 
 import httpx
 
@@ -206,13 +206,9 @@ class ResearchCandle:
 
     @property
     def candle_key(self) -> str:
-        raw = "\0".join(
-            (
-                HISTDATA_SOURCE,
-                self.symbol,
-                self.timeframe,
-                self.open_time_utc.isoformat(),
-            )
+        raw = (
+            f"{HISTDATA_SOURCE}\0{self.symbol}\0{self.timeframe}\0"
+            f"{self.open_time_utc.isoformat()}"
         )
         return sha256(raw.encode()).hexdigest()
 
@@ -268,7 +264,7 @@ class ResearchCandle:
 
 
 def chunk_key(*, symbol: str, period: HistDataPeriod) -> str:
-    raw = "\0".join((HISTDATA_SOURCE, HISTDATA_DATASET, symbol, period.key))
+    raw = f"{HISTDATA_SOURCE}\0{HISTDATA_DATASET}\0{symbol}\0{period.key}"
     return sha256(raw.encode()).hexdigest()
 
 
@@ -385,12 +381,12 @@ def _decimal(value: str, *, field: str, line_number: int) -> Decimal:
 
 def _parse_source_time(raw: str, *, line_number: int) -> datetime:
     try:
-        parsed = datetime.strptime(raw, "%Y%m%d %H%M%S")
+        parsed = datetime.strptime(f"{raw}-0500", "%Y%m%d %H%M%S%z")
     except ValueError as exc:
         raise ValueError(f"Invalid HistData timestamp at line {line_number}: {raw!r}") from exc
     if parsed.second != 0:
         raise ValueError(f"HistData M1 timestamp is not minute-aligned at line {line_number}.")
-    return parsed.replace(tzinfo=_SOURCE_TZ)
+    return parsed.astimezone(_SOURCE_TZ)
 
 
 def parse_histdata_m1(payload_text: str) -> tuple[list[SourceBar], ParseStats]:
@@ -672,7 +668,12 @@ def manifest_row(
     }
 
 
-def planned_periods(start_year: int, end_year: int, *, current_date: datetime) -> tuple[HistDataPeriod, ...]:
+def planned_periods(
+    start_year: int,
+    end_year: int,
+    *,
+    current_date: datetime,
+) -> tuple[HistDataPeriod, ...]:
     if start_year > end_year:
         raise ValueError("Backfill start_year cannot be after end_year.")
     if end_year > current_date.year:
