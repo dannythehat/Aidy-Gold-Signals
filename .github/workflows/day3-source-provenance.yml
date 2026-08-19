@@ -1,0 +1,110 @@
+name: AIDY Day 3 Source Provenance
+
+on:
+  push:
+    branches:
+      - feature/day-3-continuity-auditor
+    paths:
+      - ".github/workflows/day3-source-provenance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day3-source-provenance
+  cancel-in-progress: false
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      AIDY_METAAPI_TOKEN: ${{ secrets.AIDY_METAAPI_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-3-continuity-auditor
+
+      - name: Inspect token account inventory read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_METAAPI_TOKEN:-}" || { echo MISSING_TOKEN > /tmp/provenance-status; exit 1; }
+          curl -fsS \
+            -H "Accept: application/json" \
+            -H "auth-token: ${AIDY_METAAPI_TOKEN}" \
+            "https://mt-provisioning-api-v1.agiliumtrade.agiliumtrade.ai/users/current/accounts?limit=1000" \
+            > /tmp/accounts.json
+
+          python - <<'PY'
+          import hashlib, json, os
+          accounts=json.load(open('/tmp/accounts.json', encoding='utf-8'))
+          if not isinstance(accounts, list):
+              raise SystemExit('Unexpected MetaAPI accounts response')
+          safe=[]
+          eligible=[]
+          for a in accounts:
+              account_id=str(a.get('_id') or '')
+              login=str(a.get('login') or '')
+              name=str(a.get('name') or '')
+              server=str(a.get('server') or '')
+              version=a.get('version')
+              state=str(a.get('state') or '')
+              safe_row={
+                  'id_sha256_12': hashlib.sha256(account_id.encode()).hexdigest()[:12] if account_id else '',
+                  'login_last4': login[-4:] if login else '',
+                  'name': name,
+                  'server': server,
+                  'version': version,
+                  'state': state,
+                  'connectionStatus': a.get('connectionStatus'),
+              }
+              safe.append(safe_row)
+              if 'aidy' in name.lower() and version == 5 and login[-4:] != '1913' and account_id:
+                  eligible.append((a, safe_row))
+          json.dump({'count':len(accounts),'accounts':safe}, open('/tmp/safe-inventory.json','w',encoding='utf-8'), indent=2)
+          if len(eligible) == 1:
+              a,row=eligible[0]
+              with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as fh:
+                  fh.write(f"DISCOVERED_AIDY_ACCOUNT_ID={a['_id']}\n")
+              json.dump(row, open('/tmp/eligible-account.json','w',encoding='utf-8'), indent=2)
+              open('/tmp/provenance-status','w').write('PASS_UNIQUE_AIDY_MT5_ACCOUNT_NOT_SUPER_SIGNALS_1913')
+          elif not eligible:
+              open('/tmp/provenance-status','w').write('NO_UNAMBIGUOUS_AIDY_MT5_ACCOUNT')
+              raise SystemExit(2)
+          else:
+              open('/tmp/provenance-status','w').write('AMBIGUOUS_MULTIPLE_AIDY_MT5_ACCOUNTS')
+              raise SystemExit(3)
+          PY
+
+      - name: Persist safe provenance evidence
+        if: always()
+        shell: bash
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo "# Day 3 market-source provenance"
+            echo
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Status: $(cat /tmp/provenance-status 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Known Super Signals demo guard: login ending 1913 is ineligible"
+            echo "- Selection rule: exactly one MetaAPI MT5 account whose MetaAPI name contains AIDY and whose login does not end 1913"
+            if [ -f /tmp/safe-inventory.json ]; then
+              echo; echo "## Safe token inventory"; echo '```json'; cat /tmp/safe-inventory.json; echo; echo '```'
+            fi
+            if [ -f /tmp/eligible-account.json ]; then
+              echo; echo "## Eligible AIDY account"; echo '```json'; cat /tmp/eligible-account.json; echo; echo '```'
+            fi
+            echo
+            echo "No token, full MetaAPI account ID, password or broker credential is written to this evidence file."
+          } > ops/day3-source-provenance.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ops/day3-source-provenance.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 3: record source provenance"
+            git push origin HEAD:feature/day-3-continuity-auditor
+          fi
