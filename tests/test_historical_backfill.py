@@ -59,11 +59,14 @@ def test_research_tables_are_structurally_separate_from_live_pit_contract():
     assert "pit_eligible" in candle_fields
     assert "first_observed_at" not in candle_fields
     assert RESEARCH_BACKFILL_MANIFEST.name == "research_backfill_manifest"
+    assert RESEARCH_BACKFILL_MANIFEST.fields[-1].name == "out_of_order_rows"
+    assert RESEARCH_BACKFILL_MANIFEST.fields[-1].mode == "NULLABLE"
 
 
 def test_histdata_fixed_est_is_normalized_to_utc_without_dst_inference():
     bars, stats = parse_histdata_m1("20240701 120000;2300;2301;2299;2300.5;0\n")
     assert stats.rows == 1
+    assert stats.out_of_order_rows == 0
     assert bars[0].open_time_utc == datetime(2024, 7, 1, 17, 0, tzinfo=UTC)
     assert HISTDATA_SOURCE_TIMEZONE == "EST_FIXED_UTC_MINUS_05"
 
@@ -77,11 +80,18 @@ def test_exact_duplicates_are_deduped_but_conflicting_duplicates_fail_closed():
         parse_histdata_m1(line + "\n20240102 000000;2000;2002;1999;2001;0\n")
 
 
-def test_out_of_order_and_ohlc_invariants_fail_closed():
-    with pytest.raises(ValueError, match="out of order"):
-        parse_histdata_m1(
-            "20240102 000100;2;3;1;2;0\n20240102 000000;2;3;1;2;0\n"
-        )
+def test_source_order_anomaly_is_counted_then_canonicalized_by_timestamp():
+    bars, stats = parse_histdata_m1(
+        "20240102 000100;2;3;1;2;0\n20240102 000000;2;3;1;2;0\n"
+    )
+    assert stats.out_of_order_rows == 1
+    assert [bar.source_open_time for bar in bars] == [
+        "20240102 000000",
+        "20240102 000100",
+    ]
+
+
+def test_ohlc_invariants_fail_closed():
     with pytest.raises(ValueError, match="high invariant"):
         parse_histdata_m1("20240102 000000;2;1;0;2;0\n")
 
@@ -174,6 +184,7 @@ def test_manifest_is_retrospective_and_reconciles_timeframe_counts():
     assert row["pit_eligible"] is False
     assert row["provenance_class"] == RETROSPECTIVE_PROVENANCE
     assert row["m1_rows"] == 6
+    assert row["out_of_order_rows"] == 0
     assert row["timeframe_counts"] == {"M1": 6, "M5": 2, "H1": 1}
 
 
