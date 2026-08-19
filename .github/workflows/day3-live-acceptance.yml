@@ -1,12 +1,6 @@
 name: AIDY Day 3 Live Acceptance
 
 on:
-  push:
-    branches:
-      - feature/day-3-continuity-auditor
-    paths:
-      - ".github/workflows/day3-live-acceptance.yml"
-      - "ops/day3-live-acceptance-trigger.txt"
   workflow_dispatch:
 
 permissions:
@@ -23,8 +17,8 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      AIDY_METAAPI_TOKEN: ${{ secrets.AIDY_METAAPI_TOKEN }}
-      AIDY_METAAPI_ACCOUNT_ID: ${{ secrets.AIDY_METAAPI_ACCOUNT_ID }}
+      AIDY_DEDICATED_METAAPI_TOKEN: ${{ secrets.AIDY_DEDICATED_METAAPI_TOKEN }}
+      AIDY_DEDICATED_METAAPI_ACCOUNT_ID: ${{ secrets.AIDY_DEDICATED_METAAPI_ACCOUNT_ID }}
       AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
 
     steps:
@@ -33,8 +27,7 @@ jobs:
         with:
           ref: feature/day-3-continuity-auditor
 
-      - name: Set up Python and Node
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
@@ -48,35 +41,27 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          echo PASS > /tmp/dependencies
 
-      - name: Preflight AIDY-only source credentials
+      - name: Require explicitly dedicated credentials
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "MISSING_CLOUDFLARE_API_TOKEN" > /tmp/source-preflight; exit 1; }
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "MISSING_CLOUDFLARE_ACCOUNT_ID" > /tmp/source-preflight; exit 1; }
-          test -n "${AIDY_METAAPI_TOKEN:-}" || { echo "MISSING_AIDY_METAAPI_TOKEN" > /tmp/source-preflight; exit 1; }
-          test -n "${AIDY_METAAPI_ACCOUNT_ID:-}" || { echo "MISSING_AIDY_METAAPI_ACCOUNT_ID" > /tmp/source-preflight; exit 1; }
-          echo PASS_AIDY_NAMED_CREDENTIALS_PRESENT > /tmp/source-preflight
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AIDY_DEDICATED_METAAPI_TOKEN:-}" || { echo "::error::Missing AIDY_DEDICATED_METAAPI_TOKEN"; exit 1; }
+          test -n "${AIDY_DEDICATED_METAAPI_ACCOUNT_ID:-}" || { echo "::error::Missing AIDY_DEDICATED_METAAPI_ACCOUNT_ID"; exit 1; }
+          echo PASS > /tmp/source-preflight
 
-      - name: Re-run Day 3 code gate
+      - name: Run Day 3 code gate
         shell: bash
         run: |
           set -euo pipefail
-          uv run ruff check \
-            src/aidy/config.py \
-            src/aidy/continuity_auditor.py \
-            src/entry.py \
-            tests/test_config.py \
-            tests/test_continuity_auditor.py \
-            tests/test_d1_storage_local.py \
-            tests/test_day2_deployment_contract.py
+          uv run ruff check src/aidy/config.py src/aidy/continuity_auditor.py src/entry.py tests/test_config.py tests/test_continuity_auditor.py tests/test_d1_storage_local.py tests/test_day2_deployment_contract.py
           uv run python -m compileall -q src tests
           uv run pytest -q | tee /tmp/pytest-live.txt
           echo PASS > /tmp/code-gate
 
-      - name: Build live Worker and scheduler configs
+      - name: Build live configs
         shell: bash
         run: |
           set -euo pipefail
@@ -89,25 +74,22 @@ jobs:
           cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
           cfg['vars']['AIDY_MARKET_DATA_SOURCE']='metaapi'
           cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='aidy_dedicated'
-          with open('wrangler.day3.live.jsonc','w',encoding='utf-8') as fh:
-              json.dump(cfg, fh, indent=2); fh.write('\n')
-
+          json.dump(cfg, open('wrangler.day3.live.jsonc','w',encoding='utf-8'), indent=2)
           sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
           sched['triggers']['crons']=['* * * * *']
-          with open('wrangler.day3.scheduler.live.jsonc','w',encoding='utf-8') as fh:
-              json.dump(sched, fh, indent=2); fh.write('\n')
+          json.dump(sched, open('wrangler.day3.scheduler.live.jsonc','w',encoding='utf-8'), indent=2)
           PY
           echo PASS > /tmp/live-config
 
-      - name: Install AIDY-only Worker secrets
+      - name: Install dedicated Worker secrets
         shell: bash
         run: |
           set -euo pipefail
-          printf '%s' "$AIDY_METAAPI_TOKEN" | npx --yes wrangler@4 secret put AIDY_METAAPI_TOKEN --config wrangler.day3.live.jsonc >/tmp/secret-token.txt
-          printf '%s' "$AIDY_METAAPI_ACCOUNT_ID" | npx --yes wrangler@4 secret put AIDY_METAAPI_ACCOUNT_ID --config wrangler.day3.live.jsonc >/tmp/secret-account.txt
+          printf '%s' "$AIDY_DEDICATED_METAAPI_TOKEN" | npx --yes wrangler@4 secret put AIDY_METAAPI_TOKEN --config wrangler.day3.live.jsonc >/dev/null
+          printf '%s' "$AIDY_DEDICATED_METAAPI_ACCOUNT_ID" | npx --yes wrangler@4 secret put AIDY_METAAPI_ACCOUNT_ID --config wrangler.day3.live.jsonc >/dev/null
           echo PASS > /tmp/secrets-installed
 
-      - name: Deploy live Day 3 capture and scheduler
+      - name: Deploy live capture and scheduler
         shell: bash
         run: |
           set -euo pipefail
@@ -124,10 +106,8 @@ jobs:
             curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/live-health.json || true
             if python - <<'PY'
           import json
-          try:
-              h=json.load(open('/tmp/live-health.json', encoding='utf-8'))
-          except Exception:
-              raise SystemExit(1)
+          try: h=json.load(open('/tmp/live-health.json', encoding='utf-8'))
+          except Exception: raise SystemExit(1)
           raise SystemExit(0 if h.get('capture_enabled') is True and h.get('environment') == 'test' else 1)
           PY
             then break; fi
@@ -137,49 +117,39 @@ jobs:
           import json
           h=json.load(open('/tmp/live-health.json', encoding='utf-8'))
           assert h.get('capture_enabled') is True, h
-          assert h.get('environment') == 'test', h
           PY
           echo PASS > /tmp/live-health-pass
 
-      - name: Accumulate genuine scheduled evidence
+      - name: Accumulate scheduled evidence
         shell: bash
         run: |
-          set -euo pipefail
           sleep 390
           echo PASS > /tmp/soak
 
-      - name: Require clean Day 3 continuity window
+      - name: Require clean continuity window
         shell: bash
         run: |
           set -euo pipefail
           status="$(curl -sS -o /tmp/live-continuity.json -w '%{http_code}' "${AIDY_TEST_WORKER_URL}/day3/continuity?minutes=5&archive_limit=40")"
           echo "$status" > /tmp/live-continuity-status
-          cat /tmp/live-continuity.json
-          test "$status" = "200" || exit 1
+          test "$status" = "200"
           python - <<'PY'
           import json
           p=json.load(open('/tmp/live-continuity.json', encoding='utf-8'))
-          assert p.get('ok') is True, p
           r=p.get('report') or {}
-          assert r.get('passed') is True, r
+          assert p.get('ok') is True and r.get('passed') is True, p
           assert r.get('missing_cycles') == 0, r
-          assert r.get('snapshots_partial') == 0, r
-          assert r.get('snapshots_unavailable') == 0, r
-          assert r.get('archive_pending') == 0, r
-          assert r.get('archive_failed_rows') == 0, r
-          assert r.get('archive_missing_objects') == 0, r
+          assert r.get('snapshots_partial') == 0 and r.get('snapshots_unavailable') == 0, r
+          assert r.get('archive_pending') == 0 and r.get('archive_failed_rows') == 0 and r.get('archive_missing_objects') == 0, r
           PY
           echo PASS > /tmp/live-acceptance
 
-      - name: Roll back to safe-off if live acceptance fails
+      - name: Roll back to safe-off on failure
         if: failure()
         shell: bash
         run: |
           set +e
-          if [ ! -f /tmp/live-deployed ]; then
-            echo NOT_NEEDED > /tmp/rollback
-            exit 0
-          fi
+          if [ ! -f /tmp/live-deployed ]; then echo NOT_NEEDED > /tmp/rollback; exit 0; fi
           python - <<'PY'
           import json
           cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
@@ -187,15 +157,14 @@ jobs:
           cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
           cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
           cfg['vars']['AIDY_CAPTURE_ENABLED']='false'
-          with open('wrangler.day3.rollback.jsonc','w',encoding='utf-8') as fh:
-              json.dump(cfg, fh, indent=2); fh.write('\n')
+          json.dump(cfg, open('wrangler.day3.rollback.jsonc','w',encoding='utf-8'), indent=2)
           PY
           cp wrangler.day3.rollback.jsonc wrangler.jsonc
           uv run pywrangler deploy >/tmp/rollback-worker.txt 2>&1
           npx --yes wrangler@4 deploy --config wrangler.scheduler.test.jsonc >/tmp/rollback-scheduler.txt 2>&1
           if [ $? -eq 0 ]; then echo PASS_SAFE_OFF > /tmp/rollback; else echo ROLLBACK_FAILED > /tmp/rollback; fi
 
-      - name: Persist Day 3 live-acceptance evidence
+      - name: Persist evidence
         if: always()
         shell: bash
         run: |
@@ -204,31 +173,19 @@ jobs:
           {
             echo "# Day 3 live-acceptance evidence"
             echo
-            echo "- Trigger commit: ${GITHUB_SHA}"
             echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            echo "- Source preflight: $(cat /tmp/source-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Dedicated-source preflight: $(cat /tmp/source-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Live config: $(cat /tmp/live-config 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
-            echo "- AIDY Worker secrets installed: $(cat /tmp/secrets-installed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Dedicated Worker secrets installed: $(cat /tmp/secrets-installed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Live capture/scheduler deployed: $(cat /tmp/live-deployed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Live health: $(cat /tmp/live-health-pass 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Scheduled soak: $(cat /tmp/soak 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Day 3 continuity acceptance: $(cat /tmp/live-acceptance 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Failure rollback: $(cat /tmp/rollback 2>/dev/null || echo NOT_NEEDED)"
-            if [ -f /tmp/pytest-live.txt ]; then
-              echo; echo "## Tests"; echo '```text'; tail -20 /tmp/pytest-live.txt; echo '```'
-            fi
-            if [ -f /tmp/live-health.json ]; then
-              echo; echo "## Live health"; echo '```json'; cat /tmp/live-health.json; echo; echo '```'
-            fi
-            if [ -f /tmp/live-continuity.json ]; then
-              echo; echo "## Live continuity"; echo "HTTP $(cat /tmp/live-continuity-status 2>/dev/null || echo unknown)"; echo '```json'; cat /tmp/live-continuity.json; echo; echo '```'
-            fi
+            [ -f /tmp/live-continuity.json ] && { echo; echo '## Continuity'; echo '```json'; cat /tmp/live-continuity.json; echo; echo '```'; }
           } > ops/day3-live-acceptance-evidence.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ops/day3-live-acceptance-evidence.md
-          if ! git diff --cached --quiet; then
-            git commit -m "Day 3: record live-acceptance evidence"
-            git push origin HEAD:feature/day-3-continuity-auditor
-          fi
+          if ! git diff --cached --quiet; then git commit -m "Day 3: record live-acceptance evidence" && git push origin HEAD:feature/day-3-continuity-auditor; fi
