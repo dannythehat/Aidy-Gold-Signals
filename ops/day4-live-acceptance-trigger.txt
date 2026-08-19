@@ -1,3 +1,4 @@
 AIDY Day 4 BigQuery live acceptance.
 
-Opening the Day 4 PR is the bounded trigger. Ordinary source/evidence pushes do not match the workflow path filter.
+Attempt 2: code-quality corrections applied after 62/62 tests passed on attempt 1.
+Only this trigger-file change is allowed to start the corrected acceptance run.
