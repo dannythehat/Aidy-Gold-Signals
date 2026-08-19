@@ -1,13 +1,13 @@
 # Day 4 BigQuery live-acceptance evidence
 
-- Trigger commit: 6181825069dde56e7387bdf12780cb9158f47fde
-- Observed at UTC: 2026-08-19T10:33:20Z
+- Trigger commit: 2fd4a725ace3d20de19a02c26a9be74d7e2498aa
+- Observed at UTC: 2026-08-19T10:36:00Z
 - Dependencies: PASS
 - Code gate: PASS
 - Code gate status: ruff=0 compile=0 pytest=0
 - Live-recorder/BigQuery import boundary: PASS
 - Recorder health before export: PASS
-- Credential preflight: MISSING_AIDY_GCP_PROJECT_ID
+- Credential preflight: MISSING_AIDY_GCP_SERVICE_ACCOUNT_JSON
 - Genuine R2 snapshot retrieval: NOT_REACHED_OR_FAILED
 - BigQuery dependency: NOT_REACHED_OR_FAILED
 - R2 -> BigQuery repeated round-trip: NOT_REACHED_OR_FAILED
@@ -25,7 +25,7 @@ All checks passed!
 ## pytest
 ```text
 ..............................................................           [100%]
-62 passed in 0.47s
+62 passed in 0.58s
 ```
 
 ## health-before
