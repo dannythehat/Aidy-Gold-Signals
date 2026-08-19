@@ -30,7 +30,6 @@ jobs:
       - name: Persist diagnostic
         if: always()
         run: |
-          mkdir -p ops
           {
             echo '# Day 9 one-shot smoke diagnostic'
             echo
@@ -41,13 +40,13 @@ jobs:
             cat /tmp/day9-smoke.json 2>/dev/null || true
             echo
             echo '```'
-          } > ops/day9-smoke-diagnostic.md
+          } > /tmp/day9-smoke-diagnostic.md
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git fetch origin feature/day-9-cross-market-evidence
           git reset --hard origin/feature/day-9-cross-market-evidence
-          cp ops/day9-smoke-diagnostic.md /tmp/diag.md
-          cp /tmp/diag.md ops/day9-smoke-diagnostic.md
+          mkdir -p ops
+          cp /tmp/day9-smoke-diagnostic.md ops/day9-smoke-diagnostic.md
           git add ops/day9-smoke-diagnostic.md
           if ! git diff --cached --quiet; then
             git commit -m 'Day 9: record one-shot smoke diagnostic'
