@@ -1,1 +1,1 @@
-Day 9 bounded cross-market acceptance — 2026-08-19 — final code gate
+Day 9 bounded cross-market acceptance — 2026-08-19 — hardened live smoke
