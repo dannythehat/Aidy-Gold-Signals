@@ -1,16 +1,14 @@
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime, timedelta
+import json
 from uuid import uuid4
 
-import httpx
 import pytest
 
 from aidy.fomc_calendar_parser import parse_fomc_calendar
 from aidy.macro_event_windows import reconstruct_macro_event_window
 from aidy.official_macro import (
-    BLS_CALENDAR_URL,
     FetchedSource,
     OfficialMacroError,
     OfficialMacroGateway,
@@ -119,7 +117,9 @@ def test_fomc_calendar_uses_release_day_not_first_meeting_day() -> None:
         month=9,
         source_url="https://www.federalreserve.gov/newsevents/2026-september.htm",
     )
-    decision = next(item for item in observations if _structured(item)["event_class"] == "fomc_decision")
+    decision = next(
+        item for item in observations if _structured(item)["event_class"] == "fomc_decision"
+    )
     press = next(
         item
         for item in observations
@@ -142,7 +142,9 @@ def test_fomc_same_month_date_change_is_an_append_only_revision_identity() -> No
         month=9,
         source_url="https://www.federalreserve.gov/newsevents/2026-september.htm",
     )
-    first_decision = next(item for item in first if _structured(item)["event_class"] == "fomc_decision")
+    first_decision = next(
+        item for item in first if _structured(item)["event_class"] == "fomc_decision"
+    )
     revised_decision = next(
         item for item in revised if _structured(item)["event_class"] == "fomc_decision"
     )
@@ -252,7 +254,7 @@ def test_fed_release_is_absent_before_first_observed_and_present_after() -> None
 
 @pytest.mark.asyncio
 async def test_gateway_rejects_non_official_or_unapproved_source() -> None:
-    gateway = OfficialMacroGateway(transport=httpx.MockTransport(lambda request: None))
+    gateway = OfficialMacroGateway()
     with pytest.raises(OfficialMacroError, match="source_not_allowed"):
         await gateway.fetch(source_key="bls_calendar", url="https://example.com/calendar.ics")
 
