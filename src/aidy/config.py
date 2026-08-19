@@ -17,6 +17,7 @@ class AidySettings:
     market_closed_backoff_seconds: float = 900.0
     market_stale_seconds: float = 300.0
     fed_rss_poll_seconds: float = 120.0
+    macro_poll_seconds: float = 900.0
     archive_flush_limit: int = 100
 
     @classmethod
@@ -79,6 +80,7 @@ class AidySettings:
             ),
             market_stale_seconds=positive_float("AIDY_MARKET_STALE_SECONDS", 300.0),
             fed_rss_poll_seconds=positive_float("AIDY_FED_RSS_POLL_SECONDS", 120.0),
+            macro_poll_seconds=positive_float("AIDY_MACRO_POLL_SECONDS", 900.0),
             archive_flush_limit=positive_int("AIDY_ARCHIVE_FLUSH_LIMIT", 100),
         )
 
