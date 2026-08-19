@@ -1,7 +1,7 @@
 # Day 9 cross-market evidence live-acceptance evidence
 
-- Trigger commit: c1651635a02ad28c9aa62c4796da76af26d08bc9
-- Observed at UTC: 2026-08-19T16:02:19Z
+- Trigger commit: 9aa697d77e9efb9399f9767b18fced8ec24938e4
+- Observed at UTC: 2026-08-19T16:07:02Z
 - Dependencies: PASS
 - Code gate: PASS
 - Code gate status: ruff=0 compile=0 pytest=0
@@ -27,7 +27,7 @@ All checks passed!
 ```text
 ........................................................................ [ 53%]
 ..............................................................           [100%]
-134 passed in 0.53s
+134 passed in 0.77s
 ```
 
 ## migration
@@ -37,23 +37,7 @@ All checks passed!
 ────────────────────
 Resource location: remote 
 
-Migrations to be applied:
-┌────────────────────────────────┐
-│ name                           │
-├────────────────────────────────┤
-│ 0002_cross_market_evidence.sql │
-└────────────────────────────────┘
-? About to apply 1 migration(s)
-Your database may not be available to serve requests during the migration, continue?
-🤖 Using fallback value in non-interactive context: yes
-🌀 Executing on remote database AIDY_OPS (3588d82a-d686-4430-872d-d4c0e62c3d5d):
-🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
-🚣 Executed 5 commands in 2.55ms
-┌────────────────────────────────┬────────┐
-│ name                           │ status │
-├────────────────────────────────┼────────┤
-│ 0002_cross_market_evidence.sql │ ✅     │
-└────────────────────────────────┴────────┘
+✅ No migrations to apply!
 ```
 
 ## deploy
@@ -154,8 +138,8 @@ Attaching additional modules:
 ├─────────────────────────────────────────────────┼────────┼────────────┤
 │ Total (112 modules)                             │        │ 994.79 KiB │
 └─────────────────────────────────────────────────┴────────┴────────────┘
-Total Upload: 1004.08 KiB / gzip: 216.32 KiB
-Worker Startup Time: 1489 ms
+Total Upload: 1004.70 KiB / gzip: 216.42 KiB
+Worker Startup Time: 1444 ms
 Your Worker has access to the following bindings:
 Binding                                                            Resource                  
 env.AIDY_OPS (aidy-ops-test)                                       D1 Database               
@@ -173,16 +157,16 @@ env.AIDY_ARCHIVE_FLUSH_LIMIT ("100")                               Environment V
 env.AIDY_MACRO_POLL_SECONDS ("900")                                Environment Variable      
 env.AIDY_CROSS_MARKET_POLL_SECONDS ("3600")                        Environment Variable      
 
-Uploaded aidy-signals-test (8.84 sec)
-Deployed aidy-signals-test triggers (2.77 sec)
+Uploaded aidy-signals-test (11.02 sec)
+Deployed aidy-signals-test triggers (2.64 sec)
   https://aidy-signals-test.dannythehat2.workers.dev
   Consumer for aidy-capture-test
-Current Version ID: 58b7909e-2496-4ec9-bbaa-f23532541812
+Current Version ID: cc490efc-3a57-4bba-97eb-494df1330b2f
 ```
 
 ## source-probe
 ```json
-{"authentication": "none", "frequency": "daily_context", "observed_at": "2026-08-19T16:01:29.202792+00:00", "round_1": {"DTWEXBGS": {"observation_date": "2026-08-14", "payload_digest": "3a16cbaa00bf303b6ec7ad9db6237c7389ff3bff834a70d9fab09b11369adf69", "source": "fred_stlouisfed", "source_document_digest": "099b0ab4007d2060e319d5bef35d749a3bf397c5347c74703b8e9a626a99c2ae", "source_host": "fred.stlouisfed.org", "unit": "index_jan_2006_100", "value": "118.9028"}, "UST_NOMINAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "6deab068c787fa7da437432c40b875d430e81068bd26015636bb3702cb9d58bb", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.71"}, "UST_NOMINAL_2Y": {"observation_date": "2026-08-18", "payload_digest": "a0a8d755673c7658b77c1f1751862053aa9e52beb47f8d4592a7724512c7a677", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.19"}, "UST_REAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "5b87f43bc3a9c2a1da91bfd5ec4e22e867dd67a2487f3c0c9799e60902d9a49f", "source": "us_treasury", "source_document_digest": "3d1627cfcb258048eda6fd2211a13a35f3d12e8268b38fa115daf5d3415667ba", "source_host": "home.treasury.gov", "unit": "percent", "value": "2.41"}}, "round_2": {"DTWEXBGS": {"observation_date": "2026-08-14", "payload_digest": "3a16cbaa00bf303b6ec7ad9db6237c7389ff3bff834a70d9fab09b11369adf69", "source": "fred_stlouisfed", "source_document_digest": "099b0ab4007d2060e319d5bef35d749a3bf397c5347c74703b8e9a626a99c2ae", "source_host": "fred.stlouisfed.org", "unit": "index_jan_2006_100", "value": "118.9028"}, "UST_NOMINAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "6deab068c787fa7da437432c40b875d430e81068bd26015636bb3702cb9d58bb", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.71"}, "UST_NOMINAL_2Y": {"observation_date": "2026-08-18", "payload_digest": "a0a8d755673c7658b77c1f1751862053aa9e52beb47f8d4592a7724512c7a677", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.19"}, "UST_REAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "5b87f43bc3a9c2a1da91bfd5ec4e22e867dd67a2487f3c0c9799e60902d9a49f", "source": "us_treasury", "source_document_digest": "3d1627cfcb258048eda6fd2211a13a35f3d12e8268b38fa115daf5d3415667ba", "source_host": "home.treasury.gov", "unit": "percent", "value": "2.41"}}, "series": ["DTWEXBGS", "UST_NOMINAL_2Y", "UST_NOMINAL_10Y", "UST_REAL_10Y"], "status": "PASS"}
+{"authentication": "none", "frequency": "daily_context", "observed_at": "2026-08-19T16:06:18.118934+00:00", "round_1": {"DTWEXBGS": {"observation_date": "2026-08-14", "payload_digest": "3a16cbaa00bf303b6ec7ad9db6237c7389ff3bff834a70d9fab09b11369adf69", "source": "fred_stlouisfed", "source_document_digest": "099b0ab4007d2060e319d5bef35d749a3bf397c5347c74703b8e9a626a99c2ae", "source_host": "fred.stlouisfed.org", "unit": "index_jan_2006_100", "value": "118.9028"}, "UST_NOMINAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "6deab068c787fa7da437432c40b875d430e81068bd26015636bb3702cb9d58bb", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.71"}, "UST_NOMINAL_2Y": {"observation_date": "2026-08-18", "payload_digest": "a0a8d755673c7658b77c1f1751862053aa9e52beb47f8d4592a7724512c7a677", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.19"}, "UST_REAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "5b87f43bc3a9c2a1da91bfd5ec4e22e867dd67a2487f3c0c9799e60902d9a49f", "source": "us_treasury", "source_document_digest": "3d1627cfcb258048eda6fd2211a13a35f3d12e8268b38fa115daf5d3415667ba", "source_host": "home.treasury.gov", "unit": "percent", "value": "2.41"}}, "round_2": {"DTWEXBGS": {"observation_date": "2026-08-14", "payload_digest": "3a16cbaa00bf303b6ec7ad9db6237c7389ff3bff834a70d9fab09b11369adf69", "source": "fred_stlouisfed", "source_document_digest": "099b0ab4007d2060e319d5bef35d749a3bf397c5347c74703b8e9a626a99c2ae", "source_host": "fred.stlouisfed.org", "unit": "index_jan_2006_100", "value": "118.9028"}, "UST_NOMINAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "6deab068c787fa7da437432c40b875d430e81068bd26015636bb3702cb9d58bb", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.71"}, "UST_NOMINAL_2Y": {"observation_date": "2026-08-18", "payload_digest": "a0a8d755673c7658b77c1f1751862053aa9e52beb47f8d4592a7724512c7a677", "source": "us_treasury", "source_document_digest": "07b00736796f8dbc130ec883764e13a44f0e894489536c9f55dfe857ca984a55", "source_host": "home.treasury.gov", "unit": "percent", "value": "4.19"}, "UST_REAL_10Y": {"observation_date": "2026-08-18", "payload_digest": "5b87f43bc3a9c2a1da91bfd5ec4e22e867dd67a2487f3c0c9799e60902d9a49f", "source": "us_treasury", "source_document_digest": "3d1627cfcb258048eda6fd2211a13a35f3d12e8268b38fa115daf5d3415667ba", "source_host": "home.treasury.gov", "unit": "percent", "value": "2.41"}}, "series": ["DTWEXBGS", "UST_NOMINAL_2Y", "UST_NOMINAL_10Y", "UST_REAL_10Y"], "status": "PASS"}
 
 ```
 
