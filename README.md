@@ -8,76 +8,69 @@ AIDY and Super Signals are separate systems. AIDY produces signals; Super Signal
 
 - Separate repository and runtime from Super Signals.
 - No Render dependency for AIDY. Render remains Super Signals infrastructure only.
-- GitHub Actions is permitted only for CI, automated tests, Cloudflare provisioning/migrations and deployment. AIDY runtime and trading intelligence never execute in GitHub Actions.
+- GitHub Actions is permitted for CI, tests, Cloudflare provisioning/migrations and deployment transport. AIDY runtime and trading intelligence execute on Cloudflare, not GitHub Actions.
 - No direct MT5 execution from the AIDY intelligence layer.
 - No live-money capability during build and paper testing.
 - Point-in-time market evidence and decision auditability are mandatory.
-- AIDY never reads broker/follower positions and never uses Super Signals'
-  Vantage/MetaAPI credentials. Market-data credentials must be AIDY-owned.
+- AIDY never reads broker/follower positions and never uses broker, MT5, MetaAPI, Vantage or Super Signals credentials for market-data capture.
 
 ## Locked AIDY data/runtime architecture
 
 - **Cloudflare Workers** — AIDY serverless runtime and orchestration.
 - **Cloudflare D1** — lightweight operational state and the evidence/archive outbox.
-- **Cloudflare R2** — durable append-only raw and Parquet historical Gold archive.
+- **Cloudflare R2** — durable append-only raw and future Parquet historical Gold archive.
 - **Google BigQuery** — historical analytics warehouse for regime research, feature studies, analogue retrieval, outcome analysis and evaluation datasets.
-- **Telegram** — provider publication boundary to Super Signals.
+- **Telegram** — future provider publication boundary to Super Signals.
 
-## Market-data boundary correction — 17 August 2026
+## Broker-free market-data architecture — 19 August 2026
 
-AIDY needs independent XAUUSD quotes and closed candles. It does not need a
-broker execution account or follower-position state. The retained MetaAPI
-adapter is now market-only, contains no positions endpoint, and is disabled in
-the checked-in Cloudflare test configuration until an AIDY-dedicated source is
-explicitly approved. `AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated` is a fail-closed
-runtime gate; it must never be set for credentials owned or shared by Super
-Signals.
+AIDY's live reference-price recorder is deliberately independent of trading accounts.
 
-ChatGPT is a build tool, not an AIDY runtime dependency. The OpenAI API remains
-future Day 21 trading intelligence and is unrelated to storage or broker access.
+- Primary live XAU/USD reference source: **Gold-API** (`https://api.gold-api.com/price/XAU`).
+- Authentication: **none**. The live price endpoint is keyless.
+- Runtime source identity: `AIDY_MARKET_DATA_SOURCE=gold_api`.
+- Runtime provenance gate: `AIDY_MARKET_DATA_OWNERSHIP=public_independent`.
+- AIDY stores the Gold reference price as `mid`; it does not invent bid, ask or spread when the upstream does not provide them.
+- AIDY does not fabricate OHLC candles from one-minute price snapshots. Genuine OHLC and deeper historical research data remain a separate ingestion product.
+- The old MetaAPI adapter is historical prototype code only and is not part of the active AIDY runtime path.
 
-The earlier PostgreSQL/Alembic extraction from the 15 August prototype is preserved only as design/reference evidence. PostgreSQL and Render are not AIDY production dependencies.
+ChatGPT is a build tool, not an AIDY runtime dependency. The OpenAI API remains future trading intelligence and is unrelated to storage, broker access or the market-price source.
+
+The earlier PostgreSQL/Alembic extraction from the prototype is preserved only as design/reference evidence. PostgreSQL and Render are not AIDY production dependencies.
 
 ## Day 1 Cloudflare test bootstrap
 
-GitHub Actions is the browser/cloud-only deployment bridge for the Day 1 test gate. It may run tests, provision the named Cloudflare test resources, apply D1 migrations, deploy the test Worker and execute the storage smoke test. It is not an AIDY runtime.
-
-The repository also carries an account-neutral Wrangler template and a Windows PowerShell bootstrap as a fallback for an authenticated development machine:
+The repository carries an account-neutral Wrangler template and a Windows PowerShell bootstrap as a fallback for an authenticated development machine:
 
 ```powershell
 .\scripts\bootstrap-cloudflare-test.ps1
 ```
 
-The bootstrap path:
+The bootstrap path provisions the named Cloudflare test resources, applies `migrations/d1`, deploys `aidy-signals-test`, and verifies the D1 -> outbox -> R2 storage round trip.
 
-1. checks Cloudflare CLI authentication and opens browser login when required;
-2. copies `wrangler.test.example.jsonc` to ignored `wrangler.test.local.jsonc`;
-3. deploys `aidy-signals-test` and provisions its test D1/R2 bindings;
-4. applies `migrations/d1` to the real test D1 database;
-5. calls `POST /day1/storage-smoke` and requires a real D1 -> outbox -> R2 round trip.
-
-`AIDY_CAPTURE_ENABLED` remains `false` in the checked-in test config. The
-scheduler Cron is also disabled in source until the independent AIDY market-data
-boundary is accepted.
+`AIDY_CAPTURE_ENABLED` remains `false` in the checked-in test config. The live acceptance workflow deliberately turns it on only in the real test deployment after the public source and code gates pass.
 
 Do not commit generated local Wrangler configs, `.dev.vars`, Cloudflare auth state, API tokens or account-specific resource IDs.
 
 ## Day 3 continuity gate
 
-Day 3 adds a deterministic evidence-health auditor before any trading
-intelligence is allowed to trust the recorder. The test Worker exposes the
-read-only aggregate endpoint below only when `AIDY_ENV=test`:
+Day 3 adds a deterministic evidence-health auditor before any trading intelligence is allowed to trust the recorder. The test Worker exposes this read-only endpoint only when `AIDY_ENV=test`:
 
 ```text
 GET /day3/continuity?minutes=10&archive_limit=40
 ```
 
-The endpoint returns HTTP `200` only when the configured source is explicitly
-AIDY-owned, capture is enabled, every expected scheduler cycle is present,
-quotes are fresh, snapshots are complete, required M1/M5 candle continuity is
-intact, no source errors are recorded, the archive outbox is caught up, and the
-bounded D1 archive sample exists in R2. Any failed condition returns HTTP `503`
-with stable machine-readable failure reasons.
+For the broker-free Gold-API source, the endpoint returns HTTP `200` only when:
 
-The endpoint never exposes quote payloads, credentials, broker state or raw
-evidence. See `docs/continuity-auditor.md` for the exact contract.
+- capture is enabled;
+- the configured source is `gold_api` and marked `public_independent`;
+- every expected one-minute scheduled reference-price observation is present;
+- quote timestamps are fresh;
+- no partial or unavailable snapshots exist in the acceptance window;
+- no upstream source errors are recorded;
+- the archive outbox is caught up; and
+- the bounded D1 archive sample exists in R2.
+
+Any failed condition returns HTTP `503` with stable machine-readable failure reasons.
+
+**Day 3 does not pretend that sparse reference-price observations are candles.** Candle integrity is evaluated only once a genuine OHLC research source has been ingested.
