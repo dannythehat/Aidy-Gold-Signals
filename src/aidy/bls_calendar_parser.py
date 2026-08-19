@@ -21,6 +21,7 @@ _ACCEPTED_CLASSES = {
     "jolts",
     "employment_cost_index",
 }
+_EASTERN_TZID_ALIASES = ("AMERICA/NEW_YORK", "US-EASTERN")
 
 
 def _event_class(title: str) -> str | None:
@@ -58,8 +59,9 @@ def _dtstart_to_utc(raw_key: str, raw_value: str) -> datetime | None:
     if value.endswith("Z"):
         return local.replace(tzinfo=UTC)
     # BLS explicitly defines its release-calendar clock as Eastern Time. The
-    # live ICS may omit TZID, so a plain DTSTART is still an Eastern wall time.
-    if "TZID=" in raw_key.upper() and "AMERICA/NEW_YORK" not in raw_key.upper():
+    # live ICS currently uses the IANA-compatible legacy alias US-Eastern.
+    key_upper = raw_key.upper()
+    if "TZID=" in key_upper and not any(alias in key_upper for alias in _EASTERN_TZID_ALIASES):
         return None
     return _eastern_wall_to_utc(local)
 
