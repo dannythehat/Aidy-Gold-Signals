@@ -78,7 +78,7 @@ class AidyReferencePriceRecorderService:
             "market_data_source": "gold_api",
             "price_type": "indicative_mid",
             "candles": "separate_research_feed",
-            "cross_market": "not_configured_phase0",
+            "cross_market": "separate_point_in_time_daily_feed",
             "external_events": "fed_rss_separate_loop",
             "orders": "not_captured_phase0",
         }

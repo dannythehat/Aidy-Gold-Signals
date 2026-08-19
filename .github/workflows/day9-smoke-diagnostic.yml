@@ -1,0 +1,54 @@
+name: AIDY Day 9 Smoke Diagnostic
+
+on:
+  push:
+    branches:
+      - feature/day-9-cross-market-evidence
+    paths:
+      - "ops/day9-smoke-diagnostic-trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-9-cross-market-evidence
+
+      - name: Capture live smoke response without suppressing body
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/day9-smoke.json -w '%{http_code}' -X POST \
+            'https://aidy-signals-test.dannythehat2.workers.dev/day9/cross-market-smoke')
+          echo "$code" > /tmp/day9-smoke-status.txt
+          cat /tmp/day9-smoke.json
+
+      - name: Persist diagnostic
+        if: always()
+        run: |
+          {
+            echo '# Day 9 one-shot smoke diagnostic'
+            echo
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- HTTP status: $(cat /tmp/day9-smoke-status.txt 2>/dev/null || echo unknown)"
+            echo
+            echo '```json'
+            cat /tmp/day9-smoke.json 2>/dev/null || true
+            echo
+            echo '```'
+          } > /tmp/day9-smoke-diagnostic.md
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin feature/day-9-cross-market-evidence
+          git reset --hard origin/feature/day-9-cross-market-evidence
+          mkdir -p ops
+          cp /tmp/day9-smoke-diagnostic.md ops/day9-smoke-diagnostic.md
+          git add ops/day9-smoke-diagnostic.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Day 9: record one-shot smoke diagnostic'
+            git push origin HEAD:feature/day-9-cross-market-evidence
+          fi

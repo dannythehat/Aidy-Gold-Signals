@@ -1,0 +1,1 @@
+Day 9 final runtime-authoritative acceptance — 2026-08-19 — transport lint fixed

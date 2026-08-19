@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from .config import AidySettings
+from .cross_market import CrossMarketGateway
+from .cross_market_recorder import AidyCrossMarketRecorderService, CrossMarketCaptureResult
 from .fed_recorder import AidyFedRssRecorderService
 from .fed_rss import FedRssCaptureResult, FedRssGateway
 from .gold_api_gateway import GoldApiGateway
@@ -25,6 +27,7 @@ class RecorderCycleResult:
     market: ReferenceCaptureResult | None
     fed: FedRssCaptureResult | None
     macro: OfficialMacroCaptureResult | None
+    cross_market: CrossMarketCaptureResult | None
     archive: ArchiveFlushResult
 
 
@@ -45,15 +48,17 @@ async def run_capture_cycle(
     include_market: bool = True,
     include_fed: bool = True,
     include_macro: bool = True,
+    include_cross_market: bool = True,
     market_gateway: GoldApiGateway | None = None,
     fed_gateway: FedRssGateway | None = None,
     macro_gateway: OfficialMacroGateway | None = None,
+    cross_market_gateway: CrossMarketGateway | None = None,
 ) -> RecorderCycleResult | None:
     """Run one broker-free recorder cycle.
 
-    `now` represents only the scheduler/event evaluation time. Market, Fed and
-    official macro first-observed timestamps are deliberately stamped by their
-    recorders after upstream HTTP responses arrive, not with this nominal tick.
+    `now` represents only the scheduler/event evaluation time. First-observed
+    timestamps are deliberately stamped by each recorder after its upstream HTTP
+    response arrives, not with this nominal tick.
     """
 
     if not settings.capture_enabled:
@@ -62,6 +67,7 @@ async def run_capture_cycle(
     market: ReferenceCaptureResult | None = None
     fed: FedRssCaptureResult | None = None
     macro: OfficialMacroCaptureResult | None = None
+    cross_market: CrossMarketCaptureResult | None = None
 
     if include_market:
         market = await AidyReferencePriceRecorderService(
@@ -82,8 +88,20 @@ async def run_capture_cycle(
             gateway=macro_gateway or OfficialMacroGateway(),
         ).capture_once()
 
+    if include_cross_market:
+        cross_market = await AidyCrossMarketRecorderService(
+            repository=repository,
+            gateway=cross_market_gateway or CrossMarketGateway(),
+        ).capture_once()
+
     archive = await repository.flush_archive_outbox(limit=settings.archive_flush_limit)
-    return RecorderCycleResult(market=market, fed=fed, macro=macro, archive=archive)
+    return RecorderCycleResult(
+        market=market,
+        fed=fed,
+        macro=macro,
+        cross_market=cross_market,
+        archive=archive,
+    )
 
 
 async def run_worker_scheduled_cycle(
@@ -97,15 +115,28 @@ async def run_worker_scheduled_cycle(
     scheduled_at = scheduled_at.astimezone(UTC)
     if not settings.capture_enabled:
         archive = await repository.flush_archive_outbox(limit=settings.archive_flush_limit)
-        return RecorderCycleResult(market=None, fed=None, macro=None, archive=archive)
+        return RecorderCycleResult(
+            market=None,
+            fed=None,
+            macro=None,
+            cross_market=None,
+            archive=archive,
+        )
 
     market_due = interval_due(scheduled_at, settings.market_poll_seconds)
     fed_due = interval_due(scheduled_at, settings.fed_rss_poll_seconds)
     macro_due = interval_due(scheduled_at, settings.macro_poll_seconds)
+    cross_market_due = interval_due(scheduled_at, settings.cross_market_poll_seconds)
 
-    if not market_due and not fed_due and not macro_due:
+    if not market_due and not fed_due and not macro_due and not cross_market_due:
         archive = await repository.flush_archive_outbox(limit=settings.archive_flush_limit)
-        return RecorderCycleResult(market=None, fed=None, macro=None, archive=archive)
+        return RecorderCycleResult(
+            market=None,
+            fed=None,
+            macro=None,
+            cross_market=None,
+            archive=archive,
+        )
 
     result = await run_capture_cycle(
         settings,
@@ -114,6 +145,7 @@ async def run_worker_scheduled_cycle(
         include_market=market_due,
         include_fed=fed_due,
         include_macro=macro_due,
+        include_cross_market=cross_market_due,
     )
     assert result is not None
     return result

@@ -7,16 +7,19 @@ from urllib.parse import parse_qs, urlparse
 
 from workers import Response, WorkerEntrypoint
 
-from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
+from aidy.cloudflare_storage import R2ArchiveStore
 from aidy.config import AidySettings
 from aidy.continuity_auditor import audit_window
+from aidy.cross_market import CrossMarketGateway
+from aidy.cross_market_recorder import AidyCrossMarketRecorderService
+from aidy.cross_market_storage import D1CrossMarketOperationalEvidenceStore
 from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
 from aidy.runtime import run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
 
 
 def _repository(env):
-    operational = D1OperationalEvidenceStore(env.AIDY_OPS)
+    operational = D1CrossMarketOperationalEvidenceStore(env.AIDY_OPS)
     return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
 
 
@@ -64,6 +67,7 @@ class Default(WorkerEntrypoint):
                     "capture_enabled": settings.capture_enabled,
                     "market_data_source": settings.market_data_source,
                     "market_data_ownership": settings.market_data_ownership,
+                    "cross_market_source": "public_official_daily",
                     "scheduler": "queue-consumer",
                 }
             )
@@ -93,6 +97,70 @@ class Default(WorkerEntrypoint):
                 },
                 status=200 if ok else 503,
             )
+
+        if request.method == "POST" and url.path == "/day9/cross-market-smoke":
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            try:
+                operational, repository = _repository(self.env)
+                capture = await AidyCrossMarketRecorderService(
+                    repository=repository,
+                    gateway=CrossMarketGateway(),
+                ).capture_once()
+                flushed = await repository.flush_archive_outbox(limit=100)
+                rows_result = await self.env.AIDY_OPS.prepare(
+                    """
+                    SELECT id,source,series_id,observation_date,value,unit,first_observed_at,
+                           revision_index,payload_digest,archive_key
+                    FROM cross_market_observations c
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM cross_market_observations newer
+                        WHERE newer.source=c.source AND newer.series_id=c.series_id
+                          AND newer.observation_date=c.observation_date
+                          AND newer.revision_index > c.revision_index
+                    )
+                    ORDER BY series_id,observation_date DESC
+                    """
+                ).all()
+                rows = rows_result.results if hasattr(rows_result, "results") else []
+                latest: dict[str, object] = {}
+                for row in rows or []:
+                    series_id = str(row["series_id"])
+                    if series_id not in latest:
+                        latest[series_id] = dict(row)
+                pending_row = await self.env.AIDY_OPS.prepare(
+                    "SELECT COUNT(*) AS n FROM cross_market_archive_outbox WHERE status='pending'"
+                ).first()
+                pending = 0 if pending_row is None else int(pending_row["n"])
+                ok = capture.sources_failed == 0 and len(latest) == 4 and pending == 0
+                return Response.json(
+                    {
+                        "ok": ok,
+                        "capture": {
+                            "sources_checked": capture.sources_checked,
+                            "sources_failed": capture.sources_failed,
+                            "observations_seen": capture.observations_seen,
+                            "observations_added": capture.observations_added,
+                        },
+                        "archive": {
+                            "attempted": flushed.attempted,
+                            "archived": flushed.archived,
+                            "failed": flushed.failed,
+                            "pending": pending,
+                        },
+                        "latest": latest,
+                    },
+                    status=200 if ok else 503,
+                )
+            except Exception as exc:  # noqa: BLE001 - test-only endpoint must expose diagnosis
+                return Response.json(
+                    {
+                        "ok": False,
+                        "error": type(exc).__name__,
+                        "message": str(exc)[:1000],
+                    },
+                    status=500,
+                )
 
         if request.method == "GET" and url.path == "/day3/continuity":
             if str(self.env.AIDY_ENV).lower() != "test":
