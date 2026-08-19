@@ -1,1 +1,1 @@
-Day 5 BigQuery job-history probe — 2026-08-19T12:36Z
+Day 5 client job-history probe — 2026-08-19T12:42Z
