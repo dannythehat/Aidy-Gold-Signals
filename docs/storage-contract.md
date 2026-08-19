@@ -1,6 +1,7 @@
 # AIDY Cloudflare storage contract
 
 Decision date: 2026-08-16
+Day 3 clarification: 2026-08-19
 
 ## Purpose
 
@@ -22,10 +23,9 @@ The recorder does **not** require R2 to be healthy before operational evidence c
 - Event revisions are append-only and keyed by source + external ID.
 - Identical payload digests are idempotent and do not create a new revision.
 - Event lookups use only observations whose `first_observed_at` was known at the requested capture time.
-- Broker/follower position state is outside AIDY's product boundary and is never
-  captured. The nullable `position_state_json` D1 column remains only so the
-  historical Day 2 record can be read; every new AIDY snapshot writes `NULL`.
+- Broker/follower position state is outside AIDY's product boundary and is never captured. The nullable `position_state_json` D1 column remains only so the historical Day 2 record can be read; every new AIDY snapshot writes `NULL`.
 - Snapshot R2 schema version 2 omits position state entirely.
+- A reference-price snapshot may legitimately have `bid`, `ask`, `spread` and candle-link fields as NULL when the upstream source does not provide those facts. Unknown is preserved as unknown.
 
 ## D1 tables
 
@@ -66,13 +66,8 @@ Mocks and local SQLite tests are useful preflight evidence but are not sufficien
 
 ## Day 3 D1/R2 reconciliation
 
-The Day 3 auditor reads aggregate snapshot/candle/outbox facts from D1 and
-checks a bounded, explicitly reported sample of archived outbox keys with
-`R2.head()`. The maximum sample is 40 objects per request so the Worker remains
-inside a conservative subrequest budget. Reports always disclose both
-`archive_population` and `archive_checked`; a sample is never described as the
-entire archive when it is not.
+The active Day 3 broker-free auditor reads aggregate snapshot/outbox facts from D1 and checks a bounded, explicitly reported sample of archived outbox keys with `R2.head()`. The maximum sample is 40 objects per request so the Worker remains inside a conservative subrequest budget. Reports always disclose both `archive_population` and `archive_checked`; a sample is never described as the entire archive when it is not.
 
-Any pending outbox row is included before archived rows, even when it predates
-the requested continuity window. A pending row, retry/error marker, missing R2
-object or unverified archived row fails the Day 3 gate.
+The general candle/outbox reconciliation machinery remains available for future genuine OHLC research ingestion, but the Gold-API reference stream does not create fake candle rows merely to satisfy a schema.
+
+Any pending outbox row is included before archived rows, even when it predates the requested continuity window. A pending row, retry/error marker, missing R2 object or unverified archived row fails the Day 3 gate.
