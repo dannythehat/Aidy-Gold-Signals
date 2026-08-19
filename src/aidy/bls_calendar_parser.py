@@ -67,6 +67,9 @@ def _dtstart_to_utc(raw_key: str, raw_value: str) -> datetime | None:
 def parse_bls_official_calendar(text: str) -> list[dict[str, object]]:
     if len(text.encode("utf-8")) > 4_000_000:
         raise OfficialMacroError("bls_calendar_too_large")
+    if "BEGIN:VEVENT" not in text:
+        preview = " ".join(text[:600].split())
+        raise OfficialMacroError(f"bls_calendar_no_vevent:{preview}")
 
     events: list[dict[str, str]] = []
     current: dict[str, str] | None = None
