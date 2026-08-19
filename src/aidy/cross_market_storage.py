@@ -221,7 +221,7 @@ class D1CrossMarketOperationalEvidenceStore(D1OperationalEvidenceStore):
         )
         payload = _row_value(row, "payload_json")
         if not isinstance(payload, str):
-            raise RuntimeError("Cross-market outbox points to missing evidence.")
+            raise TypeError("Cross-market outbox points to missing evidence.")
         return payload
 
     async def mark_archive_success(
