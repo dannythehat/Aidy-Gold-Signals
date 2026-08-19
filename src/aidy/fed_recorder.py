@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 from .fed_rss import (
@@ -14,15 +15,35 @@ from .fed_rss import (
 from .storage_contracts import AidyMarketRepository
 
 logger = logging.getLogger(__name__)
+Clock = Callable[[], datetime]
 
 
 class AidyFedRssRecorderService:
-    def __init__(self, *, repository: AidyMarketRepository, gateway: FedRssGateway) -> None:
+    def __init__(
+        self,
+        *,
+        repository: AidyMarketRepository,
+        gateway: FedRssGateway,
+        clock: Clock = lambda: datetime.now(UTC),
+    ) -> None:
         self._repository = repository
         self._gateway = gateway
+        self._clock = clock
 
     async def capture_once(self, *, now: datetime | None = None) -> FedRssCaptureResult:
-        observed_at = (now or datetime.now(UTC)).astimezone(UTC)
+        """Capture Fed RSS evidence.
+
+        `now` is a deterministic test/replay override. Production callers omit
+        it so first_observed_at is stamped only after each HTTP response is
+        available, never from the earlier scheduler tick.
+        """
+
+        override = None
+        if now is not None:
+            if now.tzinfo is None:
+                raise ValueError("Fed RSS capture override must be timezone-aware.")
+            override = now.astimezone(UTC)
+
         failures = 0
         unchanged = 0
         seen = 0
@@ -34,6 +55,7 @@ class AidyFedRssRecorderService:
                     unchanged += 1
                     continue
                 observations = parse_fed_rss(xml_text, feed_key=feed_key)
+                observed_at = override or self._clock().astimezone(UTC)
             except FedRssError as exc:
                 failures += 1
                 logger.warning("AIDY Fed RSS capture failed feed=%s code=%s", feed_key, exc)
@@ -96,7 +118,7 @@ class AidyFedRssRecorderManager:
     async def _run(self) -> None:
         while True:
             try:
-                await self._service.capture_once(now=datetime.now(UTC))
+                await self._service.capture_once()
             except asyncio.CancelledError:
                 raise
             except Exception:
