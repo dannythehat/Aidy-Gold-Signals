@@ -359,7 +359,7 @@ def _reconcile_candles(
     expected: dict[str, int],
 ) -> dict[str, dict[str, int]]:
     sql = f"""
-SELECT timeframe, COUNT(*) AS rows, COUNT(DISTINCT research_identity) AS identities,
+SELECT timeframe, COUNT(*) AS row_count, COUNT(DISTINCT research_identity) AS identities,
        COUNTIF(pit_eligible) AS pit_eligible_rows,
        COUNT(DISTINCT provenance_class) AS provenance_classes
 FROM `{project}.{dataset}.{RESEARCH_CANDLES.name}`
@@ -375,7 +375,7 @@ GROUP BY timeframe
     rows = list(client.query(sql, job_config=config, location=client.location).result())
     actual = {
         str(row["timeframe"]): {
-            "rows": int(row["rows"]),
+            "rows": int(row["row_count"]),
             "identities": int(row["identities"]),
             "pit_eligible_rows": int(row["pit_eligible_rows"]),
             "provenance_classes": int(row["provenance_classes"]),
@@ -405,7 +405,7 @@ def _reconcile_manifest(
     backfill_id: str,
 ) -> int:
     sql = f"""
-SELECT COUNT(*) AS rows, COUNTIF(pit_eligible) AS pit_eligible_rows
+SELECT COUNT(*) AS row_count, COUNTIF(pit_eligible) AS pit_eligible_rows
 FROM `{project}.{dataset}.{RESEARCH_BACKFILL_MANIFEST.name}`
 WHERE backfill_identity = @backfill_identity
 """.strip()
@@ -417,7 +417,7 @@ WHERE backfill_identity = @backfill_identity
     rows = list(client.query(sql, job_config=config, location=client.location).result())
     if len(rows) != 1:
         raise RuntimeError("Manifest reconciliation returned an unexpected result.")
-    count = int(rows[0]["rows"])
+    count = int(rows[0]["row_count"])
     if count != 1 or int(rows[0]["pit_eligible_rows"]) != 0:
         raise RuntimeError("Manifest idempotency/provenance reconciliation failed.")
     return count
