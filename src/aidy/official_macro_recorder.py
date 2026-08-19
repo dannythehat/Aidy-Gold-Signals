@@ -4,6 +4,7 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from .fomc_calendar_parser import parse_fomc_calendar
 from .official_macro import (
     BEA_CURRENT_RELEASES_URL,
     BEA_SCHEDULE_URL,
@@ -16,7 +17,6 @@ from .official_macro import (
     parse_bea_schedule_html,
     parse_bls_calendar_ics,
     parse_bls_release_rss,
-    parse_fed_month_calendar_html,
     upcoming_fed_calendar_sources,
 )
 from .storage_contracts import AidyMarketRepository
@@ -87,7 +87,7 @@ class AidyOfficialMacroRecorderService:
                     observations = parse_bea_current_releases_html(fetched.text)
                 elif source_key.startswith("fed_calendar_") and calendar_period is not None:
                     year, month = calendar_period
-                    observations = parse_fed_month_calendar_html(
+                    observations = parse_fomc_calendar(
                         fetched.text,
                         year=year,
                         month=month,
