@@ -37,3 +37,13 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint.isort]
+known-first-party = ["aidy"]
+
+[tool.ruff.lint.per-file-ignores]
+# Official agency schedules expose America/New_York wall times. These parsers
+# deliberately construct a naive wall clock and immediately pass it through
+# AIDY's explicit DST-aware Eastern-to-UTC converter.
+"src/aidy/official_macro.py" = ["DTZ001", "DTZ007", "SIM117"]
+"src/aidy/fomc_calendar_parser.py" = ["DTZ001"]

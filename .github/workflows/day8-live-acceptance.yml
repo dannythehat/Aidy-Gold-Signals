@@ -1,0 +1,179 @@
+name: AIDY Day 8 Official Macro Evidence Acceptance
+
+on:
+  push:
+    branches:
+      - feature/day-8-official-macro-event-evidence
+    paths:
+      - "ops/day8-live-acceptance-trigger.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day8-official-macro-acceptance
+  cancel-in-progress: false
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-8-official-macro-event-evidence
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          echo PASS > /tmp/dependencies
+
+      - name: Run Day 8 lint and full regression gate
+        run: |
+          set +e
+          : > /tmp/ruff.txt
+          uv run ruff check \
+            src/aidy/config.py \
+            src/aidy/fed_recorder.py \
+            src/aidy/runtime.py \
+            src/aidy/bls_calendar_parser.py \
+            src/aidy/fomc_calendar_parser.py \
+            src/aidy/macro_event_windows.py \
+            src/aidy/official_macro_recorder.py \
+            scripts/day8_probe_official_macro.py \
+            tests/test_bls_calendar_parser.py \
+            tests/test_official_macro.py \
+            >> /tmp/ruff.txt 2>&1
+          ruff_primary=$?
+          uv run ruff check src/aidy/official_macro.py --ignore SIM117 >> /tmp/ruff.txt 2>&1
+          ruff_macro=$?
+          if [ "$ruff_primary" -eq 0 ] && [ "$ruff_macro" -eq 0 ]; then
+            ruff_status=0
+          else
+            ruff_status=1
+          fi
+          uv run python -m compileall -q src scripts tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest.txt
+          exit 1
+
+      - name: Prove official-only and PIT structural boundaries
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from pathlib import Path
+          from aidy.config import AidySettings
+          from aidy.official_macro import BLS_CALENDAR_URL, BLS_RSS_FEEDS, BEA_SCHEDULE_URL, BEA_CURRENT_RELEASES_URL
+
+          urls=[BLS_CALENDAR_URL, *BLS_RSS_FEEDS.values(), BEA_SCHEDULE_URL, BEA_CURRENT_RELEASES_URL]
+          assert all(url.startswith('https://') for url in urls)
+          assert all(any(domain in url for domain in ('bls.gov','bea.gov')) for url in urls)
+
+          recorder=Path('src/aidy/official_macro_recorder.py').read_text(encoding='utf-8')
+          assert 'parse_bls_official_calendar' in recorder
+          assert 'parse_bls_calendar_ics(' not in recorder
+          assert 'parse_fomc_calendar' in recorder
+          assert 'parse_fed_month_calendar_html(' not in recorder
+          windows=Path('src/aidy/macro_event_windows.py').read_text(encoding='utf-8')
+          assert 'select_latest_events_as_of' in windows
+          assert 'first_observed_at' in windows
+          docs=Path('docs/official-macro-evidence-contract.md').read_text(encoding='utf-8').lower()
+          assert 'no paid' in docs
+          assert AidySettings().macro_poll_seconds >= 300
+
+          combined='\n'.join(
+              Path(path).read_text(encoding='utf-8').lower()
+              for path in (
+                  'src/aidy/official_macro.py',
+                  'src/aidy/bls_calendar_parser.py',
+                  'src/aidy/fomc_calendar_parser.py',
+                  'src/aidy/official_macro_recorder.py',
+                  'src/aidy/macro_event_windows.py',
+              )
+          )
+          forbidden=('metaapi', 'vantage', 'mt5', 'super-signals', 'forexfactory', 'tradingeconomics')
+          assert not any(term in combined for term in forbidden)
+          PY
+          echo PASS > /tmp/structural-boundary
+
+      - name: Probe current official Fed BLS BEA sources
+        run: |
+          set +e
+          uv run python scripts/day8_probe_official_macro.py > /tmp/live-probe.json 2> /tmp/live-probe.stderr
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            echo PASS > /tmp/live-probe-status
+            cat /tmp/live-probe.json
+            exit 0
+          fi
+          echo FAIL > /tmp/live-probe-status
+          cat /tmp/live-probe.stderr
+          exit "$status"
+
+      - name: Re-prove append-only D1 revision and event-window fixtures
+        run: |
+          set -euo pipefail
+          uv run pytest -q \
+            tests/test_d1_storage_local.py::test_d1_event_revision_is_point_in_time \
+            tests/test_official_macro.py::test_event_window_filters_revision_by_what_was_known_at_t \
+            tests/test_official_macro.py::test_fomc_same_month_date_change_is_an_append_only_revision_identity \
+            > /tmp/focused.txt
+          echo PASS > /tmp/revision-window-proof
+
+      - name: Persist Day 8 acceptance evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo "# Day 8 official macro evidence live-acceptance evidence"
+            echo
+            echo "- Trigger commit: ${AIDY_ACCEPTANCE_HEAD_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
+            echo "- Official/PIT structural boundary: $(cat /tmp/structural-boundary 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Live Fed/BLS/BEA probe: $(cat /tmp/live-probe-status 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Append-only revision + event-window proof: $(cat /tmp/revision-window-proof 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            for name in ruff compile pytest focused live-probe.stderr; do
+              file="/tmp/${name}.txt"
+              [ "$name" = "live-probe.stderr" ] && file="/tmp/live-probe.stderr"
+              if [ -f "$file" ] && [ -s "$file" ]; then
+                echo; echo "## ${name}"; echo '```text'; tail -160 "$file"; echo '```'
+              fi
+            done
+            if [ -f /tmp/live-probe.json ] && [ -s /tmp/live-probe.json ]; then
+              echo; echo "## live-official-source-probe"; echo '```json'; cat /tmp/live-probe.json; echo; echo '```'
+            fi
+          } > /tmp/day8-evidence.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-8-official-macro-event-evidence
+          git reset --hard origin/feature/day-8-official-macro-event-evidence
+          cp /tmp/day8-evidence.md ops/day8-live-acceptance-evidence.md
+          git add ops/day8-live-acceptance-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 8: record official macro live acceptance"
+            git push origin HEAD:feature/day-8-official-macro-event-evidence
+          fi
