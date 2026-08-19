@@ -8,6 +8,7 @@ minute snapshots; they remain a separate research/backfill data product.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -18,6 +19,7 @@ from .gold_api_gateway import GoldApiGateway, GoldApiReadError
 from .storage_contracts import AidyMarketRepository
 
 SYMBOL = "XAUUSD"
+Clock = Callable[[], datetime]
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +28,12 @@ class ReferenceCaptureResult:
     status: str
     market_open: bool
     stored_candles: int = 0
+
+
+def _utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        raise ValueError("AIDY reference capture requires timezone-aware datetimes.")
+    return value.astimezone(UTC)
 
 
 def _canonical_json(value: object) -> str:
@@ -61,13 +69,22 @@ class AidyReferencePriceRecorderService:
         repository: AidyMarketRepository,
         gateway: GoldApiGateway,
         stale_seconds: float = 300.0,
+        clock: Clock = lambda: datetime.now(UTC),
     ) -> None:
         self._repository = repository
         self._gateway = gateway
         self._stale_seconds = max(float(stale_seconds), 30.0)
+        self._clock = clock
 
     async def capture_once(self, *, now: datetime | None = None) -> ReferenceCaptureResult:
-        captured_at = (now or datetime.now(UTC)).astimezone(UTC)
+        """Capture one observation.
+
+        `now` is an explicit deterministic override for tests/replay. Production
+        callers omit it so `captured_at` is stamped only after the upstream read
+        finishes: the first moment AIDY could actually know that quote.
+        """
+
+        override_time = _utc(now) if now is not None else None
         availability: dict[str, object] = {
             "market_data_source": "gold_api",
             "price_type": "indicative_mid",
@@ -80,6 +97,7 @@ class AidyReferencePriceRecorderService:
         try:
             quote = await self._gateway.read_xau_usd()
         except GoldApiReadError as exc:
+            captured_at = override_time or _utc(self._clock())
             availability["quote"] = exc.code
             snapshot_id = await self._store_snapshot(
                 captured_at=captured_at,
@@ -91,6 +109,9 @@ class AidyReferencePriceRecorderService:
             )
             return ReferenceCaptureResult(snapshot_id, "unavailable", False)
 
+        # Stamp the observation after the HTTP response is available. Using the
+        # scheduler's nominal tick here would falsely pre-date the evidence.
+        captured_at = override_time or _utc(self._clock())
         price = quote.get("price")
         quote_time = quote.get("observed_at")
         if not isinstance(price, Decimal) or not isinstance(quote_time, datetime):
@@ -105,7 +126,20 @@ class AidyReferencePriceRecorderService:
             )
             return ReferenceCaptureResult(snapshot_id, "unavailable", False)
 
-        quote_age = max(0.0, (captured_at - quote_time.astimezone(UTC)).total_seconds())
+        quote_time = _utc(quote_time)
+        if quote_time > captured_at:
+            availability["quote"] = "gold_api_future_timestamp"
+            snapshot_id = await self._store_snapshot(
+                captured_at=captured_at,
+                status="unavailable",
+                price=None,
+                quote_time=quote_time,
+                quote_age=None,
+                availability=availability,
+            )
+            return ReferenceCaptureResult(snapshot_id, "unavailable", False)
+
+        quote_age = (captured_at - quote_time).total_seconds()
         fresh = quote_age <= self._stale_seconds
         availability["quote"] = "available" if fresh else "gold_api_stale_quote"
         availability["market_state"] = "open" if fresh else "closed_or_stale"
@@ -114,7 +148,7 @@ class AidyReferencePriceRecorderService:
             captured_at=captured_at,
             status=status,
             price=price,
-            quote_time=quote_time.astimezone(UTC),
+            quote_time=quote_time,
             quote_age=quote_age,
             availability=availability,
         )
