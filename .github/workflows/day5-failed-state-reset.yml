@@ -1,0 +1,62 @@
+name: AIDY Day 5 Failed-State Reset
+
+on:
+  push:
+    branches:
+      - feature/day-5-historical-xauusd-backfill
+    paths:
+      - "ops/day5-reset-trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-5-historical-xauusd-backfill
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Reset only failed Day 5 research state
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet 'google-cloud-bigquery>=3.42,<4'
+          python scripts/day5_reset_failed_backfill_state.py \
+            > /tmp/day5-reset.json \
+            2> /tmp/day5-reset.stderr
+
+      - name: Persist reset evidence
+        if: always()
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-5-historical-xauusd-backfill
+          git reset --hard origin/feature/day-5-historical-xauusd-backfill
+          {
+            echo '{"stdout":'
+            cat /tmp/day5-reset.json 2>/dev/null || echo 'null'
+            echo ',"stderr":'
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('/tmp/day5-reset.stderr')
+          print(json.dumps(path.read_text(encoding='utf-8') if path.exists() else ''))
+          PY
+            echo '}'
+          } > ops/day5-reset-evidence.json
+          git add ops/day5-reset-evidence.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 5: record failed-state reset"
+            git push origin HEAD:feature/day-5-historical-xauusd-backfill
+          fi
