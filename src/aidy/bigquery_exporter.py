@@ -154,7 +154,13 @@ class ArchivedEvidence:
             raise ValueError("R2 evidence object is not valid JSON.") from exc
         if not isinstance(parsed, dict):
             raise ValueError("R2 evidence object must be a JSON object.")
-        required = ("schema_version", "record_type", "evidence_id", "archive_key", "payload_digest")
+        required = (
+            "schema_version",
+            "record_type",
+            "evidence_id",
+            "archive_key",
+            "payload_digest",
+        )
         missing = [name for name in required if parsed.get(name) in (None, "")]
         if missing:
             raise ValueError("R2 evidence object is missing: " + ", ".join(missing))
@@ -263,7 +269,9 @@ def analytical_row(evidence: ArchivedEvidence) -> dict[str, Any]:
             }
         )
     elif evidence.record_type == "snapshot":
-        availability = _json_object(_required(payload, "data_availability"), name="data_availability")
+        availability = _json_object(
+            _required(payload, "data_availability"), name="data_availability"
+        )
         event_ids = payload.get("event_observation_ids")
         if not isinstance(event_ids, list):
             raise ValueError("event_observation_ids must be an array.")
@@ -311,7 +319,7 @@ def analytical_row(evidence: ArchivedEvidence) -> dict[str, Any]:
                 ),
             }
         )
-    else:  # guarded in ArchivedEvidence
+    else:
         raise ValueError(f"Unsupported analytical record type: {evidence.record_type}")
     return row
 
@@ -355,8 +363,8 @@ MERGE `{project}.{dataset}.{destination.name}` AS T
 USING (
   SELECT {column_sql}
   FROM `{project}.{dataset}.{staging}`
-  WHERE run_id = @run_id
-  QUALIFY ROW_NUMBER() OVER (PARTITION BY load_identity ORDER BY run_id) = 1
+  WHERE _export_run_id = @run_id
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY load_identity ORDER BY _export_run_id) = 1
 ) AS S
 ON T.load_identity = S.load_identity
 WHEN NOT MATCHED THEN
@@ -365,4 +373,4 @@ WHEN NOT MATCHED THEN
 
 
 def staging_fields(spec: TableSpec) -> tuple[FieldSpec, ...]:
-    return (FieldSpec("run_id", "STRING", "REQUIRED"),) + spec.fields
+    return (FieldSpec("_export_run_id", "STRING", "REQUIRED"),) + spec.fields
