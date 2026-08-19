@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN, localcontext
 from hashlib import sha256
+from itertools import pairwise
 from typing import Any
 
 from aidy.historical_backfill import RETROSPECTIVE_PROVENANCE
@@ -208,7 +209,7 @@ def _atr_bps(candles: list[Candle], period: int = 14) -> Decimal | None:
         return None
     sample = candles[-(period + 1):]
     true_ranges: list[Decimal] = []
-    for previous, current in zip(sample, sample[1:], strict=True):
+    for previous, current in pairwise(sample):
         true_ranges.append(
             max(
                 current.high - current.low,
@@ -227,7 +228,7 @@ def _realized_vol_bps(candles: list[Candle], period: int = 20) -> Decimal | None
         return None
     sample = candles[-(period + 1):]
     returns: list[Decimal] = []
-    for previous, current in zip(sample, sample[1:], strict=True):
+    for previous, current in pairwise(sample):
         if previous.close == 0:
             return None
         with localcontext() as ctx:
