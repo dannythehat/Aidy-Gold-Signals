@@ -60,11 +60,23 @@ jobs:
       - name: Run Day 3 code gate
         shell: bash
         run: |
-          set -euo pipefail
-          uv run ruff check .
-          uv run python -m compileall -q src tests
-          uv run pytest -q | tee /tmp/pytest.txt
-          echo PASS > /tmp/code-gate
+          set +e
+          uv run ruff check . > /tmp/ruff.txt 2>&1
+          ruff_status=$?
+          uv run python -m compileall -q src tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest.txt
+          exit 1
 
       - name: Build safe-off Day 3 Worker config
         shell: bash
@@ -119,7 +131,6 @@ jobs:
           assert h.get('environment') == 'test', h
           assert h.get('capture_enabled') is False, h
           PY
-
           status="$(curl -sS -o /tmp/day3-continuity.json -w '%{http_code}' "${AIDY_TEST_WORKER_URL}/day3/continuity?minutes=5&archive_limit=40")"
           echo "$status" > /tmp/day3-continuity-status
           cat /tmp/day3-continuity.json
@@ -148,19 +159,24 @@ jobs:
             echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Cloudflare credentials present: $(cat /tmp/cloudflare-credentials 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Ruff/compile/tests: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
             echo "- Safe-off config built: $(cat /tmp/config 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- D1 migrations: $(cat /tmp/migrations 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Worker safe-off deploy: $(cat /tmp/worker-deploy 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Scheduler safe-off deploy: $(cat /tmp/scheduler-deploy 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Health + continuity fail-closed proof: $(cat /tmp/fail-closed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
-            echo
-            if [ -f /tmp/pytest.txt ]; then
-              echo "## Test output"
-              echo '```text'
-              tail -20 /tmp/pytest.txt
-              echo '```'
-            fi
+            for name in ruff compile pytest; do
+              file="/tmp/${name}.txt"
+              if [ -f "$file" ]; then
+                echo
+                echo "## ${name} output"
+                echo '```text'
+                tail -60 "$file"
+                echo '```'
+              fi
+            done
             if [ -f /tmp/day3-health.json ]; then
+              echo
               echo "## Health"
               echo '```json'
               cat /tmp/day3-health.json
@@ -168,6 +184,7 @@ jobs:
               echo '```'
             fi
             if [ -f /tmp/day3-continuity.json ]; then
+              echo
               echo "## Safe-off continuity response"
               echo "HTTP $(cat /tmp/day3-continuity-status 2>/dev/null || echo unknown)"
               echo '```json'
@@ -179,7 +196,6 @@ jobs:
             echo "## Remaining live gate"
             echo "Enable capture only with an independently owned AIDY market-data source, restore the one-minute Cloudflare scheduler, then require a clean 5+ minute /day3/continuity window with D1/R2 reconciliation."
           } > ops/day3-safe-deploy-evidence.md
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add ops/day3-safe-deploy-evidence.md
