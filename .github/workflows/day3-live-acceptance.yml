@@ -1,0 +1,238 @@
+name: AIDY Day 3 Live Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+    paths:
+      - ".github/workflows/day3-live-acceptance.yml"
+      - "ops/day3-live-acceptance-trigger.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day3-live-acceptance
+  cancel-in-progress: false
+
+jobs:
+  live-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Preflight public Gold API source
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          curl -fsS --retry 3 --retry-delay 2 "https://api.gold-api.com/price/XAU" > /tmp/gold-api-preflight.json
+          python - <<'PY'
+          import json
+          from datetime import datetime
+          from decimal import Decimal
+          payload=json.load(open('/tmp/gold-api-preflight.json', encoding='utf-8'))
+          assert str(payload.get('symbol','')).upper() in {'XAU','XAUUSD'}, payload
+          assert Decimal(str(payload.get('price'))) > 0, payload
+          raw=payload.get('updatedAt') or payload.get('timestamp')
+          assert isinstance(raw,str) and raw, payload
+          datetime.fromisoformat(raw.replace('Z','+00:00'))
+          PY
+          echo PASS > /tmp/source-preflight
+
+      - name: Run Day 3 code gate
+        run: |
+          set +e
+          uv run ruff check \
+            src/aidy/config.py \
+            src/aidy/gold_api_gateway.py \
+            src/aidy/reference_price_recorder.py \
+            src/aidy/reference_continuity.py \
+            src/aidy/runtime.py \
+            src/entry.py \
+            tests/test_config.py \
+            tests/test_gold_api_gateway.py \
+            tests/test_reference_price_recorder.py \
+            tests/test_runtime_schedule.py \
+            tests/test_day2_deployment_contract.py \
+            > /tmp/ruff.txt 2>&1
+          ruff_status=$?
+          uv run python -m compileall -q src tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest-live.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest-live.txt
+          exit 1
+
+      - name: Build live broker-free configs
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='gold_api'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          assert cfg.get('secrets',{}).get('required',[]) == []
+          text=json.dumps(cfg).lower()
+          assert 'metaapi' not in text and 'vantage' not in text
+          json.dump(cfg, open('wrangler.day3.live.jsonc','w',encoding='utf-8'), indent=2)
+          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched, open('wrangler.day3.scheduler.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          echo PASS > /tmp/live-config
+
+      - name: Deploy live capture and scheduler
+        run: |
+          set -euo pipefail
+          cp wrangler.day3.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy > /tmp/live-worker-deploy.txt 2>&1
+          npx --yes wrangler@4 deploy --config wrangler.day3.scheduler.live.jsonc > /tmp/live-scheduler-deploy.txt 2>&1
+          echo PASS > /tmp/live-deployed
+
+      - name: Verify live source identity
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/live-health.json || true
+            if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/live-health.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          ok=(h.get('capture_enabled') is True and h.get('environment') == 'test' and h.get('market_data_source') == 'gold_api' and h.get('market_data_ownership') == 'public_independent')
+          raise SystemExit(0 if ok else 1)
+          PY
+            then break; fi
+            sleep 3
+          done
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/live-health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('market_data_source') == 'gold_api', h
+          assert h.get('market_data_ownership') == 'public_independent', h
+          PY
+          echo PASS > /tmp/live-health-pass
+
+      - name: Accumulate genuine scheduled evidence
+        run: |
+          sleep 390
+          echo PASS > /tmp/soak
+
+      - name: Require clean continuity window
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/live-continuity.json -w '%{http_code}' "${AIDY_TEST_WORKER_URL}/day3/continuity?minutes=5&archive_limit=40")"
+          echo "$status" > /tmp/live-continuity-status
+          test "$status" = "200"
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/live-continuity.json', encoding='utf-8'))
+          r=p.get('report') or {}
+          assert p.get('ok') is True and r.get('passed') is True, p
+          assert r.get('expected_source') == 'gold_api', r
+          assert r.get('observed_sources') == ['gold_api'], r
+          assert r.get('missing_cycles') == 0, r
+          assert r.get('snapshots_complete',0) >= 5, r
+          assert r.get('snapshots_partial') == 0, r
+          assert r.get('snapshots_unavailable') == 0, r
+          assert r.get('stale_quote_count') == 0, r
+          assert r.get('archive_pending') == 0, r
+          assert r.get('archive_failed_rows') == 0, r
+          assert r.get('archive_missing_objects') == 0, r
+          PY
+          echo PASS > /tmp/live-acceptance
+
+      - name: Roll back safe-off on failure
+        if: failure()
+        run: |
+          set +e
+          if [ ! -f /tmp/live-deployed ]; then echo NOT_NEEDED > /tmp/rollback; exit 0; fi
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='false'
+          json.dump(cfg, open('wrangler.day3.rollback.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          cp wrangler.day3.rollback.jsonc wrangler.jsonc
+          uv run pywrangler deploy > /tmp/rollback-worker.txt 2>&1
+          npx --yes wrangler@4 deploy --config wrangler.scheduler.test.jsonc > /tmp/rollback-scheduler.txt 2>&1
+          if [ $? -eq 0 ]; then echo PASS_SAFE_OFF > /tmp/rollback; else echo ROLLBACK_FAILED > /tmp/rollback; fi
+
+      - name: Persist evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo "# Day 3 broker-free live-acceptance evidence"
+            echo
+            echo "- Trigger commit: ${GITHUB_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Public Gold API preflight: $(cat /tmp/source-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
+            echo "- Live config: $(cat /tmp/live-config 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Live capture/scheduler deployed: $(cat /tmp/live-deployed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Live health: $(cat /tmp/live-health-pass 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Scheduled soak: $(cat /tmp/soak 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Day 3 continuity acceptance: $(cat /tmp/live-acceptance 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Failure rollback: $(cat /tmp/rollback 2>/dev/null || echo NOT_NEEDED)"
+            for name in ruff compile pytest-live live-worker-deploy live-scheduler-deploy; do
+              file="/tmp/${name}.txt"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```text'; tail -80 "$file"; echo '```'
+              fi
+            done
+            [ -f /tmp/gold-api-preflight.json ] && { echo; echo '## Gold API preflight'; echo '```json'; cat /tmp/gold-api-preflight.json; echo; echo '```'; }
+            [ -f /tmp/live-health.json ] && { echo; echo '## Live health'; echo '```json'; cat /tmp/live-health.json; echo; echo '```'; }
+            [ -f /tmp/live-continuity.json ] && { echo; echo '## Continuity'; echo "HTTP $(cat /tmp/live-continuity-status 2>/dev/null || echo unknown)"; echo '```json'; cat /tmp/live-continuity.json; echo; echo '```'; }
+          } > ops/day3-live-acceptance-evidence.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ops/day3-live-acceptance-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 3: record broker-free live acceptance"
+            git push origin HEAD:feature/day-3-continuity-auditor
+          fi

@@ -3,27 +3,28 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-import pytest
-
 from aidy.config import AidySettings
 from aidy.runtime import interval_due, run_worker_scheduled_cycle
 from aidy.storage_contracts import ArchiveFlushResult
 
 
-def test_worker_env_loader_is_disabled_without_secrets() -> None:
+def test_worker_env_loader_is_keyless_when_capture_disabled() -> None:
     env = SimpleNamespace(AIDY_CAPTURE_ENABLED="false", AIDY_ARCHIVE_FLUSH_LIMIT="25")
     settings = AidySettings.from_worker_env(env)
     assert settings.capture_enabled is False
-    assert settings.metaapi_token == ""
-    assert settings.metaapi_account_id == ""
-    assert settings.market_data_ownership == ""
+    assert settings.market_data_source == "gold_api"
+    assert settings.market_data_ownership == "public_independent"
     assert settings.archive_flush_limit == 25
 
 
-def test_worker_env_loader_fails_closed_when_capture_enabled_without_secrets() -> None:
-    env = SimpleNamespace(AIDY_CAPTURE_ENABLED="true")
-    with pytest.raises(RuntimeError, match="capture is enabled"):
-        AidySettings.from_worker_env(env)
+def test_worker_env_loader_allows_keyless_public_capture() -> None:
+    env = SimpleNamespace(
+        AIDY_CAPTURE_ENABLED="true",
+        AIDY_MARKET_DATA_SOURCE="gold_api",
+        AIDY_MARKET_DATA_OWNERSHIP="public_independent",
+    )
+    settings = AidySettings.from_worker_env(env)
+    assert settings.capture_enabled is True
 
 
 def test_interval_due_is_restart_independent() -> None:
@@ -41,9 +42,8 @@ class ArchiveOnlyRepository:
         return ArchiveFlushResult(attempted=0, archived=0, failed=0)
 
 
-@pytest.mark.asyncio
 async def test_disabled_worker_cycle_still_retries_archive_outbox() -> None:
-    settings = AidySettings(metaapi_token="", metaapi_account_id="", archive_flush_limit=17)
+    settings = AidySettings(capture_enabled=False, archive_flush_limit=17)
     repository = ArchiveOnlyRepository()
     result = await run_worker_scheduled_cycle(
         settings,

@@ -7,11 +7,12 @@ from pathlib import Path
 import pytest
 
 from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
+from aidy.continuity_auditor import ContinuityPolicy, D1R2ContinuityReader
 from aidy.storage_contracts import AidyMarketRepository
 
 
 class Prepared:
-    def __init__(self, db: "LocalD1", sql: str, params=()) -> None:
+    def __init__(self, db: LocalD1, sql: str, params=()) -> None:
         self.db = db
         self.sql = sql
         self.params = params
@@ -214,3 +215,82 @@ async def test_storage_smoke_uses_same_outbox_path(operational) -> None:
     assert result.failed == 0
     assert probe.archive_key in bucket.objects
     assert await operational.archive_status(outbox_id=probe.outbox_id) == "archived"
+
+
+@pytest.mark.asyncio
+async def test_day3_d1_r2_reader_proves_a_complete_window(operational) -> None:
+    end = datetime.now(UTC).replace(second=0, microsecond=0) + timedelta(minutes=1)
+    start = end - timedelta(minutes=11)
+    for index in range(11):
+        captured = start + timedelta(minutes=index)
+        for timeframe in ("1m", "5m"):
+            if timeframe == "5m" and index % 5:
+                continue
+            digest = f"{1000 + index * 10 + (timeframe == '5m'):064x}"
+            await operational.commit_candle(
+                {
+                    "symbol": "XAUUSD",
+                    "timeframe": timeframe,
+                    "open_time_utc": captured,
+                    "broker_open_time": None,
+                    "open": "4350",
+                    "high": "4355",
+                    "low": "4348",
+                    "close": "4353",
+                    "tick_volume": 100,
+                    "spread": "0.20",
+                    "volume": None,
+                    "source": "metaapi",
+                    "payload_digest": digest,
+                    "first_observed_at": captured,
+                }
+            )
+        await operational.commit_snapshot(
+            {
+                "captured_at": captured,
+                "symbol": "XAUUSD",
+                "capture_status": "complete",
+                "bid": "4352.9",
+                "ask": "4353.1",
+                "mid": "4353",
+                "spread": "0.2",
+                "quote_time": captured,
+                "quote_age_seconds": 1.0,
+                "session_code": "london",
+                "data_availability_json": (
+                    '{"quote":"available","candles_1m":"available",'
+                    '"candles_5m":"available","market_state":"open"}'
+                ),
+                "event_observation_ids_json": "[]",
+                "latest_m1_id": None,
+                "latest_m5_id": None,
+                "latest_m15_id": None,
+                "latest_h1_id": None,
+                "latest_h4_id": None,
+                "latest_d1_id": None,
+                "snapshot_digest": f"{2000 + index:064x}",
+            }
+        )
+
+    bucket = LocalR2()
+    repository = AidyMarketRepository(operational, R2ArchiveStore(bucket))
+    flushed = await repository.flush_archive_outbox(limit=100)
+    assert flushed.failed == 0
+
+    report = await D1R2ContinuityReader(operational._db, bucket).load_and_audit(
+        start=start,
+        end=end,
+        archive_limit=40,
+        policy=ContinuityPolicy(
+            expected_source="metaapi",
+            capture_enabled=True,
+            ownership_confirmed=True,
+            stale_quote_seconds=30,
+        ),
+    )
+    assert report.passed is True
+    assert report.expected_cycles == 11
+    assert report.observed_cycles == 11
+    assert report.archive_population == flushed.archived
+    assert report.archive_checked == flushed.archived
+    assert report.archive_missing_objects == 0

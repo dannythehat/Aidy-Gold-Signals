@@ -7,6 +7,8 @@
   "vars": {
     "AIDY_ENV": "test",
     "AIDY_CAPTURE_ENABLED": "false",
+    "AIDY_MARKET_DATA_SOURCE": "gold_api",
+    "AIDY_MARKET_DATA_OWNERSHIP": "public_independent",
     "AIDY_MARKET_POLL_SECONDS": "60",
     "AIDY_SLOW_POLL_SECONDS": "300",
     "AIDY_MARKET_CLOSED_BACKOFF_SECONDS": "900",

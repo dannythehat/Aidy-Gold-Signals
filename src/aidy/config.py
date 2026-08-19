@@ -9,9 +9,8 @@ ValueGetter = Callable[[str, str], str]
 
 @dataclass(frozen=True, slots=True)
 class AidySettings:
-    metaapi_token: str
-    metaapi_account_id: str
-    market_data_ownership: str = ""
+    market_data_ownership: str = "public_independent"
+    market_data_source: str = "gold_api"
     capture_enabled: bool = False
     market_poll_seconds: float = 60.0
     slow_poll_seconds: float = 300.0
@@ -51,33 +50,27 @@ class AidySettings:
             "yes",
             "on",
         }
-        metaapi_token = optional("AIDY_METAAPI_TOKEN")
-        metaapi_account_id = optional("AIDY_METAAPI_ACCOUNT_ID")
-        market_data_ownership = optional("AIDY_MARKET_DATA_OWNERSHIP").lower()
+        market_data_ownership = (
+            optional("AIDY_MARKET_DATA_OWNERSHIP").lower() or "public_independent"
+        )
+        market_data_source = optional("AIDY_MARKET_DATA_SOURCE").lower() or "gold_api"
 
         if enabled:
-            required = {
-                "AIDY_METAAPI_TOKEN": metaapi_token,
-                "AIDY_METAAPI_ACCOUNT_ID": metaapi_account_id,
-            }
-            missing = [name for name, value in required.items() if not value]
-            if missing:
+            if market_data_source != "gold_api":
                 raise RuntimeError(
-                    "AIDY capture is enabled but required environment variables are missing: "
-                    + ", ".join(missing)
+                    "AIDY capture is enabled but the configured market-data source "
+                    "does not match the installed broker-free adapter."
                 )
-            if market_data_ownership != "aidy_dedicated":
+            if market_data_ownership != "public_independent":
                 raise RuntimeError(
-                    "AIDY capture is enabled but the market-data connection is not "
-                    "explicitly confirmed as AIDY-dedicated. Set "
-                    "AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated only for credentials "
-                    "that are not owned or shared by Super Signals."
+                    "AIDY capture is enabled but market data is not explicitly marked "
+                    "public_independent. Broker, MT5, MetaAPI and Super Signals credentials "
+                    "are not valid AIDY market-data sources."
                 )
 
         return cls(
-            metaapi_token=metaapi_token,
-            metaapi_account_id=metaapi_account_id,
             market_data_ownership=market_data_ownership,
+            market_data_source=market_data_source,
             capture_enabled=enabled,
             market_poll_seconds=positive_float("AIDY_MARKET_POLL_SECONDS", 60.0),
             slow_poll_seconds=positive_float("AIDY_SLOW_POLL_SECONDS", 300.0),
@@ -95,7 +88,7 @@ class AidySettings:
 
     @classmethod
     def from_worker_env(cls, environment: object) -> AidySettings:
-        """Load config from Cloudflare Worker vars/secrets without exposing them."""
+        """Load config from Cloudflare Worker vars without exposing secrets."""
 
         def getter(name: str, default: str) -> str:
             try:
