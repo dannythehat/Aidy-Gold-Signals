@@ -28,6 +28,7 @@ jobs:
       AIDY_BIGQUERY_DATASET: aidy_analytics_test
       AIDY_BIGQUERY_LOCATION: EU
       AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - uses: actions/checkout@v4
@@ -106,7 +107,6 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo MISSING_CLOUDFLARE_API_TOKEN > /tmp/credential-preflight; exit 1; }
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo MISSING_CLOUDFLARE_ACCOUNT_ID > /tmp/credential-preflight; exit 1; }
-          test -n "${AIDY_GCP_PROJECT_ID:-}" || { echo MISSING_AIDY_GCP_PROJECT_ID > /tmp/credential-preflight; exit 1; }
           test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo MISSING_AIDY_GCP_SERVICE_ACCOUNT_JSON > /tmp/credential-preflight; exit 1; }
           python - <<'PY'
           import json, os
@@ -115,6 +115,10 @@ jobs:
           assert info.get('project_id')
           assert info.get('client_email')
           assert info.get('private_key')
+          project=(os.environ.get('AIDY_GCP_PROJECT_ID') or '').strip() or str(info['project_id']).strip()
+          assert project
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f'AIDY_GCP_PROJECT_ID={project}\n')
           PY
           echo PASS > /tmp/credential-preflight
 
@@ -230,7 +234,7 @@ jobs:
           {
             echo "# Day 4 BigQuery live-acceptance evidence"
             echo
-            echo "- Trigger commit: ${GITHUB_SHA}"
+            echo "- Trigger commit: ${AIDY_ACCEPTANCE_HEAD_SHA}"
             echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
             echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
