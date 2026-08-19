@@ -143,7 +143,7 @@ def _treasury_date(entry: ElementTree.Element) -> date | None:
     if raw is None:
         return None
     try:
-        return datetime.fromisoformat(raw.replace("Z", "+00:00")).date()
+        return datetime.fromisoformat(raw).date()
     except ValueError:
         try:
             return date.fromisoformat(raw[:10])
