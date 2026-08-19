@@ -69,7 +69,7 @@ jobs:
       - name: Prove retrospective/live boundary is structural
         run: |
           set -euo pipefail
-          python - <<'PY'
+          uv run python - <<'PY'
           from pathlib import Path
           from aidy.historical_backfill import RESEARCH_CANDLES, RETROSPECTIVE_PROVENANCE
           fields={field.name for field in RESEARCH_CANDLES.fields}
