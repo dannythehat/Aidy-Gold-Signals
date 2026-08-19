@@ -1,1 +1,1 @@
-Day 8 bounded official macro acceptance — 2026-08-19 — aidy imports classified first-party
+Day 8 bounded official macro acceptance — 2026-08-19 — import spacing normalized
