@@ -1,25 +1,25 @@
 # AIDY Gold Signals — Locked Architecture
 
 Decision date: 2026-08-16
+Market-data update: 2026-08-19
 
 ## Product boundary
 
 AIDY Signals is a standalone Gold signal provider. Super Signals is a downstream consumer only, through the AIDY Signals Telegram group.
 
-AIDY does not share Super Signals code, database, runtime, risk engine, parser, broker execution layer, or deployment stack.
+AIDY does not share Super Signals code, database, runtime, risk engine, parser, broker execution layer or deployment stack.
 
 ## Market-data boundary
 
-AIDY requires XAUUSD quotes and closed candles, not a broker execution account.
+AIDY does not require a broker execution account to observe Gold.
 
+- Active live XAU/USD reference source: public keyless Gold-API.
 - AIDY never reads broker/follower positions, orders or account state.
-- Vantage execution and actual position reconciliation belong only to Super Signals.
-- Super Signals MetaAPI/Vantage credentials must never be copied into AIDY.
-- Any enabled AIDY market-data connection must be separately owned, separately
-  credentialed and explicitly confirmed with
-  `AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated`.
-- The MetaAPI adapter retained from Day 2 is a disabled market-only adapter, not
-  the permanent production-source decision.
+- Vantage execution and position reconciliation belong only to Super Signals.
+- No MetaAPI, MT5, Vantage or Super Signals credential belongs in the AIDY live market-data path.
+- Enabled forward capture must identify `AIDY_MARKET_DATA_SOURCE=gold_api` and `AIDY_MARKET_DATA_OWNERSHIP=public_independent`.
+- The live reference source provides an indicative Gold price. AIDY stores it as `mid` and leaves unsupported bid/ask/spread values unknown.
+- Genuine OHLC/tick history is a separate research ingestion product. AIDY never invents candles from sparse snapshots.
 
 ## Runtime and data layer
 
@@ -66,31 +66,30 @@ AIDY publishes provider-style trade and management messages to the private AIDY 
 
 ## Intelligence boundary
 
-ChatGPT is not part of the AIDY runtime. OpenAI API reasoning is planned for Day
-21 as AIDY's trading intelligence. It does not store evidence and does not access
-Vantage or Super Signals.
+ChatGPT is not part of the AIDY runtime. OpenAI API reasoning is planned for the later intelligence phase. It does not store evidence and does not access Vantage or Super Signals.
 
 ## Explicit exclusions
 
 - No Render service, database, worker or deployment for AIDY unless the owner explicitly reverses this decision.
-- No GitHub Actions runtime. Actions may be used only as explicitly approved CI
-  or deployment transport.
+- No GitHub Actions trading/runtime scheduler. Actions may be used for CI, tests, provisioning, migrations and deployment transport.
 - No direct follower-trade execution from AIDY.
 - No live-money capability during build and paper evaluation.
 
 ## Day 3 evidence-health boundary
 
-The continuity auditor is deterministic and runs against D1/R2 bindings. It
-does not ask OpenAI whether the evidence is healthy. It calculates expected
-versus observed scheduler cycles, quote age, snapshot status, M1/M5 candle
-gaps, revision counts, source errors, archive backlog/retries and D1-to-R2
-object existence. A material unknown or mismatch fails closed.
+The Day 3 reference continuity auditor is deterministic and runs against D1/R2 bindings. For the active Gold-API feed it measures expected versus observed one-minute scheduler cycles, quote age, complete/partial/unavailable snapshot state, source identity, source errors, archive backlog/retries and D1-to-R2 object existence.
 
-The live Day 3 gate additionally requires `AIDY_CAPTURE_ENABLED=true`,
-`AIDY_MARKET_DATA_OWNERSHIP=aidy_dedicated`, and an installed adapter whose
-name matches `AIDY_MARKET_DATA_SOURCE`. Super Signals credentials can never
-satisfy this gate.
+The live Day 3 gate requires:
 
-## Superseded prototype
+- `AIDY_CAPTURE_ENABLED=true`;
+- `AIDY_MARKET_DATA_SOURCE=gold_api`;
+- `AIDY_MARKET_DATA_OWNERSHIP=public_independent`;
+- zero hidden missing capture cycles in the acceptance window;
+- no stale/partial/unavailable observations;
+- no archive mismatch.
 
-The PostgreSQL/Alembic extraction from the 15 August prototype is retained temporarily as reference for recorder semantics, append-only revisions and tests. It is not the target persistence implementation and must be refactored behind Cloudflare/BigQuery storage interfaces before Day 1 is closed.
+Candle continuity is not claimed by this feed. Candle integrity is assessed only when a genuine OHLC research source has been loaded.
+
+## Historical prototype
+
+The earlier MetaAPI and PostgreSQL/Alembic recorder code is historical reference material only. It is not the active market-data or persistence architecture.
