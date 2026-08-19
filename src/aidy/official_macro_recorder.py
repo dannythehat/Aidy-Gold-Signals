@@ -4,6 +4,7 @@ import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from .bls_calendar_parser import parse_bls_official_calendar
 from .fomc_calendar_parser import parse_fomc_calendar
 from .official_macro import (
     BEA_CURRENT_RELEASES_URL,
@@ -15,7 +16,6 @@ from .official_macro import (
     OfficialMacroGateway,
     parse_bea_current_releases_html,
     parse_bea_schedule_html,
-    parse_bls_calendar_ics,
     parse_bls_release_rss,
     upcoming_fed_calendar_sources,
 )
@@ -78,7 +78,7 @@ class AidyOfficialMacroRecorderService:
                     continue
                 observed_at = override or self._clock().astimezone(UTC)
                 if source_key == "bls_calendar":
-                    observations = parse_bls_calendar_ics(fetched.text)
+                    observations = parse_bls_official_calendar(fetched.text)
                 elif source_key in BLS_RSS_FEEDS:
                     observations = parse_bls_release_rss(fetched.text, feed_key=source_key)
                 elif source_key == "bea_schedule":
