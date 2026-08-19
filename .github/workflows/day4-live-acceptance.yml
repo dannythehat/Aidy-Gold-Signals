@@ -1,0 +1,269 @@
+name: AIDY Day 4 BigQuery Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/day4-live-acceptance.yml"
+      - "ops/day4-live-acceptance-trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day4-bigquery-acceptance
+  cancel-in-progress: false
+
+jobs:
+  live-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_GCP_PROJECT_ID: ${{ secrets.AIDY_GCP_PROJECT_ID }}
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-4-bigquery-analytical-memory
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          echo PASS > /tmp/dependencies
+
+      - name: Run Day 4 code gate
+        run: |
+          set +e
+          uv run ruff check \
+            src/aidy/bigquery_exporter.py \
+            scripts/day4_export_r2_to_bigquery.py \
+            tests/test_bigquery_exporter.py \
+            > /tmp/ruff.txt 2>&1
+          ruff_status=$?
+          uv run python -m compileall -q src scripts tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest.txt
+          exit 1
+
+      - name: Prove BigQuery is not imported by the live recorder
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          runtime = Path('src/aidy/runtime.py').read_text(encoding='utf-8').lower()
+          entry = Path('src/entry.py').read_text(encoding='utf-8').lower()
+          assert 'bigquery' not in runtime
+          assert 'google.cloud' not in runtime
+          assert 'bigquery' not in entry
+          assert 'google.cloud' not in entry
+          PY
+          echo PASS > /tmp/runtime-boundary
+
+      - name: Verify forward Gold recorder is healthy before export
+        run: |
+          set -euo pipefail
+          curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health-before.json
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health-before.json', encoding='utf-8'))
+          assert h.get('status') == 'ok', h
+          assert h.get('capture_enabled') is True, h
+          assert h.get('market_data_source') == 'gold_api', h
+          assert h.get('market_data_ownership') == 'public_independent', h
+          PY
+          echo PASS > /tmp/health-before-pass
+
+      - name: Require existing Cloudflare and Google Cloud credentials
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo MISSING_CLOUDFLARE_API_TOKEN > /tmp/credential-preflight; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo MISSING_CLOUDFLARE_ACCOUNT_ID > /tmp/credential-preflight; exit 1; }
+          test -n "${AIDY_GCP_PROJECT_ID:-}" || { echo MISSING_AIDY_GCP_PROJECT_ID > /tmp/credential-preflight; exit 1; }
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo MISSING_AIDY_GCP_SERVICE_ACCOUNT_JSON > /tmp/credential-preflight; exit 1; }
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('type') == 'service_account'
+          assert info.get('project_id')
+          assert info.get('client_email')
+          assert info.get('private_key')
+          PY
+          echo PASS > /tmp/credential-preflight
+
+      - name: Read one genuine archived Gold snapshot from R2
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          json.dump(cfg, open('wrangler.day4.read.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          npx --yes wrangler@4 d1 execute AIDY_OPS \
+            --remote \
+            --config wrangler.day4.read.jsonc \
+            --command "SELECT archive_key,payload_digest,evidence_id FROM archive_outbox WHERE record_type='snapshot' AND status='archived' ORDER BY created_at DESC LIMIT 1" \
+            --json > /tmp/day4-d1-sample.json
+          python - <<'PY'
+          import json
+          data=json.load(open('/tmp/day4-d1-sample.json', encoding='utf-8'))
+          found=[]
+          def walk(value):
+              if isinstance(value, dict):
+                  if value.get('archive_key') and value.get('payload_digest'):
+                      found.append(value)
+                  for child in value.values(): walk(child)
+              elif isinstance(value, list):
+                  for child in value: walk(child)
+          walk(data)
+          assert found, data
+          row=found[0]
+          open('/tmp/day4-archive-key.txt','w',encoding='utf-8').write(str(row['archive_key']))
+          open('/tmp/day4-payload-digest.txt','w',encoding='utf-8').write(str(row['payload_digest']))
+          open('/tmp/day4-evidence-id.txt','w',encoding='utf-8').write(str(row['evidence_id']))
+          PY
+          archive_key="$(cat /tmp/day4-archive-key.txt)"
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/${archive_key}" \
+            --remote \
+            --config wrangler.day4.read.jsonc \
+            --file /tmp/day4-r2-sample.json
+          python - <<'PY'
+          import json
+          r2=json.load(open('/tmp/day4-r2-sample.json', encoding='utf-8'))
+          expected_key=open('/tmp/day4-archive-key.txt', encoding='utf-8').read()
+          expected_digest=open('/tmp/day4-payload-digest.txt', encoding='utf-8').read()
+          expected_id=open('/tmp/day4-evidence-id.txt', encoding='utf-8').read()
+          assert r2.get('record_type') == 'snapshot', r2
+          assert r2.get('schema_version') == 2, r2
+          assert r2.get('archive_key') == expected_key, (r2.get('archive_key'), expected_key)
+          assert r2.get('payload_digest') == expected_digest, (r2.get('payload_digest'), expected_digest)
+          assert r2.get('evidence_id') == expected_id, (r2.get('evidence_id'), expected_id)
+          PY
+          echo PASS > /tmp/r2-sample
+
+      - name: Install bounded BigQuery export dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+          echo PASS > /tmp/bigquery-dependency
+
+      - name: Provision test warehouse and export the real R2 sample twice
+        run: |
+          set -euo pipefail
+          uv run python scripts/day4_export_r2_to_bigquery.py \
+            /tmp/day4-r2-sample.json \
+            > /tmp/day4-export-first.json
+          uv run python scripts/day4_export_r2_to_bigquery.py \
+            /tmp/day4-r2-sample.json \
+            > /tmp/day4-export-second.json
+          python - <<'PY'
+          import json
+          first=json.load(open('/tmp/day4-export-first.json', encoding='utf-8'))
+          second=json.load(open('/tmp/day4-export-second.json', encoding='utf-8'))
+          assert first.get('ok') is True and second.get('ok') is True
+          assert first.get('dataset') == 'aidy_analytics_test'
+          assert second.get('dataset') == 'aidy_analytics_test'
+          assert first.get('load_identities') == second.get('load_identities')
+          for result in (first, second):
+              snapshots=(result.get('reconciliation') or {}).get('market_snapshots') or {}
+              manifest=(result.get('reconciliation') or {}).get('export_manifest') or {}
+              assert snapshots == {'expected': 1, 'rows': 1, 'identities': 1}, snapshots
+              assert manifest == {'expected': 1, 'rows': 1, 'identities': 1}, manifest
+          PY
+          echo PASS > /tmp/bigquery-roundtrip
+
+      - name: Prove BigQuery failure cannot stop the recorder
+        run: |
+          set -euo pipefail
+          set +e
+          AIDY_GCP_SERVICE_ACCOUNT_JSON='' uv run python scripts/day4_export_r2_to_bigquery.py \
+            --ensure-only \
+            > /tmp/expected-bigquery-failure.txt 2>&1
+          export_status=$?
+          set -e
+          test "$export_status" -ne 0
+          curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health-after-failure.json
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health-after-failure.json', encoding='utf-8'))
+          assert h.get('status') == 'ok', h
+          assert h.get('capture_enabled') is True, h
+          assert h.get('market_data_source') == 'gold_api', h
+          PY
+          echo PASS > /tmp/failure-isolation
+
+      - name: Persist Day 4 acceptance evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo "# Day 4 BigQuery live-acceptance evidence"
+            echo
+            echo "- Trigger commit: ${GITHUB_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
+            echo "- Live-recorder/BigQuery import boundary: $(cat /tmp/runtime-boundary 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Recorder health before export: $(cat /tmp/health-before-pass 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Credential preflight: $(cat /tmp/credential-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Genuine R2 snapshot retrieval: $(cat /tmp/r2-sample 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery dependency: $(cat /tmp/bigquery-dependency 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- R2 -> BigQuery repeated round-trip: $(cat /tmp/bigquery-roundtrip 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery-failure isolation from recorder: $(cat /tmp/failure-isolation 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            if [ -f /tmp/day4-archive-key.txt ]; then
+              echo "- R2 archive key: $(cat /tmp/day4-archive-key.txt)"
+              echo "- R2 payload digest: $(cat /tmp/day4-payload-digest.txt)"
+              echo "- R2 evidence ID: $(cat /tmp/day4-evidence-id.txt)"
+            fi
+            for name in ruff compile pytest expected-bigquery-failure; do
+              file="/tmp/${name}.txt"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```text'; tail -80 "$file"; echo '```'
+              fi
+            done
+            for name in health-before health-after-failure day4-export-first day4-export-second; do
+              file="/tmp/${name}.json"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```json'; cat "$file"; echo; echo '```'
+              fi
+            done
+          } > ops/day4-live-acceptance-evidence.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ops/day4-live-acceptance-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 4: record BigQuery live acceptance"
+            git push origin HEAD:feature/day-4-bigquery-analytical-memory
+          fi
