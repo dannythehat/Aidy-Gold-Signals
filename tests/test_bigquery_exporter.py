@@ -163,16 +163,21 @@ def test_manifest_carries_provenance_and_successful_load_identity() -> None:
     assert row["archive_key"] == evidence.archive_key
     assert row["payload_digest"] == evidence.payload_digest
     assert row["destination_table"] == "market_snapshots"
+    assert row["run_id"] == "run-1"
     assert row["status"] == "success"
 
 
 def test_merge_sql_is_insert_only_and_idempotent_by_load_identity() -> None:
-    sql = merge_sql(project="aidy-test", dataset="aidy_analytics_test", destination=MARKET_SNAPSHOTS)
+    sql = merge_sql(
+        project="aidy-test",
+        dataset="aidy_analytics_test",
+        destination=MARKET_SNAPSHOTS,
+    )
     assert "MERGE `aidy-test.aidy_analytics_test.market_snapshots`" in sql
     assert "ON T.load_identity = S.load_identity" in sql
     assert "WHEN NOT MATCHED THEN" in sql
     assert "WHEN MATCHED" not in sql
-    assert "WHERE run_id = @run_id" in sql
+    assert "WHERE _export_run_id = @run_id" in sql
 
 
 def test_unsupported_or_wrong_schema_archive_fails_closed() -> None:
