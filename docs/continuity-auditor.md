@@ -1,24 +1,24 @@
 # AIDY Day 3 continuity-auditor contract
 
 Decision date: 2026-08-17
+Broker-free update: 2026-08-19
 
 ## Purpose
 
-Rows in D1 do not prove that AIDY observed the market continuously. Day 3 makes
-evidence quality explicit and machine-testable before feature engineering,
-historical memory or OpenAI reasoning can trust the stream.
+Rows in D1 do not prove that AIDY observed Gold continuously. Day 3 makes evidence quality explicit and machine-testable before feature engineering, historical memory or OpenAI reasoning can trust the stream.
 
-## Inputs
+## Active Day 3 source contract
 
-For a fixed UTC window the auditor reads:
+The active forward source is the public keyless Gold-API XAU/USD reference-price endpoint.
+
+For a fixed UTC window the active Day 3 auditor reads:
 
 - D1 market snapshots and their capture status, quote age and availability map;
-- D1 market candles, exact source, timeframe, open time and revision index;
+- the recorded source identity (`gold_api`);
 - D1 archive-outbox status, retry count and stable R2 key;
 - R2 object existence for a bounded reconciliation sample.
 
-Broker positions, orders, account balances and Super Signals state are outside
-the contract.
+Broker positions, orders, account balances, MT5, MetaAPI and Super Signals state are outside the contract.
 
 ## Calculations
 
@@ -26,27 +26,27 @@ the contract.
 - missing-cycle ratio and longest missing run;
 - complete, partial and unavailable snapshot counts;
 - quote-age p50, p95, maximum and stale count;
-- stable source-error-code counts from the point-in-time availability maps;
-- per-timeframe unique candles, revision rows, gaps, missing intervals and
-  maximum gap;
-- archive population/sample size, pending rows, retry attempts, failed rows,
-  missing R2 objects and unverified rows.
+- stable source-error-code counts from point-in-time availability maps;
+- archive population/sample size, pending rows, retry attempts, failed rows, missing R2 objects and unverified rows.
 
-## Fail-closed acceptance
+## Genuine-candle rule
 
-The report cannot pass when:
+Gold-API supplies an indicative reference price, not the genuine OHLC contract needed for historical candle research. AIDY therefore does **not** manufacture M1/M5/H1 bars from one sample per minute.
 
-- capture is disabled or AIDY ownership is not explicitly confirmed;
-- the observed candle source differs from the configured installed adapter;
-- an expected scheduler cycle is missing;
+The earlier general candle-continuity auditor remains useful when a genuine OHLC/tick research source is added. Candle gaps, revisions and timeframe continuity will then be evaluated against that source under its own provenance contract.
+
+## Fail-closed Day 3 acceptance
+
+The active broker-free report cannot pass when:
+
+- capture is disabled;
+- the source is not `gold_api` or provenance is not `public_independent`;
+- an expected one-minute scheduler observation is missing;
 - a complete snapshot has no quote age or any quote exceeds the stale limit;
 - a partial/unavailable snapshot or source error exists;
-- M1 or M5 evidence is absent, or any observed timeframe contains a gap;
 - the archive outbox has backlog, retries/errors or a sampled R2 mismatch.
 
-The strict zero-tolerance defaults are intentional for the Day 3 acceptance
-window. Later operational alert thresholds may be versioned, but missing
-evidence must never be silently converted into a healthy result.
+The strict zero-tolerance defaults are intentional for the Day 3 acceptance window. Later operational alert thresholds may be versioned, but missing evidence must never be silently converted into a healthy result.
 
 ## Test Worker endpoint
 
@@ -59,5 +59,4 @@ evidence must never be silently converted into a healthy result.
 - Failed gate: HTTP `503`, `ok=false`, exact failure reasons retained.
 - Invalid request/configuration: HTTP `400`.
 
-Only aggregate evidence-health metrics are returned. No secret or raw market
-payload is included.
+Only aggregate evidence-health metrics are returned. No secret or raw market payload is included.
