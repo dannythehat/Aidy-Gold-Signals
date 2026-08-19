@@ -36,3 +36,18 @@ END:VCALENDAR
     rows = parse_bls_official_calendar(text)
     assert len(rows) == 1
     assert _structured(rows[0])["event_class"] == "employment_cost_index"
+
+
+def test_live_bls_us_eastern_tzid_alias_is_accepted() -> None:
+    text = """BEGIN:VCALENDAR
+BEGIN:VEVENT
+UID:jobs-live-tzid
+DTSTART;TZID=US-Eastern:20260110T083000
+SUMMARY:Employment Situation
+END:VEVENT
+END:VCALENDAR
+"""
+    rows = parse_bls_official_calendar(text)
+    assert len(rows) == 1
+    assert _structured(rows[0])["event_class"] == "employment_situation"
+    assert _structured(rows[0])["scheduled_at"] == "2026-01-10T13:30:00+00:00"
