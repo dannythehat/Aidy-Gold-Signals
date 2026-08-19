@@ -10,16 +10,29 @@ from uuid import uuid4
 
 from aidy.bigquery_exporter import EXPORT_MANIFEST
 from aidy.cross_market_bigquery import ArchivedCrossMarketEvidence, CROSS_MARKET_TABLE
-from scripts.day4_export_r2_to_bigquery import (
-    _cleanup_stage,
-    _client_from_env,
-    _count_identities,
-    _ensure_fact_table,
-    _ensure_stage_table,
-    _load_stage,
-    _merge,
-    _require_google,
-)
+
+try:
+    from scripts.day4_export_r2_to_bigquery import (
+        _cleanup_stage,
+        _client_from_env,
+        _count_identities,
+        _ensure_fact_table,
+        _ensure_stage_table,
+        _load_stage,
+        _merge,
+        _require_google,
+    )
+except ModuleNotFoundError:
+    from day4_export_r2_to_bigquery import (  # type: ignore[no-redef]
+        _cleanup_stage,
+        _client_from_env,
+        _count_identities,
+        _ensure_fact_table,
+        _ensure_stage_table,
+        _load_stage,
+        _merge,
+        _require_google,
+    )
 
 
 def ensure_cross_market_warehouse(
