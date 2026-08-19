@@ -113,7 +113,8 @@ jobs:
             --period 2024 \
             --period 2025 \
             --batch-size 50000 \
-            > /tmp/day5-first.json
+            > /tmp/day5-first.json \
+            2> /tmp/day5-first.stderr
           python - <<'PY'
           import json
           result=json.load(open('/tmp/day5-first.json', encoding='utf-8'))
@@ -134,7 +135,8 @@ jobs:
             --period 2025 \
             --batch-size 50000 \
             --force-process \
-            > /tmp/day5-forced-repeat.json
+            > /tmp/day5-forced-repeat.json \
+            2> /tmp/day5-forced-repeat.stderr
           python - <<'PY'
           import json
           result=json.load(open('/tmp/day5-forced-repeat.json', encoding='utf-8'))
@@ -160,7 +162,8 @@ jobs:
             --period 2024 \
             --period 2025 \
             --batch-size 50000 \
-            > /tmp/day5-checkpoint-rerun.json
+            > /tmp/day5-checkpoint-rerun.json \
+            2> /tmp/day5-checkpoint-rerun.stderr
           python - <<'PY'
           import json
           result=json.load(open('/tmp/day5-checkpoint-rerun.json', encoding='utf-8'))
@@ -240,6 +243,12 @@ jobs:
               file="/tmp/${name}.json"
               if [ -f "$file" ]; then
                 echo; echo "## ${name}"; echo '```json'; cat "$file"; echo; echo '```'
+              fi
+            done
+            for name in day5-first day5-forced-repeat day5-checkpoint-rerun; do
+              file="/tmp/${name}.stderr"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}-stderr"; echo '```text'; tail -120 "$file"; echo '```'
               fi
             done
           } > /tmp/day5-live-acceptance-evidence.md
