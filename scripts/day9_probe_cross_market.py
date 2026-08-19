@@ -13,6 +13,8 @@ from aidy.cross_market import (
     CrossMarketObservation,
 )
 
+_ALLOWED_LIVE_HOSTS = {"www.federalreserve.gov", "home.treasury.gov"}
+
 
 def _validate(observations: list[CrossMarketObservation]) -> dict[str, object]:
     if {item.series_id for item in observations} != set(ENABLED_SERIES):
@@ -22,7 +24,7 @@ def _validate(observations: list[CrossMarketObservation]) -> dict[str, object]:
     for item in observations:
         if item.observation_date > today:
             raise RuntimeError(f"Future cross-market observation date: {item.series_id}")
-        if urlparse(item.source_url).hostname not in {"fred.stlouisfed.org", "home.treasury.gov"}:
+        if urlparse(item.source_url).hostname not in _ALLOWED_LIVE_HOSTS:
             raise RuntimeError(f"Unexpected cross-market source host: {item.series_id}")
         value = Decimal(item.value)
         if item.unit == "percent" and not Decimal(-20) < value < Decimal(30):
