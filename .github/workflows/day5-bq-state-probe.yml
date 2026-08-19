@@ -29,8 +29,9 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet 'google-cloud-bigquery>=3.42,<4'
-          python - <<'PY' > /tmp/day5-bq-state.json
+          python - <<'PY' > /tmp/day5-bq-state.json 2> /tmp/day5-bq-state.stderr
           import json, os
+          from datetime import UTC, datetime, timedelta
           from google.cloud import bigquery
           from google.oauth2 import service_account
           info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
@@ -39,7 +40,7 @@ jobs:
           dataset=os.environ['AIDY_BIGQUERY_DATASET']
           client=bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
           def query(sql):
-              return [dict(row.items()) for row in client.query(sql).result()]
+              return [dict(row.items()) for row in client.query(sql, location='EU').result()]
           facts=query(f'''SELECT source_file, source_payload_sha256, chunk_key, timeframe,
              COUNT(*) AS row_count, COUNT(DISTINCT research_identity) AS identity_count,
              MIN(open_time_utc) AS first_open, MAX(open_time_utc) AS last_open,
@@ -58,31 +59,25 @@ jobs:
           WHERE source='histdata'
           GROUP BY source_period, source_file, source_payload_sha256, chunk_key
           ORDER BY source_period''')
-          jobs=query(f'''SELECT creation_time, job_id, job_type, statement_type, state,
-             error_result, destination_table, total_bytes_processed,
-             dml_statistics.inserted_row_count AS inserted_row_count,
-             dml_statistics.updated_row_count AS updated_row_count,
-             dml_statistics.deleted_row_count AS deleted_row_count,
-             query
-          FROM `{project}.region-eu`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
-          WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR)
-            AND user_email = @service_email
-          ORDER BY creation_time DESC
-          LIMIT 120''') if False else []
-          job_config=bigquery.QueryJobConfig(query_parameters=[
-              bigquery.ScalarQueryParameter('service_email','STRING',info['client_email'])
-          ])
-          job_rows=[dict(row.items()) for row in client.query(f'''SELECT creation_time, job_id, job_type, statement_type, state,
-             error_result, destination_table, total_bytes_processed,
-             dml_statistics.inserted_row_count AS inserted_row_count,
-             dml_statistics.updated_row_count AS updated_row_count,
-             dml_statistics.deleted_row_count AS deleted_row_count,
-             query
-          FROM `{project}.region-eu`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
-          WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR)
-            AND user_email = @service_email
-          ORDER BY creation_time DESC
-          LIMIT 120''', job_config=job_config, location='EU').result()]
+          recent=[]
+          cutoff=datetime.now(UTC)-timedelta(hours=3)
+          for job in client.list_jobs(all_users=False, min_creation_time=cutoff, max_results=120):
+              destination=getattr(job, 'destination', None)
+              if destination is not None:
+                  destination=f'{destination.project}.{destination.dataset_id}.{destination.table_id}'
+              recent.append({
+                  'job_id': job.job_id,
+                  'job_type': getattr(job, 'job_type', None),
+                  'state': getattr(job, 'state', None),
+                  'error_result': getattr(job, 'error_result', None),
+                  'created': getattr(job, 'created', None),
+                  'destination': destination,
+                  'output_rows': getattr(job, 'output_rows', None),
+                  'statement_type': getattr(job, 'statement_type', None),
+                  'num_dml_affected_rows': getattr(job, 'num_dml_affected_rows', None),
+                  'total_bytes_processed': getattr(job, 'total_bytes_processed', None),
+                  'query': getattr(job, 'query', None),
+              })
           def normal(value):
               if hasattr(value, 'isoformat'): return value.isoformat()
               if isinstance(value, dict): return {k: normal(v) for k,v in value.items()}
@@ -92,18 +87,31 @@ jobs:
               'facts': [{k: normal(v) for k,v in row.items()} for row in facts],
               'stage_runs': [{k: normal(v) for k,v in row.items()} for row in stages],
               'manifests': [{k: normal(v) for k,v in row.items()} for row in manifests],
-              'recent_jobs': [{k: normal(v) for k,v in row.items()} for row in job_rows],
+              'recent_jobs': [{k: normal(v) for k,v in row.items()} for row in recent],
           }
           print(json.dumps(payload, sort_keys=True))
           PY
       - name: Persist probe evidence
+        if: always()
         run: |
-          set -euo pipefail
+          set -u
+          {
+            echo '{"probe_stdout":'
+            if [ -s /tmp/day5-bq-state.json ]; then cat /tmp/day5-bq-state.json; else echo 'null'; fi
+            echo ',"probe_stderr":'
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('/tmp/day5-bq-state.stderr')
+          print(json.dumps(path.read_text(encoding='utf-8') if path.exists() else ''))
+          PY
+            echo '}'
+          } > /tmp/day5-bq-state-envelope.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin feature/day-5-historical-xauusd-backfill
           git reset --hard origin/feature/day-5-historical-xauusd-backfill
-          cp /tmp/day5-bq-state.json ops/day5-bq-state.json
+          cp /tmp/day5-bq-state-envelope.json ops/day5-bq-state.json
           git add ops/day5-bq-state.json
           git commit -m "Day 5: record BigQuery state probe"
           git push origin HEAD:feature/day-5-historical-xauusd-backfill
