@@ -1,0 +1,137 @@
+name: AIDY Day 8 Test Worker Deploy
+
+on:
+  push:
+    branches:
+      - feature/day-8-official-macro-event-evidence
+    paths:
+      - "ops/day8-deploy-trigger.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day8-test-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+      AIDY_DEPLOY_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-8-official-macro-event-evidence
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies and require passed Day 8 acceptance
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          grep -F -- '- Code gate: PASS' ops/day8-live-acceptance-evidence.md
+          grep -F -- '- Official/PIT structural boundary: PASS' ops/day8-live-acceptance-evidence.md
+          grep -F -- '- Live Fed/BLS/BEA probe: PASS' ops/day8-live-acceptance-evidence.md
+          grep -F -- '- Append-only revision + event-window proof: PASS' ops/day8-live-acceptance-evidence.md
+          echo PASS > /tmp/preflight
+
+      - name: Build Day 8 live test config
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='gold_api'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MACRO_POLL_SECONDS']='900'
+          assert cfg.get('secrets',{}).get('required',[]) == []
+          text=json.dumps(cfg).lower()
+          assert 'metaapi' not in text and 'vantage' not in text
+          json.dump(cfg, open('wrangler.day8.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          echo PASS > /tmp/config
+
+      - name: Deploy accepted Day 8 Worker
+        run: |
+          set -euo pipefail
+          cp wrangler.day8.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy > /tmp/deploy.txt 2>&1
+          echo PASS > /tmp/deployed
+
+      - name: Verify broker-free live health remains intact
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          ok=(h.get('capture_enabled') is True and h.get('environment') == 'test' and h.get('market_data_source') == 'gold_api' and h.get('market_data_ownership') == 'public_independent')
+          raise SystemExit(0 if ok else 1)
+          PY
+            then break; fi
+            sleep 3
+          done
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('environment') == 'test', h
+          assert h.get('market_data_source') == 'gold_api', h
+          assert h.get('market_data_ownership') == 'public_independent', h
+          PY
+          echo PASS > /tmp/health-pass
+
+      - name: Persist Day 8 deployment evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo '# Day 8 test Worker deployment evidence'
+            echo
+            echo "- Trigger commit: ${AIDY_DEPLOY_HEAD_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Acceptance preflight: $(cat /tmp/preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Live config: $(cat /tmp/config 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Worker deployed: $(cat /tmp/deployed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Broker-free live health: $(cat /tmp/health-pass 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            if [ -f /tmp/deploy.txt ]; then
+              echo; echo '## deploy'; echo '```text'; tail -120 /tmp/deploy.txt; echo '```'
+            fi
+            if [ -f /tmp/health.json ]; then
+              echo; echo '## health'; echo '```json'; cat /tmp/health.json; echo; echo '```'
+            fi
+          } > /tmp/day8-deploy-evidence.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-8-official-macro-event-evidence
+          git reset --hard origin/feature/day-8-official-macro-event-evidence
+          cp /tmp/day8-deploy-evidence.md ops/day8-deploy-evidence.md
+          git add ops/day8-deploy-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 8: record test Worker deployment"
+            git push origin HEAD:feature/day-8-official-macro-event-evidence
+          fi
