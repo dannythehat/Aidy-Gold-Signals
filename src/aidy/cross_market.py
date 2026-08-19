@@ -205,23 +205,23 @@ class CrossMarketGateway:
             "User-Agent": "AIDY-Gold-Recorder/1.0",
         }
         try:
-            async with httpx.AsyncClient(
-                timeout=self._timeout,
-                follow_redirects=False,
-            ) as client:
-                async with client.stream("GET", url, headers=headers) as response:
-                    if response.status_code != 200:
-                        raise CrossMarketError(
-                            f"cross_market_http_{response.status_code}"
-                        )
-                    declared = response.headers.get("content-length", "").strip()
-                    if declared.isdigit() and int(declared) > _MAX_SOURCE_BYTES:
+            async with (
+                httpx.AsyncClient(
+                    timeout=self._timeout,
+                    follow_redirects=False,
+                ) as client,
+                client.stream("GET", url, headers=headers) as response,
+            ):
+                if response.status_code != 200:
+                    raise CrossMarketError(f"cross_market_http_{response.status_code}")
+                declared = response.headers.get("content-length", "").strip()
+                if declared.isdigit() and int(declared) > _MAX_SOURCE_BYTES:
+                    raise CrossMarketError("cross_market_payload_size")
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    body.extend(chunk)
+                    if len(body) > _MAX_SOURCE_BYTES:
                         raise CrossMarketError("cross_market_payload_size")
-                    body = bytearray()
-                    async for chunk in response.aiter_bytes():
-                        body.extend(chunk)
-                        if len(body) > _MAX_SOURCE_BYTES:
-                            raise CrossMarketError("cross_market_payload_size")
         except CrossMarketError:
             raise
         except httpx.TimeoutException as exc:
