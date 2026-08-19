@@ -13,7 +13,9 @@ class FakeRepository:
     def __init__(self) -> None:
         self.snapshots: list[dict[str, object]] = []
 
-    async def event_observation_ids_known_at(self, *, captured_at: datetime, lookback_hours: int = 24):
+    async def event_observation_ids_known_at(
+        self, *, captured_at: datetime, lookback_hours: int = 24
+    ):
         del captured_at, lookback_hours
         return []
 
@@ -41,9 +43,10 @@ class FakeGateway:
 async def test_reference_recorder_stores_fresh_mid_without_fake_bid_ask_or_candles() -> None:
     now = datetime(2026, 8, 19, 9, 25, tzinfo=UTC)
     repository = FakeRepository()
+    gateway = FakeGateway(price=Decimal("3388.25"), observed_at=now - timedelta(seconds=15))
     result = await AidyReferencePriceRecorderService(
         repository=repository,  # type: ignore[arg-type]
-        gateway=FakeGateway(price=Decimal("3388.25"), observed_at=now - timedelta(seconds=15)),  # type: ignore[arg-type]
+        gateway=gateway,  # type: ignore[arg-type]
         stale_seconds=300,
     ).capture_once(now=now)
 
@@ -65,12 +68,57 @@ async def test_reference_recorder_stores_fresh_mid_without_fake_bid_ask_or_candl
 async def test_reference_recorder_marks_stale_quote_partial() -> None:
     now = datetime(2026, 8, 19, 9, 25, tzinfo=UTC)
     repository = FakeRepository()
+    gateway = FakeGateway(price=Decimal("3388.25"), observed_at=now - timedelta(minutes=10))
     result = await AidyReferencePriceRecorderService(
         repository=repository,  # type: ignore[arg-type]
-        gateway=FakeGateway(price=Decimal("3388.25"), observed_at=now - timedelta(minutes=10)),  # type: ignore[arg-type]
+        gateway=gateway,  # type: ignore[arg-type]
         stale_seconds=300,
     ).capture_once(now=now)
 
     assert result.status == "partial"
     assert result.market_open is False
     assert repository.snapshots[0]["quote_age_seconds"] == 600.0
+
+
+@pytest.mark.asyncio
+async def test_production_capture_stamps_actual_first_observed_time_after_read() -> None:
+    upstream_time = datetime(2026, 8, 19, 9, 25, 5, tzinfo=UTC)
+    first_observed = datetime(2026, 8, 19, 9, 25, 12, tzinfo=UTC)
+    repository = FakeRepository()
+    gateway = FakeGateway(price=Decimal("3388.25"), observed_at=upstream_time)
+
+    result = await AidyReferencePriceRecorderService(
+        repository=repository,  # type: ignore[arg-type]
+        gateway=gateway,  # type: ignore[arg-type]
+        stale_seconds=300,
+        clock=lambda: first_observed,
+    ).capture_once()
+
+    assert result.status == "complete"
+    snapshot = repository.snapshots[0]
+    assert snapshot["captured_at"] == first_observed
+    assert snapshot["quote_time"] == upstream_time
+    assert snapshot["quote_age_seconds"] == 7.0
+
+
+@pytest.mark.asyncio
+async def test_reference_recorder_rejects_future_dated_upstream_quote() -> None:
+    first_observed = datetime(2026, 8, 19, 9, 25, 12, tzinfo=UTC)
+    repository = FakeRepository()
+    gateway = FakeGateway(
+        price=Decimal("3388.25"),
+        observed_at=first_observed + timedelta(seconds=1),
+    )
+
+    result = await AidyReferencePriceRecorderService(
+        repository=repository,  # type: ignore[arg-type]
+        gateway=gateway,  # type: ignore[arg-type]
+        stale_seconds=300,
+        clock=lambda: first_observed,
+    ).capture_once()
+
+    assert result.status == "unavailable"
+    assert result.market_open is False
+    snapshot = repository.snapshots[0]
+    assert snapshot["mid"] is None
+    assert '"quote":"gold_api_future_timestamp"' in str(snapshot["data_availability_json"])
