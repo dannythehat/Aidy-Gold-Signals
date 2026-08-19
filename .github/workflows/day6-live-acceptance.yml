@@ -207,8 +207,11 @@ jobs:
           for bundle in (before, at):
               assert bundle['retrospective_history_included'] is False
               text=json.dumps(bundle).lower()
-              assert 'retrospective_history' not in text
               assert 'research_candles' not in text
+              assert '"provenance_class": "retrospective_history"' not in text
+              for item in bundle['candles']:
+                  fact=item.get('fact') or {}
+                  assert fact.get('source') != 'histdata'
           PY
           echo PASS > /tmp/retrospective-exclusion
 
