@@ -86,9 +86,15 @@ def select_latest_candles_as_of(
 ) -> list[dict[str, Any]]:
     if not symbol.strip():
         raise ValueError("symbol is required.")
+    cutoff = normalize_as_of(as_of)
     canonical = select_latest_revisions_as_of(
-        (row for row in rows if str(row.get("symbol") or "") == symbol),
-        as_of=as_of,
+        (
+            row
+            for row in rows
+            if str(row.get("symbol") or "") == symbol
+            and _known_at(row, "open_time_utc", cutoff)
+        ),
+        as_of=cutoff,
         key_fields=("source", "symbol", "timeframe", "open_time_utc"),
     )
     latest: dict[tuple[str, str], dict[str, Any]] = {}
@@ -229,7 +235,9 @@ WITH eligible AS (
     ORDER BY first_observed_at DESC, revision_index DESC, load_identity DESC
   ) AS revision_rank
   FROM `{project}.{dataset}.{MARKET_CANDLES.name}`
-  WHERE symbol = @symbol AND first_observed_at <= @as_of
+  WHERE symbol = @symbol
+    AND open_time_utc <= @as_of
+    AND first_observed_at <= @as_of
 ), canonical AS (
   SELECT * EXCEPT(revision_rank), ROW_NUMBER() OVER (
     PARTITION BY source, timeframe
