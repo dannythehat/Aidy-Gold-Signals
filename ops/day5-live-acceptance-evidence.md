@@ -1,7 +1,7 @@
 # Day 5 historical XAUUSD backfill live-acceptance evidence
 
-- Trigger commit: ccef9deca40cdc471da5c6f3d8821dd1e3eecdca
-- Observed at UTC: 2026-08-19T12:03:19Z
+- Trigger commit: 32a1fdef4bf3beb7b36141adc14ccf3d64866d39
+- Observed at UTC: 2026-08-19T12:04:46Z
 - Dependencies: PASS
 - Code gate: FAIL
 - Code gate status: ruff=0 compile=0 pytest=1
@@ -37,5 +37,5 @@ E       Failed: DID NOT RAISE ValueError
 tests/test_historical_backfill.py:81: Failed
 =========================== short test summary info ============================
 FAILED tests/test_historical_backfill.py::test_out_of_order_and_ohlc_invariants_fail_closed - Failed: DID NOT RAISE ValueError
-1 failed, 75 passed in 0.68s
+1 failed, 75 passed in 0.65s
 ```
