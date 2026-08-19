@@ -42,14 +42,22 @@ def _schema(bigquery: Any, fields: tuple[FieldSpec, ...]) -> list[Any]:
     ]
 
 
+def _canonical_type(value: str) -> str:
+    aliases = {"FLOAT": "FLOAT64", "INTEGER": "INT64"}
+    upper = value.upper()
+    return aliases.get(upper, upper)
+
+
 def _schema_signature(table: Any) -> tuple[tuple[str, str, str], ...]:
-    return tuple((field.name, field.field_type.upper(), field.mode.upper()) for field in table.schema)
+    return tuple(
+        (field.name, _canonical_type(field.field_type), field.mode.upper())
+        for field in table.schema
+    )
 
 
 def _expected_signature(fields: tuple[FieldSpec, ...]) -> tuple[tuple[str, str, str], ...]:
-    aliases = {"FLOAT": "FLOAT64", "INTEGER": "INT64"}
     return tuple(
-        (field.name, aliases.get(field.field_type.upper(), field.field_type.upper()), field.mode.upper())
+        (field.name, _canonical_type(field.field_type), field.mode.upper())
         for field in fields
     )
 
