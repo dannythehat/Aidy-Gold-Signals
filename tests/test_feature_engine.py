@@ -19,7 +19,7 @@ def _research_row(
     high: Decimal | None = None,
     low: Decimal | None = None,
 ) -> dict[str, object]:
-    price = close if close is not None else Decimal("3300") + Decimal(index) / Decimal(10)
+    price = close if close is not None else Decimal(3300) + Decimal(index) / Decimal(10)
     open_price = price - Decimal("0.05")
     high_price = high if high is not None else price + Decimal("0.20")
     low_price = low if low is not None else open_price - Decimal("0.20")
@@ -44,7 +44,7 @@ def _research_row(
 
 def _pit_row(*, index: int, observed_delay_seconds: int = 5) -> dict[str, object]:
     opened = _BASE + timedelta(minutes=index)
-    price = Decimal("3300") + Decimal(index) / Decimal(10)
+    price = Decimal(3300) + Decimal(index) / Decimal(10)
     return {
         "load_identity": f"pit-{index}",
         "evidence_id": f"evidence-{index}",
@@ -217,9 +217,9 @@ def test_invalid_ohlc_geometry_fails_closed() -> None:
     row = _research_row(
         timeframe="M1",
         index=0,
-        close=Decimal("3300"),
-        high=Decimal("3299"),
-        low=Decimal("3298"),
+        close=Decimal(3300),
+        high=Decimal(3299),
+        low=Decimal(3298),
     )
     with pytest.raises(ValueError, match="OHLC geometry"):
         build_feature_packet(
@@ -247,14 +247,14 @@ def test_confirmed_swing_uses_only_bars_already_present_by_as_of() -> None:
     highs = ["3301", "3302", "3305", "3302", "3301", "3302", "3303"]
     rows = []
     for index, high_text in enumerate(highs):
-        close = Decimal("3300")
+        close = Decimal(3300)
         rows.append(
             _research_row(
                 timeframe="M1",
                 index=index,
                 close=close,
                 high=Decimal(high_text),
-                low=Decimal("3299"),
+                low=Decimal(3299),
             )
         )
     as_of = rows[-1]["open_time_utc"]
