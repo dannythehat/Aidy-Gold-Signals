@@ -19,7 +19,6 @@ from aidy.official_macro import (
 )
 from aidy.official_macro_recorder import AidyOfficialMacroRecorderService
 
-
 BLS_ICS = """BEGIN:VCALENDAR
 BEGIN:VEVENT
 UID:cpi-sep-2026
