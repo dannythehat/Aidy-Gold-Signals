@@ -1,0 +1,263 @@
+name: AIDY Day 6 PIT As-Of Reconstruction Acceptance
+
+on:
+  push:
+    branches:
+      - feature/day-6-pit-asof-reconstruction
+    paths:
+      - "ops/day6-live-acceptance-trigger.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day6-pit-asof-acceptance
+  cancel-in-progress: false
+
+jobs:
+  live-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-6-pit-asof-reconstruction
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          echo PASS > /tmp/dependencies
+
+      - name: Run Day 6 code gate
+        run: |
+          set +e
+          uv run ruff check \
+            src/aidy/pit_reconstruction.py \
+            scripts/day6_reconstruct_asof.py \
+            tests/test_pit_reconstruction.py \
+            tests/test_pit_candle_time_boundary.py \
+            > /tmp/ruff.txt 2>&1
+          ruff_status=$?
+          uv run python -m compileall -q src scripts tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest.txt
+          exit 1
+
+      - name: Prove structural PIT boundary before warehouse access
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from pathlib import Path
+          from aidy.pit_reconstruction import QUERY_VERSION, query_contract
+
+          queries = query_contract(project='aidy-signals', dataset='aidy_analytics_test')
+          sql='\n'.join(query.sql.lower() for query in queries.values())
+          assert QUERY_VERSION == 'aidy_pit_asof_v1'
+          assert 'research_candles' not in sql
+          assert 'retrospective_history' not in sql
+          assert 'first_observed_at <= @as_of' in queries['candles'].sql
+          assert 'open_time_utc <= @as_of' in queries['candles'].sql
+          assert 'first_observed_at <= @as_of' in queries['events'].sql
+          assert 'captured_at <= @as_of' in queries['snapshot'].sql
+
+          core=Path('src/aidy/pit_reconstruction.py').read_text(encoding='utf-8').lower()
+          assert 'google.cloud' not in core
+          assert 'google.oauth2' not in core
+          PY
+          echo PASS > /tmp/structural-boundary
+
+      - name: Require existing Google Cloud credential
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo MISSING_AIDY_GCP_SERVICE_ACCOUNT_JSON > /tmp/credential-preflight; exit 1; }
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('type') == 'service_account'
+          assert info.get('project_id')
+          assert info.get('client_email')
+          assert info.get('private_key')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+          echo PASS > /tmp/credential-preflight
+
+      - name: Install bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+          echo PASS > /tmp/bigquery-dependency
+
+      - name: Locate genuine PIT evidence and retrospective control rows
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY' > /tmp/day6-warehouse-anchor.json
+          import json, os
+          from google.cloud import bigquery
+          from google.oauth2 import service_account
+
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          creds=service_account.Credentials.from_service_account_info(info)
+          project=info['project_id']
+          dataset=os.environ['AIDY_BIGQUERY_DATASET']
+          client=bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
+
+          snap=list(client.query(f'''SELECT MIN(captured_at) AS first_captured_at, COUNT(*) AS snapshot_rows
+          FROM `{project}.{dataset}.market_snapshots`''').result())[0]
+          research=list(client.query(f'''SELECT COUNT(*) AS research_rows, COUNTIF(pit_eligible) AS pit_eligible_rows
+          FROM `{project}.{dataset}.research_candles`''').result())[0]
+          first=snap['first_captured_at']
+          assert first is not None, 'No genuine AIDY BigQuery snapshot exists.'
+          assert int(snap['snapshot_rows']) > 0
+          assert int(research['research_rows']) > 0, 'Day 5 retrospective control rows are missing.'
+          assert int(research['pit_eligible_rows']) == 0
+          print(json.dumps({
+              'project': project,
+              'dataset': dataset,
+              'first_captured_at': first.isoformat(),
+              'snapshot_rows': int(snap['snapshot_rows']),
+              'research_rows': int(research['research_rows']),
+              'research_pit_eligible_rows': int(research['pit_eligible_rows']),
+          }, sort_keys=True))
+          PY
+          python - <<'PY'
+          import json, os
+          anchor=json.load(open('/tmp/day6-warehouse-anchor.json', encoding='utf-8'))
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"AIDY_FIRST_CAPTURED_AT={anchor['first_captured_at']}\n")
+          PY
+          echo PASS > /tmp/warehouse-anchor
+
+      - name: Reconstruct just before the first genuine snapshot
+        run: |
+          set -euo pipefail
+          BEFORE=$(uv run python - <<'PY'
+          import os
+          from datetime import datetime, timedelta
+          value=datetime.fromisoformat(os.environ['AIDY_FIRST_CAPTURED_AT']) - timedelta(microseconds=1)
+          print(value.isoformat())
+          PY
+          )
+          uv run python scripts/day6_reconstruct_asof.py --as-of "$BEFORE" > /tmp/day6-before.json 2> /tmp/day6-before.stderr
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day6-before.json', encoding='utf-8'))
+          assert result['query_version'] == 'aidy_pit_asof_v1'
+          assert result['retrospective_history_included'] is False
+          assert result['snapshot']['state'] == 'unknown', result['snapshot']
+          assert result['snapshot']['fact'] is None
+          assert result['availability'] == {'state': 'unknown', 'data': None}
+          assert set(result['query_ids']) == {'candles','events','snapshot'}
+          assert all(result['query_ids'].values())
+          PY
+          echo PASS > /tmp/before-first-snapshot
+
+      - name: Reconstruct exactly at the first genuine snapshot
+        run: |
+          set -euo pipefail
+          uv run python scripts/day6_reconstruct_asof.py --as-of "$AIDY_FIRST_CAPTURED_AT" > /tmp/day6-at.json 2> /tmp/day6-at.stderr
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day6-at.json', encoding='utf-8'))
+          snapshot=result['snapshot']
+          assert snapshot['state'] == 'known', snapshot
+          assert snapshot['fact']['captured_at'] == result['as_of_utc'], (snapshot['fact']['captured_at'], result['as_of_utc'])
+          provenance=snapshot['provenance']
+          for field in ('load_identity','evidence_id','archive_key','payload_digest','record_type','schema_version'):
+              assert provenance.get(field) not in (None,''), (field, provenance)
+          assert provenance['record_type'] == 'snapshot'
+          assert result['availability']['state'] == 'known'
+          assert result['availability']['snapshot_evidence_id'] == provenance['evidence_id']
+          assert result['retrospective_history_included'] is False
+          PY
+          echo PASS > /tmp/at-first-snapshot
+
+      - name: Prove retrospective history cannot contaminate the real PIT bundle
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          anchor=json.load(open('/tmp/day6-warehouse-anchor.json', encoding='utf-8'))
+          before=json.load(open('/tmp/day6-before.json', encoding='utf-8'))
+          at=json.load(open('/tmp/day6-at.json', encoding='utf-8'))
+          assert anchor['research_rows'] > 0
+          assert anchor['research_pit_eligible_rows'] == 0
+          for bundle in (before, at):
+              assert bundle['retrospective_history_included'] is False
+              text=json.dumps(bundle).lower()
+              assert 'retrospective_history' not in text
+              assert 'research_candles' not in text
+          PY
+          echo PASS > /tmp/retrospective-exclusion
+
+      - name: Persist Day 6 acceptance evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo "# Day 6 PIT as-of reconstruction live-acceptance evidence"
+            echo
+            echo "- Trigger commit: ${AIDY_ACCEPTANCE_HEAD_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
+            echo "- Structural PIT boundary: $(cat /tmp/structural-boundary 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Credential preflight: $(cat /tmp/credential-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery dependency: $(cat /tmp/bigquery-dependency 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Warehouse anchor/control rows: $(cat /tmp/warehouse-anchor 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Before first snapshot -> explicit unknown: $(cat /tmp/before-first-snapshot 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- At first snapshot -> known with provenance: $(cat /tmp/at-first-snapshot 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Retrospective history excluded: $(cat /tmp/retrospective-exclusion 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            for name in ruff compile pytest; do
+              file="/tmp/${name}.txt"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```text'; tail -120 "$file"; echo '```'
+              fi
+            done
+            for name in day6-warehouse-anchor day6-before day6-at; do
+              file="/tmp/${name}.json"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```json'; cat "$file"; echo; echo '```'
+              fi
+            done
+            for name in day6-before day6-at; do
+              file="/tmp/${name}.stderr"
+              if [ -f "$file" ] && [ -s "$file" ]; then
+                echo; echo "## ${name}-stderr"; echo '```text'; tail -120 "$file"; echo '```'
+              fi
+            done
+          } > /tmp/day6-live-acceptance-evidence.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-6-pit-asof-reconstruction
+          git reset --hard origin/feature/day-6-pit-asof-reconstruction
+          cp /tmp/day6-live-acceptance-evidence.md ops/day6-live-acceptance-evidence.md
+          git add ops/day6-live-acceptance-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 6: record PIT reconstruction live acceptance"
+            git push origin HEAD:feature/day-6-pit-asof-reconstruction
+          fi
