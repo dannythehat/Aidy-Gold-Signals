@@ -1,0 +1,373 @@
+name: AIDY Day 9 Cross-Market Evidence Acceptance
+
+on:
+  push:
+    branches:
+      - feature/day-9-cross-market-evidence
+    paths:
+      - "ops/day9-live-acceptance-trigger.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day9-cross-market-acceptance
+  cancel-in-progress: false
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-9-cross-market-evidence
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          echo PASS > /tmp/dependencies
+
+      - name: Run Day 9 code gate
+        run: |
+          set +e
+          uv run ruff check \
+            src/aidy/config.py \
+            src/aidy/cross_market.py \
+            src/aidy/cross_market_asof.py \
+            src/aidy/cross_market_bigquery.py \
+            src/aidy/cross_market_recorder.py \
+            src/aidy/cross_market_storage.py \
+            src/aidy/reference_price_recorder.py \
+            src/aidy/runtime.py \
+            src/aidy/storage_contracts.py \
+            src/entry.py \
+            scripts/day9_export_cross_market_to_bigquery.py \
+            scripts/day9_probe_cross_market.py \
+            tests/test_cross_market.py \
+            > /tmp/ruff.txt 2>&1
+          ruff_status=$?
+          uv run python -m compileall -q src scripts tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest.txt
+          exit 1
+
+      - name: Prove Day 9 source and boundary contract
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from pathlib import Path
+          from aidy.config import AidySettings
+          from aidy.cross_market import ENABLED_SERIES, FRED_DOLLAR_URL, TREASURY_NOMINAL_URL, TREASURY_REAL_URL
+
+          assert set(ENABLED_SERIES) == {'DTWEXBGS','UST_NOMINAL_2Y','UST_NOMINAL_10Y','UST_REAL_10Y'}
+          assert FRED_DOLLAR_URL.startswith('https://fred.stlouisfed.org/')
+          assert 'home.treasury.gov' in TREASURY_NOMINAL_URL
+          assert 'home.treasury.gov' in TREASURY_REAL_URL
+          assert AidySettings().cross_market_poll_seconds == 3600.0
+
+          source='\n'.join(Path(path).read_text(encoding='utf-8').lower() for path in (
+              'src/aidy/cross_market.py',
+              'src/aidy/cross_market_recorder.py',
+              'src/aidy/cross_market_storage.py',
+              'src/aidy/cross_market_asof.py',
+          ))
+          for forbidden in ('metaapi','vantage','mt5','super-signals','dxy','tradingeconomics'):
+              assert forbidden not in source
+          audit=Path('docs/cross-market-source-audit.md').read_text(encoding='utf-8').lower()
+          assert 'no-go' in audit and 'first_observed_at' in audit and 'daily context' in audit
+          PY
+          echo PASS > /tmp/structural-boundary
+
+      - name: Repeated live source probe
+        run: |
+          set +e
+          uv run python scripts/day9_probe_cross_market.py > /tmp/source-probe.json 2> /tmp/source-probe.stderr
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            echo PASS > /tmp/source-probe-status
+            cat /tmp/source-probe.json
+            exit 0
+          fi
+          echo FAIL > /tmp/source-probe-status
+          cat /tmp/source-probe.stderr
+          exit "$status"
+
+      - name: Require existing Cloudflare and Google credentials
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo MISSING_CLOUDFLARE_API_TOKEN; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo MISSING_CLOUDFLARE_ACCOUNT_ID; exit 1; }
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo MISSING_AIDY_GCP_SERVICE_ACCOUNT_JSON; exit 1; }
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('project_id')
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as fh:
+              fh.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+          echo PASS > /tmp/credential-preflight
+
+      - name: Build accepted live test config
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='gold_api'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MACRO_POLL_SECONDS']='900'
+          cfg['vars']['AIDY_CROSS_MARKET_POLL_SECONDS']='3600'
+          assert cfg.get('secrets',{}).get('required',[]) == []
+          text=json.dumps(cfg).lower()
+          assert 'metaapi' not in text and 'vantage' not in text
+          json.dump(cfg, open('wrangler.day9.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          echo PASS > /tmp/live-config
+
+      - name: Apply Day 9 D1 migration
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day9.live.jsonc > /tmp/migration.txt 2>&1
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day9.live.jsonc \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('cross_market_observations','cross_market_archive_outbox') ORDER BY name" \
+            > /tmp/migration-tables.json
+          grep -q 'cross_market_observations' /tmp/migration-tables.json
+          grep -q 'cross_market_archive_outbox' /tmp/migration-tables.json
+          echo PASS > /tmp/migration-pass
+
+      - name: Deploy Day 9 test Worker
+        run: |
+          set -euo pipefail
+          cp wrangler.day9.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy > /tmp/deploy.txt 2>&1
+          echo PASS > /tmp/deployed
+
+      - name: Verify broker-free health and Day 9 boundary
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          ok=(h.get('capture_enabled') is True and h.get('market_data_source')=='gold_api' and h.get('market_data_ownership')=='public_independent' and h.get('cross_market_source')=='public_official_daily')
+          raise SystemExit(0 if ok else 1)
+          PY
+            then break; fi
+            sleep 3
+          done
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          assert h.get('status')=='ok', h
+          assert h.get('capture_enabled') is True, h
+          assert h.get('market_data_source')=='gold_api', h
+          assert h.get('market_data_ownership')=='public_independent', h
+          assert h.get('cross_market_source')=='public_official_daily', h
+          PY
+          echo PASS > /tmp/health-pass
+
+      - name: Capture two real Day 9 samples through Worker
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST "${AIDY_TEST_WORKER_URL}/day9/cross-market-smoke" > /tmp/smoke1.json
+          curl -fsS -X POST "${AIDY_TEST_WORKER_URL}/day9/cross-market-smoke" > /tmp/smoke2.json
+          python - <<'PY'
+          import json
+          for name in ('smoke1','smoke2'):
+              data=json.load(open(f'/tmp/{name}.json', encoding='utf-8'))
+              assert data.get('ok') is True, data
+              capture=data['capture']
+              assert capture['sources_checked']==3, data
+              assert capture['sources_failed']==0, data
+              assert capture['observations_seen']==4, data
+              assert set(data['latest']) == {'DTWEXBGS','UST_NOMINAL_2Y','UST_NOMINAL_10Y','UST_REAL_10Y'}, data
+              assert data['archive']['pending']==0, data
+              assert data['archive']['failed']==0, data
+          PY
+          echo PASS > /tmp/worker-samples
+
+      - name: Reconcile D1 identities and choose R2 evidence
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day9.live.jsonc \
+            --command "SELECT source,series_id,observation_date,COUNT(*) AS rows,COUNT(DISTINCT payload_digest) AS payloads,MAX(revision_index) AS max_revision FROM cross_market_observations GROUP BY source,series_id,observation_date ORDER BY series_id,observation_date" \
+            > /tmp/d1-groups.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day9.live.jsonc \
+            --command "SELECT source,series_id,observation_date,value,unit,first_observed_at,revision_index,payload_digest,archive_key FROM (SELECT *,ROW_NUMBER() OVER(PARTITION BY series_id ORDER BY observation_date DESC,revision_index DESC,first_observed_at DESC) AS rn FROM cross_market_observations) WHERE rn=1 ORDER BY series_id" \
+            > /tmp/d1-latest.json
+          python - <<'PY'
+          import json, os
+          groups=json.load(open('/tmp/d1-groups.json', encoding='utf-8'))
+          rows=[]
+          for batch in groups:
+              rows.extend(batch.get('results') or [])
+          assert rows
+          assert all(int(row['rows']) == int(row['payloads']) for row in rows), rows
+
+          latest_payload=json.load(open('/tmp/d1-latest.json', encoding='utf-8'))
+          latest=[]
+          for batch in latest_payload:
+              latest.extend(batch.get('results') or [])
+          assert {row['series_id'] for row in latest} == {'DTWEXBGS','UST_NOMINAL_2Y','UST_NOMINAL_10Y','UST_REAL_10Y'}, latest
+          with open('/tmp/r2-keys.txt','w',encoding='utf-8') as fh:
+              for index,row in enumerate(latest):
+                  fh.write(f"{index}\t{row['archive_key']}\n")
+          PY
+          echo PASS > /tmp/d1-reconciliation
+
+      - name: Download all four immutable R2 facts
+        run: |
+          set -euo pipefail
+          while IFS=$'\t' read -r index key; do
+            npx --yes wrangler@4 r2 object get "aidy-memory-test/${key}" --remote --file "/tmp/cross-${index}.json"
+            test -s "/tmp/cross-${index}.json"
+          done < /tmp/r2-keys.txt
+          python - <<'PY'
+          import glob, json
+          files=sorted(glob.glob('/tmp/cross-*.json'))
+          assert len(files)==4, files
+          series=set()
+          for path in files:
+              row=json.load(open(path, encoding='utf-8'))
+              assert row['record_type']=='cross_market', row
+              assert row['schema_version']==1, row
+              assert row['revision_index'] >= 1, row
+              series.add(row['payload']['series_id'])
+          assert series == {'DTWEXBGS','UST_NOMINAL_2Y','UST_NOMINAL_10Y','UST_REAL_10Y'}, series
+          PY
+          echo PASS > /tmp/r2-reconciliation
+
+      - name: Install bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+          echo PASS > /tmp/bigquery-dependency
+
+      - name: Export the four R2 facts twice and prove BigQuery idempotency
+        run: |
+          set -euo pipefail
+          : > /tmp/bigquery-export.jsonl
+          for file in /tmp/cross-*.json; do
+            uv run python scripts/day9_export_cross_market_to_bigquery.py "$file" >> /tmp/bigquery-export.jsonl
+            uv run python scripts/day9_export_cross_market_to_bigquery.py "$file" >> /tmp/bigquery-export.jsonl
+          done
+          uv run python - <<'PY' > /tmp/bigquery-asof.json
+          import json, os
+          from datetime import UTC, datetime
+          from google.cloud import bigquery
+          from google.oauth2 import service_account
+          from aidy.cross_market import ENABLED_SERIES
+          from aidy.cross_market_asof import bigquery_cross_market_sql, reconstruct_cross_market_as_of
+
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          creds=service_account.Credentials.from_service_account_info(info)
+          project=info['project_id']
+          dataset=os.environ['AIDY_BIGQUERY_DATASET']
+          client=bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
+          as_of=datetime.now(UTC)
+          config=bigquery.QueryJobConfig(query_parameters=[bigquery.ScalarQueryParameter('as_of','TIMESTAMP',as_of)])
+          rows=[dict(row.items()) for row in client.query(bigquery_cross_market_sql(project=project,dataset=dataset), job_config=config).result()]
+          result=reconstruct_cross_market_as_of(rows, as_of=as_of)
+          assert set(result['series']) == set(ENABLED_SERIES)
+          assert all(result['series'][series]['state']=='known' for series in ENABLED_SERIES), result
+          print(json.dumps(result, sort_keys=True))
+          PY
+          python - <<'PY'
+          import json
+          lines=[json.loads(line) for line in open('/tmp/bigquery-export.jsonl', encoding='utf-8') if line.strip()]
+          assert len(lines)==8, len(lines)
+          assert all(line['fact_rows']==1 and line['fact_identities']==1 for line in lines), lines
+          assert all(line['manifest_rows']==1 and line['manifest_identities']==1 for line in lines), lines
+          assert len({line['series_id'] for line in lines})==4, lines
+          PY
+          echo PASS > /tmp/bigquery-pass
+
+      - name: Persist Day 9 acceptance evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo '# Day 9 cross-market evidence live-acceptance evidence'
+            echo
+            echo "- Trigger commit: ${AIDY_ACCEPTANCE_HEAD_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
+            echo "- Source/PIT structural boundary: $(cat /tmp/structural-boundary 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Repeated live source probe: $(cat /tmp/source-probe-status 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Credential preflight: $(cat /tmp/credential-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Live config: $(cat /tmp/live-config 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- D1 migration: $(cat /tmp/migration-pass 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Worker deployed: $(cat /tmp/deployed 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Broker-free health: $(cat /tmp/health-pass 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Two real Worker samples: $(cat /tmp/worker-samples 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- D1 identity reconciliation: $(cat /tmp/d1-reconciliation 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- R2 reconciliation: $(cat /tmp/r2-reconciliation 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery dependency: $(cat /tmp/bigquery-dependency 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery double-export + PIT as-of: $(cat /tmp/bigquery-pass 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            for name in ruff compile pytest source-probe.stderr migration deploy; do
+              file="/tmp/${name}.txt"
+              [ "$name" = "source-probe.stderr" ] && file="/tmp/source-probe.stderr"
+              if [ -f "$file" ] && [ -s "$file" ]; then
+                echo; echo "## ${name}"; echo '```text'; tail -160 "$file"; echo '```'
+              fi
+            done
+            for name in source-probe smoke1 smoke2 d1-groups d1-latest bigquery-export bigquery-asof health; do
+              file="/tmp/${name}.json"
+              [ "$name" = "bigquery-export" ] && file="/tmp/bigquery-export.jsonl"
+              if [ -f "$file" ] && [ -s "$file" ]; then
+                echo; echo "## ${name}"; echo '```json'; cat "$file"; echo; echo '```'
+              fi
+            done
+          } > /tmp/day9-evidence.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-9-cross-market-evidence
+          git reset --hard origin/feature/day-9-cross-market-evidence
+          cp /tmp/day9-evidence.md ops/day9-live-acceptance-evidence.md
+          git add ops/day9-live-acceptance-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 9: record cross-market live acceptance"
+            git push origin HEAD:feature/day-9-cross-market-evidence
+          fi
