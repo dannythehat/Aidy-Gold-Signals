@@ -45,10 +45,12 @@ jobs:
             src/aidy/config.py \
             src/aidy/fed_recorder.py \
             src/aidy/runtime.py \
+            src/aidy/bls_calendar_parser.py \
             src/aidy/fomc_calendar_parser.py \
             src/aidy/macro_event_windows.py \
             src/aidy/official_macro_recorder.py \
             scripts/day8_probe_official_macro.py \
+            tests/test_bls_calendar_parser.py \
             tests/test_official_macro.py \
             >> /tmp/ruff.txt 2>&1
           ruff_primary=$?
@@ -87,6 +89,8 @@ jobs:
           assert all(any(domain in url for domain in ('bls.gov','bea.gov')) for url in urls)
 
           recorder=Path('src/aidy/official_macro_recorder.py').read_text(encoding='utf-8')
+          assert 'parse_bls_official_calendar' in recorder
+          assert 'parse_bls_calendar_ics(' not in recorder
           assert 'parse_fomc_calendar' in recorder
           assert 'parse_fed_month_calendar_html(' not in recorder
           windows=Path('src/aidy/macro_event_windows.py').read_text(encoding='utf-8')
@@ -100,6 +104,7 @@ jobs:
               Path(path).read_text(encoding='utf-8').lower()
               for path in (
                   'src/aidy/official_macro.py',
+                  'src/aidy/bls_calendar_parser.py',
                   'src/aidy/fomc_calendar_parser.py',
                   'src/aidy/official_macro_recorder.py',
                   'src/aidy/macro_event_windows.py',
