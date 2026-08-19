@@ -1,0 +1,264 @@
+name: AIDY Day 5 Historical Backfill Acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/day-5-historical-xauusd-backfill
+    paths:
+      - "ops/day5-live-acceptance-trigger.txt"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aidy-day5-historical-backfill-acceptance
+  cancel-in-progress: false
+
+jobs:
+  live-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-5-historical-xauusd-backfill
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          echo PASS > /tmp/dependencies
+
+      - name: Run Day 5 code gate
+        run: |
+          set +e
+          uv run ruff check \
+            src/aidy/historical_backfill.py \
+            scripts/day5_backfill_histdata.py \
+            tests/test_historical_backfill.py \
+            > /tmp/ruff.txt 2>&1
+          ruff_status=$?
+          uv run python -m compileall -q src scripts tests > /tmp/compile.txt 2>&1
+          compile_status=$?
+          uv run pytest -q > /tmp/pytest.txt 2>&1
+          pytest_status=$?
+          echo "ruff=${ruff_status} compile=${compile_status} pytest=${pytest_status}" > /tmp/code-gate-status
+          if [ "$ruff_status" -eq 0 ] && [ "$compile_status" -eq 0 ] && [ "$pytest_status" -eq 0 ]; then
+            echo PASS > /tmp/code-gate
+            exit 0
+          fi
+          echo FAIL > /tmp/code-gate
+          cat /tmp/ruff.txt
+          cat /tmp/compile.txt
+          cat /tmp/pytest.txt
+          exit 1
+
+      - name: Prove retrospective/live boundary is structural
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          from pathlib import Path
+          from aidy.historical_backfill import RESEARCH_CANDLES, RETROSPECTIVE_PROVENANCE
+          fields={field.name for field in RESEARCH_CANDLES.fields}
+          assert RESEARCH_CANDLES.name == 'research_candles'
+          assert 'first_observed_at' not in fields
+          assert 'pit_eligible' in fields
+          assert RETROSPECTIVE_PROVENANCE == 'retrospective_history'
+          source=Path('src/aidy/historical_backfill.py').read_text(encoding='utf-8').lower()
+          runner=Path('scripts/day5_backfill_histdata.py').read_text(encoding='utf-8').lower()
+          for forbidden in ('metaapi', 'vantage', 'mt5', 'super-signals', 'super_signals'):
+              assert forbidden not in source
+              assert forbidden not in runner
+          PY
+          echo PASS > /tmp/provenance-boundary
+
+      - name: Require existing Google Cloud credential
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo MISSING_AIDY_GCP_SERVICE_ACCOUNT_JSON > /tmp/credential-preflight; exit 1; }
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('type') == 'service_account'
+          assert info.get('project_id')
+          assert info.get('client_email')
+          assert info.get('private_key')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+          echo PASS > /tmp/credential-preflight
+
+      - name: Install bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+          echo PASS > /tmp/bigquery-dependency
+
+      - name: Load two complete HistData XAUUSD annual periods
+        run: |
+          set -euo pipefail
+          uv run python scripts/day5_backfill_histdata.py \
+            --period 2024 \
+            --period 2025 \
+            --batch-size 50000 \
+            > /tmp/day5-first.json \
+            2> /tmp/day5-first.stderr
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day5-first.json', encoding='utf-8'))
+          assert result.get('ok') is True, result
+          assert result.get('source') == 'histdata', result
+          assert result.get('periods') == ['2024','2025'], result
+          assert result.get('timeframes') == ['M1','M5','M15','H1','H4','D1'], result
+          statuses=[item.get('status') for item in result.get('results', [])]
+          assert len(statuses) == 2, result
+          assert all(status in {'loaded','checkpoint_skipped'} for status in statuses), result
+          PY
+          echo PASS > /tmp/two-year-backfill
+
+      - name: Force-process 2025 again to prove insert-only idempotency
+        run: |
+          set -euo pipefail
+          uv run python scripts/day5_backfill_histdata.py \
+            --period 2025 \
+            --batch-size 50000 \
+            --force-process \
+            > /tmp/day5-forced-repeat.json \
+            2> /tmp/day5-forced-repeat.stderr
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day5-forced-repeat.json', encoding='utf-8'))
+          assert result.get('ok') is True, result
+          item=result['results'][0]
+          assert item.get('status') == 'loaded', item
+          assert item.get('manifest_rows') == 1, item
+          counts=item.get('timeframe_counts') or {}
+          recon=item.get('reconciliation') or {}
+          for timeframe, expected in counts.items():
+              observed=recon.get(timeframe) or {}
+              assert observed.get('rows') == expected, (timeframe, expected, observed)
+              assert observed.get('identities') == expected, (timeframe, expected, observed)
+              assert observed.get('pit_eligible_rows') == 0, (timeframe, observed)
+              assert observed.get('provenance_classes') == 1, (timeframe, observed)
+          PY
+          echo PASS > /tmp/forced-idempotency
+
+      - name: Prove successful manifest checkpoints resume without reloading
+        run: |
+          set -euo pipefail
+          uv run python scripts/day5_backfill_histdata.py \
+            --period 2024 \
+            --period 2025 \
+            --batch-size 50000 \
+            > /tmp/day5-checkpoint-rerun.json \
+            2> /tmp/day5-checkpoint-rerun.stderr
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day5-checkpoint-rerun.json', encoding='utf-8'))
+          statuses=[item.get('status') for item in result.get('results', [])]
+          assert statuses == ['checkpoint_skipped','checkpoint_skipped'], result
+          PY
+          echo PASS > /tmp/checkpoint-resume
+
+      - name: Query provenance and prove live market_candles contamination is zero
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY' > /tmp/day5-bigquery-proof.json
+          import json, os
+          from google.cloud import bigquery
+          from google.oauth2 import service_account
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          creds=service_account.Credentials.from_service_account_info(info)
+          project=info['project_id']
+          dataset=os.environ['AIDY_BIGQUERY_DATASET']
+          client=bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
+          research=list(client.query(f'''SELECT source_file, timeframe, COUNT(*) AS row_count,
+             COUNTIF(pit_eligible) AS pit_eligible_rows,
+             COUNT(DISTINCT provenance_class) AS provenance_classes
+          FROM `{project}.{dataset}.research_candles`
+          WHERE source='histdata' AND (source_file LIKE '%_2024.zip' OR source_file LIKE '%_2025.zip')
+          GROUP BY source_file,timeframe ORDER BY source_file,timeframe''').result())
+          manifests=list(client.query(f'''SELECT source_period, COUNT(*) AS row_count,
+             COUNTIF(pit_eligible) AS pit_eligible_rows,
+             MAX(COALESCE(out_of_order_rows, 0)) AS out_of_order_rows
+          FROM `{project}.{dataset}.research_backfill_manifest`
+          WHERE source='histdata' AND source_period IN ('2024','2025') AND status='success'
+          GROUP BY source_period ORDER BY source_period''').result())
+          contamination=list(client.query(f'''SELECT COUNT(*) AS row_count
+          FROM `{project}.{dataset}.market_candles`
+          WHERE source='histdata' ''').result())[0]['row_count']
+          assert research, 'No HistData research facts found.'
+          assert len(manifests) == 2, manifests
+          assert all(int(row['pit_eligible_rows']) == 0 for row in research), research
+          assert all(int(row['provenance_classes']) == 1 for row in research), research
+          assert all(int(row['pit_eligible_rows']) == 0 for row in manifests), manifests
+          assert int(contamination) == 0, contamination
+          print(json.dumps({
+              'research_groups': [dict(row.items()) for row in research],
+              'manifest_periods': [dict(row.items()) for row in manifests],
+              'market_candles_histdata_rows': int(contamination),
+          }, sort_keys=True))
+          PY
+          echo PASS > /tmp/bigquery-provenance
+
+      - name: Persist Day 5 acceptance evidence
+        if: always()
+        run: |
+          set -u
+          mkdir -p ops
+          {
+            echo "# Day 5 historical XAUUSD backfill live-acceptance evidence"
+            echo
+            echo "- Trigger commit: ${AIDY_ACCEPTANCE_HEAD_SHA}"
+            echo "- Observed at UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "- Dependencies: $(cat /tmp/dependencies 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate: $(cat /tmp/code-gate 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Code gate status: $(cat /tmp/code-gate-status 2>/dev/null || echo unknown)"
+            echo "- Structural retrospective/live boundary: $(cat /tmp/provenance-boundary 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Credential preflight: $(cat /tmp/credential-preflight 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery dependency: $(cat /tmp/bigquery-dependency 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Two-year 2024-2025 backfill: $(cat /tmp/two-year-backfill 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Forced 2025 idempotency: $(cat /tmp/forced-idempotency 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- Checkpoint resume: $(cat /tmp/checkpoint-resume 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            echo "- BigQuery provenance/live contamination proof: $(cat /tmp/bigquery-provenance 2>/dev/null || echo NOT_REACHED_OR_FAILED)"
+            for name in ruff compile pytest; do
+              file="/tmp/${name}.txt"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```text'; tail -100 "$file"; echo '```'
+              fi
+            done
+            for name in day5-first day5-forced-repeat day5-checkpoint-rerun day5-bigquery-proof; do
+              file="/tmp/${name}.json"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}"; echo '```json'; cat "$file"; echo; echo '```'
+              fi
+            done
+            for name in day5-first day5-forced-repeat day5-checkpoint-rerun; do
+              file="/tmp/${name}.stderr"
+              if [ -f "$file" ]; then
+                echo; echo "## ${name}-stderr"; echo '```text'; tail -120 "$file"; echo '```'
+              fi
+            done
+          } > /tmp/day5-live-acceptance-evidence.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-5-historical-xauusd-backfill
+          git reset --hard origin/feature/day-5-historical-xauusd-backfill
+          cp /tmp/day5-live-acceptance-evidence.md ops/day5-live-acceptance-evidence.md
+          git add ops/day5-live-acceptance-evidence.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Day 5: record historical backfill live acceptance"
+            git push origin HEAD:feature/day-5-historical-xauusd-backfill
+          fi
