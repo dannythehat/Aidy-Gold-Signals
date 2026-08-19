@@ -1,7 +1,7 @@
 # Day 8 official macro evidence live-acceptance evidence
 
-- Trigger commit: d17a9a4443cedfa7e131e2abac73f363f81e7905
-- Observed at UTC: 2026-08-19T15:04:31Z
+- Trigger commit: 55c7329738140bfc55a2a72b2bbe588d7fe28679
+- Observed at UTC: 2026-08-19T15:07:54Z
 - Dependencies: PASS
 - Code gate: FAIL
 - Code gate status: ruff=1 compile=0 pytest=0
@@ -11,171 +11,111 @@
 
 ## ruff
 ```text
-641 | /             async with httpx.AsyncClient(
-642 | |                 timeout=self._timeout,
-643 | |                 follow_redirects=False,
-644 | |                 transport=self._transport,
-645 | |             ) as client:
-646 | |                 async with client.stream("GET", url, headers=headers) as response:
-    | |__________________________________________________________________________________^
-647 |                       if response.status_code == 304:
-648 |                           return FetchedSource(source_key, url, None)
-    |
-help: Combine `with` statements
-    |
-644 |                 transport=self._transport,
-    -             ) as client:
-    -                 async with client.stream("GET", url, headers=headers) as response:
-    -                     if response.status_code == 304:
-    -                         return FetchedSource(source_key, url, None)
-    -                     if response.status_code != 200:
-    -                         raise OfficialMacroError(f"official_macro_http_{response.status_code}")
-    -                     declared = response.headers.get("content-length", "").strip()
-    -                     if declared.isdigit() and int(declared) > _MAX_SOURCE_BYTES:
-645 +             ) as client, client.stream("GET", url, headers=headers) as response:
-646 +                 if response.status_code == 304:
-647 +                     return FetchedSource(source_key, url, None)
-648 +                 if response.status_code != 200:
-649 +                     raise OfficialMacroError(f"official_macro_http_{response.status_code}")
-650 +                 declared = response.headers.get("content-length", "").strip()
-651 +                 if declared.isdigit() and int(declared) > _MAX_SOURCE_BYTES:
-652 +                     raise OfficialMacroError("official_macro_source_too_large")
-653 +                 body = bytearray()
-654 +                 async for chunk in response.aiter_bytes():
-655 +                     body.extend(chunk)
-656 +                     if len(body) > _MAX_SOURCE_BYTES:
-657 |                         raise OfficialMacroError("official_macro_source_too_large")
-    -                     body = bytearray()
-    -                     async for chunk in response.aiter_bytes():
-    -                         body.extend(chunk)
-    -                         if len(body) > _MAX_SOURCE_BYTES:
-    -                             raise OfficialMacroError("official_macro_source_too_large")
-    -                     encoding = response.encoding or "utf-8"
-    -                     validators = (
-    -                         response.headers.get("etag"),
-    -                         response.headers.get("last-modified"),
-    -                     )
-658 +                 encoding = response.encoding or "utf-8"
-659 +                 validators = (
-660 +                     response.headers.get("etag"),
-661 +                     response.headers.get("last-modified"),
-662 +                 )
-663 |         except httpx.TimeoutException as exc:
-    |
-
-BLE001 Do not catch blind exception: `Exception`
-   --> src/aidy/storage_contracts.py:139:20
-    |
-137 |             try:
-138 |                 await self._archive.put_immutable(item)
-139 |             except Exception as exc:  # archive provider errors are deliberately isolated
-    |                    ^^^^^^^^^
-140 |                 failed += 1
-141 |                 await self._operational.mark_archive_failure(
-    |
-
-I001 [*] Import block is un-sorted or un-formatted
- --> tests/test_migration_offline.py:1:1
-  |
-1 | / from __future__ import annotations
-2 | |
-3 | | import importlib.util
-4 | | import io
-5 | | from pathlib import Path
-6 | |
-7 | | from alembic.migration import MigrationContext
-8 | | from alembic.operations import Operations
-  | |_________________________________________^
-help: Organize imports
+DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+  --> src/aidy/fomc_calendar_parser.py:39:42
    |
-9  |
-   -
-10 | _MIGRATION = Path("migrations/versions/0001_aidy_market_evidence.py")
+37 |             continue
+38 |         day = int(match.group(1))
+39 |         scheduled = _eastern_wall_to_utc(datetime(year, month, day, hour, minute))
+   |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+40 |         logical = f"{year:04d}-{month:02d}"
+41 |         event_key = sha256(f"Federal Reserve\0{event_class}\0{logical}".encode()).hexdigest()
    |
-
-I001 [*] Import block is un-sorted or un-formatted
- --> tests/test_no_postgres_runtime.py:1:1
-  |
-1 | / from __future__ import annotations
-2 | |
-3 | | from pathlib import Path
-  | |________________________^
-help: Organize imports
-  |
-4 |
-  -
-5 | PRODUCTION_FILES = (
-  |
+help: Pass a `datetime.timezone` object to the `tzinfo` parameter
 
 I001 [*] Import block is un-sorted or un-formatted
   --> tests/test_official_macro.py:1:1
    |
  1 | / from __future__ import annotations
  2 | |
- 3 | | import json
- 4 | | from datetime import UTC, datetime, timedelta
+ 3 | | from datetime import UTC, datetime, timedelta
+ 4 | | import json
  5 | | from uuid import uuid4
  6 | |
- 7 | | import httpx
- 8 | | import pytest
- 9 | |
-10 | | from aidy.fomc_calendar_parser import parse_fomc_calendar
-11 | | from aidy.macro_event_windows import reconstruct_macro_event_window
-12 | | from aidy.official_macro import (
-13 | |     BLS_CALENDAR_URL,
-14 | |     FetchedSource,
-15 | |     OfficialMacroError,
-16 | |     OfficialMacroGateway,
-17 | |     parse_bea_current_releases_html,
-18 | |     parse_bea_schedule_html,
-19 | |     parse_bls_calendar_ics,
-20 | |     parse_bls_release_rss,
-21 | | )
-22 | | from aidy.official_macro_recorder import AidyOfficialMacroRecorderService
+ 7 | | import pytest
+ 8 | |
+ 9 | | from aidy.fomc_calendar_parser import parse_fomc_calendar
+10 | | from aidy.macro_event_windows import reconstruct_macro_event_window
+11 | | from aidy.official_macro import (
+12 | |     FetchedSource,
+13 | |     OfficialMacroError,
+14 | |     OfficialMacroGateway,
+15 | |     parse_bea_current_releases_html,
+16 | |     parse_bea_schedule_html,
+17 | |     parse_bls_calendar_ics,
+18 | |     parse_bls_release_rss,
+19 | | )
+20 | | from aidy.official_macro_recorder import AidyOfficialMacroRecorderService
    | |_________________________________________________________________________^
 help: Organize imports
    |
-23 |
+2  |
+3  + import json
+4  | from datetime import UTC, datetime, timedelta
+   - import json
+5  | from uuid import uuid4
+--------------------------------------------------------------------------------
+20 | from aidy.official_macro_recorder import AidyOfficialMacroRecorderService
    -
-24 | BLS_ICS = """BEGIN:VCALENDAR
+21 |
    |
 
-F401 [*] `aidy.official_macro.BLS_CALENDAR_URL` imported but unused
-  --> tests/test_official_macro.py:13:5
-   |
-11 | from aidy.macro_event_windows import reconstruct_macro_event_window
-12 | from aidy.official_macro import (
-13 |     BLS_CALENDAR_URL,
-   |     ^^^^^^^^^^^^^^^^
-14 |     FetchedSource,
-15 |     OfficialMacroError,
-   |
-help: Remove unused import: `aidy.official_macro.BLS_CALENDAR_URL`
-   |
-12 | from aidy.official_macro import (
-   -     BLS_CALENDAR_URL,
-13 |     FetchedSource,
-   |
+Found 2 errors.
+[*] 1 fixable with the `--fix` option.
+DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+   --> src/aidy/official_macro.py:210:17
+    |
+208 |         return None
+209 |     try:
+210 |         local = datetime.strptime(value.rstrip("Z"), "%Y%m%dT%H%M%S")
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+211 |     except ValueError:
+212 |         try:
+    |
+help: Call `.replace(tzinfo=<timezone>)` or `.astimezone()` to convert to an aware datetime
 
-PIE810 Call `endswith` once with a `tuple`
-  --> tests/test_postgres_integration.py:29:13
-   |
-27 |     parsed = make_url(raw)
-28 |     database = (parsed.database or "").lower()
-29 |     if not (database.endswith("_scratch") or database.endswith("_test")):
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-30 |         pytest.fail(
-31 |             "Refusing destructive migration test: AIDY_TEST_DATABASE_URL database name "
-   |
-help: Merge into a single `endswith` call
+DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
+   --> src/aidy/official_macro.py:213:21
+    |
+211 |     except ValueError:
+212 |         try:
+213 |             local = datetime.strptime(value.rstrip("Z"), "%Y%m%dT%H%M")
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+214 |         except ValueError:
+215 |             return None
+    |
+help: Call `.replace(tzinfo=<timezone>)` or `.astimezone()` to convert to an aware datetime
 
-Found 18 errors.
-[*] 6 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).
+DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+   --> src/aidy/official_macro.py:460:45
+    |
+458 |         if match.group(4).upper() == "AM" and hour == 12:
+459 |             hour = 0
+460 |         scheduled_at = _eastern_wall_to_utc(datetime(year, month, day, hour, minute))
+    |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+461 |         links = [link for cell in row for link in cell["links"]]
+462 |         release_url = next((urljoin(BEA_SCHEDULE_URL, link) for link in links if link), None)
+    |
+help: Pass a `datetime.timezone` object to the `tzinfo` parameter
+
+DTZ001 `datetime.datetime()` called without a `tzinfo` argument
+   --> src/aidy/official_macro.py:568:45
+    |
+566 |         hour = 14
+567 |         minute = 0 if event_class == "fomc_decision" else 30
+568 |         scheduled_at = _eastern_wall_to_utc(datetime(year, month, day, hour, minute))
+    |                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+569 |         title = "FOMC Meeting" if event_class == "fomc_decision" else "FOMC Press Conference"
+570 |         event_key = _event_key(agency="Federal Reserve", event_class=event_class, title=f"{title} {year}-{month:02d}-{day:02d}")
+    |
+help: Pass a `datetime.timezone` object to the `tzinfo` parameter
+
+Found 4 errors.
 ```
 
 ## pytest
 ```text
 ........................................................................ [ 60%]
 ................................................                         [100%]
-120 passed in 0.90s
+120 passed in 0.83s
 ```
