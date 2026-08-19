@@ -1,1 +1,1 @@
-Day 7 bounded deterministic feature acceptance — corrected pairwise gate — 2026-08-19T14:30Z
+Day 7 bounded deterministic feature acceptance — final read-only BigQuery gate — 2026-08-19T14:33Z
