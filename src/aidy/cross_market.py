@@ -30,6 +30,7 @@ SERIES_US10Y_REAL = "UST_REAL_10Y"
 ENABLED_SERIES = (SERIES_USD_BROAD, SERIES_US2Y, SERIES_US10Y, SERIES_US10Y_REAL)
 
 _ALLOWED_HOSTS = {"www.federalreserve.gov", "home.treasury.gov"}
+_MAX_SOURCE_BYTES = 4_000_000
 _MAX_XML_BYTES = 4_000_000
 
 
@@ -189,7 +190,7 @@ def parse_treasury_yield_xml(
 
 class CrossMarketGateway:
     def __init__(self, *, timeout_seconds: float = 30.0) -> None:
-        self._timeout = timeout_seconds
+        self._timeout = httpx.Timeout(timeout_seconds)
 
     @staticmethod
     def _validate_url(url: str) -> None:
@@ -199,17 +200,35 @@ class CrossMarketGateway:
 
     async def _fetch(self, url: str) -> bytes:
         self._validate_url(url)
+        headers = {
+            "Accept": "text/html, application/xml, text/xml;q=0.9, */*;q=0.1",
+            "User-Agent": "AIDY-Gold-Recorder/1.0",
+        }
         try:
             async with httpx.AsyncClient(
                 timeout=self._timeout,
-                follow_redirects=True,
-                headers={"User-Agent": "AIDY-Signals-Cross-Market/1.0"},
+                follow_redirects=False,
             ) as client:
-                response = await client.get(url)
-                response.raise_for_status()
+                async with client.stream("GET", url, headers=headers) as response:
+                    if response.status_code != 200:
+                        raise CrossMarketError(
+                            f"cross_market_http_{response.status_code}"
+                        )
+                    declared = response.headers.get("content-length", "").strip()
+                    if declared.isdigit() and int(declared) > _MAX_SOURCE_BYTES:
+                        raise CrossMarketError("cross_market_payload_size")
+                    body = bytearray()
+                    async for chunk in response.aiter_bytes():
+                        body.extend(chunk)
+                        if len(body) > _MAX_SOURCE_BYTES:
+                            raise CrossMarketError("cross_market_payload_size")
+        except CrossMarketError:
+            raise
+        except httpx.TimeoutException as exc:
+            raise CrossMarketError("cross_market_timeout") from exc
         except httpx.HTTPError as exc:
             raise CrossMarketError("cross_market_http_error") from exc
-        return response.content
+        return bytes(body)
 
     async def fetch_broad_dollar(self) -> CrossMarketObservation:
         raw = await self._fetch(FED_H10_CURRENT_URL)
