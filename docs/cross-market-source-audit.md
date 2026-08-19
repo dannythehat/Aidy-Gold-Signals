@@ -8,7 +8,8 @@ Day 9 enables only free daily public/official context whose ownership and timing
 
 | Candidate | Decision | Source | Cost / auth | Frequency | PIT treatment |
 |---|---|---|---|---|---|
-| Broad USD index | ENABLE | Fed Board H.10 `DTWEXBGS` via FRED public CSV | Free, no key | Daily | observation date + AIDY first-observed timestamp; revisions append-only |
+| Broad USD index | ENABLE | Federal Reserve Board H.10 current release, Broad Dollar Index (`DTWEXBGS` semantic mapping) | Free, no key | Daily observations published in weekly H.10 release | source observation date + AIDY first-observed timestamp; revisions append-only |
+| FRED CSV delivery of `DTWEXBGS` | NO-GO for forward Worker runtime | FRED public CSV | Free, no key | Daily | GitHub probe succeeded, but Cloudflare Worker live smoke failed repeatedly; do not depend on it in runtime |
 | U.S. Treasury 2Y nominal | ENABLE | U.S. Treasury daily par yield XML | Free, no key | Daily | observation date + AIDY first-observed timestamp; revisions append-only |
 | U.S. Treasury 10Y nominal | ENABLE | U.S. Treasury daily par yield XML | Free, no key | Daily | observation date + AIDY first-observed timestamp; revisions append-only |
 | U.S. Treasury 10Y real | ENABLE | U.S. Treasury daily real par yield XML | Free, no key | Daily | observation date + AIDY first-observed timestamp; revisions append-only |
@@ -16,9 +17,13 @@ Day 9 enables only free daily public/official context whose ownership and timing
 | Intraday Treasury yields | NO-GO | No approved official free intraday feed | N/A | N/A | Daily Treasury evidence only; no synthetic interpolation |
 | Equity/ETF/crypto proxies | NO-GO for Day 9 | Not needed to satisfy the current evidence question | N/A | N/A | Do not add noise before outcome research demonstrates incremental value |
 
-## Why FRED is acceptable for the dollar index
+## Why direct Federal Reserve H.10 is the runtime USD source
 
-`DTWEXBGS` is the Board of Governors' Nominal Broad U.S. Dollar Index from the H.10 Foreign Exchange Rates release. The Federal Reserve Board's Data Download Program is being retired and directs users toward FRED for continued data access. AIDY therefore treats the public FRED CSV as a Federal Reserve delivery channel for this Board series, not as a third-party trading feed.
+The Board of Governors publishes the H.10 Foreign Exchange Rates release and its Broad U.S. Dollar Index. The current H.10 page publishes the prior business week's daily dollar-index values on the Board's own `federalreserve.gov` domain.
+
+AIDY maps the Board's `1) BROAD / JAN06=100` row to the established H.10 series semantic `DTWEXBGS`. The value remains daily context, but AIDY does **not** pretend it knew the value on the source observation date. `first_observed_at` is the later time when the Worker actually fetched the Board's H.10 release.
+
+FRED remains a valid public distribution channel for the Board series, but Day 9 live acceptance found that the Cloudflare Worker could not fetch FRED reliably while GitHub Actions could. Because forward runtime continuity matters more than theoretical source availability, FRED is explicitly rejected for the Worker path rather than hidden behind a fallback.
 
 ## Why Treasury XML is acceptable
 
