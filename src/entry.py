@@ -9,7 +9,8 @@ from workers import Response, WorkerEntrypoint
 
 from aidy.cloudflare_storage import D1OperationalEvidenceStore, R2ArchiveStore
 from aidy.config import AidySettings
-from aidy.continuity_auditor import ContinuityPolicy, D1R2ContinuityReader, audit_window
+from aidy.continuity_auditor import audit_window
+from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
 from aidy.runtime import run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
 
@@ -102,20 +103,19 @@ class Default(WorkerEntrypoint):
                 archive_limit = int(query.get("archive_limit", ["40"])[0])
                 start, end = audit_window(end=datetime.now(UTC), minutes=minutes)
                 settings = AidySettings.from_worker_env(self.env)
-                report = await D1R2ContinuityReader(
+                report = await D1R2ReferenceContinuityReader(
                     self.env.AIDY_OPS,
                     self.env.AIDY_MEMORY,
                 ).load_and_audit(
                     start=start,
                     end=end,
                     archive_limit=archive_limit,
-                    policy=ContinuityPolicy(
+                    policy=ReferenceContinuityPolicy(
                         expected_source=settings.market_data_source,
                         capture_enabled=settings.capture_enabled,
                         ownership_confirmed=(
                             settings.market_data_ownership == "public_independent"
                         ),
-                        required_timeframes=(),
                         stale_quote_seconds=settings.market_stale_seconds,
                     ),
                 )
