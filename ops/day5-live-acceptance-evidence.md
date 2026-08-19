@@ -1,7 +1,7 @@
 # Day 5 historical XAUUSD backfill live-acceptance evidence
 
-- Trigger commit: 4cbb7598592dcde6b3cbd1f0f8dd3629d3cf3455
-- Observed at UTC: 2026-08-19T11:49:52Z
+- Trigger commit: e95a1aa4dcf0ca37d31d0e1d4669ed036b03d170
+- Observed at UTC: 2026-08-19T11:54:23Z
 - Dependencies: PASS
 - Code gate: FAIL
 - Code gate status: ruff=1 compile=0 pytest=0
@@ -15,43 +15,43 @@
 
 ## ruff
 ```text
-207 |       @property
-208 |       def candle_key(self) -> str:
-209 |           raw = "\0".join(
-    |  _______________^
-210 | |             (
-211 | |                 HISTDATA_SOURCE,
-212 | |                 self.symbol,
-213 | |                 self.timeframe,
-214 | |                 self.open_time_utc.isoformat(),
-215 | |             )
-216 | |         )
-    | |_________^
-217 |           return sha256(raw.encode()).hexdigest()
-    |
-help: Replace with f-string
+ 7 | from datetime import UTC, datetime
+ 8 | from pathlib import Path
+ 9 | from typing import Any, Iterable
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10 | from uuid import uuid4
+   |
+help: Import from `collections.abc`
+   |
+8  | from pathlib import Path
+   - from typing import Any, Iterable
+9  + from typing import Any
+10 + from collections.abc import Iterable
+11 | from uuid import uuid4
+   |
 
-FLY002 Consider f-string instead of string join
-   --> src/aidy/historical_backfill.py:271:11
+PLC0206 Extracting value from dictionary without calling `.items()`
+   --> scripts/day5_backfill_histdata.py:418:9
     |
-270 | def chunk_key(*, symbol: str, period: HistDataPeriod) -> str:
-271 |     raw = "\0".join((HISTDATA_SOURCE, HISTDATA_DATASET, symbol, period.key))
-    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-272 |     return sha256(raw.encode()).hexdigest()
+417 | def _iter_candle_rows(candles: dict[str, list[Any]]) -> Iterable[dict[str, object]]:
+418 |     for timeframe in candles:
+    |         ^^^^^^^^^^^^^^^^^^^^
+419 |         for candle in candles[timeframe]:
+    |                       ------------------
+420 |             yield candle.to_row()
     |
-help: Replace with f-string
+help: Use `for timeframe, value in candles.items()` instead
 
-DTZ007 Naive datetime constructed using `datetime.datetime.strptime()` without %z
-   --> src/aidy/historical_backfill.py:388:18
+BLE001 Do not catch blind exception: `Exception`
+   --> scripts/day5_backfill_histdata.py:554:20
     |
-386 | def _parse_source_time(raw: str, *, line_number: int) -> datetime:
-387 |     try:
-388 |         parsed = datetime.strptime(raw, "%Y%m%d %H%M%S")
-    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-389 |     except ValueError as exc:
-390 |         raise ValueError(f"Invalid HistData timestamp at line {line_number}: {raw!r}") from exc
+552 |                     run_id=run_id,
+553 |                 )
+554 |             except Exception as exc:
+    |                    ^^^^^^^^^
+555 |                 cleanup_errors.append(f"{spec.name}: {type(exc).__name__}: {exc}")
+556 |     if cleanup_errors:
     |
-help: Call `.replace(tzinfo=<timezone>)` or `.astimezone()` to convert to an aware datetime
 
 I001 [*] Import block is un-sorted or un-formatted
   --> tests/test_historical_backfill.py:1:1
@@ -113,8 +113,8 @@ FLY002 Consider f-string instead of string join
    | |_____^
 help: Replace with f-string
 
-Found 9 errors.
-[*] 3 fixable with the `--fix` option (3 hidden fixes can be enabled with the `--unsafe-fixes` option).
+Found 5 errors.
+[*] 2 fixable with the `--fix` option (1 hidden fix can be enabled with the `--unsafe-fixes` option).
 ```
 
 ## compile
@@ -125,5 +125,5 @@ Found 9 errors.
 ```text
 ........................................................................ [ 94%]
 ....                                                                     [100%]
-76 passed in 0.62s
+76 passed in 0.63s
 ```
