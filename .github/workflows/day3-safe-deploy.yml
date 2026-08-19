@@ -1,0 +1,144 @@
+name: AIDY Day 3 Safe Deploy
+
+on:
+  push:
+    branches:
+      - feature/day-3-continuity-auditor
+    paths:
+      - ".github/workflows/day3-safe-deploy.yml"
+      - "ops/day3-safe-deploy-trigger.txt"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day3-safe-deploy
+  cancel-in-progress: false
+
+jobs:
+  safe-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+    steps:
+      - name: Checkout Day 3 branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Verify Cloudflare credentials exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; }
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}" || { echo "::error::Missing CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+
+      - name: Run Day 3 code gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check .
+          uv run python -m compileall -q src tests
+          uv run pytest -q
+
+      - name: Build safe-off Day 3 Worker config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='false'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='metaapi'
+          cfg['vars'].pop('AIDY_MARKET_DATA_OWNERSHIP', None)
+          with open('wrangler.day3.safe.jsonc','w',encoding='utf-8') as fh:
+              json.dump(cfg, fh, indent=2)
+              fh.write('\n')
+          PY
+
+      - name: Apply D1 migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day3.safe.jsonc
+
+      - name: Deploy exact Day 3 Worker safe-off
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day3.safe.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+      - name: Deploy scheduler safe-off
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config wrangler.scheduler.test.jsonc
+
+      - name: Verify health and fail-closed Day 3 endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "${AIDY_TEST_WORKER_URL}/health" | tee /tmp/day3-health.json
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/day3-health.json', encoding='utf-8'))
+          assert h.get('status') == 'ok', h
+          assert h.get('environment') == 'test', h
+          assert h.get('capture_enabled') is False, h
+          PY
+
+          status="$(curl -sS -o /tmp/day3-continuity.json -w '%{http_code}' "${AIDY_TEST_WORKER_URL}/day3/continuity?minutes=5&archive_limit=40")"
+          cat /tmp/day3-continuity.json
+          test "$status" = "503" || { echo "::error::Expected safe-off Day 3 gate to fail closed with HTTP 503, got $status"; exit 1; }
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/day3-continuity.json', encoding='utf-8'))
+          assert p.get('ok') is False, p
+          report=p.get('report') or {}
+          reasons=report.get('failure_reasons') or []
+          assert any('capture' in str(x).lower() for x in reasons), reasons
+          print('DAY3_SAFE_OFF_FAIL_CLOSED=PASS')
+          print('DAY3_FAILURE_REASONS=', reasons)
+          PY
+
+      - name: Day 3 safe-deploy summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## AIDY Day 3 safe deployment"
+            echo "- Branch: ${GITHUB_REF_NAME}"
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Worker: aidy-signals-test"
+            echo "- Scheduler: aidy-signals-scheduler-test"
+            echo "- Capture intentionally disabled"
+            echo "- Scheduler Cron intentionally disabled"
+            echo "- Next gate: supply an independently owned AIDY market-data source, enable capture, then prove a clean 5+ minute scheduled continuity window"
+            [ -f /tmp/day3-health.json ] && { echo '### Health'; echo '```json'; cat /tmp/day3-health.json; echo; echo '```'; } || true
+            [ -f /tmp/day3-continuity.json ] && { echo '### Continuity fail-closed proof'; echo '```json'; cat /tmp/day3-continuity.json; echo; echo '```'; } || true
+          } >> "$GITHUB_STEP_SUMMARY"
