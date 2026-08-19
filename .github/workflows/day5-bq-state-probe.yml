@@ -1,0 +1,81 @@
+name: AIDY Day 5 BigQuery State Probe
+
+on:
+  push:
+    branches:
+      - feature/day-5-historical-xauusd-backfill
+    paths:
+      - "ops/day5-bq-state-trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-5-historical-xauusd-backfill
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Query current Day 5 warehouse state
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet 'google-cloud-bigquery>=3.42,<4'
+          python - <<'PY' > /tmp/day5-bq-state.json
+          import json, os
+          from google.cloud import bigquery
+          from google.oauth2 import service_account
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          creds=service_account.Credentials.from_service_account_info(info)
+          project=info['project_id']
+          dataset=os.environ['AIDY_BIGQUERY_DATASET']
+          client=bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
+          def query(sql):
+              return [dict(row.items()) for row in client.query(sql).result()]
+          facts=query(f'''SELECT source_file, source_payload_sha256, chunk_key, timeframe,
+             COUNT(*) AS row_count, COUNT(DISTINCT research_identity) AS identity_count,
+             MIN(open_time_utc) AS first_open, MAX(open_time_utc) AS last_open,
+             COUNTIF(pit_eligible) AS pit_eligible_count
+          FROM `{project}.{dataset}.research_candles`
+          WHERE source='histdata'
+          GROUP BY source_file, source_payload_sha256, chunk_key, timeframe
+          ORDER BY source_file, source_payload_sha256, timeframe''')
+          stages=query(f'''SELECT _backfill_run_id, COUNT(*) AS row_count
+          FROM `{project}.{dataset}._stage_research_candles`
+          GROUP BY _backfill_run_id ORDER BY _backfill_run_id''')
+          manifests=query(f'''SELECT source_period, source_file, source_payload_sha256, chunk_key,
+             COUNT(*) AS row_count, MAX(COALESCE(out_of_order_rows,0)) AS out_of_order_rows,
+             COUNTIF(pit_eligible) AS pit_eligible_count
+          FROM `{project}.{dataset}.research_backfill_manifest`
+          WHERE source='histdata'
+          GROUP BY source_period, source_file, source_payload_sha256, chunk_key
+          ORDER BY source_period''')
+          def normal(value):
+              if hasattr(value, 'isoformat'): return value.isoformat()
+              return value
+          payload={
+              'facts': [{k: normal(v) for k,v in row.items()} for row in facts],
+              'stage_runs': stages,
+              'manifests': manifests,
+          }
+          print(json.dumps(payload, sort_keys=True))
+          PY
+      - name: Persist probe evidence
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin feature/day-5-historical-xauusd-backfill
+          git reset --hard origin/feature/day-5-historical-xauusd-backfill
+          cp /tmp/day5-bq-state.json ops/day5-bq-state.json
+          git add ops/day5-bq-state.json
+          git commit -m "Day 5: record BigQuery state probe"
+          git push origin HEAD:feature/day-5-historical-xauusd-backfill
