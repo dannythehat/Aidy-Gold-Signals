@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from .bigquery_exporter import EXPORT_MANIFEST, FieldSpec, TableSpec, load_identity
@@ -83,7 +83,7 @@ class ArchivedCrossMarketEvidence:
         if first_seen.tzinfo is None:
             raise ValueError("Cross-market first_observed_at must be timezone-aware.")
         observation_date = str(self.payload["observation_date"])
-        datetime.strptime(observation_date, "%Y-%m-%d")
+        date.fromisoformat(observation_date)
         return {
             "load_identity": self.load_identity,
             "schema_version": self.schema_version,
