@@ -1,1 +1,1 @@
-Day 8 bounded official macro acceptance — 2026-08-19
+Day 8 bounded official macro acceptance — 2026-08-19 — corrected lint scope
