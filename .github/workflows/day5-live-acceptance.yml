@@ -1,12 +1,6 @@
 name: AIDY Day 5 Historical Backfill Acceptance
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/day5-live-acceptance.yml"
-      - "ops/day5-live-acceptance-trigger.txt"
   workflow_dispatch:
 
 permissions:
@@ -24,7 +18,7 @@ jobs:
       AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
       AIDY_BIGQUERY_DATASET: aidy_analytics_test
       AIDY_BIGQUERY_LOCATION: EU
-      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      AIDY_ACCEPTANCE_HEAD_SHA: ${{ github.sha }}
 
     steps:
       - uses: actions/checkout@v4
