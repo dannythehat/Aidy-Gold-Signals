@@ -34,19 +34,14 @@ def _scheduled_at_from_queue_body(body: object) -> datetime:
 
 
 async def _write_test_queue_error(env, settings: AidySettings | None, exc: Exception) -> None:
+    del settings
     if str(getattr(env, "AIDY_ENV", "")).lower() != "test":
         return
-    token = (settings.metaapi_token if settings is not None else None) or ""
-    message = str(exc)
-    trace = traceback.format_exc()
-    if token:
-        message = message.replace(token, "[redacted]")
-        trace = trace.replace(token, "[redacted]")
     payload = {
         "observed_at": datetime.now(UTC).isoformat(),
         "exception_type": type(exc).__name__,
-        "message": message[:1000],
-        "traceback": trace[-6000:],
+        "message": str(exc)[:1000],
+        "traceback": traceback.format_exc()[-6000:],
     }
     await env.AIDY_MEMORY.put(
         "diagnostics/day2-queue-consumer-error.json",
@@ -66,6 +61,8 @@ class Default(WorkerEntrypoint):
                     "runtime": "cloudflare-workers",
                     "environment": str(getattr(self.env, "AIDY_ENV", "unknown")),
                     "capture_enabled": settings.capture_enabled,
+                    "market_data_source": settings.market_data_source,
+                    "market_data_ownership": settings.market_data_ownership,
                     "scheduler": "queue-consumer",
                 }
             )
@@ -116,8 +113,9 @@ class Default(WorkerEntrypoint):
                         expected_source=settings.market_data_source,
                         capture_enabled=settings.capture_enabled,
                         ownership_confirmed=(
-                            settings.market_data_ownership == "aidy_dedicated"
+                            settings.market_data_ownership == "public_independent"
                         ),
+                        required_timeframes=(),
                         stale_quote_seconds=settings.market_stale_seconds,
                     ),
                 )
@@ -135,9 +133,6 @@ class Default(WorkerEntrypoint):
 
     async def queue(self, batch, env, ctx):
         """Consume one scheduled-capture message using Cloudflare's Python queue ABI."""
-        # Cloudflare supplies env/ctx as ABI arguments, but WorkerEntrypoint wraps
-        # the constructor environment as self.env. AIDY bindings must use that
-        # wrapped environment for D1/R2/secret conversion.
         del env, ctx
         worker_env = self.env
         settings: AidySettings | None = None
