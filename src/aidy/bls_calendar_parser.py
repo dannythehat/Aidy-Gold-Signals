@@ -146,4 +146,19 @@ def parse_bls_official_calendar(text: str) -> list[dict[str, object]]:
                 "payload_digest": sha256(raw_json.encode()).hexdigest(),
             }
         )
+
+    if events and not observations:
+        samples: list[dict[str, object]] = []
+        for event in events[:5]:
+            summaries = [
+                [key, value] for key, value in event.items() if key.upper().startswith("SUMMARY")
+            ]
+            starts = [
+                [key, value] for key, value in event.items() if key.upper().startswith("DTSTART")
+            ]
+            samples.append({"summary": summaries, "dtstart": starts})
+        raise OfficialMacroError(
+            "bls_calendar_no_supported_events:"
+            + json.dumps(samples, sort_keys=True, separators=(",", ":"))
+        )
     return observations
