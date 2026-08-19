@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import csv
-import io
 import json
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
@@ -12,8 +10,8 @@ from xml.etree import ElementTree
 
 import httpx
 
-FRED_DOLLAR_SERIES = "DTWEXBGS"
-FRED_DOLLAR_URL = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={FRED_DOLLAR_SERIES}"
+from .fed_h10_dollar import FED_H10_CURRENT_URL, H10ParseError, parse_fed_h10_broad_dollar_html
+
 TREASURY_NOMINAL_URL = (
     "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml"
     "?data=daily_treasury_yield_curve&field_tdr_date_value={year}"
@@ -23,7 +21,7 @@ TREASURY_REAL_URL = (
     "?data=daily_treasury_real_yield_curve&field_tdr_date_value={year}"
 )
 
-SOURCE_FRED = "fred_stlouisfed"
+SOURCE_FED_H10 = "federal_reserve_h10"
 SOURCE_TREASURY = "us_treasury"
 SERIES_USD_BROAD = "DTWEXBGS"
 SERIES_US2Y = "UST_NOMINAL_2Y"
@@ -31,8 +29,7 @@ SERIES_US10Y = "UST_NOMINAL_10Y"
 SERIES_US10Y_REAL = "UST_REAL_10Y"
 ENABLED_SERIES = (SERIES_USD_BROAD, SERIES_US2Y, SERIES_US10Y, SERIES_US10Y_REAL)
 
-_ALLOWED_HOSTS = {"fred.stlouisfed.org", "home.treasury.gov"}
-_MAX_CSV_BYTES = 2_000_000
+_ALLOWED_HOSTS = {"www.federalreserve.gov", "home.treasury.gov"}
 _MAX_XML_BYTES = 4_000_000
 
 
@@ -80,49 +77,18 @@ def _digest(raw: bytes) -> str:
     return sha256(raw).hexdigest()
 
 
-def parse_fred_broad_dollar_csv(raw: bytes, *, source_url: str = FRED_DOLLAR_URL) -> CrossMarketObservation:
-    if not raw or len(raw) > _MAX_CSV_BYTES:
-        raise CrossMarketError("fred_dollar_payload_size")
+def parse_fed_h10_broad_dollar(raw: bytes) -> CrossMarketObservation:
     try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError as exc:
-        raise CrossMarketError("fred_dollar_encoding") from exc
-    reader = csv.DictReader(io.StringIO(text))
-    if not reader.fieldnames:
-        raise CrossMarketError("fred_dollar_missing_header")
-    date_field = next(
-        (name for name in reader.fieldnames if name.lower() in {"date", "observation_date"}),
-        None,
-    )
-    value_field = next(
-        (name for name in reader.fieldnames if name.upper() == FRED_DOLLAR_SERIES),
-        None,
-    )
-    if date_field is None or value_field is None:
-        raise CrossMarketError("fred_dollar_schema")
-
-    latest: tuple[date, str] | None = None
-    for row in reader:
-        date_raw = str(row.get(date_field) or "").strip()
-        value_raw = str(row.get(value_field) or "").strip()
-        if not date_raw or value_raw in {"", "."}:
-            continue
-        try:
-            observed_date = date.fromisoformat(date_raw)
-        except ValueError as exc:
-            raise CrossMarketError("fred_dollar_invalid_date") from exc
-        value = _decimal_text(value_raw)
-        if latest is None or observed_date > latest[0]:
-            latest = (observed_date, value)
-    if latest is None:
-        raise CrossMarketError("fred_dollar_no_observation")
+        observation_date, raw_value = parse_fed_h10_broad_dollar_html(raw)
+    except H10ParseError as exc:
+        raise CrossMarketError(str(exc)) from exc
     return CrossMarketObservation(
-        source=SOURCE_FRED,
+        source=SOURCE_FED_H10,
         series_id=SERIES_USD_BROAD,
-        observation_date=latest[0],
-        value=latest[1],
+        observation_date=observation_date,
+        value=_decimal_text(raw_value),
         unit="index_jan_2006_100",
-        source_url=source_url,
+        source_url=FED_H10_CURRENT_URL,
         source_document_digest=_digest(raw),
     )
 
@@ -246,8 +212,8 @@ class CrossMarketGateway:
         return response.content
 
     async def fetch_broad_dollar(self) -> CrossMarketObservation:
-        raw = await self._fetch(FRED_DOLLAR_URL)
-        return parse_fred_broad_dollar_csv(raw)
+        raw = await self._fetch(FED_H10_CURRENT_URL)
+        return parse_fed_h10_broad_dollar(raw)
 
     async def fetch_treasury_nominal(self, *, year: int | None = None) -> list[CrossMarketObservation]:
         resolved_year = year or datetime.now(UTC).year
