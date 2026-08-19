@@ -69,6 +69,27 @@ def _table_id(project: str, dataset: str, name: str) -> str:
     return f"{project}.{dataset}.{name}"
 
 
+def _ensure_schema(
+    client: Any,
+    bigquery: Any,
+    *,
+    existing: Any,
+    expected_fields: tuple[FieldSpec, ...],
+    table_id: str,
+) -> None:
+    existing_signature = _signature(existing.schema)
+    expected_signature = _signature(expected_fields)
+    if existing_signature == expected_signature:
+        return
+    if expected_signature[: len(existing_signature)] == existing_signature:
+        additions = expected_fields[len(existing_signature) :]
+        if additions and all(field.mode.upper() == "NULLABLE" for field in additions):
+            existing.schema = _schema(bigquery, expected_fields)
+            client.update_table(existing, ["schema"])
+            return
+    raise RuntimeError(f"BigQuery schema drift detected for {table_id}.")
+
+
 def _ensure_dataset(
     client: Any,
     bigquery: Any,
@@ -114,8 +135,13 @@ def _ensure_fact_table(
         )
         client.create_table(table)
         return
-    if _signature(existing.schema) != _signature(spec.fields):
-        raise RuntimeError(f"BigQuery schema drift detected for {table_id}.")
+    _ensure_schema(
+        client,
+        bigquery,
+        existing=existing,
+        expected_fields=spec.fields,
+        table_id=table_id,
+    )
     partition_field = getattr(getattr(existing, "time_partitioning", None), "field", None)
     if partition_field != spec.partition_field:
         raise RuntimeError(f"BigQuery partition drift detected for {table_id}.")
@@ -141,8 +167,13 @@ def _ensure_stage_table(
         table.description = "Transient AIDY Day 5 backfill staging. Not analytical truth."
         client.create_table(table)
         return
-    if _signature(existing.schema) != _signature(fields):
-        raise RuntimeError(f"BigQuery staging schema drift detected for {stage_id}.")
+    _ensure_schema(
+        client,
+        bigquery,
+        existing=existing,
+        expected_fields=fields,
+        table_id=stage_id,
+    )
 
 
 def ensure_warehouse(client: Any, *, project: str, dataset: str, location: str) -> None:
@@ -574,6 +605,7 @@ def process_period(
         "duplicate_rows": stats.duplicate_rows,
         "gap_count": stats.gap_count,
         "max_gap_seconds": stats.max_gap_seconds,
+        "out_of_order_rows": stats.out_of_order_rows,
         "timeframe_counts": expected,
         "reconciliation": reconciliation,
         "manifest_rows": manifest_count,
