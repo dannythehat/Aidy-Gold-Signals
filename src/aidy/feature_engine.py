@@ -148,6 +148,11 @@ def _candle_from_row(
 ) -> Candle | None:
     if str(row.get("symbol") or "") != symbol:
         return None
+    if mode == "pit" and (
+        row.get("provenance_class") == RETROSPECTIVE_PROVENANCE
+        or row.get("pit_eligible") is False
+    ):
+        raise ValueError("Retrospective-only evidence cannot enter a PIT feature packet.")
     open_time = _utc(row.get("open_time_utc"))
     if open_time > as_of:
         return None
