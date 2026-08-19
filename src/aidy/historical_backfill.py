@@ -117,6 +117,7 @@ RESEARCH_BACKFILL_MANIFEST = TableSpec(
         FieldSpec("ingested_at", "TIMESTAMP", "REQUIRED"),
         FieldSpec("run_id", "STRING", "REQUIRED"),
         FieldSpec("status", "STRING", "REQUIRED"),
+        FieldSpec("out_of_order_rows", "INTEGER"),
     ),
 )
 
@@ -179,6 +180,7 @@ class ParseStats:
     duplicate_rows: int
     gap_count: int
     max_gap_seconds: int
+    out_of_order_rows: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -391,11 +393,9 @@ def _parse_source_time(raw: str, *, line_number: int) -> datetime:
 
 def parse_histdata_m1(payload_text: str) -> tuple[list[SourceBar], ParseStats]:
     reader = csv.reader(io.StringIO(payload_text), delimiter=";")
-    bars: list[SourceBar] = []
-    duplicate_rows = 0
-    gap_count = 0
-    max_gap_seconds = 0
-    previous: SourceBar | None = None
+    raw_bars: list[SourceBar] = []
+    out_of_order_rows = 0
+    previous_source_time: datetime | None = None
 
     for line_number, row in enumerate(reader, start=1):
         if not row or all(not value.strip() for value in row):
@@ -423,14 +423,28 @@ def parse_histdata_m1(payload_text: str) -> tuple[list[SourceBar], ParseStats]:
             low=values[2],
             close=values[3],
         )
+        if previous_source_time is not None and source_time < previous_source_time:
+            out_of_order_rows += 1
+        raw_bars.append(candidate)
+        previous_source_time = source_time
+
+    if not raw_bars:
+        raise RuntimeError("HistData payload contained no M1 candles.")
+
+    raw_bars.sort(key=lambda item: item.source_time)
+    bars: list[SourceBar] = []
+    duplicate_rows = 0
+    gap_count = 0
+    max_gap_seconds = 0
+    previous: SourceBar | None = None
+    for candidate in raw_bars:
         if previous is not None:
             delta_seconds = int((candidate.source_time - previous.source_time).total_seconds())
-            if delta_seconds < 0:
-                raise ValueError(f"HistData M1 rows are out of order at line {line_number}.")
             if delta_seconds == 0:
                 if candidate != previous:
                     raise ValueError(
-                        f"Conflicting duplicate HistData M1 candle at line {line_number}."
+                        "Conflicting duplicate HistData M1 candle at "
+                        f"{candidate.source_open_time}."
                     )
                 duplicate_rows += 1
                 continue
@@ -440,13 +454,12 @@ def parse_histdata_m1(payload_text: str) -> tuple[list[SourceBar], ParseStats]:
         bars.append(candidate)
         previous = candidate
 
-    if not bars:
-        raise RuntimeError("HistData payload contained no M1 candles.")
     return bars, ParseStats(
         rows=len(bars),
         duplicate_rows=duplicate_rows,
         gap_count=gap_count,
         max_gap_seconds=max_gap_seconds,
+        out_of_order_rows=out_of_order_rows,
     )
 
 
@@ -665,6 +678,7 @@ def manifest_row(
         "ingested_at": ingested_at.astimezone(UTC).isoformat(),
         "run_id": run_id,
         "status": status,
+        "out_of_order_rows": stats.out_of_order_rows,
     }
 
 
