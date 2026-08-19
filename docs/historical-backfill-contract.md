@@ -51,10 +51,12 @@ The parser:
 2. requires minute-aligned timestamps;
 3. rejects malformed/non-finite prices;
 4. rejects impossible OHLC relationships;
-5. rejects out-of-order rows;
-6. removes byte-equivalent candle duplicates while counting them;
+5. counts source rows that move backward relative to the preceding raw row, then deterministically canonicalizes the accepted rows by source timestamp;
+6. removes exact candle duplicates while counting them;
 7. rejects conflicting duplicates for the same source timestamp;
 8. measures every source discontinuity greater than one minute and retains count/max-gap evidence.
+
+The immutable ZIP and CSV hashes remain the source-of-truth provenance even when the vendor archive contains ordering anomalies. `out_of_order_rows` is persisted in the backfill manifest so canonicalization is auditable rather than hidden.
 
 A gap is evidence, not permission to fabricate a missing candle. No interpolation or synthetic M1 bars are created.
 
@@ -86,7 +88,7 @@ Cluster: symbol, timeframe, source, provenance class
 Partition: `ingested_at` day  
 Cluster: source, symbol, status
 
-One successful manifest identity records the source period, request signature, source digests, requested timeframes, first/last UTC timestamps, M1 row count, duplicate/gap evidence, derived timeframe counts and run ID.
+One successful manifest identity records the source period, request signature, source digests, requested timeframes, first/last UTC timestamps, M1 row count, duplicate/gap/order-anomaly evidence, derived timeframe counts and run ID.
 
 The manifest is the resumable checkpoint. A completed source period with the same request signature and derivation version is skipped on a normal rerun. `--force-process` bypasses the checkpoint but still uses insert-only BigQuery MERGE semantics, so the same source cannot duplicate facts.
 
@@ -99,7 +101,7 @@ For each period:
 1. check the successful manifest checkpoint;
 2. download/cache and validate the source ZIP;
 3. hash ZIP and CSV payload;
-4. parse and validate M1;
+4. parse, validate and audibly canonicalize M1 source order;
 5. derive requested timeframes;
 6. stage rows under a unique `_backfill_run_id`;
 7. insert-only MERGE facts by `research_identity`;
@@ -109,13 +111,15 @@ For each period:
 
 If execution stops after fact MERGE but before the manifest is written, rerunning the period safely reuses the same research identities and then completes the manifest checkpoint.
 
+The warehouse bootstrap permits only additive nullable metadata fields for this contract. Any destructive or incompatible schema drift still fails closed.
+
 ## Day 5 acceptance
 
 The bounded live gate must prove all of the following with real HistData XAUUSD archives and the real `aidy_analytics_test` BigQuery dataset:
 
 1. source download and ZIP/CSV validation succeeds;
 2. parser, UTC normalization and deterministic aggregation tests pass;
-3. at least two complete historical annual periods are loaded and range/count/gap evidence is recorded;
+3. at least two complete historical annual periods are loaded and range/count/gap/order-anomaly evidence is recorded;
 4. every loaded research row is `retrospective_history` and `pit_eligible = false`;
 5. no retrospective row is written to `market_candles`;
 6. a forced repeat of an accepted source period leaves research fact/manifest identity counts unchanged;
