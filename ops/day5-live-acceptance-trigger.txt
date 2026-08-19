@@ -1,1 +1,1 @@
-Day 5 bounded live acceptance trigger — 2026-08-19T13:12Z — retention TTL fix
+Day 5 bounded live acceptance trigger — 2026-08-19T13:27Z — retention verified
