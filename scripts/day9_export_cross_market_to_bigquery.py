@@ -9,7 +9,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from aidy.bigquery_exporter import EXPORT_MANIFEST
-from aidy.cross_market_bigquery import ArchivedCrossMarketEvidence, CROSS_MARKET_TABLE
+from aidy.cross_market_bigquery import CROSS_MARKET_TABLE, ArchivedCrossMarketEvidence
 
 try:
     from scripts.day4_export_r2_to_bigquery import (
