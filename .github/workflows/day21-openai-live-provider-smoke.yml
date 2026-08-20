@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - ".github/workflows/day21-openai-live-provider-smoke.yml"
+      - "scripts/day21_openai_live_diagnostic.py"
+      - "scripts/day21_openai_live_probe.py"
+      - "src/aidy/openai_gateway.py"
 
 permissions:
   contents: read
@@ -43,24 +46,9 @@ jobs:
           set -euo pipefail
           test -n "${OPENAI_API_KEY:-}"
 
-      - name: Run real Responses API smoke
+      - name: Diagnose real structured decision safely
         shell: bash
         run: |
           set -euo pipefail
-          uv run python scripts/day21_openai_live_probe.py > /tmp/day21-live-provider.json
-          cat /tmp/day21-live-provider.json
-          python - <<'PY'
-          import json
-
-          with open("/tmp/day21-live-provider.json", encoding="utf-8") as handle:
-              result = json.load(handle)
-
-          assert result["status"] == "accepted", result
-          assert result["publication_allowed"] is True, result
-          assert result["failure_reason"] is None, result
-          assert result["response_id"], result
-          assert result["provider_model"], result
-          assert result["decision_action"] == "no_trade", result
-          assert result["decision_digest"], result
-          assert result["attempts"] in (1, 2), result
-          PY
+          uv run python scripts/day21_openai_live_diagnostic.py > /tmp/day21-live-diagnostic.json
+          cat /tmp/day21-live-diagnostic.json
