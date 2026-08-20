@@ -1,0 +1,90 @@
+name: AIDY Day 20 Master Trader Contract Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "src/aidy/master_trader_contract.py"
+      - "tests/test_master_trader_contract.py"
+      - "docs/master-trader-decision-v1-contract.md"
+      - "scripts/day20_contract_examples.py"
+      - ".github/workflows/day20-master-trader-contract-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day20-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 20 contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/master_trader_contract.py \
+            tests/test_master_trader_contract.py \
+            scripts/day20_contract_examples.py
+
+      - name: Compile project
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 20 focused contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_master_trader_contract.py
+
+      - name: Run full project regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Prove deterministic four-action examples
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day20_contract_examples.py > /tmp/day20-contract.json
+          cat /tmp/day20-contract.json
+          python - <<'PY'
+          import json
+
+          with open("/tmp/day20-contract.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+          assert result.get("ok") is True, result
+          manifest = result["manifest"]
+          assert manifest["contract_version"] == "aidy_master_trader_decision_v1", result
+          assert manifest["no_trade_first_class"] is True, result
+          assert manifest["pending_orders_supported"] is False, result
+          assert manifest["position_sizing_fields_allowed"] is False, result
+          assert manifest["confidence_controls_position_size"] is False, result
+          assert manifest["hidden_chain_of_thought_required"] is False, result
+          assert [item["action"] for item in result["validated_examples"]] == [
+              "new_trade",
+              "manage_trade",
+              "close_trade",
+              "no_trade",
+          ], result
+          PY
