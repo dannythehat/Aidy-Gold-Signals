@@ -325,12 +325,12 @@ def _normalize_aidy_signal_state(
 
     raw_signals = value.get("active_signals") or []
     if not isinstance(raw_signals, (list, tuple)):
-        raise ValueError("active_signals must be a list.")
+        raise TypeError("active_signals must be a list.")
 
     active_signals: list[dict[str, Any]] = []
     for raw in raw_signals:
         if not isinstance(raw, Mapping):
-            raise ValueError("Each active AIDY signal must be an object.")
+            raise TypeError("Each active AIDY signal must be an object.")
         unknown = set(raw) - _SIGNAL_KEYS
         if unknown:
             raise ValueError(f"Unsupported AIDY active-signal fields: {sorted(unknown)}")
