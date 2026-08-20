@@ -1,0 +1,83 @@
+name: AIDY Day 15 Setup Taxonomy Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "src/aidy/setup_detector.py"
+      - "tests/test_setup_detector.py"
+      - "docs/setup-taxonomy-v1-contract.md"
+      - "scripts/day15_setup_examples.py"
+      - ".github/workflows/day15-setup-acceptance.yml"
+
+concurrency:
+  group: aidy-day15-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 15 code, tests and examples
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/setup_detector.py \
+            tests/test_setup_detector.py \
+            scripts/day15_setup_examples.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 15 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_setup_detector.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Prove deterministic setup examples
+        run: |
+          set -euo pipefail
+          uv run python scripts/day15_setup_examples.py > /tmp/day15-examples.json
+          cat /tmp/day15-examples.json
+          python - <<'PY'
+          import json
+
+          result = json.load(open('/tmp/day15-examples.json', encoding='utf-8'))
+          assert result.get('ok') is True, result
+          assert result.get('taxonomy_count') == 20, result
+          assert result.get('future_outcomes_used') is False, result
+          assert result.get('trade_recommendations_made') is False, result
+          examples = {item['fixture']: item for item in result.get('examples', [])}
+          assert examples['single']['detector_state'] == 'single', result
+          assert examples['single']['day14_setup_state'] == 'present', result
+          assert examples['single']['day14_risk_state'] == 'valid', result
+          assert examples['multiple']['detector_state'] == 'multiple', result
+          assert examples['multiple']['day14_setup_state'] == 'ambiguous', result
+          assert examples['none']['detector_state'] == 'none', result
+          assert examples['none']['day14_setup_state'] == 'absent', result
+          assert all(item['trading_decision_made'] is False for item in examples.values()), result
+          PY
