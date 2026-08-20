@@ -1,0 +1,118 @@
+name: AIDY Day 13 Trade Outcome Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/trade_outcomes.py"
+      - "tests/test_trade_outcomes.py"
+      - "scripts/day13_historical_trade_outcomes.py"
+      - "docs/trade-outcome-v1-contract.md"
+      - ".github/workflows/day13-trade-outcome-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day13-trade-outcome-acceptance
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 13 code, tests and probe
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/trade_outcomes.py \
+            tests/test_trade_outcomes.py \
+            scripts/day13_historical_trade_outcomes.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 13 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_trade_outcomes.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"; exit 1; }
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('type') == 'service_account'
+          assert info.get('project_id')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Build bounded real historical trade-outcome distribution
+        run: |
+          set -euo pipefail
+          uv run python scripts/day13_historical_trade_outcomes.py \
+            --start 2025-01-06T00:00:00+00:00 \
+            --end 2025-01-13T00:00:00+00:00 \
+            --max-anchors 120 \
+            > /tmp/day13-outcomes.json
+          cat /tmp/day13-outcomes.json
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day13-outcomes.json', encoding='utf-8'))
+          assert result.get('ok') is True, result
+          assert result.get('evaluation_only') is True, result
+          assert result.get('pit_eligible') is False, result
+          assert result.get('realized_pnl_included') is False, result
+          assert result.get('source_table') == 'research_candles', result
+          assert int(result.get('source_rows', 0)) > 0, result
+          assert int(result.get('anchors_built', 0)) > 0, result
+          assert int(result.get('outcomes_built', 0)) == int(result['anchors_built']) * 2, result
+          assert int(result.get('complete_outcomes', 0)) > 0, result
+          template=result.get('probe_template') or {}
+          assert template.get('strategy_claim') is False, result
+          distribution=result.get('distribution') or {}
+          assert distribution.get('evaluation_only') is True, result
+          assert distribution.get('pit_eligible') is False, result
+          assert distribution.get('realized_pnl_included') is False, result
+          assert distribution.get('outcome_causality_included') is False, result
+          assert distribution.get('direction_counts', {}).get('long', 0) > 0, result
+          assert distribution.get('direction_counts', {}).get('short', 0) > 0, result
+          assert distribution.get('complete_average_mfe_r') is not None, result
+          assert distribution.get('complete_average_mae_r') is not None, result
+          PY
