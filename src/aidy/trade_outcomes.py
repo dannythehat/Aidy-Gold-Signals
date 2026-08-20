@@ -480,7 +480,7 @@ def build_trade_outcome_bundle(
     )
     raw_rows = list(research_rows)
     rows_by_time = _normalize_rows(raw_rows)
-    horizons = tuple(sorted(set(int(value) for value in horizons_minutes)))
+    horizons = tuple(sorted({int(value) for value in horizons_minutes}))
     if not horizons or any(value <= 0 for value in horizons):
         raise ValueError("Trade outcome bundle requires positive horizons.")
 
