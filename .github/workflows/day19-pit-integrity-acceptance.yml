@@ -1,0 +1,123 @@
+name: AIDY Day 19 PIT Integrity Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "src/aidy/context_packet.py"
+      - "src/aidy/pit_integrity.py"
+      - "tests/test_pit_integrity_adversarial.py"
+      - "docs/pit-integrity-adversarial-v1-contract.md"
+      - "scripts/day19_pit_integrity_probe.py"
+      - ".github/workflows/day19-pit-integrity-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day19-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 19 hardening tests and probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/context_packet.py \
+            src/aidy/pit_integrity.py \
+            tests/test_pit_integrity_adversarial.py \
+            scripts/day19_pit_integrity_probe.py
+
+      - name: Compile project
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 19 adversarial acceptance tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_pit_integrity_adversarial.py
+
+      - name: Run full project regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || {
+            echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"
+            exit 1
+          }
+          python - <<'PY'
+          import json
+          import os
+
+          info = json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Prove real historical-memory PIT integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day19_pit_integrity_probe.py \
+            --candidate-limit 250 \
+            --max-results 200 \
+            > /tmp/day19-pit-integrity.json
+          cat /tmp/day19-pit-integrity.json
+          python - <<'PY'
+          import json
+
+          with open("/tmp/day19-pit-integrity.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+          assert result.get("ok") is True, result
+          assert result.get("pit_integrity_version") == "aidy_pit_integrity_adversarial_v1", result
+          assert int(result.get("attack_count", -1)) == 18, result
+          assert int(result.get("blocked_attack_count", -1)) == 18, result
+          assert result.get("all_attacks_blocked") is True, result
+          assert result.get("unresolved_attack_ids") == [], result
+          assert int(result.get("candidate_rows_from_bigquery", 0)) > 0, result
+          assert int(result.get("candidate_future_case_violations", -1)) == 0, result
+          assert int(result.get("candidate_unavailable_outcome_violations", -1)) == 0, result
+          assert int(result.get("outcome_similarity_violations", -1)) == 0, result
+          assert result.get("outcomes_used_for_selection") is False, result
+          assert result.get("day6_sql_excludes_outcome_tables") is True, result
+          assert result.get("decision_builders_exclude_research_tables") is True, result
+          PY

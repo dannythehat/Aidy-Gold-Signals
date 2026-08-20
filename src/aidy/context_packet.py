@@ -75,6 +75,30 @@ _FORBIDDEN_STATE_KEYS = {
     "ticket",
     "vantage",
 }
+_FORBIDDEN_DECISION_KEYS = {
+    "available_after_utc",
+    "counterfactual_digest",
+    "counterfactual_version",
+    "future_return",
+    "future_returns",
+    "horizon_assessments",
+    "mae",
+    "mfe",
+    "move_bundle",
+    "move_bundle_version",
+    "outcome",
+    "outcome_label",
+    "outcome_state",
+    "outcomes",
+    "path_class",
+    "pnl",
+    "primary_classification",
+    "realized_pnl",
+    "stop_hit",
+    "target_hit",
+    "trade_outcome_bundle",
+    "trade_outcome_bundle_version",
+}
 
 
 def _canonical_json(value: object) -> str:
@@ -114,6 +138,28 @@ def _digest(value: object) -> str:
     return sha256(_canonical_json(value).encode()).hexdigest()
 
 
+def _assert_clean_decision_evidence(value: Any, *, path: str) -> None:
+    """Reject future/evaluation data and retrospective lineage from PIT decision evidence."""
+
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            normalized = str(key).strip().lower()
+            if normalized in _FORBIDDEN_DECISION_KEYS:
+                raise ValueError(f"Future/outcome field is forbidden at {path}.{key}.")
+            if normalized == "future_derived" and item is not False:
+                raise ValueError(f"Future-derived evidence is forbidden at {path}.{key}.")
+            if normalized == "evaluation_only" and item is not False:
+                raise ValueError(f"Evaluation-only evidence is forbidden at {path}.{key}.")
+            if normalized == "provenance_class" and str(item) == "retrospective_history":
+                raise ValueError(f"Retrospective-only evidence is forbidden at {path}.{key}.")
+            if normalized == "pit_eligible" and item is False:
+                raise ValueError(f"Non-PIT evidence is forbidden at {path}.{key}.")
+            _assert_clean_decision_evidence(item, path=f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _assert_clean_decision_evidence(item, path=f"{path}[{index}]")
+
+
 def _validate_feature_packet(
     packet: Mapping[str, Any],
     *,
@@ -140,6 +186,7 @@ def _validate_feature_packet(
     digest_body.pop("feature_packet_digest", None)
     if not supplied_digest or supplied_digest != _digest(digest_body):
         raise ValueError("Gold feature packet digest does not match its contents.")
+    _assert_clean_decision_evidence(normalized, path="feature_packet")
     return normalized
 
 
@@ -330,10 +377,10 @@ def _normalize_aidy_signal_state(
     active_signals: list[dict[str, Any]] = []
     for raw in raw_signals:
         if not isinstance(raw, Mapping):
-            raise TypeError("Each active AIDY signal must be an object.")
+            raise TypeError("Each active AIDY`signal must be an object.")
         unknown = set(raw) - _SIGNAL_KEYS
         if unknown:
-            raise ValueError(f"Unsupported AIDY active-signal fields: {sorted(unknown)}")
+            raise ValueError(f"Unsupported AIDY`active-signal fields: {sorted(unknown)}")
 
         signal_id = str(raw.get("aidy_signal_id") or "").strip()
         if not signal_id:
@@ -344,7 +391,7 @@ def _normalize_aidy_signal_state(
         if raw.get("opened_at_utc") is not None and opened_at is None:
             raise ValueError("opened_at_utc must be timezone-aware.")
         if raw.get("updated_at_utc") is not None and updated_at is None:
-            raise ValueError("updated_at_utc must be timezone-aware.")
+            raise ValueError,"updated_at_utc must be timezone-aware.")
         if (opened_at and opened_at > as_of) or (updated_at and updated_at > as_of):
             raise ValueError("AIDY signal lifecycle cannot contain future state.")
 
@@ -361,7 +408,9 @@ def _normalize_aidy_signal_state(
                     else _decimal_text(raw.get("entry_price"))
                 ),
                 "stop_loss": (
-                    None if raw.get("stop_loss") is None else _decimal_text(raw.get("stop_loss"))
+                    None
+                    if raw.get("stop_loss") is None
+                    else _decimal_text(raw.get("stop_loss"))
                 ),
                 "targets": [_decimal_text(target) for target in (raw.get("targets") or [])],
                 "opened_at_utc": opened_at.isoformat() if opened_at else None,
@@ -373,9 +422,7 @@ def _normalize_aidy_signal_state(
     state = {
         "state_version": AIDY_SIGNAL_STATE_VERSION,
         "evidence_state": "known",
-        "lifecycle_state": str(
-            value.get("state") or ("active" if active_signals else "none")
-        ),
+        "lifecycle_state": str(value.get("state") or ("active" if active_signals else "none")),
         "lifecycle_version": value.get("lifecycle_version"),
         "as_of_utc": as_of.isoformat(),
         "last_decision_id": value.get("last_decision_id"),
@@ -405,7 +452,11 @@ def _build_data_quality(
     quote = feature_packet.get("quote_context")
     quote = quote if isinstance(quote, Mapping) else {}
     quote_state = str(quote.get("quote_state") or "unknown")
-    quote_age = int(quote["quote_age_seconds"]) if quote.get("quote_age_seconds") is not None else None
+    quote_age = (
+        int(quote["quote_age_seconds"])
+        if quote.get("quote_age_seconds") is not None
+        else None
+    )
     if quote_state != "known" or quote_age is None:
         quote_freshness = "unknown"
     elif quote_age > quote_stale_after_seconds:
