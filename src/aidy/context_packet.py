@@ -81,6 +81,21 @@ def _canonical_json(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+def _decimal_text(value: Any) -> str:
+    if value is None or isinstance(value, bool):
+        raise ValueError("Price values must be finite decimals.")
+    try:
+        number = Decimal(str(value))
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError("Price values must be finite decimals.") from exc
+    if not number.is_finite():
+        raise ValueError("Price values must be finite decimals.")
+    text = format(number, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
 def _json_safe(value: Any) -> Any:
     if isinstance(value, datetime):
         if value.tzinfo is None:
@@ -95,29 +110,8 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def _decimal_text(value: Any) -> str:
-    if value is None or isinstance(value, bool):
-        raise ValueError("Price values must be finite decimals.")
-    try:
-        parsed = Decimal(str(value))
-    except (InvalidOperation, ValueError) as exc:
-        raise ValueError("Price values must be finite decimals.") from exc
-    if not parsed.is_finite():
-        raise ValueError("Price values must be finite decimals.")
-    if parsed == 0:
-        return "0"
-    text = format(parsed, "f")
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    return text or "0"
-
-
-def _feature_packet_digest(packet: Mapping[str, Any]) -> str:
-    body = _json_safe(dict(packet))
-    supplied = body.pop("feature_packet_digest", None)
-    if supplied is None:
-        raise ValueError("Gold feature packet is missing feature_packet_digest.")
-    return sha256(_canonical_json(body).encode()).hexdigest()
+def _digest(value: object) -> str:
+    return sha256(_canonical_json(value).encode()).hexdigest()
 
 
 def _validate_feature_packet(
@@ -131,14 +125,20 @@ def _validate_feature_packet(
         raise ValueError("Unsupported Gold feature packet version.")
     if normalized.get("mode") != "pit":
         raise ValueError("Day 10 context accepts PIT Gold features only.")
-    if normalized.get("provenance_class") != PIT_PROVENANCE or normalized.get("pit_eligible") is not True:
+    if (
+        normalized.get("provenance_class") != PIT_PROVENANCE
+        or normalized.get("pit_eligible") is not True
+    ):
         raise ValueError("Retrospective or non-PIT Gold features cannot enter Day 10 context.")
     if normalize_as_of(str(normalized.get("as_of_utc"))) != as_of:
         raise ValueError("Gold feature packet as-of timestamp does not match context as-of.")
     if str(normalized.get("symbol") or "") != symbol:
         raise ValueError("Gold feature packet symbol does not match context symbol.")
+
     supplied_digest = str(normalized.get("feature_packet_digest") or "")
-    if supplied_digest != _feature_packet_digest(normalized):
+    digest_body = dict(normalized)
+    digest_body.pop("feature_packet_digest", None)
+    if not supplied_digest or supplied_digest != _digest(digest_body):
         raise ValueError("Gold feature packet digest does not match its contents.")
     return normalized
 
@@ -168,10 +168,24 @@ def _optional_utc(value: Any) -> datetime | None:
         return None
 
 
-def _event_provenance(row: Mapping[str, Any]) -> dict[str, Any]:
+def _event_record(row: Mapping[str, Any], *, as_of: datetime) -> dict[str, Any] | None:
+    event_class = event_class_of(row)
+    if event_class not in HIGH_IMPACT_EVENT_CLASSES:
+        return None
+
     structured = _structured_event(row)
     observed = _optional_utc(row.get("first_observed_at"))
-    return {
+    if observed is None or observed > as_of:
+        return None
+    scheduled = _optional_utc(structured.get("scheduled_at"))
+    published = _optional_utc(row.get("published_at"))
+    minutes_to_scheduled = (
+        None
+        if scheduled is None
+        else int((scheduled - as_of).total_seconds() / 60)
+    )
+
+    provenance = {
         "source": row.get("source"),
         "external_id": row.get("external_id"),
         "evidence_id": row.get("evidence_id"),
@@ -180,23 +194,8 @@ def _event_provenance(row: Mapping[str, Any]) -> dict[str, Any]:
         "payload_digest": row.get("payload_digest"),
         "source_url": structured.get("source_url"),
         "revision_index": int(row.get("revision_index") or 0),
-        "first_observed_at": observed.isoformat() if observed else None,
+        "first_observed_at": observed.isoformat(),
     }
-
-
-def _event_record(row: Mapping[str, Any], *, as_of: datetime) -> dict[str, Any] | None:
-    event_class = event_class_of(row)
-    if event_class not in HIGH_IMPACT_EVENT_CLASSES:
-        return None
-    structured = _structured_event(row)
-    scheduled = _optional_utc(structured.get("scheduled_at"))
-    published = _optional_utc(row.get("published_at"))
-    observed = _optional_utc(row.get("first_observed_at"))
-    if observed is None or observed > as_of:
-        return None
-    minutes_to_scheduled = None
-    if scheduled is not None:
-        minutes_to_scheduled = int((scheduled - as_of).total_seconds() / 60)
     return {
         "event_class": event_class,
         "phase": structured.get("phase"),
@@ -205,7 +204,7 @@ def _event_record(row: Mapping[str, Any], *, as_of: datetime) -> dict[str, Any] 
         "published_at": published.isoformat() if published else None,
         "first_observed_at": observed.isoformat(),
         "minutes_to_scheduled": minutes_to_scheduled,
-        "provenance": _event_provenance(row),
+        "provenance": provenance,
     }
 
 
@@ -222,10 +221,9 @@ def _build_event_risk(
     if minutes_before < 0 or minutes_after < 0:
         raise ValueError("Macro event-window minutes must be non-negative.")
 
-    canonical = select_latest_events_as_of(rows, as_of=as_of)
     records = [
         record
-        for row in canonical
+        for row in select_latest_events_as_of(rows, as_of=as_of)
         if (record := _event_record(row, as_of=as_of)) is not None
     ]
     records.sort(
@@ -243,15 +241,21 @@ def _build_event_risk(
         scheduled = _optional_utc(record["scheduled_at"])
         published = _optional_utc(record["published_at"])
         observed = _optional_utc(record["first_observed_at"])
+
         scheduled_in_window = False
         if scheduled is not None:
             delta = (scheduled - as_of).total_seconds() / 60
             scheduled_in_window = -minutes_after <= delta <= minutes_before
-        release_in_window = any(
-            candidate is not None
-            and -minutes_after <= (candidate - as_of).total_seconds() / 60 <= 0
-            for candidate in (published, observed)
-        )
+
+        phase = str(record.get("phase") or "").lower()
+        release_in_window = False
+        if scheduled is None or phase == "released":
+            release_in_window = any(
+                candidate is not None
+                and -minutes_after <= (candidate - as_of).total_seconds() / 60 <= 0
+                for candidate in (published, observed)
+            )
+
         if scheduled_in_window or release_in_window:
             in_window.append(record)
 
@@ -261,8 +265,6 @@ def _build_event_risk(
         if record["scheduled_at"] is not None
         and _optional_utc(record["scheduled_at"]) >= as_of
     ]
-    next_event = upcoming[0] if upcoming else None
-
     if evidence_state == "unknown":
         timing_state = "unknown"
     elif in_window:
@@ -280,20 +282,20 @@ def _build_event_risk(
         "high_impact_event_classes": list(HIGH_IMPACT_EVENT_CLASSES),
         "observations_considered": len(records),
         "events_in_window": in_window,
-        "next_scheduled_event": next_event,
+        "next_scheduled_event": upcoming[0] if upcoming else None,
     }
 
 
-def _assert_no_forbidden_state_keys(value: Any, *, path: str = "aidy_signal_state") -> None:
+def _reject_external_account_state(value: Any, *, path: str = "aidy_signal_state") -> None:
     if isinstance(value, Mapping):
         for key, item in value.items():
             normalized = str(key).strip().lower()
             if normalized in _FORBIDDEN_STATE_KEYS:
                 raise ValueError(f"Forbidden broker/follower state field at {path}.{key}.")
-            _assert_no_forbidden_state_keys(item, path=f"{path}.{key}")
+            _reject_external_account_state(item, path=f"{path}.{key}")
     elif isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
-            _assert_no_forbidden_state_keys(item, path=f"{path}[{index}]")
+            _reject_external_account_state(item, path=f"{path}[{index}]")
 
 
 def _normalize_aidy_signal_state(
@@ -305,25 +307,26 @@ def _normalize_aidy_signal_state(
         state = {
             "state_version": AIDY_SIGNAL_STATE_VERSION,
             "evidence_state": "unknown",
+            "lifecycle_state": "unknown",
             "lifecycle_version": None,
             "as_of_utc": as_of.isoformat(),
             "last_decision_id": None,
             "active_signals": [],
         }
-        state["state_digest"] = sha256(_canonical_json(state).encode()).hexdigest()
+        state["state_digest"] = _digest(state)
         return state
 
-    _assert_no_forbidden_state_keys(value)
+    _reject_external_account_state(value)
     unknown_top = set(value) - _SIGNAL_STATE_KEYS
     if unknown_top:
         raise ValueError(f"Unsupported AIDY signal-state fields: {sorted(unknown_top)}")
-    state_as_of_raw = value.get("as_of_utc")
-    if state_as_of_raw is not None and normalize_as_of(state_as_of_raw) != as_of:
+    if value.get("as_of_utc") is not None and normalize_as_of(value["as_of_utc"]) != as_of:
         raise ValueError("AIDY signal lifecycle as-of does not match context as-of.")
 
     raw_signals = value.get("active_signals") or []
     if not isinstance(raw_signals, (list, tuple)):
         raise ValueError("active_signals must be a list.")
+
     active_signals: list[dict[str, Any]] = []
     for raw in raw_signals:
         if not isinstance(raw, Mapping):
@@ -331,50 +334,55 @@ def _normalize_aidy_signal_state(
         unknown = set(raw) - _SIGNAL_KEYS
         if unknown:
             raise ValueError(f"Unsupported AIDY active-signal fields: {sorted(unknown)}")
+
         signal_id = str(raw.get("aidy_signal_id") or "").strip()
         if not signal_id:
             raise ValueError("Each active AIDY signal requires aidy_signal_id.")
-        item = {
-            "aidy_signal_id": signal_id,
-            "originating_decision_id": raw.get("originating_decision_id"),
-            "status": raw.get("status"),
-            "direction": raw.get("direction"),
-            "entry_type": raw.get("entry_type"),
-            "entry_price": (
-                None if raw.get("entry_price") is None else _decimal_text(raw.get("entry_price"))
-            ),
-            "stop_loss": (
-                None if raw.get("stop_loss") is None else _decimal_text(raw.get("stop_loss"))
-            ),
-            "targets": [_decimal_text(target) for target in (raw.get("targets") or [])],
-            "opened_at_utc": (
-                None
-                if raw.get("opened_at_utc") is None
-                else normalize_as_of(raw.get("opened_at_utc")).isoformat()
-            ),
-            "updated_at_utc": (
-                None
-                if raw.get("updated_at_utc") is None
-                else normalize_as_of(raw.get("updated_at_utc")).isoformat()
-            ),
-        }
-        for timestamp_key in ("opened_at_utc", "updated_at_utc"):
-            timestamp = item[timestamp_key]
-            if timestamp is not None and normalize_as_of(timestamp) > as_of:
-                raise ValueError("AIDY signal lifecycle cannot contain future state.")
-        active_signals.append(item)
+
+        opened_at = _optional_utc(raw.get("opened_at_utc"))
+        updated_at = _optional_utc(raw.get("updated_at_utc"))
+        if raw.get("opened_at_utc") is not None and opened_at is None:
+            raise ValueError("opened_at_utc must be timezone-aware.")
+        if raw.get("updated_at_utc") is not None and updated_at is None:
+            raise ValueError("updated_at_utc must be timezone-aware.")
+        if (opened_at and opened_at > as_of) or (updated_at and updated_at > as_of):
+            raise ValueError("AIDY signal lifecycle cannot contain future state.")
+
+        active_signals.append(
+            {
+                "aidy_signal_id": signal_id,
+                "originating_decision_id": raw.get("originating_decision_id"),
+                "status": raw.get("status"),
+                "direction": raw.get("direction"),
+                "entry_type": raw.get("entry_type"),
+                "entry_price": (
+                    None
+                    if raw.get("entry_price") is None
+                    else _decimal_text(raw.get("entry_price"))
+                ),
+                "stop_loss": (
+                    None if raw.get("stop_loss") is None else _decimal_text(raw.get("stop_loss"))
+                ),
+                "targets": [_decimal_text(target) for target in (raw.get("targets") or [])],
+                "opened_at_utc": opened_at.isoformat() if opened_at else None,
+                "updated_at_utc": updated_at.isoformat() if updated_at else None,
+            }
+        )
     active_signals.sort(key=lambda item: item["aidy_signal_id"])
 
-    normalized = {
+    state = {
         "state_version": AIDY_SIGNAL_STATE_VERSION,
         "evidence_state": "known",
+        "lifecycle_state": str(
+            value.get("state") or ("active" if active_signals else "none")
+        ),
         "lifecycle_version": value.get("lifecycle_version"),
         "as_of_utc": as_of.isoformat(),
         "last_decision_id": value.get("last_decision_id"),
         "active_signals": active_signals,
     }
-    normalized["state_digest"] = sha256(_canonical_json(normalized).encode()).hexdigest()
-    return normalized
+    state["state_digest"] = _digest(state)
+    return state
 
 
 def _build_data_quality(
@@ -385,22 +393,19 @@ def _build_data_quality(
     signal_state: Mapping[str, Any],
     quote_stale_after_seconds: int,
 ) -> dict[str, Any]:
-    timeframe_map = feature_packet.get("timeframes")
-    if not isinstance(timeframe_map, Mapping):
-        timeframe_map = {}
+    timeframes = feature_packet.get("timeframes")
+    timeframes = timeframes if isinstance(timeframes, Mapping) else {}
     missing_timeframes = [
         timeframe
         for timeframe in TIMEFRAMES
-        if not isinstance(timeframe_map.get(timeframe), Mapping)
-        or timeframe_map[timeframe].get("state") != "known"
+        if not isinstance(timeframes.get(timeframe), Mapping)
+        or timeframes[timeframe].get("state") != "known"
     ]
 
     quote = feature_packet.get("quote_context")
-    if not isinstance(quote, Mapping):
-        quote = {}
+    quote = quote if isinstance(quote, Mapping) else {}
     quote_state = str(quote.get("quote_state") or "unknown")
-    quote_age_raw = quote.get("quote_age_seconds")
-    quote_age = int(quote_age_raw) if quote_age_raw is not None else None
+    quote_age = int(quote["quote_age_seconds"]) if quote.get("quote_age_seconds") is not None else None
     if quote_state != "known" or quote_age is None:
         quote_freshness = "unknown"
     elif quote_age > quote_stale_after_seconds:
@@ -408,11 +413,8 @@ def _build_data_quality(
     else:
         quote_freshness = "fresh"
 
-    spread_state = "known" if quote.get("spread") is not None else "unknown"
-
     series = cross_market.get("series")
-    if not isinstance(series, Mapping):
-        series = {}
+    series = series if isinstance(series, Mapping) else {}
     missing_cross_market = sorted(
         series_id
         for series_id, payload in series.items()
@@ -424,6 +426,7 @@ def _build_data_quality(
         if isinstance(payload, Mapping)
     }
 
+    spread_state = "known" if quote.get("spread") is not None else "unknown"
     flags: list[str] = []
     if missing_timeframes:
         flags.append("gold_timeframes_missing")
@@ -456,7 +459,7 @@ def _build_data_quality(
 def compute_context_hash(packet: Mapping[str, Any]) -> str:
     body = _json_safe(dict(packet))
     body.pop("context_hash", None)
-    return sha256(_canonical_json(body).encode()).hexdigest()
+    return _digest(body)
 
 
 def verify_context_hash(packet: Mapping[str, Any]) -> bool:
@@ -500,10 +503,8 @@ def build_context_packet(
         signal_state=signal_state,
         quote_stale_after_seconds=quote_stale_after_seconds,
     )
-
-    quote_context = gold.get("quote_context")
-    if not isinstance(quote_context, Mapping):
-        quote_context = {}
+    quote = gold.get("quote_context")
+    quote = quote if isinstance(quote, Mapping) else {}
 
     packet: dict[str, Any] = {
         "context_packet_version": CONTEXT_PACKET_VERSION,
@@ -522,8 +523,8 @@ def build_context_packet(
         "gold": gold,
         "session": {
             "computed_session_code": session_code_at(cutoff),
-            "recorded_session_code": quote_context.get("recorded_session_code"),
-            "session_code_consistent": quote_context.get("session_code_consistent"),
+            "recorded_session_code": quote.get("recorded_session_code"),
+            "session_code_consistent": quote.get("session_code_consistent"),
         },
         "event_risk": event_risk,
         "cross_market": cross_market,
