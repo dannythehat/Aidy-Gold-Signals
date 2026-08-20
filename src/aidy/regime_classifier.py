@@ -15,8 +15,8 @@ REGIME_DIGEST_ALGORITHM = "sha256"
 SUPPORTED_SYMBOL = "XAUUSD"
 TREND_TIMEFRAMES = ("M15", "H1", "H4")
 VOLATILITY_TIMEFRAME = "H1"
-VOLATILITY_LOW_LT_BPS = Decimal("20")
-VOLATILITY_HIGH_GTE_BPS = Decimal("50")
+VOLATILITY_LOW_LT_BPS = Decimal(20)
+VOLATILITY_HIGH_GTE_BPS = Decimal(50)
 
 _DIRECTION_VALUES = {"bullish", "bearish", "flat"}
 _SESSION_VALUES = {
@@ -35,6 +35,24 @@ _LABEL_ORDER = (
     "quote_spread_condition",
     "event_timing",
 )
+_FORBIDDEN_HINDSIGHT_KEYS = {
+    "future_return",
+    "future_returns",
+    "outcome",
+    "outcome_label",
+    "pnl",
+    "realized_pnl",
+    "profit",
+    "loss",
+    "win",
+    "winner",
+    "loser",
+    "target_hit",
+    "stop_hit",
+    "mfe",
+    "mae",
+    "subsequent_price",
+}
 
 
 def _canonical_json(value: object) -> str:
@@ -64,7 +82,7 @@ def _decimal_or_none(value: Any) -> Decimal | None:
     if value is None:
         return None
     if isinstance(value, bool):
-        raise ValueError("Volatility values must be finite non-negative decimals.")
+        raise TypeError("Volatility values must be finite non-negative decimals.")
     try:
         parsed = Decimal(str(value))
     except (InvalidOperation, ValueError) as exc:
@@ -72,6 +90,18 @@ def _decimal_or_none(value: Any) -> Decimal | None:
     if not parsed.is_finite() or parsed < 0:
         raise ValueError("Volatility values must be finite non-negative decimals.")
     return parsed
+
+
+def _assert_no_hindsight_fields(value: Any, *, path: str = "context") -> None:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            normalized = str(key).strip().lower()
+            if normalized in _FORBIDDEN_HINDSIGHT_KEYS:
+                raise ValueError(f"Hindsight field is forbidden at {path}.{key}.")
+            _assert_no_hindsight_fields(item, path=f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _assert_no_hindsight_fields(item, path=f"{path}[{index}]")
 
 
 def classify_trend_structure(directions: Mapping[str, Any]) -> str:
@@ -172,6 +202,7 @@ def _validate_context(context: Mapping[str, Any]) -> tuple[datetime, str]:
         raise ValueError("Retrospective history cannot enter Day 11 regime classification.")
     if context.get("broker_follower_state_included") is not False:
         raise ValueError("Broker/follower state cannot enter Day 11 regime classification.")
+    _assert_no_hindsight_fields(context)
     if not verify_context_hash(context):
         raise ValueError("Context hash does not match Day 10 packet contents.")
     symbol = str(context.get("symbol") or "")
@@ -249,6 +280,7 @@ def classify_gold_regime(context: Mapping[str, Any]) -> dict[str, Any]:
                     "normal_lt": str(VOLATILITY_HIGH_GTE_BPS),
                     "high_gte": str(VOLATILITY_HIGH_GTE_BPS),
                 },
+                "threshold_basis": "fixed_v1_gold_descriptive_not_outcome_calibrated",
             },
             "session": {
                 "source": "session.computed_session_code",
