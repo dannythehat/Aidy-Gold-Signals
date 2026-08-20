@@ -1,0 +1,121 @@
+name: AIDY Day 16 Historical Case Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/historical_cases.py"
+      - "tests/test_historical_cases.py"
+      - "scripts/day16_historical_case_probe.py"
+      - "docs/historical-case-v1-contract.md"
+      - ".github/workflows/day16-historical-case-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day16-historical-case-acceptance
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 16 code tests and probe
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/historical_cases.py \
+            tests/test_historical_cases.py \
+            scripts/day16_historical_case_probe.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 16 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_historical_cases.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"; exit 1; }
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('type') == 'service_account'
+          assert info.get('project_id')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Build and reconcile bounded real historical Gold cases
+        run: |
+          set -euo pipefail
+          uv run python scripts/day16_historical_case_probe.py \
+            --start 2025-01-06T00:00:00+00:00 \
+            --end 2025-01-08T00:00:00+00:00 \
+            --max-cases 36 \
+            > /tmp/day16-cases.json
+          cat /tmp/day16-cases.json
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day16-cases.json', encoding='utf-8'))
+          assert result.get('ok') is True, result
+          assert result.get('case_version') == 'aidy_historical_gold_case_v1', result
+          assert result.get('input_version') == 'aidy_historical_case_input_v1', result
+          assert result.get('provenance_class') == 'retrospective_history', result
+          assert result.get('source_table') == 'research_candles', result
+          assert result.get('destination_table') == 'research_gold_cases', result
+          assert int(result.get('source_rows', 0)) > 0, result
+          assert int(result.get('cases_built', 0)) > 0, result
+          assert int(result.get('cases_reconciled', 0)) == int(result['cases_built']), result
+          assert int(result.get('complete_move_cases', 0)) > 0, result
+          assert int(result.get('analogue_views_built', 0)) == int(result['cases_built']), result
+          assert result.get('future_evaluation_in_analogue_views') is False, result
+          assert result.get('retrospective_live_decision_claim') is False, result
+          assert int(result.get('day14_counterfactuals_attached', -1)) == 0, result
+          distribution=result.get('distribution') or {}
+          assert int(distribution.get('case_count', 0)) == int(result['cases_built']), result
+          assert distribution.get('future_outcomes_used_for_case_selection') is False, result
+          assert distribution.get('analogue_matching_uses_input_boundary_only') is True, result
+          assert distribution.get('provenance_counts', {}).get('retrospective_history', 0) > 0, result
+          sample=result.get('sample_case') or {}
+          assert sample.get('case_id'), result
+          assert sample.get('as_of_utc'), result
+          assert sample.get('analogue_view_digest'), result
+          PY
