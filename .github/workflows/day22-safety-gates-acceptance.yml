@@ -1,0 +1,88 @@
+name: AIDY Day 22 Deterministic Safety Gates Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/safety_gates.py"
+      - "tests/test_safety_gates.py"
+      - "docs/deterministic-safety-gates-v1-contract.md"
+      - "scripts/day22_safety_gate_examples.py"
+      - ".github/workflows/day22-safety-gates-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day22-safety-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 22 safety gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/safety_gates.py \
+            tests/test_safety_gates.py \
+            scripts/day22_safety_gate_examples.py
+
+      - name: Compile project
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 22 focused safety tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_safety_gates.py
+
+      - name: Run full project regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Prove deterministic safety examples
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day22_safety_gate_examples.py > /tmp/day22-safety.json
+          cat /tmp/day22-safety.json
+          python - <<'PY'
+          import json
+
+          with open("/tmp/day22-safety.json", encoding="utf-8") as handle:
+              value = json.load(handle)
+
+          assert value["manifest"]["confidence_can_bypass_gate"] is False
+          assert value["pre_model"]["model_call_allowed"] is True
+          assert value["post_model_no_trade"]["decision_admitted"] is True
+          assert value["post_model_no_trade"]["actionable"] is False
+          assert value["post_model_no_trade"]["downstream_action"] == "no_action"
+          assert value["stale_context"]["model_call_allowed"] is False
+          assert "pre_context_stale" in value["stale_context"]["reason_codes"]
+          PY
