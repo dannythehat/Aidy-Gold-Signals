@@ -32,7 +32,7 @@ def _row_dict(row: Any) -> dict[str, object]:
 
 
 def _parse_utc(value: str) -> datetime:
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
         raise ValueError("Historical distribution timestamps must be timezone-aware.")
     return parsed.astimezone(UTC)
