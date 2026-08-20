@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from aidy.context_packet import build_context_packet
+from aidy.context_packet import build_context_packet, compute_context_hash
 from aidy.feature_engine import build_feature_packet
 from aidy.regime_classifier import (
     REGIME_DEFINITION_VERSION,
@@ -218,7 +218,7 @@ def test_regime_digest_is_repeatable_and_changes_when_context_changes() -> None:
     assert first["source_context_hash"] != clear["source_context_hash"]
 
 
-def test_tampered_or_non_objective_context_is_rejected() -> None:
+def test_tampered_non_objective_or_hindsight_context_is_rejected() -> None:
     tampered = _context()
     tampered["data_quality"]["quote_freshness"] = "fresh"
     with pytest.raises(ValueError, match="Context hash"):
@@ -228,6 +228,12 @@ def test_tampered_or_non_objective_context_is_rejected() -> None:
     hindsight["retrospective_history_included"] = True
     with pytest.raises(ValueError, match="Retrospective"):
         classify_gold_regime(hindsight)
+
+    contaminated = _context()
+    contaminated["future_return"] = "2.5%"
+    contaminated["context_hash"] = compute_context_hash(contaminated)
+    with pytest.raises(ValueError, match="Hindsight field"):
+        classify_gold_regime(contaminated)
 
 
 def test_distribution_report_counts_only_descriptive_regimes() -> None:
