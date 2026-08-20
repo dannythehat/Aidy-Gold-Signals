@@ -167,9 +167,10 @@ def test_integrated_regime_is_explainable_and_has_no_hindsight_labels() -> None:
         "H1": "bullish",
         "H4": "flat",
     }
-    forbidden = ("profit", "loss", "win", "winner", "loser", "future_return")
+    forbidden_tokens = {"profit", "loss", "win", "winner", "loser", "future", "outcome"}
     for value in regime["labels"].values():
-        assert not any(term in str(value).lower() for term in forbidden)
+        tokens = set(str(value).lower().split("_"))
+        assert tokens.isdisjoint(forbidden_tokens)
 
 
 def test_missing_context_remains_unknown_instead_of_becoming_a_regime_guess() -> None:
