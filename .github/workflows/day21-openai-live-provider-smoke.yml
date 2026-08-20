@@ -1,0 +1,66 @@
+name: AIDY Day 21 Live OpenAI Provider Smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/day21-openai-live-provider-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day21-live-provider-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  live-provider-smoke:
+    runs-on: ubuntu-24.04
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Prove secure OpenAI secret is configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${OPENAI_API_KEY:-}"
+
+      - name: Run real Responses API smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day21_openai_live_probe.py > /tmp/day21-live-provider.json
+          cat /tmp/day21-live-provider.json
+          python - <<'PY'
+          import json
+
+          with open("/tmp/day21-live-provider.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          assert result["status"] == "accepted", result
+          assert result["publication_allowed"] is True, result
+          assert result["failure_reason"] is None, result
+          assert result["response_id"], result
+          assert result["provider_model"], result
+          assert result["decision_action"] == "no_trade", result
+          assert result["decision_digest"], result
+          assert result["attempts"] in (1, 2), result
+          PY
