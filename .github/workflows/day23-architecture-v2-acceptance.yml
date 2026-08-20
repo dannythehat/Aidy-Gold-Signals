@@ -1,0 +1,166 @@
+name: AIDY Day 23 Architecture V2 J1 J16 Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/day23_research.py"
+      - "tests/test_day23_research.py"
+      - "scripts/day23_independence_baseline.py"
+      - "docs/day23-architecture-v2-baseline-preregistration.md"
+      - ".github/workflows/day23-architecture-v2-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day23-architecture-v2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      DAY23_BASELINE_SHA: 4bc7269ee05f5596ac6555279e97e98556be9b96
+
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 22 ancestry and unchanged Day 17/18 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${DAY23_BASELINE_SHA}^{commit}"
+          git merge-base --is-ancestor "${DAY23_BASELINE_SHA}" HEAD
+          test "$(git merge-base "${DAY23_BASELINE_SHA}" HEAD)" = "${DAY23_BASELINE_SHA}"
+          git diff --exit-code "${DAY23_BASELINE_SHA}" -- \
+            src/aidy/analogue_retrieval.py \
+            src/aidy/evidence_grading.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Local-equivalent static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/day23_research.py \
+            tests/test_day23_research.py \
+            scripts/day23_independence_baseline.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 23 focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day23_research.py
+
+      - name: Run full project regression suite once
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"; exit 1; }
+          python - <<'PY'
+          import json
+          import os
+
+          info = json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Run the one frozen 1,000-query J1 and baseline J16 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day23_independence_baseline.py \
+            --query-count 1000 \
+            --query-start 2025-03-01T00:00:00+00:00 \
+            --candidate-limit 2000 \
+            --max-results 200 \
+            --output-dir day23_artifacts \
+            > /tmp/day23-summary.json
+          cat /tmp/day23-summary.json
+
+      - name: Enforce Day 23 evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+
+          with open("day23_artifacts/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          assert result["ok"] is True, result
+          assert result["baseline_sha"] == "4bc7269ee05f5596ac6555279e97e98556be9b96", result
+          assert result["frozen_query_count"] == 1000, result
+          assert result["query_manifest_frozen_before_retrieval"] is True, result
+          assert result["retrieval_tuned_during_experiment"] is False, result
+          assert result["query_removed_or_replaced"] is False, result
+          assert result["day17_min_similarity_score"] == "0.72", result
+          assert result["day17_min_component_coverage"] == "0.65", result
+          assert result["day18_max_results"] == 200, result
+          assert result["candidate_limit"] == 2000, result
+          assert result["candidate_sql_parity"]["candidate_sql_parity"] is True, result
+          assert result["outcomes_used_for_analogue_selection"] is False, result
+          assert result["bigquery_evidence"]["manifest_rows"] == 1000, result
+          assert result["bigquery_evidence"]["j1_rows"] == 1000, result
+          assert result["bigquery_evidence"]["j16_rows"] == 1000, result
+
+          j1 = result["j1"]
+          assert j1["query_count"] == 1000, result
+          assert j1["stop_work_threshold"] == "0.50", result
+          assert isinstance(j1["stop_work_fired"], bool), result
+          assert j1["schedule_pressure_override_allowed"] is False, result
+          if not j1["stop_work_threshold_evaluable"]:
+              assert j1["normal_roadmap_progression_allowed"] is False, result
+
+          j16 = result["j16"]
+          assert j16["query_count"] == 1000, result
+          assert j16["descriptive_baseline_only"] is True, result
+          assert j16["validation_clearance"] is False, result
+          assert j16["authoritative_retest_day"] == 38, result
+          assert j16["inference_permitted"] is False, result
+          PY
+
+      - name: Preserve exact frozen manifest and results
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day23-architecture-v2-baseline-${{ github.event.pull_request.head.sha }}
+          path: day23_artifacts/
+          if-no-files-found: error
+          retention-days: 90
