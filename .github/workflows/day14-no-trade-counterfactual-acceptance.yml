@@ -1,0 +1,82 @@
+name: AIDY Day 14 No-Trade Counterfactual Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/no_trade_counterfactual.py"
+      - "tests/test_no_trade_counterfactual.py"
+      - "scripts/day14_counterfactual_examples.py"
+      - "docs/no-trade-counterfactual-v1-contract.md"
+      - ".github/workflows/day14-no-trade-counterfactual-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day14-no-trade-counterfactual-acceptance
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 14 code, tests and examples
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/no_trade_counterfactual.py \
+            tests/test_no_trade_counterfactual.py \
+            scripts/day14_counterfactual_examples.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 14 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_no_trade_counterfactual.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Build deterministic counterfactual examples
+        run: |
+          set -euo pipefail
+          uv run python scripts/day14_counterfactual_examples.py > /tmp/day14-examples.json
+          cat /tmp/day14-examples.json
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day14-examples.json', encoding='utf-8'))
+          assert result.get('ok') is True, result
+          assert result.get('evaluation_only') is True, result
+          assert result.get('future_derived') is True, result
+          assert result.get('pit_eligible') is False, result
+          assert result.get('directional_movement_alone_sufficient') is False, result
+          examples={item['setup_state']: item for item in result.get('examples', [])}
+          assert examples['present']['primary_classification'] == 'missed_opportunity', result
+          assert examples['absent']['primary_classification'] == 'good_restraint', result
+          assert examples['unknown']['primary_classification'] == 'indeterminate', result
+          assert len({item['path_class_240m'] for item in examples.values()}) == 1, result
+          PY
