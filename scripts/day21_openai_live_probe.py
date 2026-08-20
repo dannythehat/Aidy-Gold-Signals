@@ -16,7 +16,14 @@ async def main() -> None:
         "data_quality": {"state": "synthetic_probe_only"},
         "candidate_setups": [],
         "historical_analogues": [],
-        "instruction_context": "Synthetic contract probe only; no real trade may be inferred.",
+        "required_decision_timing": {
+            "evaluated_at_utc": "2026-08-20T12:00:00+00:00",
+            "valid_until_utc": "2026-08-20T12:05:00+00:00",
+        },
+        "instruction_context": (
+            "Synthetic contract probe only; no real trade may be inferred. "
+            "Return the required_decision_timing values exactly."
+        ),
     })
     safe = {
         "status": result["status"],
