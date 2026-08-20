@@ -6,13 +6,12 @@ import pytest
 
 from aidy.context_packet import build_context_packet, verify_context_hash
 from aidy.cross_market import (
+    SERIES_US2Y,
     SERIES_US10Y,
     SERIES_US10Y_REAL,
-    SERIES_US2Y,
     SERIES_USD_BROAD,
 )
 from aidy.feature_engine import build_feature_packet
-
 
 AS_OF = datetime(2026, 8, 20, 12, 0, tzinfo=UTC)
 
