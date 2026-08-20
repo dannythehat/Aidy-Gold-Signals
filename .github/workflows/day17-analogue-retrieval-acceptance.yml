@@ -1,0 +1,121 @@
+name: AIDY Day 17 Historical Analogue Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/analogue_retrieval.py"
+      - "tests/test_analogue_retrieval.py"
+      - "scripts/day17_analogue_probe.py"
+      - "docs/analogue-retrieval-v1-contract.md"
+      - ".github/workflows/day17-analogue-retrieval-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day17-analogue-retrieval-acceptance
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 17 code tests and probe
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/analogue_retrieval.py \
+            tests/test_analogue_retrieval.py \
+            scripts/day17_analogue_probe.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 17 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_analogue_retrieval.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"; exit 1; }
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          assert info.get('type') == 'service_account'
+          assert info.get('project_id')
+          with open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8') as fh:
+              fh.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Run bounded real historical analogue retrieval
+        run: |
+          set -euo pipefail
+          uv run python scripts/day17_analogue_probe.py \
+            --candidate-limit 250 \
+            --max-results 5 \
+            > /tmp/day17-analogue.json
+          cat /tmp/day17-analogue.json
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/day17-analogue.json', encoding='utf-8'))
+          assert result.get('ok') is True, result
+          assert result.get('retrieval_version') == 'aidy_historical_analogue_retrieval_v1', result
+          assert result.get('similarity_feature_version') == 'aidy_gold_similarity_features_v1', result
+          assert result.get('query_id'), result
+          assert int(result.get('candidate_rows_from_bigquery', 0)) > 0, result
+          assert result.get('selection_reproducible_under_reordering') is True, result
+          assert result.get('outcomes_used_for_selection') is False, result
+          assert result.get('probability_claims_included') is False, result
+          guards=result.get('hard_pit_guards') or {}
+          assert all(guards.get(key) is True for key in (
+              'candidate_as_of_before_query',
+              'outcome_available_by_query_time',
+              'explicit_provenance_filter',
+              'version_compatibility_filter',
+          )), result
+          assert result.get('evidence_state') in {
+              'matches_found',
+              'no_sufficient_similarity',
+          }, result
+          assert int(result.get('returned_match_count', 0)) <= 5, result
+          for match in result.get('top_matches') or []:
+              assert match.get('outcome_used_for_similarity') is False, result
+              assert match.get('similarity_score') is not None, result
+              assert match.get('component_coverage') is not None, result
+          PY
