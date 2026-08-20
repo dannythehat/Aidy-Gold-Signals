@@ -1,0 +1,131 @@
+name: AIDY Day 18 Evidence Grade Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/evidence_grading.py"
+      - "tests/test_evidence_grading.py"
+      - "docs/evidence-grade-v1-contract.md"
+      - "scripts/day18_evidence_grade_probe.py"
+      - ".github/workflows/day18-evidence-grade-acceptance.yml"
+
+concurrency:
+  group: aidy-day18-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 18 code tests and probe
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/evidence_grading.py \
+            tests/test_evidence_grading.py \
+            scripts/day18_evidence_grade_probe.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 18 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_evidence_grading.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || {
+            echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"
+            exit 1
+          }
+          python - <<'PY'
+          import json
+          import os
+
+          info = json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Grade bounded real historical analogue evidence
+        run: |
+          set -euo pipefail
+          uv run python scripts/day18_evidence_grade_probe.py \
+            --candidate-limit 250 \
+            --max-results 200 \
+            > /tmp/day18-evidence.json
+          cat /tmp/day18-evidence.json
+          python - <<'PY'
+          import json
+
+          result = json.load(open("/tmp/day18-evidence.json", encoding="utf-8"))
+          assert result.get("ok") is True, result
+          assert result.get("evidence_grade_version") == "aidy_evidence_grade_v1", result
+          assert result.get("evidence_report_version") == "aidy_analogue_evidence_report_v1", result
+          assert int(result.get("candidate_rows_from_bigquery", 0)) > 0, result
+          assert int(result.get("retrieved_match_count", 0)) > 0, result
+          assert result.get("selection_digest"), result
+          assert result.get("report_digest"), result
+          assert result.get("grading_applied_after_analogue_selection") is True, result
+          assert result.get("selection_mutated_by_grading") is False, result
+          assert result.get("outcome_values_used_for_dataset_grade") is False, result
+          assert result.get("standalone_trade_decision_allowed") is False, result
+
+          # The current bounded real Day 16/17 sample has only one sufficiently
+          # similar neighbour. One excellent neighbour must remain insufficient.
+          assert result.get("dataset_grade") == "insufficient", result
+          assert int(result.get("dataset_n", -1)) == int(
+              result.get("retrieved_match_count", -2)
+          ), result
+          assert result.get("probability_like_wording_allowed") is False, result
+          assert result.get("decision_weight_allowed") is False, result
+
+          statistics = result.get("statistics") or []
+          assert len(statistics) == 6, result
+          for statistic in statistics:
+              assert "n" in statistic and statistic.get("grade"), result
+              if int(statistic["n"]) < 30:
+                  assert statistic.get("probability_like_wording_allowed") is False, result
+                  assert statistic.get("rates_emitted") is False, result
+              if int(statistic["n"]) < 100:
+                  assert statistic.get("decision_weight_allowed") is False, result
+          PY
