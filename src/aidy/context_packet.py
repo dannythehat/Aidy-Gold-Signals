@@ -377,10 +377,10 @@ def _normalize_aidy_signal_state(
     active_signals: list[dict[str, Any]] = []
     for raw in raw_signals:
         if not isinstance(raw, Mapping):
-            raise TypeError("Each active AIDY`signal must be an object.")
+            raise TypeError("Each active AIDY signal must be an object.")
         unknown = set(raw) - _SIGNAL_KEYS
         if unknown:
-            raise ValueError(f"Unsupported AIDY`active-signal fields: {sorted(unknown)}")
+            raise ValueError(f"Unsupported AIDY active-signal fields: {sorted(unknown)}")
 
         signal_id = str(raw.get("aidy_signal_id") or "").strip()
         if not signal_id:
@@ -391,7 +391,7 @@ def _normalize_aidy_signal_state(
         if raw.get("opened_at_utc") is not None and opened_at is None:
             raise ValueError("opened_at_utc must be timezone-aware.")
         if raw.get("updated_at_utc") is not None and updated_at is None:
-            raise ValueError,"updated_at_utc must be timezone-aware.")
+            raise ValueError("updated_at_utc must be timezone-aware.")
         if (opened_at and opened_at > as_of) or (updated_at and updated_at > as_of):
             raise ValueError("AIDY signal lifecycle cannot contain future state.")
 
