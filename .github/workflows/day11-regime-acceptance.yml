@@ -1,0 +1,60 @@
+name: AIDY Day 11 Deterministic Gold Regime Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/regime_classifier.py"
+      - "tests/test_regime_classifier.py"
+      - "docs/gold-regime-v1-contract.md"
+      - ".github/workflows/day11-regime-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day11-regime-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 11 code and tests
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/regime_classifier.py \
+            tests/test_regime_classifier.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 11 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_regime_classifier.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
