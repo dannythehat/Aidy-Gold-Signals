@@ -1,0 +1,64 @@
+name: AIDY Day 10 Objective Context Acceptance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/aidy/context_packet.py"
+      - "tests/test_context_packet.py"
+      - "tests/test_context_packet_event_timing.py"
+      - "docs/context-packet-v1-contract.md"
+      - ".github/workflows/day10-context-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day10-objective-context-acceptance
+  cancel-in-progress: false
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/day-10-objective-context-packet
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Ruff Day 10 code and tests
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/context_packet.py \
+            tests/test_context_packet.py \
+            tests/test_context_packet_event_timing.py
+
+      - name: Compile project
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 10 focused acceptance tests
+        run: |
+          set -euo pipefail
+          uv run pytest -q \
+            tests/test_context_packet.py \
+            tests/test_context_packet_event_timing.py
+
+      - name: Run full project regression suite
+        run: |
+          set -euo pipefail
+          uv run pytest -q
