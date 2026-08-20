@@ -130,6 +130,10 @@ def _merge_rows(
     rows: list[dict[str, Any]],
     run_id: str,
 ) -> tuple[int, int]:
+    # The stage table is dedicated to this acceptance probe. Clear any residue from a
+    # previous interrupted run before writing the current deterministic batch.
+    client.query(f"TRUNCATE TABLE `{stage_id}`").result()
+
     staged = [{"_run_id": run_id, **row} for row in rows]
     load_job = client.load_table_from_json(staged, stage_id)
     load_job.result()
@@ -169,7 +173,7 @@ def _merge_rows(
 
     case_ids = [row["case_id"] for row in rows]
     reconcile_sql = f"""
-        SELECT COUNT(*) AS rows, COUNT(DISTINCT case_id) AS identities
+        SELECT COUNT(*) AS row_count, COUNT(DISTINCT case_id) AS identity_count
         FROM `{table_id}`
         WHERE case_id IN UNNEST(@case_ids)
     """
@@ -178,7 +182,7 @@ def _merge_rows(
     )
     reconciliation = next(client.query(reconcile_sql, job_config=reconcile_config).result())
     client.query(f"DELETE FROM `{stage_id}` WHERE _run_id = @run_id", job_config=config).result()
-    return int(reconciliation["rows"]), int(reconciliation["identities"])
+    return int(reconciliation["row_count"]), int(reconciliation["identity_count"])
 
 
 def main() -> int:
@@ -263,7 +267,10 @@ def main() -> int:
 
     distribution = historical_case_distribution(cases)
     complete_move_cases = sum(
-        all(label["coverage_state"] == "complete" for label in case["future_evaluation"]["move_bundle"]["labels"])
+        all(
+            label["coverage_state"] == "complete"
+            for label in case["future_evaluation"]["move_bundle"]["labels"]
+        )
         for case in cases
     )
     result = {
