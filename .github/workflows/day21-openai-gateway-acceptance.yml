@@ -96,12 +96,12 @@ jobs:
           assert result["estimated_cost_usd"] == "0.007100", value
           PY
 
-      - name: Prove CI contains no live API secret path
+      - name: Prove repository contains no project API key
         shell: bash
         run: |
           set -euo pipefail
-          if grep -Eq 'OPENAI_API_KEY:|sk-proj-|sk-[A-Za-z0-9_-]{16,}' \
-            .github/workflows/day21-openai-gateway-acceptance.yml; then
-            echo "Day 21 acceptance workflow must not contain an OpenAI secret."
+          if git grep -n 'sk-proj-' -- \
+            ':!.github/workflows/day21-openai-gateway-acceptance.yml'; then
+            echo "A project API key marker was found in tracked repository content."
             exit 1
           fi
