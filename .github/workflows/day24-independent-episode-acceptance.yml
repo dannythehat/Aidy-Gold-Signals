@@ -8,6 +8,7 @@ on:
       - "src/aidy/evidence_grading_v2.py"
       - "tests/test_day24_independent_retrieval.py"
       - "scripts/day24_independent_episode_acceptance.py"
+      - "scripts/day24_bigquery_runner.py"
       - "docs/day24-independent-episode-retrieval-preregistration.md"
       - ".github/workflows/day24-independent-episode-acceptance.yml"
 
@@ -68,7 +69,8 @@ jobs:
             src/aidy/analogue_retrieval_v2.py \
             src/aidy/evidence_grading_v2.py \
             tests/test_day24_independent_retrieval.py \
-            scripts/day24_independent_episode_acceptance.py
+            scripts/day24_independent_episode_acceptance.py \
+            scripts/day24_bigquery_runner.py
           uv run python -m compileall -q src scripts tests
 
       - name: Run Day 24 focused tests
@@ -109,7 +111,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run python scripts/day24_independent_episode_acceptance.py \
+          uv run python scripts/day24_bigquery_runner.py \
             --output-dir day24_artifacts \
             > /tmp/day24-summary.json
           cat /tmp/day24-summary.json
