@@ -1,0 +1,183 @@
+name: AIDY Day 25 Market Structure Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/market_structure_context.py"
+      - "src/aidy/context_packet_v2.py"
+      - "src/aidy/historical_case_context_v2.py"
+      - "src/aidy/analogue_retrieval_v3.py"
+      - "src/aidy/j5_epoch_effect.py"
+      - "tests/test_day25_market_structure.py"
+      - "scripts/day25_market_structure_acceptance.py"
+      - "docs/day25-market-structure-preregistration.md"
+      - ".github/workflows/day25-market-structure-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: day25-market-structure-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+  AIDY_BIGQUERY_DATASET: aidy_analytics_test
+  AIDY_BIGQUERY_LOCATION: EU
+  DAY25_BASE_SHA: 9c2d0e33177c40bbc123f380bce68ffe2430f504
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 24 base and accepted modules untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${DAY25_BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "$DAY25_BASE_SHA" HEAD
+          test "$(git merge-base "$DAY25_BASE_SHA" HEAD)" = "$DAY25_BASE_SHA"
+          git diff --exit-code "$DAY25_BASE_SHA" -- \
+            src/aidy/context_packet.py \
+            src/aidy/historical_cases.py \
+            src/aidy/analogue_retrieval.py \
+            src/aidy/analogue_retrieval_v2.py \
+            src/aidy/evidence_grading_v2.py \
+            src/aidy/market_sessions.py \
+            scripts/day23_independence_baseline.py \
+            scripts/day24_independent_episode_acceptance.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/market_structure_context.py \
+            src/aidy/context_packet_v2.py \
+            src/aidy/historical_case_context_v2.py \
+            src/aidy/analogue_retrieval_v3.py \
+            src/aidy/j5_epoch_effect.py \
+            tests/test_day25_market_structure.py \
+            scripts/day25_market_structure_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Run Day 25 focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day25_market_structure.py
+
+      - name: Run full regression suite once
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || {
+            echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"
+            exit 1
+          }
+          python - <<'PY'
+          import json
+          import os
+
+          info = json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Run exact frozen Day 25 warehouse acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day25_market_structure_acceptance.py \
+            --output-dir day25_artifacts \
+            > /tmp/day25-summary.json
+          cat /tmp/day25-summary.json
+
+      - name: Enforce Day 25 evidence contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+
+          with open("day25_artifacts/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "9c2d0e33177c40bbc123f380bce68ffe2430f504", result
+          assert result["frozen_manifest_digest"] == "119d8c2a1a11cba44d8195fff81be640f7b9c084d0d7b8c28a61dedfa64e5ac5", result
+          assert result["frozen_query_count"] == 1000, result
+          assert result["query_removed_or_replaced"] is False, result
+          assert result["candidate_store_snapshot_digest"] == "bd3c81b54ec05b2150e6e6ecbdffbc3c1e4f943c6a23c9a8ee4977c1dc1c3a88", result
+          assert result["candidate_case_count"] == 36, result
+          assert result["pre_day25_epoch_relaxation_query_count"] == 0, result
+          assert result["candidate_order_reproducible_query_count"] == 1000, result
+          assert result["day24_gates_unchanged"] == {
+              "min_similarity_score": "0.72",
+              "min_component_coverage": "0.65",
+              "embargo_minutes": 240,
+              "episode_horizon_minutes": 240,
+          }, result
+          assert result["outcome_values_used_for_epoch_assignment"] is False, result
+          assert result["outcome_values_used_for_retrieval_selection"] is False, result
+          assert result["bigquery_evidence"]["result_rows"] == 1000, result
+
+          j5 = result["j5"]
+          assert j5["j5_version"] == "aidy_j5_market_structure_epoch_effect_v1", j5
+          assert j5["minimum_pair_count_per_class"] == 10, j5
+          assert j5["new_24x7_minimum_independent_cases"] == 10, j5
+          assert j5["outcome_used_for_epoch_assignment"] is False, j5
+          assert j5["outcome_used_for_stratum_assignment"] is False, j5
+          assert j5["outcome_used_for_episode_representative_selection"] is False, j5
+          assert j5["j5_conclusion"] in {
+              "INSUFFICIENT",
+              "SUPPORTS_LOWER_SAME_EPOCH_DISPERSION",
+              "DOES_NOT_SUPPORT_LOWER_SAME_EPOCH_DISPERSION",
+          }, j5
+          assert j5["new_24x7_epoch_conclusion"] in {
+              "INSUFFICIENT",
+              "SUFFICIENT_FOR_DESCRIPTIVE_COMPARISON",
+          }, j5
+          PY
+
+      - name: Preserve exact Day 25 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day25-market-structure-${{ github.event.pull_request.head.sha }}
+          path: day25_artifacts/
+          if-no-files-found: error
+          retention-days: 90
