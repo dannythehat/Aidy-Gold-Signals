@@ -89,11 +89,15 @@ Pairs are formed only after grouping on decision-time/input-boundary fields:
 
 No future outcome is used to create the stratum or assign the epoch.
 
+### Episode independence
+
+Within each matching stratum, cases with overlapping complete 240-minute outcome windows are collapsed into connected temporal episodes before pair construction. The deterministic representative is the lexicographically smallest `case_id`; outcomes do not choose the representative. J5 reports both raw eligible-case counts and independent representative counts. This prevents clustered timestamps from manufacturing pair count.
+
 ### Outcome
 
 Only a complete Move Detective 240-minute label is eligible. The frozen descriptive outcome is `path_stats.terminal_return_bps`.
 
-For every eligible within-stratum pair calculate:
+For every eligible **episode-independent representative** pair within a stratum calculate:
 
 `abs(terminal_return_bps_a - terminal_return_bps_b)`
 
@@ -114,19 +118,19 @@ Report separately for same-epoch and cross-epoch pairs:
 - p75
 - maximum absolute terminal-return difference in bps
 
-Also report source-case counts by epoch and complete-240m case counts by epoch.
+Also report raw source-case counts, complete-240m case counts and independent episode-representative counts by epoch.
 
 ### Frozen conclusion rule
 
-Minimum pair count per comparison class: **10**.
+Minimum **episode-independent pair count** per comparison class: **10**.
 
 - If either same-epoch or cross-epoch has fewer than 10 matched pairs: `INSUFFICIENT`.
 - If both have at least 10 pairs and same-epoch median absolute difference is lower than cross-epoch median: `SUPPORTS_LOWER_SAME_EPOCH_DISPERSION`.
 - If both have at least 10 pairs and that ordering is not present: `DOES_NOT_SUPPORT_LOWER_SAME_EPOCH_DISPERSION`.
 
-The new post-24-Jul-2026 1-Ounce 24/7 epoch is separately considered `INSUFFICIENT` unless it has at least **10 complete independent historical cases**. Day 25 acceptance explicitly allows this result.
+The new post-24-Jul-2026 1-Ounce 24/7 epoch is separately considered `INSUFFICIENT` unless it has at least **10 complete independent historical episode representatives**. Day 25 acceptance explicitly allows this result.
 
-No threshold, structural boundary, stratum definition, outcome field or conclusion rule may be changed after observing J5.
+No threshold, structural boundary, stratum definition, independence rule, outcome field or conclusion rule may be changed after observing J5.
 
 ## Acceptance invariants
 
