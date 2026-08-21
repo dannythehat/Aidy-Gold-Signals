@@ -29,7 +29,7 @@ _UNKNOWN = {"", "unknown", "unavailable", "unavailable_by_retrospective_provenan
 _COMPONENTS: tuple[tuple[str, tuple[str, ...], str, Decimal, Decimal | None], ...] = (
     ("session", ("regime", "session"), "categorical", Decimal("1.00"), None),
     ("event_timing", ("regime", "event_timing"), "categorical", Decimal("1.00"), None),
-    ("h1_atr", ("h1_atr_14_bps",), "numeric", Decimal("1.00"), Decimal("40")),
+    ("h1_atr", ("h1_atr_14_bps",), "numeric", Decimal("1.00"), Decimal(40)),
     (
         "range_position",
         ("m15_range_position_20",),
@@ -583,7 +583,7 @@ def retrieve_analogues_v2(
     no_reason = None
     if not returned:
         if exclusion_counts:
-            no_reason = sorted(exclusion_counts.items(), key=lambda item: (-item[1], item[0]))[0][0]
+            no_reason = min(exclusion_counts.items(), key=lambda item: (-item[1], item[0]))[0]
         else:
             no_reason = "no_eligible_candidate"
     result = {
