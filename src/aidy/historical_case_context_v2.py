@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import copy
+import json
 from collections.abc import Iterable, Mapping
 from datetime import datetime
+from hashlib import sha256
 from typing import Any
 
 from aidy.historical_cases import (
-    build_historical_case,
+    CASE_VERSION,
     compute_case_input_digest,
+    compute_historical_case_digest,
     verify_historical_case_digest,
 )
 from aidy.market_structure_context import (
@@ -17,6 +20,14 @@ from aidy.market_structure_context import (
 )
 
 HISTORICAL_CASE_CONTEXT_VERSION_V2 = "aidy_historical_case_structural_context_v2"
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _digest(value: object) -> str:
+    return sha256(_canonical_json(value).encode()).hexdigest()
 
 
 def enrich_input_boundary_with_market_structure(
@@ -51,7 +62,12 @@ def enrich_historical_case_with_market_structure(
     case: Mapping[str, Any],
     official_schedule_records: Iterable[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
-    """Create a valid derived canonical case without mutating the accepted v1 case."""
+    """Create a valid derived canonical case without mutating accepted evidence.
+
+    Future-evaluation bytes are copied exactly. Only the decision/input boundary and
+    identities derived from that boundary change. No outcome value participates in
+    structural assignment.
+    """
 
     if not verify_historical_case_digest(case):
         raise ValueError("Day 25 enrichment requires a valid accepted historical case.")
@@ -64,24 +80,21 @@ def enrich_historical_case_with_market_structure(
         input_boundary=boundary,
         official_schedule_records=official_schedule_records,
     )
-    return build_historical_case(
-        input_boundary=enriched_boundary,
-        move_bundle=(
-            dict(future["move_bundle"])
-            if isinstance(future.get("move_bundle"), Mapping)
-            else None
-        ),
-        trade_outcome_bundle=(
-            dict(future["trade_outcome_bundle"])
-            if isinstance(future.get("trade_outcome_bundle"), Mapping)
-            else None
-        ),
-        no_trade_counterfactual=(
-            dict(future["no_trade_counterfactual"])
-            if isinstance(future.get("no_trade_counterfactual"), Mapping)
-            else None
-        ),
+    result = copy.deepcopy(dict(case))
+    result["input_boundary"] = enriched_boundary
+    result["case_id"] = _digest(
+        {
+            "case_version": CASE_VERSION,
+            "symbol": result["symbol"],
+            "as_of_utc": result["as_of_utc"],
+            "provenance_class": result["provenance_class"],
+            "input_digest": enriched_boundary["input_digest"],
+        }
     )
+    result["case_digest"] = compute_historical_case_digest(result)
+    if not verify_historical_case_digest(result):
+        raise RuntimeError("Derived Day 25 historical case digest does not reproduce.")
+    return result
 
 
 def enrich_historical_cases_with_market_structure(
