@@ -10,8 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from aidy.analogue_retrieval import reconstruct_case_from_storage_row
-from aidy.analogue_retrieval_v3 import retrieve_analogues_v3, verify_retrieval_digest_v3
+from aidy.analogue_retrieval_v2 import retrieve_analogues_v2, verify_retrieval_digest_v2
+from aidy.analogue_retrieval_v3 import enrich_query_with_market_structure
 from aidy.day23_research import canonical_json, digest, freeze_query_manifest
+from aidy.historical_case_context_v2 import enrich_historical_case_with_market_structure
 from aidy.j5_epoch_effect import J5_VERSION, run_j5_epoch_effect, verify_j5_digest
 from aidy.market_structure_context import (
     MARKET_STRUCTURE_CONTEXT_VERSION,
@@ -283,6 +285,11 @@ def main() -> int:
     if not verify_j5_digest(j5) or j5["j5_version"] != J5_VERSION:
         raise RuntimeError("J5 result failed its frozen digest/version contract.")
 
+    # The 36 source cases are immutable for this experiment, so enrich them once.
+    # Rebuilding the same derived cases inside each of 1,000 queries adds compute
+    # without adding evidence or a new determinism check.
+    prepared_cases = [enrich_historical_case_with_market_structure(case=case) for case in cases]
+
     result_rows: list[dict[str, Any]] = []
     artifact_rows: list[dict[str, Any]] = []
     query_epochs: Counter[str] = Counter()
@@ -291,28 +298,35 @@ def main() -> int:
     known_epoch_relaxation_count = 0
     reproducible_count = 0
 
-    for index, query in enumerate(queries, start=1):
-        result = retrieve_analogues_v3(query=query, candidate_cases=cases)
-        reversed_result = retrieve_analogues_v3(
+    for index, source_query in enumerate(queries, start=1):
+        query = enrich_query_with_market_structure(source_query)
+        retrieval = retrieve_analogues_v2(query=query, candidate_cases=prepared_cases)
+        reversed_retrieval = retrieve_analogues_v2(
             query=query,
-            candidate_cases=list(reversed(cases)),
+            candidate_cases=list(reversed(prepared_cases)),
         )
-        if not verify_retrieval_digest_v3(result):
-            raise RuntimeError(f"Day 25 retrieval digest failed at query {index}.")
-        if result["day25_retrieval_digest"] != reversed_result["day25_retrieval_digest"]:
+        if not verify_retrieval_digest_v2(retrieval):
+            raise RuntimeError(f"Day 25 delegated retrieval digest failed at query {index}.")
+        if retrieval["retrieval_digest"] != reversed_retrieval["retrieval_digest"]:
             raise RuntimeError(f"Candidate-order determinism failed at query {index}.")
         reproducible_count += 1
 
-        delegated = result["retrieval"]
-        query_epochs[str(result["query_market_structure_epoch"])] += 1
-        evidence_states[str(delegated["evidence_state"])] += 1
-        exclusion_counts.update(delegated["exclusion_counts"])
+        epoch = str(query["analogue_features"]["market_structure_epoch"])
+        query_epochs[epoch] += 1
+        evidence_states[str(retrieval["evidence_state"])] += 1
+        exclusion_counts.update(retrieval["exclusion_counts"])
         forbidden = "market_structure_epoch_unavailable_pre_day25"
-        if any(item.get("name") == forbidden for item in delegated["gate_relaxations"]):
+        if any(item.get("name") == forbidden for item in retrieval["gate_relaxations"]):
             known_epoch_relaxation_count += 1
 
-        payload_digest = str(result["day25_retrieval_digest"])
-        source_query_id = str(query["query_id"])
+        payload = {
+            "source_query_id": source_query["query_id"],
+            "enriched_query_id": query["query_id"],
+            "query_market_structure_epoch": epoch,
+            "retrieval": retrieval,
+        }
+        payload_digest = digest(payload)
+        source_query_id = str(source_query["query_id"])
         result_rows.append(
             {
                 "experiment_id": EXPERIMENT,
@@ -321,7 +335,7 @@ def main() -> int:
                 "query_index": index,
                 "source_query_id": source_query_id,
                 "payload_digest": payload_digest,
-                "result_payload_json": canonical_json(result),
+                "result_payload_json": canonical_json(payload),
                 "recorded_at_utc": recorded_at,
             }
         )
@@ -329,12 +343,13 @@ def main() -> int:
             {
                 "query_index": index,
                 "source_query_id": source_query_id,
-                "day25_retrieval_digest": payload_digest,
-                "query_market_structure_epoch": result["query_market_structure_epoch"],
-                "evidence_state": delegated["evidence_state"],
-                "returned_match_count": delegated["returned_match_count"],
-                "exclusion_counts": delegated["exclusion_counts"],
-                "gate_relaxations": delegated["gate_relaxations"],
+                "enriched_query_id": query["query_id"],
+                "payload_digest": payload_digest,
+                "query_market_structure_epoch": epoch,
+                "evidence_state": retrieval["evidence_state"],
+                "returned_match_count": retrieval["returned_match_count"],
+                "exclusion_counts": retrieval["exclusion_counts"],
+                "gate_relaxations": retrieval["gate_relaxations"],
             }
         )
 
@@ -353,6 +368,8 @@ def main() -> int:
         "query_removed_or_replaced": False,
         "candidate_store_snapshot_digest": CANDIDATE_DIGEST,
         "candidate_case_count": len(cases),
+        "prepared_candidate_case_count": len(prepared_cases),
+        "candidate_enrichment_reused_across_queries": True,
         "query_epoch_counts": dict(sorted(query_epochs.items())),
         "candidate_epoch_counts": dict(sorted(candidate_epochs.items())),
         "retrieval_evidence_states": dict(sorted(evidence_states.items())),
