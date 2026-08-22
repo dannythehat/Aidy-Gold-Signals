@@ -12,6 +12,9 @@ CANDIDATE_COUNT = 36
 RESULT_TABLE = "research_day26_price_structure_results"
 SUMMARY_TABLE = "research_day26_summary"
 PIT_CANDLE_SOURCE = "gold_api"
+QUERY_TIMEOUT_SECONDS = 180
+QUERY_PAGE_SIZE = 10_000
+QUERY_PROGRESS_EVERY = 25_000
 
 
 def utc(value: Any) -> datetime:
@@ -33,18 +36,37 @@ def query_config(bigquery: Any, pairs: list[tuple[str, str, Any]]) -> Any:
     )
 
 
+def _query_rows(
+    client: Any,
+    sql: str,
+    *,
+    label: str,
+    job_config: Any | None = None,
+) -> list[dict[str, Any]]:
+    print(f"WAREHOUSE {label}: query start", flush=True)
+    job = client.query(sql, job_config=job_config)
+    iterator = job.result(timeout=QUERY_TIMEOUT_SECONDS, page_size=QUERY_PAGE_SIZE)
+    print(f"WAREHOUSE {label}: query complete; retrieving rows", flush=True)
+    rows: list[dict[str, Any]] = []
+    for index, item in enumerate(iterator, start=1):
+        rows.append(row(item))
+        if index % QUERY_PROGRESS_EVERY == 0:
+            print(f"WAREHOUSE {label}: retrieved {index} rows", flush=True)
+    print(f"WAREHOUSE {label}: retrieval complete rows={len(rows)}", flush=True)
+    return rows
+
+
 def load_candidate_snapshot(client: Any, project: str, dataset: str) -> list[dict[str, Any]]:
     table = f"{project}.{dataset}.research_gold_cases"
-    rows = [
-        row(item)
-        for item in client.query(
-            f"""SELECT case_id, case_digest, input_digest, as_of_utc,
-                       future_available_after_utc, provenance_class, data_quality_grade
-                FROM `{table}`
-                WHERE symbol='XAUUSD'
-                ORDER BY as_of_utc, case_id"""
-        ).result()
-    ]
+    rows = _query_rows(
+        client,
+        f"""SELECT case_id, case_digest, input_digest, as_of_utc,
+                   future_available_after_utc, provenance_class, data_quality_grade
+            FROM `{table}`
+            WHERE symbol='XAUUSD'
+            ORDER BY as_of_utc, case_id""",
+        label="candidate-snapshot",
+    )
     snapshot = [
         {
             "case_id": str(item["case_id"]),
@@ -82,7 +104,20 @@ WITH anchors AS (
   SELECT
     a.case_id AS anchor_case_id,
     a.as_of_utc AS anchor_as_of_utc,
-    c.*,
+    c.symbol,
+    c.timeframe,
+    c.open_time_utc,
+    c.open,
+    c.high,
+    c.low,
+    c.close,
+    c.research_identity,
+    c.provenance_class,
+    c.pit_eligible,
+    c.source,
+    c.source_file_sha256,
+    c.source_payload_sha256,
+    c.derivation_version,
     ROW_NUMBER() OVER (
       PARTITION BY a.case_id, c.timeframe
       ORDER BY c.open_time_utc DESC, c.research_identity DESC
@@ -99,12 +134,16 @@ FROM ranked
 WHERE timeframe_rank <= 2048
 ORDER BY anchor_as_of_utc, anchor_case_id, timeframe, open_time_utc
 """.strip()
+    raw_rows = _query_rows(client, sql, label="research-windows")
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for item in client.query(sql).result():
-        payload = row(item)
+    for payload in raw_rows:
         anchor = str(payload.pop("anchor_case_id"))
         payload.pop("anchor_as_of_utc", None)
         grouped[anchor].append(payload)
+    print(
+        f"WAREHOUSE research-windows: grouped anchors={len(grouped)} rows={len(raw_rows)}",
+        flush=True,
+    )
     return dict(grouped)
 
 
@@ -120,18 +159,18 @@ def load_pit_probe(
         bigquery,
         [("symbol", "STRING", "XAUUSD"), ("cutoff", "TIMESTAMP", cutoff)],
     )
-    snapshot_rows = list(
-        client.query(
-            f"""SELECT * FROM `{snapshot_table}`
-                WHERE symbol=@symbol AND captured_at <= @cutoff
-                ORDER BY captured_at DESC, load_identity DESC
-                LIMIT 1""",
-            job_config=config,
-        ).result()
+    snapshot_rows = _query_rows(
+        client,
+        f"""SELECT * FROM `{snapshot_table}`
+            WHERE symbol=@symbol AND captured_at <= @cutoff
+            ORDER BY captured_at DESC, load_identity DESC
+            LIMIT 1""",
+        label="pit-snapshot",
+        job_config=config,
     )
     if not snapshot_rows:
         raise RuntimeError("Day 26 requires one real PIT snapshot at/before the frozen cutoff.")
-    snapshot = row(snapshot_rows[0])
+    snapshot = snapshot_rows[0]
     as_of = utc(snapshot["captured_at"])
 
     candle_table = f"{project}.{dataset}.market_candles"
@@ -143,35 +182,34 @@ def load_pit_probe(
             ("as_of", "TIMESTAMP", as_of),
         ],
     )
-    rows = [
-        row(item)
-        for item in client.query(
-            f"""WITH eligible AS (
-                  SELECT *, ROW_NUMBER() OVER (
-                    PARTITION BY source, symbol, timeframe, open_time_utc
-                    ORDER BY first_observed_at DESC, revision_index DESC, load_identity DESC
-                  ) AS revision_rank
-                  FROM `{candle_table}`
-                  WHERE symbol=@symbol
-                    AND source=@source
-                    AND open_time_utc <= @as_of
-                    AND first_observed_at <= @as_of
-                ), canonical AS (
-                  SELECT * EXCEPT(revision_rank), ROW_NUMBER() OVER (
-                    PARTITION BY timeframe
-                    ORDER BY open_time_utc DESC, first_observed_at DESC,
-                             revision_index DESC, load_identity DESC
-                  ) AS timeframe_rank
-                  FROM eligible
-                  WHERE revision_rank=1
-                )
-                SELECT * EXCEPT(timeframe_rank)
-                FROM canonical
-                WHERE timeframe_rank <= 2048
-                ORDER BY timeframe, open_time_utc""",
-            job_config=candle_config,
-        ).result()
-    ]
+    rows = _query_rows(
+        client,
+        f"""WITH eligible AS (
+              SELECT *, ROW_NUMBER() OVER (
+                PARTITION BY source, symbol, timeframe, open_time_utc
+                ORDER BY first_observed_at DESC, revision_index DESC, load_identity DESC
+              ) AS revision_rank
+              FROM `{candle_table}`
+              WHERE symbol=@symbol
+                AND source=@source
+                AND open_time_utc <= @as_of
+                AND first_observed_at <= @as_of
+            ), canonical AS (
+              SELECT * EXCEPT(revision_rank), ROW_NUMBER() OVER (
+                PARTITION BY timeframe
+                ORDER BY open_time_utc DESC, first_observed_at DESC,
+                         revision_index DESC, load_identity DESC
+              ) AS timeframe_rank
+              FROM eligible
+              WHERE revision_rank=1
+            )
+            SELECT * EXCEPT(timeframe_rank)
+            FROM canonical
+            WHERE timeframe_rank <= 2048
+            ORDER BY timeframe, open_time_utc""",
+        label="pit-candles",
+        job_config=candle_config,
+    )
     if not rows:
         raise RuntimeError("Day 26 PIT probe found no canonical Gold candles.")
     return as_of, snapshot, rows
@@ -203,6 +241,7 @@ def persist_results(
     experiment: str,
     rows: list[dict[str, Any]],
 ) -> None:
+    print("WAREHOUSE persist-results: start", flush=True)
     schema = [
         bigquery.SchemaField("experiment_id", "STRING", mode="REQUIRED"),
         bigquery.SchemaField("base_sha", "STRING", mode="REQUIRED"),
@@ -217,12 +256,14 @@ def persist_results(
     ]
     ensure_table(client, bigquery, not_found, table_id, schema)
     config = query_config(bigquery, [("experiment", "STRING", experiment)])
+    existing_rows = _query_rows(
+        client,
+        f"SELECT anchor_id,payload_digest FROM `{table_id}` WHERE experiment_id=@experiment",
+        label="persist-results-existing",
+        job_config=config,
+    )
     existing = {
-        str(item["anchor_id"]): str(item["payload_digest"])
-        for item in client.query(
-            f"SELECT anchor_id,payload_digest FROM `{table_id}` WHERE experiment_id=@experiment",
-            job_config=config,
-        ).result()
+        str(item["anchor_id"]): str(item["payload_digest"]) for item in existing_rows
     }
     missing: list[dict[str, Any]] = []
     for payload in rows:
@@ -232,20 +273,23 @@ def persist_results(
         if anchor not in existing:
             missing.append(payload)
     if missing:
+        print(f"WAREHOUSE persist-results: appending rows={len(missing)}", flush=True)
         job = client.load_table_from_json(
             missing,
             table_id,
             job_config=bigquery.LoadJobConfig(schema=schema, write_disposition="WRITE_APPEND"),
         )
-        job.result()
-    check = next(
-        client.query(
-            f"SELECT COUNT(*) n,COUNT(DISTINCT anchor_id) ids FROM `{table_id}` WHERE experiment_id=@experiment",
-            job_config=config,
-        ).result()
+        job.result(timeout=QUERY_TIMEOUT_SECONDS)
+    check_rows = _query_rows(
+        client,
+        f"SELECT COUNT(*) n,COUNT(DISTINCT anchor_id) ids FROM `{table_id}` WHERE experiment_id=@experiment",
+        label="persist-results-check",
+        job_config=config,
     )
+    check = check_rows[0]
     if int(check["n"]) != len(rows) or int(check["ids"]) != len(rows):
         raise RuntimeError("Day 26 result reconciliation failed.")
+    print("WAREHOUSE persist-results: complete", flush=True)
 
 
 def persist_summary(
@@ -258,6 +302,7 @@ def persist_summary(
     recorded_at: str,
     canonical_json: Any,
 ) -> None:
+    print("WAREHOUSE persist-summary: start", flush=True)
     schema = [
         bigquery.SchemaField("experiment_id", "STRING", mode="REQUIRED"),
         bigquery.SchemaField("base_sha", "STRING", mode="REQUIRED"),
@@ -268,13 +313,13 @@ def persist_summary(
     ]
     ensure_table(client, bigquery, not_found, table_id, schema)
     config = query_config(bigquery, [("experiment", "STRING", experiment)])
-    existing = [
-        str(item["payload_digest"])
-        for item in client.query(
-            f"SELECT payload_digest FROM `{table_id}` WHERE experiment_id=@experiment",
-            job_config=config,
-        ).result()
-    ]
+    existing_rows = _query_rows(
+        client,
+        f"SELECT payload_digest FROM `{table_id}` WHERE experiment_id=@experiment",
+        label="persist-summary-existing",
+        job_config=config,
+    )
+    existing = [str(item["payload_digest"]) for item in existing_rows]
     if existing and existing != [summary["summary_digest"]]:
         raise RuntimeError("Immutable Day 26 summary conflict.")
     if not existing:
@@ -291,4 +336,5 @@ def persist_summary(
             table_id,
             job_config=bigquery.LoadJobConfig(schema=schema, write_disposition="WRITE_APPEND"),
         )
-        job.result()
+        job.result(timeout=QUERY_TIMEOUT_SECONDS)
+    print("WAREHOUSE persist-summary: complete", flush=True)
