@@ -1,23 +1,13 @@
-name: AIDY Day 26 Price Structure Acceptance
+name: AIDY Day 26 Price Structure Acceptance (manual fallback)
 
+# GitHub Actions is deliberately NOT triggered by pull-request pushes.
+# Day 26 authoritative acceptance is scripts/day26_cloudshell_acceptance.sh.
+# This workflow remains only as an explicit manual fallback after Actions quota is available.
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "src/aidy/price_structure_v2.py"
-      - "src/aidy/context_packet_v3.py"
-      - "tests/test_day26_price_structure.py"
-      - "scripts/day26_acceptance_support.py"
-      - "scripts/day26_price_structure_acceptance.py"
-      - "docs/day26-price-structure-contract.md"
-      - ".github/workflows/day26-price-structure-acceptance.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: day26-price-structure-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
 
 env:
   AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
@@ -25,17 +15,17 @@ env:
   AIDY_BIGQUERY_DATASET: aidy_analytics_test
   AIDY_BIGQUERY_LOCATION: EU
   DAY26_BASE_SHA: 262bf436dcd948d0dabe554f93d64edb82726121
-  DAY26_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  DAY26_HEAD_SHA: ${{ github.sha }}
 
 jobs:
   acceptance:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - name: Checkout exact candidate head
+      - name: Checkout exact selected head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Verify Day 25 base and accepted modules untouched
@@ -43,7 +33,6 @@ jobs:
         run: |
           set -euo pipefail
           git cat-file -e "${DAY26_BASE_SHA}^{commit}"
-          git merge-base --is-ancestor "$DAY26_BASE_SHA" HEAD
           test "$(git merge-base "$DAY26_BASE_SHA" HEAD)" = "$DAY26_BASE_SHA"
           git diff --exit-code "$DAY26_BASE_SHA" -- \
             src/aidy/feature_engine.py \
@@ -85,64 +74,23 @@ jobs:
             src/aidy/price_structure_v2.py src/aidy/context_packet_v3.py
 
       - name: Run Day 26 focused tests
-        shell: bash
-        run: |
-          set -euo pipefail
-          uv run pytest -q tests/test_day26_price_structure.py
+        run: uv run pytest -q tests/test_day26_price_structure.py
 
       - name: Run full regression suite once
-        shell: bash
-        run: |
-          set -euo pipefail
-          uv run pytest -q
-
-      - name: Install bounded BigQuery dependency
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}"
-          uv pip install 'google-cloud-bigquery>=3.42,<4'
+        run: uv run pytest -q
 
       - name: Run frozen Day 26 warehouse acceptance
         shell: bash
         run: |
           set -euo pipefail
-          uv run python scripts/day26_price_structure_acceptance.py --output-dir day26_artifacts > /tmp/day26-summary.json
-          cat /tmp/day26-summary.json
-
-      - name: Enforce Day 26 evidence contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          from datetime import datetime
-
-          with open("day26_artifacts/summary.json", encoding="utf-8") as handle:
-              result = json.load(handle)
-          assert result["ok"] is True, result
-          assert result["base_sha"] == "262bf436dcd948d0dabe554f93d64edb82726121", result
-          assert result["head_sha"] == "${{ github.event.pull_request.head.sha }}", result
-          assert result["candidate_store_snapshot_digest"] == "bd3c81b54ec05b2150e6e6ecbdffbc3c1e4f943c6a23c9a8ee4977c1dc1c3a88", result
-          assert result["retrospective_anchor_count"] == 36, result
-          assert result["retrospective_input_order_reproducible_count"] == 36, result
-          assert result["real_pit_probe_count"] == 1, result
-          assert result["pit_input_order_reproducible"] is True, result
-          assert result["bigquery_evidence"]["result_rows"] == 37, result
-          assert all(result["prior_period_known_anchor_counts"].get(key, 0) > 0 for key in ("prior_day", "prior_week", "prior_month")), result
-          assert result["retrospective_arrival_latency_fabricated"] is False, result
-          assert result["historical_spread_inference_included"] is False, result
-          assert result["threshold_based_feed_health_gate_included"] is False, result
-          assert result["future_values_used"] is False, result
-          assert result["predictive_edge_claimed"] is False, result
-          assert result["accepted_prior_modules_modified"] is False, result
-          assert datetime.fromisoformat(result["pit_probe_as_of_utc"]) <= datetime.fromisoformat(result["pit_probe_cutoff_utc"]), result
-          PY
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}"
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+          uv run python scripts/day26_price_structure_acceptance.py --output-dir day26_artifacts
 
       - name: Preserve exact Day 26 evidence
         uses: actions/upload-artifact@v4
         with:
-          name: aidy-day26-price-structure-${{ github.event.pull_request.head.sha }}
+          name: aidy-day26-price-structure-${{ github.sha }}
           path: day26_artifacts/
           if-no-files-found: error
           retention-days: 90
