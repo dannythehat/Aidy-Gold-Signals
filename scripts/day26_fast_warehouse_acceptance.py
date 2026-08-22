@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib
 
-
 support = importlib.import_module("day26_acceptance_support")
 WINDOW_LIMIT = 2048
 
