@@ -1,43 +1,140 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Any
 
 import day26_acceptance_support as support
 
 
-QUERY_TIMEOUT_SECONDS = 180
+WINDOW_LIMIT = 2048
 
 
-def _fast_query_rows(
+def _deduplicated_research_windows(
     client: Any,
-    sql: str,
-    *,
-    label: str,
-    job_config: Any | None = None,
-) -> list[dict[str, Any]]:
-    """Fetch a completed BigQuery result through the Storage API.
+    project: str,
+    dataset: str,
+) -> dict[str, list[dict[str, Any]]]:
+    """Reconstruct the exact frozen per-anchor windows from one deduplicated transfer.
 
-    The Day-26 acceptance query can return hundreds of thousands of duplicated
-    anchor/candle rows. The normal REST RowIterator is correct but painfully
-    slow in Cloud Shell. BigQuery Storage preserves the same query result while
-    using the bulk read path. Scientific logic and frozen evidence are unchanged.
+    The original acceptance query joined every historical candle to every later
+    anchor, so the same candle crossed the network many times. This query first
+    computes the exact last-2048 membership for every frozen anchor/timeframe,
+    then returns the DISTINCT union of those candle rows. Local reconstruction
+    filters that union back to each anchor and takes the same last-2048 ordering.
+    No scientific definition, anchor, cutoff, feature or evidence gate changes.
     """
 
-    print(f"WAREHOUSE {label}: query start", flush=True)
-    job = client.query(sql, job_config=job_config)
-    iterator = job.result(timeout=QUERY_TIMEOUT_SECONDS)
-    print(f"WAREHOUSE {label}: query complete; bulk retrieval start", flush=True)
-    table = iterator.to_arrow(create_bqstorage_client=True)
-    rows = table.to_pylist()
-    print(f"WAREHOUSE {label}: bulk retrieval complete rows={len(rows)}", flush=True)
-    return rows
+    case_table = f"{project}.{dataset}.research_gold_cases"
+    candle_table = f"{project}.{dataset}.research_candles"
+
+    anchors = support._query_rows(
+        client,
+        f"""SELECT case_id, as_of_utc
+            FROM `{case_table}`
+            WHERE symbol='XAUUSD'
+            ORDER BY as_of_utc, case_id""",
+        label="research-anchor-index",
+    )
+    if len(anchors) != support.CANDIDATE_COUNT:
+        raise RuntimeError(
+            f"Expected {support.CANDIDATE_COUNT} frozen anchors, found {len(anchors)}"
+        )
+
+    sql = f"""
+WITH anchors AS (
+  SELECT case_id, as_of_utc
+  FROM `{case_table}`
+  WHERE symbol='XAUUSD'
+), ranked AS (
+  SELECT
+    a.case_id AS anchor_case_id,
+    c.symbol,
+    c.timeframe,
+    c.open_time_utc,
+    c.open,
+    c.high,
+    c.low,
+    c.close,
+    c.research_identity,
+    c.provenance_class,
+    c.pit_eligible,
+    c.source,
+    c.source_file_sha256,
+    c.source_payload_sha256,
+    c.derivation_version,
+    ROW_NUMBER() OVER (
+      PARTITION BY a.case_id, c.timeframe
+      ORDER BY c.open_time_utc DESC, c.research_identity DESC
+    ) AS timeframe_rank
+  FROM anchors a
+  JOIN `{candle_table}` c
+    ON c.symbol='XAUUSD'
+   AND c.open_time_utc <= a.as_of_utc
+  WHERE c.provenance_class='retrospective_history'
+    AND c.pit_eligible=FALSE
+), exact_union AS (
+  SELECT DISTINCT
+    symbol,
+    timeframe,
+    open_time_utc,
+    open,
+    high,
+    low,
+    close,
+    research_identity,
+    provenance_class,
+    pit_eligible,
+    source,
+    source_file_sha256,
+    source_payload_sha256,
+    derivation_version
+  FROM ranked
+  WHERE timeframe_rank <= {WINDOW_LIMIT}
+)
+SELECT *
+FROM exact_union
+ORDER BY timeframe, open_time_utc, research_identity
+""".strip()
+
+    unique_rows = support._query_rows(client, sql, label="research-window-union")
+    by_timeframe: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for payload in unique_rows:
+        by_timeframe[str(payload["timeframe"])].append(payload)
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    reconstructed_total = 0
+    for anchor in anchors:
+        case_id = str(anchor["case_id"])
+        as_of = support.utc(anchor["as_of_utc"])
+        selected: list[dict[str, Any]] = []
+        for timeframe in sorted(by_timeframe):
+            eligible = [
+                payload
+                for payload in by_timeframe[timeframe]
+                if support.utc(payload["open_time_utc"]) <= as_of
+            ]
+            eligible.sort(
+                key=lambda payload: (
+                    support.utc(payload["open_time_utc"]),
+                    str(payload["research_identity"]),
+                )
+            )
+            selected.extend(dict(payload) for payload in eligible[-WINDOW_LIMIT:])
+        grouped[case_id] = selected
+        reconstructed_total += len(selected)
+
+    print(
+        "WAREHOUSE research-windows: "
+        f"unique_transfer_rows={len(unique_rows)} "
+        f"reconstructed_anchor_rows={reconstructed_total} "
+        f"anchors={len(grouped)}",
+        flush=True,
+    )
+    return grouped
 
 
 def main() -> int:
-    # Existing support functions resolve _query_rows from their module globals at
-    # call time, so this transport-only replacement applies to candidate,
-    # retrospective-window and PIT reads without changing any acceptance logic.
-    support._query_rows = _fast_query_rows
+    support.load_research_windows = _deduplicated_research_windows
 
     import day26_price_structure_acceptance as acceptance
 
