@@ -47,3 +47,6 @@ known-first-party = ["aidy"]
 # AIDY's explicit DST-aware Eastern-to-UTC converter.
 "src/aidy/official_macro.py" = ["DTZ001", "DTZ007", "SIM117"]
 "src/aidy/fomc_calendar_parser.py" = ["DTZ001"]
+# Day-26 price-structure tests intentionally construct Decimal values from
+# explicit strings so fixture values remain visibly decimal and exact.
+"tests/test_day26_price_structure.py" = ["FURB157"]
