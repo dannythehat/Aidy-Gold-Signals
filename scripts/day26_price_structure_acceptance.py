@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -29,6 +30,7 @@ from day26_acceptance_support import (
     utc,
 )
 
+DEFAULT_PROJECT = "aidy-signals"
 DEFAULT_DATASET = "aidy_analytics_test"
 DEFAULT_LOCATION = "EU"
 PIT_PROBE_CUTOFF = datetime(2026, 8, 21, 9, 30, tzinfo=UTC)
@@ -36,7 +38,15 @@ PIT_PROBE_CUTOFF = datetime(2026, 8, 21, 9, 30, tzinfo=UTC)
 
 def _args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Day 26 price-structure warehouse acceptance")
-    parser.add_argument("--project", default=os.environ.get("AIDY_GCP_PROJECT_ID"))
+    parser.add_argument(
+        "--project",
+        default=(
+            os.environ.get("AIDY_GCP_PROJECT_ID")
+            or os.environ.get("GOOGLE_CLOUD_PROJECT")
+            or os.environ.get("GCLOUD_PROJECT")
+            or DEFAULT_PROJECT
+        ),
+    )
     parser.add_argument("--dataset", default=os.environ.get("AIDY_BIGQUERY_DATASET", DEFAULT_DATASET))
     parser.add_argument("--location", default=os.environ.get("AIDY_BIGQUERY_LOCATION", DEFAULT_LOCATION))
     parser.add_argument("--output-dir", default="day26_artifacts")
@@ -83,24 +93,64 @@ def _assert_packet(packet: dict[str, Any], *, mode: str) -> None:
         raise RuntimeError("Unexpected Day 26 mode.")
 
 
+def _bigquery_client(*, project: str, location: str) -> tuple[Any, Any, Any]:
+    """Create a BigQuery client without coupling acceptance to GitHub Actions.
+
+    Priority:
+    1. Existing AIDY service-account JSON (CI-compatible path).
+    2. Google Application Default Credentials (Cloud Shell / local gcloud path).
+    3. Short-lived token from the already-authenticated gcloud CLI.
+
+    No credential value is printed or persisted by this function.
+    """
+
+    from google.api_core.exceptions import NotFound
+    from google.auth import default as google_auth_default
+    from google.auth.exceptions import DefaultCredentialsError
+    from google.cloud import bigquery
+    from google.oauth2 import service_account
+    from google.oauth2.credentials import Credentials
+
+    secret = os.environ.get("AIDY_GCP_SERVICE_ACCOUNT_JSON")
+    if secret:
+        credentials = service_account.Credentials.from_service_account_info(json.loads(secret))
+        return (
+            bigquery.Client(project=project, credentials=credentials, location=location),
+            bigquery,
+            NotFound,
+        )
+
+    try:
+        credentials, _ = google_auth_default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform"]
+        )
+    except DefaultCredentialsError:
+        token = subprocess.check_output(
+            ["gcloud", "auth", "print-access-token"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        if not token:
+            raise SystemExit("No Google credential available from ADC or authenticated gcloud.")
+        credentials = Credentials(token=token)
+
+    return (
+        bigquery.Client(project=project, credentials=credentials, location=location),
+        bigquery,
+        NotFound,
+    )
+
+
 def main() -> int:
     args = _args()
     if not args.project:
-        raise SystemExit("AIDY_GCP_PROJECT_ID or --project is required.")
+        raise SystemExit("A Google Cloud project is required.")
     head_sha = (os.environ.get("DAY26_HEAD_SHA") or "").strip()
     if len(head_sha) != 40:
         raise SystemExit("DAY26_HEAD_SHA must be the exact 40-character PR head SHA.")
     experiment = f"day26-price-structure-20260824-{head_sha[:12]}"
 
-    from google.api_core.exceptions import NotFound
-    from google.cloud import bigquery
-    from google.oauth2 import service_account
-
-    secret = os.environ.get("AIDY_GCP_SERVICE_ACCOUNT_JSON")
-    if not secret:
-        raise SystemExit("AIDY_GCP_SERVICE_ACCOUNT_JSON is required.")
-    credentials = service_account.Credentials.from_service_account_info(json.loads(secret))
-    client = bigquery.Client(project=args.project, credentials=credentials, location=args.location)
+    client, bigquery, NotFound = _bigquery_client(project=args.project, location=args.location)
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
     recorded_at = datetime.now(UTC).isoformat()
