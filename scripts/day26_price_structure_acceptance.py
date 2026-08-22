@@ -9,13 +9,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aidy.day23_research import canonical_json, digest
-from aidy.price_structure_v2 import (
-    FEED_HEALTH_VERSION,
-    PRICE_STRUCTURE_VERSION,
-    build_price_structure_packet,
-    verify_price_structure_packet,
-)
 from day26_acceptance_support import (
     BASE_SHA,
     CANDIDATE_COUNT,
@@ -28,6 +21,14 @@ from day26_acceptance_support import (
     persist_results,
     persist_summary,
     utc,
+)
+
+from aidy.day23_research import canonical_json, digest
+from aidy.price_structure_v2 import (
+    FEED_HEALTH_VERSION,
+    PRICE_STRUCTURE_VERSION,
+    build_price_structure_packet,
+    verify_price_structure_packet,
 )
 
 DEFAULT_PROJECT = "aidy-signals"
@@ -47,8 +48,12 @@ def _args() -> argparse.Namespace:
             or DEFAULT_PROJECT
         ),
     )
-    parser.add_argument("--dataset", default=os.environ.get("AIDY_BIGQUERY_DATASET", DEFAULT_DATASET))
-    parser.add_argument("--location", default=os.environ.get("AIDY_BIGQUERY_LOCATION", DEFAULT_LOCATION))
+    parser.add_argument(
+        "--dataset", default=os.environ.get("AIDY_BIGQUERY_DATASET", DEFAULT_DATASET)
+    )
+    parser.add_argument(
+        "--location", default=os.environ.get("AIDY_BIGQUERY_LOCATION", DEFAULT_LOCATION)
+    )
     parser.add_argument("--output-dir", default="day26_artifacts")
     return parser.parse_args()
 
@@ -308,8 +313,12 @@ def main() -> int:
         "swing_reversion_anchor_counts": dict(sorted(swing_reversions.items())),
         "pit_quote_feed_state": pit_packet["feed_health"]["quote"]["quote_state"],
         "pit_quote_age_seconds": pit_packet["feed_health"]["quote"]["quote_age_seconds"],
-        "pit_m1_last_observation_age_seconds": pit_packet["feed_health"]["timeframes"]["M1"]["last_observation_age_seconds"],
-        "pit_m1_interbar_gap_count": pit_packet["feed_health"]["timeframes"]["M1"]["interbar_gap_count"],
+        "pit_m1_last_observation_age_seconds": pit_packet["feed_health"]["timeframes"]["M1"][
+            "last_observation_age_seconds"
+        ],
+        "pit_m1_interbar_gap_count": pit_packet["feed_health"]["timeframes"]["M1"][
+            "interbar_gap_count"
+        ],
         "retrospective_arrival_latency_fabricated": False,
         "historical_spread_inference_included": False,
         "threshold_based_feed_health_gate_included": False,

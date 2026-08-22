@@ -68,7 +68,9 @@ def load_candidate_snapshot(client: Any, project: str, dataset: str) -> list[dic
     return snapshot
 
 
-def load_research_windows(client: Any, project: str, dataset: str) -> dict[str, list[dict[str, Any]]]:
+def load_research_windows(
+    client: Any, project: str, dataset: str
+) -> dict[str, list[dict[str, Any]]]:
     case_table = f"{project}.{dataset}.research_gold_cases"
     candle_table = f"{project}.{dataset}.research_candles"
     sql = f"""

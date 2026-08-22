@@ -5,10 +5,11 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation, localcontext
 from hashlib import sha256
+from itertools import pairwise
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from aidy.feature_engine import Candle, FEATURE_DEFINITION_VERSION, normalize_candles
+from aidy.feature_engine import FEATURE_DEFINITION_VERSION, Candle, normalize_candles
 from aidy.historical_backfill import RETROSPECTIVE_PROVENANCE
 
 PRICE_STRUCTURE_VERSION = "aidy_gold_price_structure_v2"
@@ -156,7 +157,10 @@ def _prior_periods(d1: list[Candle], *, as_of: datetime) -> dict[str, Any]:
     prior_week_rows = [
         candle
         for candle in d1
-        if (candle.open_time_utc.date().isocalendar().year, candle.open_time_utc.date().isocalendar().week)
+        if (
+            candle.open_time_utc.date().isocalendar().year,
+            candle.open_time_utc.date().isocalendar().week,
+        )
         != (current_iso.year, current_iso.week)
         and candle.open_time_utc.date() < as_of.date()
     ]
@@ -224,7 +228,9 @@ def _window_rows(m1: list[Candle], *, start: datetime, end: datetime) -> list[Ca
 def _asia_overnight_range(m1: list[Candle], *, as_of: datetime) -> dict[str, Any]:
     zone, start_time, end_time = _SESSION_SPECS["asia"]
     local_now = as_of.astimezone(zone)
-    local_day = local_now.date() if local_now.time() >= start_time else local_now.date() - timedelta(days=1)
+    local_day = (
+        local_now.date() if local_now.time() >= start_time else local_now.date() - timedelta(days=1)
+    )
     start_utc, end_utc = _local_interval(local_day, zone, start_time, end_time)
     expected = int((end_utc - start_utc).total_seconds() // 60)
     base = {
@@ -236,13 +242,34 @@ def _asia_overnight_range(m1: list[Candle], *, as_of: datetime) -> dict[str, Any
         "expected_m1_bars": expected,
     }
     if as_of < start_utc:
-        return {**base, "state": "not_started", "observed_m1_bars": 0, "high": None, "low": None, "source_identities": []}
+        return {
+            **base,
+            "state": "not_started",
+            "observed_m1_bars": 0,
+            "high": None,
+            "low": None,
+            "source_identities": [],
+        }
     if as_of < end_utc:
         observed = _window_rows(m1, start=start_utc, end=min(as_of, end_utc))
-        return {**base, "state": "forming", "observed_m1_bars": len(observed), "high": None, "low": None, "source_identities": _source_ids(observed)}
+        return {
+            **base,
+            "state": "forming",
+            "observed_m1_bars": len(observed),
+            "high": None,
+            "low": None,
+            "source_identities": _source_ids(observed),
+        }
     rows = _window_rows(m1, start=start_utc, end=end_utc)
     if len(rows) != expected:
-        return {**base, "state": "incomplete", "observed_m1_bars": len(rows), "high": None, "low": None, "source_identities": _source_ids(rows)}
+        return {
+            **base,
+            "state": "incomplete",
+            "observed_m1_bars": len(rows),
+            "high": None,
+            "low": None,
+            "source_identities": _source_ids(rows),
+        }
     return {
         **base,
         "state": "known",
@@ -275,13 +302,34 @@ def _opening_range(
         "expected_m1_bars": minutes,
     }
     if as_of <= start_utc:
-        return {**base, "state": "not_started", "observed_m1_bars": 0, "high": None, "low": None, "source_identities": []}
+        return {
+            **base,
+            "state": "not_started",
+            "observed_m1_bars": 0,
+            "high": None,
+            "low": None,
+            "source_identities": [],
+        }
     rows = _window_rows(m1, start=start_utc, end=min(as_of, end_utc))
     if as_of < end_utc:
-        return {**base, "state": "forming", "observed_m1_bars": len(rows), "high": None, "low": None, "source_identities": _source_ids(rows)}
+        return {
+            **base,
+            "state": "forming",
+            "observed_m1_bars": len(rows),
+            "high": None,
+            "low": None,
+            "source_identities": _source_ids(rows),
+        }
     rows = _window_rows(m1, start=start_utc, end=end_utc)
     if len(rows) != minutes:
-        return {**base, "state": "incomplete", "observed_m1_bars": len(rows), "high": None, "low": None, "source_identities": _source_ids(rows)}
+        return {
+            **base,
+            "state": "incomplete",
+            "observed_m1_bars": len(rows),
+            "high": None,
+            "low": None,
+            "source_identities": _source_ids(rows),
+        }
     return {
         **base,
         "state": "known",
@@ -293,14 +341,24 @@ def _opening_range(
 
 
 def _opening_ranges(m1: list[Candle], *, as_of: datetime) -> dict[str, Any]:
-    return {
+    result: dict[str, Any] = {
         "definition": "accepted_day25_liquidity_opening_ranges_v1",
-        session: {
-            f"{minutes}m": _opening_range(m1, as_of=as_of, session=session, minutes=minutes)
-            for minutes in _OPENING_RANGE_MINUTES
-        }
-        for session in _SESSION_SPECS
     }
+    result.update(
+        {
+            session: {
+                f"{minutes}m": _opening_range(
+                    m1,
+                    as_of=as_of,
+                    session=session,
+                    minutes=minutes,
+                )
+                for minutes in _OPENING_RANGE_MINUTES
+            }
+            for session in _SESSION_SPECS
+        }
+    )
+    return result
 
 
 def _session_extreme(m1: list[Candle], *, as_of: datetime, session: str) -> dict[str, Any]:
@@ -318,7 +376,15 @@ def _session_extreme(m1: list[Candle], *, as_of: datetime, session: str) -> dict
         "full_session_expected_m1_bars": full_expected,
     }
     if as_of <= start_utc:
-        return {**base, "state": "not_started", "elapsed_expected_m1_bars": 0, "observed_m1_bars": 0, "high": None, "low": None, "source_identities": []}
+        return {
+            **base,
+            "state": "not_started",
+            "elapsed_expected_m1_bars": 0,
+            "observed_m1_bars": 0,
+            "high": None,
+            "low": None,
+            "source_identities": [],
+        }
     observation_end = min(as_of, end_utc)
     elapsed_expected = max(0, int((observation_end - start_utc).total_seconds() // 60))
     rows = _window_rows(m1, start=start_utc, end=observation_end)
@@ -342,14 +408,18 @@ def _session_extreme(m1: list[Candle], *, as_of: datetime, session: str) -> dict
 
 
 def _session_extremes(m1: list[Candle], *, as_of: datetime) -> dict[str, Any]:
-    return {
+    result: dict[str, Any] = {
         "definition": "accepted_day25_named_session_extremes_v1",
-        session: _session_extreme(m1, as_of=as_of, session=session)
-        for session in _SESSION_SPECS
     }
+    result.update(
+        {session: _session_extreme(m1, as_of=as_of, session=session) for session in _SESSION_SPECS}
+    )
+    return result
 
 
-def _utc_day_gap(m1: list[Candle], *, as_of: datetime, prior_day: Mapping[str, Any]) -> dict[str, Any]:
+def _utc_day_gap(
+    m1: list[Candle], *, as_of: datetime, prior_day: Mapping[str, Any]
+) -> dict[str, Any]:
     prior_close = _decimal(prior_day.get("close")) if prior_day.get("state") == "known" else None
     today = [item for item in m1 if item.open_time_utc.date() == as_of.date()]
     if prior_close is None or not today:
@@ -382,7 +452,11 @@ def _utc_day_gap(m1: list[Candle], *, as_of: datetime, prior_day: Mapping[str, A
         "current_utc_day_open": _fmt(current_open),
         "gap_bps": _fmt(size),
         "direction": direction,
-        "fill_state": "not_applicable" if direction == "flat" else "filled" if filled else "unfilled",
+        "fill_state": "not_applicable"
+        if direction == "flat"
+        else "filled"
+        if filled
+        else "unfilled",
         "first_completed_m1_open_time_utc": ordered[0].open_time_utc.isoformat(),
         "source_identities": _source_ids(ordered),
     }
@@ -434,7 +508,9 @@ def _trend_persistence(m15: list[Candle]) -> dict[str, Any]:
     }
 
 
-def _breakout_state(m1: list[Candle], *, as_of: datetime, prior_day: Mapping[str, Any]) -> dict[str, Any]:
+def _breakout_state(
+    m1: list[Candle], *, as_of: datetime, prior_day: Mapping[str, Any]
+) -> dict[str, Any]:
     prior_high = _decimal(prior_day.get("high")) if prior_day.get("state") == "known" else None
     prior_low = _decimal(prior_day.get("low")) if prior_day.get("state") == "known" else None
     today = [item for item in m1 if item.open_time_utc.date() == as_of.date()]
@@ -518,12 +594,14 @@ def _wick_footprint(m15: list[Candle]) -> dict[str, Any]:
     }
 
 
-def _latest_confirmed_swing(candles: list[Candle], *, high: bool, wing: int = 2) -> tuple[int, Candle] | None:
+def _latest_confirmed_swing(
+    candles: list[Candle], *, high: bool, wing: int = 2
+) -> tuple[int, Candle] | None:
     if len(candles) < wing * 2 + 1:
         return None
     for index in range(len(candles) - wing - 1, wing - 1, -1):
         candidate = candles[index]
-        neighbors = candles[index - wing:index] + candles[index + 1:index + wing + 1]
+        neighbors = candles[index - wing : index] + candles[index + 1 : index + wing + 1]
         if high and all(candidate.high > item.high for item in neighbors):
             return index, candidate
         if not high and all(candidate.low < item.low for item in neighbors):
@@ -590,7 +668,10 @@ def _latency_values(
     for row in raw_rows:
         if _canonical_timeframe(row.get("timeframe")) != timeframe:
             continue
-        if row.get("provenance_class") == RETROSPECTIVE_PROVENANCE or row.get("pit_eligible") is False:
+        if (
+            row.get("provenance_class") == RETROSPECTIVE_PROVENANCE
+            or row.get("pit_eligible") is False
+        ):
             continue
         first_observed = row.get("first_observed_at")
         opened = row.get("open_time_utc")
@@ -618,7 +699,7 @@ def _timeframe_feed_health(
     recent = candles[-256:]
     gaps = [
         int((right.open_time_utc - left.open_time_utc).total_seconds())
-        for left, right in zip(recent, recent[1:])
+        for left, right in pairwise(recent)
     ]
     excess = [gap for gap in gaps if gap > duration]
     latest = recent[-1] if recent else None
@@ -629,7 +710,9 @@ def _timeframe_feed_health(
             "state": "observed" if latencies else "unknown",
             "sample_n": len(latencies),
             "min_first_observed_delay_from_open_seconds": None if not latencies else min(latencies),
-            "median_first_observed_delay_from_open_seconds": None if not latencies else latencies[(len(latencies) - 1) // 2],
+            "median_first_observed_delay_from_open_seconds": None
+            if not latencies
+            else latencies[(len(latencies) - 1) // 2],
             "max_first_observed_delay_from_open_seconds": None if not latencies else max(latencies),
         }
     else:
@@ -644,9 +727,13 @@ def _timeframe_feed_health(
         "state": "observed" if latest is not None else "unknown",
         "expected_interval_seconds": duration,
         "sample_bars": len(recent),
-        "latest_completed_bar_open_utc": None if latest is None else latest.open_time_utc.isoformat(),
+        "latest_completed_bar_open_utc": None
+        if latest is None
+        else latest.open_time_utc.isoformat(),
         "latest_completed_bar_end_utc": None if latest_end is None else latest_end.isoformat(),
-        "last_observation_age_seconds": None if latest_end is None else int((as_of - latest_end).total_seconds()),
+        "last_observation_age_seconds": None
+        if latest_end is None
+        else int((as_of - latest_end).total_seconds()),
         "interbar_gap_count": len(excess),
         "max_interbar_gap_seconds": None if not gaps else max(gaps),
         "arrival_observation": latency,
@@ -726,9 +813,7 @@ def build_price_structure_packet(
         "asia_overnight_range": _asia_overnight_range(completed["M1"], as_of=cutoff),
         "opening_ranges": _opening_ranges(completed["M1"], as_of=cutoff),
         "session_extremes": _session_extremes(completed["M1"], as_of=cutoff),
-        "utc_day_gap": _utc_day_gap(
-            completed["M1"], as_of=cutoff, prior_day=prior["prior_day"]
-        ),
+        "utc_day_gap": _utc_day_gap(completed["M1"], as_of=cutoff, prior_day=prior["prior_day"]),
         "trend_persistence_acceleration": _trend_persistence(completed["M15"]),
         "prior_day_breakout": _breakout_state(
             completed["M1"], as_of=cutoff, prior_day=prior["prior_day"]

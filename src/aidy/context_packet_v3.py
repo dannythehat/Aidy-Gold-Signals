@@ -52,7 +52,10 @@ def build_context_packet_v3(
         raise ValueError("Day 26 price structure and context packet must share the same T.")
     if price_structure_packet.get("symbol") != packet.get("symbol"):
         raise ValueError("Day 26 price structure and context packet symbols differ.")
-    if price_structure_packet.get("mode") != "pit" or price_structure_packet.get("pit_eligible") is not True:
+    if (
+        price_structure_packet.get("mode") != "pit"
+        or price_structure_packet.get("pit_eligible") is not True
+    ):
         raise ValueError("Live Day 26 context requires a PIT-eligible price-structure packet.")
 
     result = dict(packet)
