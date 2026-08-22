@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import importlib
-from collections import defaultdict
-from typing import Any
 
 
 support = importlib.import_module("day26_acceptance_support")
@@ -10,10 +8,10 @@ WINDOW_LIMIT = 2048
 
 
 def _deduplicated_research_windows(
-    client: Any,
+    client: object,
     project: str,
     dataset: str,
-) -> dict[str, list[dict[str, Any]]]:
+) -> dict[str, list[dict[str, object]]]:
     """Reconstruct the exact frozen per-anchor windows from one deduplicated transfer.
 
     The original acceptance query joined every historical candle to every later
@@ -97,16 +95,16 @@ ORDER BY timeframe, open_time_utc, research_identity
 """.strip()
 
     unique_rows = support._query_rows(client, sql, label="research-window-union")
-    by_timeframe: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    by_timeframe: dict[str, list[dict[str, object]]] = {}
     for payload in unique_rows:
-        by_timeframe[str(payload["timeframe"])].append(payload)
+        by_timeframe.setdefault(str(payload["timeframe"]), []).append(payload)
 
-    grouped: dict[str, list[dict[str, Any]]] = {}
+    grouped: dict[str, list[dict[str, object]]] = {}
     reconstructed_total = 0
     for anchor in anchors:
         case_id = str(anchor["case_id"])
         as_of = support.utc(anchor["as_of_utc"])
-        selected: list[dict[str, Any]] = []
+        selected: list[dict[str, object]] = []
         for timeframe in sorted(by_timeframe):
             eligible = [
                 payload
@@ -135,7 +133,6 @@ ORDER BY timeframe, open_time_utc, research_identity
 
 def main() -> int:
     support.load_research_windows = _deduplicated_research_windows
-
     acceptance = importlib.import_module("day26_price_structure_acceptance")
     return acceptance.main()
 
