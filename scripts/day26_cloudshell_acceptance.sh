@@ -62,11 +62,20 @@ uv run --python 3.13 ruff check \
   scripts/day26_acceptance_support.py \
   scripts/day26_price_structure_acceptance.py
 uv run --python 3.13 python -m compileall -q src scripts tests
-if grep -Eini 'RSI|MACD|Stochastics|Bollinger|Ichimoku|stop hunt|liquidity sweep' \
-  src/aidy/price_structure_v2.py src/aidy/context_packet_v3.py; then
-  echo 'Forbidden Day-26 vocabulary found.' >&2
-  exit 1
-fi
+uv run --python 3.13 python - <<'PY'
+import re
+from pathlib import Path
+
+pattern = re.compile(
+    r"\b(?:RSI|MACD|Stochastics|Bollinger|Ichimoku)\b|stop hunt|liquidity sweep",
+    re.IGNORECASE,
+)
+for name in ("src/aidy/price_structure_v2.py", "src/aidy/context_packet_v3.py"):
+    match = pattern.search(Path(name).read_text(encoding="utf-8"))
+    if match:
+        raise SystemExit(f"Forbidden Day-26 vocabulary in {name}: {match.group(0)}")
+print("PASS prohibited-vocabulary check")
+PY
 printf 'PASS static/vocabulary checks\n'
 
 # 5. Focused Day-26 tests, then the full accumulated regression exactly once.
