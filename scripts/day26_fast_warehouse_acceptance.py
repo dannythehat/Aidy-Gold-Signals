@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import importlib
 from collections import defaultdict
 from typing import Any
 
-import day26_acceptance_support as support
 
-
+support = importlib.import_module("day26_acceptance_support")
 WINDOW_LIMIT = 2048
 
 
@@ -136,8 +136,7 @@ ORDER BY timeframe, open_time_utc, research_identity
 def main() -> int:
     support.load_research_windows = _deduplicated_research_windows
 
-    import day26_price_structure_acceptance as acceptance
-
+    acceptance = importlib.import_module("day26_price_structure_acceptance")
     return acceptance.main()
 
 
