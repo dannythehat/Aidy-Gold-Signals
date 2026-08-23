@@ -1,0 +1,48 @@
+name: Day 32 research integrity acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/research_integrity.py"
+      - "tests/test_day32_research_integrity.py"
+      - "scripts/day32_research_integrity_acceptance.py"
+      - "docs/day32-research-integrity-contract.md"
+      - ".github/workflows/day32-research-integrity-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bounded acceptance dependencies
+        run: pip install -e . pytest ruff google-cloud-bigquery google-auth
+      - name: Changed-file lint
+        run: ruff check src/aidy/research_integrity.py tests/test_day32_research_integrity.py scripts/day32_research_integrity_acceptance.py
+      - name: Focused adversarial tests
+        run: pytest -q tests/test_day32_research_integrity.py
+      - name: Full regression
+        run: pytest -q
+      - name: Genuine bounded BigQuery acceptance
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+          AIDY_GCP_PROJECT_ID: aidy-signals
+          AIDY_BIGQUERY_DATASET: aidy_analytics_test
+          AIDY_BIGQUERY_LOCATION: EU
+        run: python scripts/day32_research_integrity_acceptance.py --bigquery --output-dir day32_artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: day32-research-integrity-evidence
+          path: day32_artifacts
+          if-no-files-found: error
+          retention-days: 7
