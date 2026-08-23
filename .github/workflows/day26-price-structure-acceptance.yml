@@ -1,0 +1,96 @@
+name: AIDY Day 26 Price Structure Acceptance (manual fallback)
+
+# GitHub Actions is deliberately NOT triggered by pull-request pushes.
+# Day 26 authoritative acceptance is scripts/day26_cloudshell_acceptance.sh.
+# This workflow remains only as an explicit manual fallback after Actions quota is available.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+  AIDY_GCP_PROJECT_ID: aidy-signals
+  AIDY_BIGQUERY_DATASET: aidy_analytics_test
+  AIDY_BIGQUERY_LOCATION: EU
+  DAY26_BASE_SHA: 262bf436dcd948d0dabe554f93d64edb82726121
+  DAY26_HEAD_SHA: ${{ github.sha }}
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact selected head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Verify Day 25 base and accepted modules untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e "${DAY26_BASE_SHA}^{commit}"
+          test "$(git merge-base "$DAY26_BASE_SHA" HEAD)" = "$DAY26_BASE_SHA"
+          git diff --exit-code "$DAY26_BASE_SHA" -- \
+            src/aidy/feature_engine.py \
+            src/aidy/context_packet.py \
+            src/aidy/context_packet_v2.py \
+            src/aidy/market_sessions.py \
+            src/aidy/market_structure_context.py \
+            src/aidy/historical_case_context_v2.py \
+            src/aidy/analogue_retrieval_v2.py \
+            src/aidy/analogue_retrieval_v3.py \
+            src/aidy/evidence_grading_v2.py \
+            src/aidy/j5_epoch_effect.py \
+            scripts/day25_market_structure_acceptance.py
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static and vocabulary checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/price_structure_v2.py \
+            src/aidy/context_packet_v3.py \
+            tests/test_day26_price_structure.py \
+            scripts/day26_acceptance_support.py \
+            scripts/day26_price_structure_acceptance.py
+          uv run python -m compileall -q src scripts tests
+          ! grep -Eini 'RSI|MACD|Stochastics|Bollinger|Ichimoku|stop hunt|liquidity sweep' \
+            src/aidy/price_structure_v2.py src/aidy/context_packet_v3.py
+
+      - name: Run Day 26 focused tests
+        run: uv run pytest -q tests/test_day26_price_structure.py
+
+      - name: Run full regression suite once
+        run: uv run pytest -q
+
+      - name: Run frozen Day 26 warehouse acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}"
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+          uv run python scripts/day26_price_structure_acceptance.py --output-dir day26_artifacts
+
+      - name: Preserve exact Day 26 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day26-price-structure-${{ github.sha }}
+          path: day26_artifacts/
+          if-no-files-found: error
+          retention-days: 90
