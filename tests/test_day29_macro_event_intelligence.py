@@ -147,6 +147,20 @@ def test_non_official_schedule_host_is_rejected() -> None:
         )
 
 
+def test_official_eta_claims_host_is_allowlisted() -> None:
+    schedule = build_schedule_observation(
+        event_class="initial_jobless_claims",
+        source_key="dol_initial_claims",
+        external_id="claims-2026-03-05",
+        scheduled_date="2026-03-05",
+        scheduled_time="08:30",
+        timezone_name="America/New_York",
+        first_observed_at="2026-03-01T12:00:00+00:00",
+        source_url="https://oui.doleta.gov/unemploy/claims.asp",
+    )
+    assert verify_schedule_observation(schedule)
+
+
 def test_as_of_selection_excludes_future_revisions_and_retrospective_rows() -> None:
     first = _schedule(observed=datetime(2026, 3, 1, 12, tzinfo=UTC), day=date(2026, 3, 6))
     revised = _schedule(observed=datetime(2026, 3, 3, 12, tzinfo=UTC), day=date(2026, 3, 7))

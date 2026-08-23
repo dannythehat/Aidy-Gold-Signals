@@ -41,8 +41,8 @@ SUMMARY_TABLE = "research_day29_summary"
 
 SOURCE_PROBES = {
     "dol_initial_claims": (
-        "https://www.dol.gov/newsroom/releases/eta",
-        ("unemployment insurance weekly claims",),
+        "https://oui.doleta.gov/unemploy/claims.asp",
+        ("unemployment insurance weekly claims data", "initial claims"),
     ),
     "ism_reports": (
         "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",

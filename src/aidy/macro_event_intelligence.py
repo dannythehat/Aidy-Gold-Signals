@@ -36,7 +36,7 @@ EVENT_CLASSES = (
 SOURCE_REGISTRY: dict[str, dict[str, Any]] = {
     "dol_initial_claims": {
         "institution": "US_DOL_ETA",
-        "hosts": ("dol.gov", "www.dol.gov"),
+        "hosts": ("dol.gov", "www.dol.gov", "oui.doleta.gov"),
         "event_classes": ("initial_jobless_claims",),
     },
     "ism_reports": {
