@@ -225,12 +225,17 @@ def main() -> int:
     args = _args()
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    recorded_at = datetime.now(UTC).isoformat()
+    capture_attempted_at = datetime.now(UTC).isoformat()
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     if len(head_sha) != 40:
         raise RuntimeError("Day 30 requires an exact Git head SHA.")
 
-    daily_records, calendar_records = _capture_sources(Path(args.cache_dir), recorded_at)
+    daily_records, calendar_records = _capture_sources(
+        Path(args.cache_dir), capture_attempted_at
+    )
+    recorded_at = str(daily_records[0]["first_observed_at"])
+    if any(str(row["first_observed_at"]) != recorded_at for row in daily_records):
+        raise RuntimeError("Day 30 cached bulletin rows disagree on first-observed time.")
     trade_date = max(str(row["trade_date"]) for row in daily_records)
     source_manifest_digest = digest(
         {
