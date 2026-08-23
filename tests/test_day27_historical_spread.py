@@ -139,7 +139,7 @@ def test_collapse_uses_last_genuine_tick_per_minute_and_no_volume_fields() -> No
         source_payload_sha256="b" * 64,
     )
     ticks = [
-        Tick(datetime(2025, 1, 6, 14, 0, 10, tzinfo=UTC), Decimal("100"), Decimal("100.02")),
+        Tick(datetime(2025, 1, 6, 14, 0, 10, tzinfo=UTC), Decimal(100), Decimal("100.02")),
         Tick(datetime(2025, 1, 6, 14, 0, 50, tzinfo=UTC), Decimal("100.01"), Decimal("100.04")),
         Tick(datetime(2025, 1, 6, 14, 1, 20, tzinfo=UTC), Decimal("100.02"), Decimal("100.05")),
     ]
