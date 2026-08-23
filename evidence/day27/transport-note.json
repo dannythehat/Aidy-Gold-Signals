@@ -1,0 +1,1 @@
+{"archive_validation":"ZIP validation plus source-file and payload SHA-256 provenance","credentials_sent_to_histdata":false,"histdata_transport":"HTTPS","reason":"HistData certificate reported expired by Google Cloud Shell on 2026-08-23","scope":"one-off public December-2024 and January-2025 XAUUSD tick archive prefetch only","tls_certificate_verified_for_prefetch":false}
