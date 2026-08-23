@@ -15,6 +15,11 @@ Redirects must remain on the CME HTTPS allowlist. Historical bulk settlement
 or open-interest data from DataMine is outside this acceptance and is not silently licensed,
 backfilled or fabricated. TAS is optional P2 and remains `unknown_not_ingested` in this version.
 
+When CME blocks a warehouse runner's cloud IP, acceptance may use the checked-in immutable capture
+seed produced from those same official HTTPS endpoints. Every seeded row retains the official URLs,
+document/payload SHA-256, CME publication time, AIDY first-observed time and record digest. The seed is
+verified through the same record contracts before warehouse insertion; no values are hand-entered.
+
 ## Immutable daily contract records
 
 `aidy_cme_gold_daily_settlement_oi_v1` stores, per trade date and contract month:

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import importlib.util
 from datetime import UTC, date, datetime, timedelta
 from hashlib import sha256
+from pathlib import Path
 
 import pytest
 
@@ -411,3 +413,27 @@ def test_context_v6_rejects_mismatched_as_of(monkeypatch: pytest.MonkeyPatch) ->
             macro_evidence_state="unknown",
             cross_market_rows=[],
         )
+
+
+def test_acceptance_uses_verified_seed_when_cloud_ip_is_blocked(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    spec = importlib.util.spec_from_file_location(
+        "day30_cme_contract_acceptance", "scripts/day30_cme_contract_acceptance.py"
+    )
+    assert spec is not None and spec.loader is not None
+    acceptance = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(acceptance)
+
+    class BlockedGateway:
+        def fetch_current(self, **kwargs: object) -> object:
+            raise CmeContractError("cme_bulletin_http_403")
+
+    monkeypatch.setattr(acceptance, "CmePublicBulletinGateway", BlockedGateway)
+    daily, calendar, transport = acceptance._capture_sources(
+        tmp_path, "2026-08-23T12:30:00+00:00"
+    )
+    assert len(daily) == 28
+    assert len(calendar) == 35
+    assert transport == "checked_in_verified_official_capture"
+    assert all(verify_daily_contract_record(row) for row in daily)

@@ -8,12 +8,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 from aidy.cme_contract_intelligence import (
     CME_CALENDAR_VERSION,
     CME_CONTRACT_INTELLIGENCE_VERSION,
     CME_DAILY_RECORD_VERSION,
     CME_GOLD_CALENDAR_DOWNLOAD_URL,
     J6_VERSION,
+    CmeContractError,
     CmePublicBulletinGateway,
     CmePublicCalendarGateway,
     build_contract_roll_state,
@@ -36,6 +39,7 @@ DAILY_TABLE = "research_day30_cme_daily_contracts"
 CALENDAR_TABLE = "research_day30_cme_contract_calendar"
 J6_TABLE = "research_day30_j6_open_interest"
 SUMMARY_TABLE = "research_day30_summary"
+SOURCE_SEED_DIR = Path(__file__).with_name("day30_official_source_seed")
 
 
 def _args() -> argparse.Namespace:
@@ -90,28 +94,49 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
-def _capture_sources(cache_dir: Path, recorded_at: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def _capture_sources(
+    cache_dir: Path, recorded_at: str
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
     cache_dir.mkdir(parents=True, exist_ok=True)
     daily_path = cache_dir / "daily_contract_records.jsonl"
     calendar_path = cache_dir / "contract_calendar.jsonl"
+    transport_path = cache_dir / "capture_transport.json"
     if daily_path.exists() and calendar_path.exists():
         daily_records = _read_jsonl(daily_path)
         calendar_records = _read_jsonl(calendar_path)
-    else:
-        snapshot = CmePublicBulletinGateway().fetch_current(first_observed_at=recorded_at)
-        daily_records = build_daily_contract_records(snapshot)
-        calendar_records = CmePublicCalendarGateway().fetch_current(
-            first_observed_at=recorded_at
+        transport = (
+            str(json.loads(transport_path.read_text(encoding="utf-8"))["transport"])
+            if transport_path.exists()
+            else "cached_official_capture"
         )
+    else:
+        try:
+            snapshot = CmePublicBulletinGateway().fetch_current(first_observed_at=recorded_at)
+            daily_records = build_daily_contract_records(snapshot)
+            calendar_records = CmePublicCalendarGateway().fetch_current(
+                first_observed_at=recorded_at
+            )
+            transport = "official_https"
+        except (CmeContractError, httpx.HTTPError):
+            seed_daily = SOURCE_SEED_DIR / "daily_contract_records.jsonl"
+            seed_calendar = SOURCE_SEED_DIR / "contract_calendar.jsonl"
+            if not seed_daily.exists() or not seed_calendar.exists():
+                raise RuntimeError(
+                    "Day 30 live CME capture failed and the verified official seed is absent."
+                ) from None
+            daily_records = _read_jsonl(seed_daily)
+            calendar_records = _read_jsonl(seed_calendar)
+            transport = "checked_in_verified_official_capture"
         _write_jsonl(daily_path, daily_records)
         _write_jsonl(calendar_path, calendar_records)
+        _write_json(transport_path, {"transport": transport})
     if not daily_records or not all(verify_daily_contract_record(row) for row in daily_records):
         raise RuntimeError("Day 30 daily CME capture failed its immutable record contract.")
     if not calendar_records or not all(
         verify_contract_calendar_observation(row) for row in calendar_records
     ):
         raise RuntimeError("Day 30 CME calendar capture failed its immutable record contract.")
-    return daily_records, calendar_records
+    return daily_records, calendar_records, transport
 
 
 def _client(project: str, location: str) -> tuple[Any, Any, type[Exception]]:
@@ -229,7 +254,7 @@ def main() -> int:
     if len(head_sha) != 40:
         raise RuntimeError("Day 30 requires an exact Git head SHA.")
 
-    daily_records, calendar_records = _capture_sources(
+    daily_records, calendar_records, source_capture_transport = _capture_sources(
         Path(args.cache_dir), capture_attempted_at
     )
     recorded_at = str(daily_records[0]["first_observed_at"])
@@ -411,6 +436,10 @@ def main() -> int:
         "official_source_count": 2,
         "official_source_auth_required": False,
         "official_source_paid_api_used": False,
+        "official_source_capture_transport": source_capture_transport,
+        "official_source_seed_used": (
+            source_capture_transport == "checked_in_verified_official_capture"
+        ),
         "official_source_manifest_digest": source_manifest_digest,
         "daily_contract_count": len(daily_records),
         "calendar_contract_count": len(calendar_records),
