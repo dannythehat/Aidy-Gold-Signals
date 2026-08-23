@@ -6,7 +6,6 @@ from typing import Any
 
 from aidy.context_packet import compute_context_hash
 from aidy.context_packet_v4 import build_context_packet_v4
-
 from aidy.macro_event_intelligence import (
     EVENT_INTELLIGENCE_VERSION,
     verify_event_intelligence_state,
