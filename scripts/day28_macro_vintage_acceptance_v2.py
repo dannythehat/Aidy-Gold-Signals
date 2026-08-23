@@ -11,6 +11,7 @@ from urllib.parse import urlencode
 
 import day28_macro_vintage_acceptance as acceptance
 import httpx
+
 from aidy.macro_vintages import AlfredSnapshot
 
 _FRED_OBSERVATIONS_URL = "https://api.stlouisfed.org/fred/series/observations"
@@ -43,7 +44,13 @@ def _parse_fred_snapshot(
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise RuntimeError("Day 28 FRED API returned invalid JSON.") from exc
 
-    observations = payload.get("observations") if isinstance(payload, dict) else None
+    if not isinstance(payload, dict):
+        raise RuntimeError("Day 28 FRED API response is not an object.")
+    vintage_text = vintage.isoformat()
+    if payload.get("realtime_start") != vintage_text or payload.get("realtime_end") != vintage_text:
+        raise RuntimeError("Day 28 FRED API response real-time period does not match requested vintage.")
+
+    observations = payload.get("observations")
     if not isinstance(observations, list):
         raise RuntimeError("Day 28 FRED API response has no observations list.")
 
@@ -77,8 +84,8 @@ def _load_snapshots_v2(cache_dir: Path) -> list[AlfredSnapshot]:
     """Capture PIT snapshots through the authenticated official FRED API."""
 
     api_key = os.environ.get("FRED_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError("Day 28 requires FRED_API_KEY in the process environment.")
+    if len(api_key) != 32 or not api_key.isalnum() or api_key.lower() != api_key:
+        raise RuntimeError("Day 28 FRED_API_KEY is missing or malformed.")
 
     cache_dir = cache_dir / "fred_api"
     cache_dir.mkdir(parents=True, exist_ok=True)
@@ -176,7 +183,11 @@ def _load_snapshots_v2(cache_dir: Path) -> list[AlfredSnapshot]:
 def _persist_with_fred_metadata(*args: Any, **kwargs: Any) -> int:
     rows = kwargs.get("rows")
     table_id = str(kwargs.get("table_id", ""))
-    if table_id.endswith(f".{acceptance.SUMMARY_TABLE}") and isinstance(rows, list) and rows:
+    if (
+        table_id.endswith(f".{acceptance.SUMMARY_TABLE}")
+        and isinstance(rows, list)
+        and rows
+    ):
         row = rows[0]
         summary = row.get("summary_json") if isinstance(row, dict) else None
         if isinstance(summary, dict):
