@@ -50,9 +50,3 @@ known-first-party = ["aidy"]
 # Day-26 price-structure tests intentionally construct Decimal values from
 # explicit strings so fixture values remain visibly decimal and exact.
 "tests/test_day26_price_structure.py" = ["FURB157"]
-# Day-27 keeps the formatting helper's explicit integer acceptance visible;
-# PYI041 treats int|float as redundant because int is accepted by float typing.
-"src/aidy/historical_spread.py" = ["PYI041"]
-# Day-27 spread fixtures intentionally use Decimal strings so decimal precision
-# and the distinction between whole-price and fractional-price values are explicit.
-"tests/test_day27_historical_spread.py" = ["FURB157"]
