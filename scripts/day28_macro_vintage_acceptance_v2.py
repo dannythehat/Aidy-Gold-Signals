@@ -45,19 +45,19 @@ def _parse_fred_snapshot(
         raise RuntimeError("Day 28 FRED API returned invalid JSON.") from exc
 
     if not isinstance(payload, dict):
-        raise RuntimeError("Day 28 FRED API response is not an object.")
+        raise TypeError("Day 28 FRED API response is not an object.")
     vintage_text = vintage.isoformat()
     if payload.get("realtime_start") != vintage_text or payload.get("realtime_end") != vintage_text:
         raise RuntimeError("Day 28 FRED API response real-time period does not match requested vintage.")
 
     observations = payload.get("observations")
     if not isinstance(observations, list):
-        raise RuntimeError("Day 28 FRED API response has no observations list.")
+        raise TypeError("Day 28 FRED API response has no observations list.")
 
     values: list[tuple[date, str | None]] = []
     for item in observations:
         if not isinstance(item, dict):
-            raise RuntimeError("Day 28 FRED API observation is not an object.")
+            raise TypeError("Day 28 FRED API observation is not an object.")
         try:
             observation_date = date.fromisoformat(str(item["date"]))
         except (KeyError, ValueError) as exc:
@@ -112,7 +112,7 @@ def _load_snapshots_v2(cache_dir: Path) -> list[AlfredSnapshot]:
                         snapshot = _parse_fred_snapshot(
                             path.read_bytes(), series_id=series_id, vintage=vintage
                         )
-                    except (OSError, RuntimeError):
+                    except (OSError, RuntimeError, TypeError):
                         print(
                             f"DAY28 FRED invalid-cache {series_id} {vintage}; refetching",
                             flush=True,
