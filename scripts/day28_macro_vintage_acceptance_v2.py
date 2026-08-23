@@ -3,10 +3,14 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-import httpx
-
 import day28_macro_vintage_acceptance as acceptance
-from aidy.macro_vintages import AlfredSnapshot, alfred_url, parse_alfred_csv
+import httpx
+from aidy.macro_vintages import (
+    AlfredSnapshot,
+    MacroVintageError,
+    alfred_url,
+    parse_alfred_csv,
+)
 
 _RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
 _MAX_ATTEMPTS = 6
@@ -65,7 +69,7 @@ def _load_snapshots_v2(cache_dir: Path) -> list[AlfredSnapshot]:
                             vintage=vintage,
                             url=url,
                         )
-                    except Exception:
+                    except (MacroVintageError, ValueError, OSError):
                         print(
                             f"DAY28 SOURCE invalid-cache {series_id} {vintage}; refetching",
                             flush=True,
