@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import os
 import time
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
@@ -12,7 +13,7 @@ from urllib.parse import urlencode
 import day28_macro_vintage_acceptance as acceptance
 import httpx
 
-from aidy.macro_vintages import AlfredSnapshot
+from aidy.macro_vintages import AlfredSnapshot, SERIES_T10YIE
 
 _FRED_OBSERVATIONS_URL = "https://api.stlouisfed.org/fred/series/observations"
 _RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
@@ -130,7 +131,7 @@ def _load_snapshots_v2(cache_dir: Path) -> list[AlfredSnapshot]:
                         "observation_end": acceptance.OBSERVATION_END.isoformat(),
                         "output_type": "1",
                     }
-                    last_error: BaseException | None = None
+                    last_error: Exception | None = None
                     for attempt in range(1, _MAX_ATTEMPTS + 1):
                         try:
                             response = client.get(_FRED_OBSERVATIONS_URL, params=params)
@@ -180,6 +181,87 @@ def _load_snapshots_v2(cache_dir: Path) -> list[AlfredSnapshot]:
     return snapshots
 
 
+def _utc(value: datetime | str) -> datetime:
+    parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
+    if parsed.tzinfo is None:
+        raise ValueError("Day 28 acceptance timestamps must be timezone-aware.")
+    return parsed.astimezone(UTC)
+
+
+def _canonical_decimal(value: Decimal) -> str:
+    text = format(value, "f").rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _same_observation_reference(
+    records: list[dict[str, Any]],
+    *,
+    observation_date: str,
+    as_of: datetime | str,
+) -> dict[str, Any] | None:
+    cutoff = _utc(as_of)
+    eligible: list[dict[str, Any]] = []
+    for record in records:
+        if record.get("series_id") != SERIES_T10YIE:
+            continue
+        if record.get("observation_date") != observation_date:
+            continue
+        if not acceptance.verify_version_record(record):
+            continue
+        if _utc(str(record["pit_available_after_utc"])) > cutoff:
+            continue
+        if record.get("value") is None:
+            continue
+        eligible.append(record)
+    if not eligible:
+        return None
+    return max(
+        eligible,
+        key=lambda item: (
+            _utc(str(item["pit_available_after_utc"])),
+            int(item["revision_index"]),
+            str(item["version_identity"]),
+        ),
+    )
+
+
+_ORIGINAL_BUILD_RATES_STATE = acceptance.build_rates_macro_state
+
+
+def _build_rates_macro_state_with_aligned_reference(
+    records: Any,
+    *,
+    as_of: datetime | str,
+) -> dict[str, Any]:
+    materialized = list(records)
+    state = _ORIGINAL_BUILD_RATES_STATE(materialized, as_of=as_of)
+    derived = state["derived"]["breakeven_10y"]
+    if derived.get("state") == "known" and derived.get("observation_date"):
+        reference = _same_observation_reference(
+            materialized,
+            observation_date=str(derived["observation_date"]),
+            as_of=as_of,
+        )
+        if reference is not None:
+            delta = Decimal(str(derived["value"])) - Decimal(str(reference["value"]))
+            if delta != 0:
+                raise RuntimeError(
+                    "Day 28 same-date T10YIE validation mismatch: "
+                    f"derived={derived['value']} official={reference['value']} "
+                    f"observation_date={derived['observation_date']}"
+                )
+            official = state["official_breakeven_reference"]
+            official["state"] = "known"
+            official["observation_date"] = reference["observation_date"]
+            official["reference_value"] = reference["value"]
+            official["reference_version_identity"] = reference["version_identity"]
+            official["derived_minus_official"] = _canonical_decimal(delta)
+            body = dict(state)
+            body.pop("state_digest", None)
+            state["state_digest"] = acceptance.digest(body)
+    return state
+
+
 def _persist_with_fred_metadata(*args: Any, **kwargs: Any) -> int:
     rows = kwargs.get("rows")
     table_id = str(kwargs.get("table_id", ""))
@@ -195,6 +277,9 @@ def _persist_with_fred_metadata(*args: Any, **kwargs: Any) -> int:
             summary["source_auth_required"] = True
             summary["source_endpoint"] = "fred/series/observations"
             summary["source_transport"] = "authenticated_official_api"
+            summary["official_breakeven_validation_method"] = (
+                "same_observation_date_pit_valid_t10yie_exact_match"
+            )
             summary.pop("summary_digest", None)
             summary["summary_digest"] = acceptance.digest(summary)
             row["summary_digest"] = summary["summary_digest"]
@@ -207,6 +292,7 @@ _ORIGINAL_PERSIST = acceptance._persist_experiment_rows
 def main() -> int:
     acceptance._ALLOWED_CHANGED_FILES.add("scripts/day28_macro_vintage_acceptance_v2.py")
     acceptance._load_snapshots = _load_snapshots_v2
+    acceptance.build_rates_macro_state = _build_rates_macro_state_with_aligned_reference
     acceptance._persist_experiment_rows = _persist_with_fred_metadata
     return acceptance.main()
 
