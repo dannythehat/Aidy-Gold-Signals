@@ -38,6 +38,14 @@ SOURCE_TABLE = "research_day29_official_sources"
 CLASS_TABLE = "research_day29_event_tiers"
 FEATURE_TABLE = "research_day29_pre_event_features"
 SUMMARY_TABLE = "research_day29_summary"
+ISM_SCHEDULE_URL = (
+    "https://www.ismworld.org/supply-management-news-and-reports/reports/"
+    "rob-report-calendar/"
+)
+ISM_PROBE_URL = (
+    "https://www.ismworld.org/globalassets/pub/research-and-surveys/rob/pmi/"
+    "mwf4202607pmi.pdf"
+)
 
 SOURCE_PROBES = {
     "dol_initial_claims": (
@@ -45,8 +53,8 @@ SOURCE_PROBES = {
         ("unemployment insurance weekly claims data", "initial claims"),
     ),
     "ism_reports": (
-        "https://www.ismworld.org/supply-management-news-and-reports/reports/rob-report-calendar/",
-        ("manufacturing", "services", "10:00"),
+        ISM_PROBE_URL,
+        ("ism logo", "ismworld.org"),
     ),
     "census_economic_indicators": (
         "https://www.census.gov/economic-indicators/calendar-listview.html",
@@ -125,11 +133,12 @@ def _fetch_sources(cache_dir: Path, recorded_at: str) -> list[dict[str, Any]]:
         for source_key, (url, required_tokens) in SOURCE_PROBES.items():
             path = cache_dir / f"{source_key}.body"
             metadata_path = cache_dir / f"{source_key}.json"
-            if path.exists():
-                body = path.read_bytes()
-                if not metadata_path.exists():
-                    raise RuntimeError(f"Day 29 cache metadata is missing for {source_key}.")
+            cached_for_current_probe = False
+            if path.exists() and metadata_path.exists():
                 metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                cached_for_current_probe = metadata.get("requested_url") == url
+            if cached_for_current_probe:
+                body = path.read_bytes()
                 final_url = str(metadata["final_url"])
                 status_code = 200
             else:
@@ -140,7 +149,8 @@ def _fetch_sources(cache_dir: Path, recorded_at: str) -> list[dict[str, Any]]:
                 final_url = str(response.url)
                 status_code = response.status_code
                 metadata_path.write_text(
-                    canonical_json({"final_url": final_url}) + "\n", encoding="utf-8"
+                    canonical_json({"final_url": final_url, "requested_url": url}) + "\n",
+                    encoding="utf-8",
                 )
             text = body.decode("utf-8", errors="ignore").lower()
             missing = [token for token in required_tokens if token not in text]
@@ -201,7 +211,7 @@ def _historical_episode(rows: list[dict[str, Any]]) -> tuple[dict[str, Any], dic
         scheduled_time=time(10, 0),
         timezone_name="America/New_York",
         first_observed_at=datetime(2026, 8, 23, tzinfo=UTC),
-        source_url=SOURCE_PROBES["ism_reports"][0],
+        source_url=ISM_SCHEDULE_URL,
         provenance_class="retrospective_official_schedule",
     )
     event_at = _utc(schedule["scheduled_at"])
@@ -386,7 +396,7 @@ def main() -> int:
         scheduled_time=time(10, 0),
         timezone_name="America/New_York",
         first_observed_at=datetime(2026, 8, 23, tzinfo=UTC),
-        source_url=SOURCE_PROBES["ism_reports"][0],
+        source_url=ISM_SCHEDULE_URL,
     )
     event_state = build_event_intelligence_state(
         as_of=datetime(2026, 8, 23, tzinfo=UTC),
