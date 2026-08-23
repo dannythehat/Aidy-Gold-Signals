@@ -266,7 +266,12 @@ def build_version_history(snapshots: Iterable[AlfredSnapshot]) -> list[dict[str,
         for snapshot_index, snapshot in enumerate(ordered):
             value_map = snapshot.value_map()
             for observation_date in sorted(value_map):
-                new_value = value_map[observation_date]
+                raw_new_value = value_map[observation_date]
+                new_value = (
+                    None
+                    if raw_new_value is None
+                    else _fmt(_decimal(raw_new_value, name="snapshot value"))
+                )
                 old_known = observation_date in current_value
                 old_value = current_value.get(observation_date)
 
