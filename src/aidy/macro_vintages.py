@@ -155,6 +155,7 @@ def parse_alfred_csv(
         text = raw.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
         raise MacroVintageError("alfred_invalid_utf8") from exc
+
     reader = csv.reader(io.StringIO(text))
     try:
         header = next(reader)
@@ -176,10 +177,7 @@ def parse_alfred_csv(
         if observation_date < observation_start or observation_date > observation_end:
             continue
         raw_value = row[1].strip()
-        if raw_value in {"", "."}:
-            value = None
-        else:
-            value = _fmt(_decimal(raw_value, name="ALFRED value"))
+        value = None if raw_value in {"", "."} else _fmt(_decimal(raw_value, name="ALFRED value"))
         rows.append((observation_date, value))
     rows.sort(key=lambda item: item[0])
     return AlfredSnapshot(
@@ -250,30 +248,34 @@ class AlfredGateway:
 def build_version_history(snapshots: Iterable[AlfredSnapshot]) -> list[dict[str, Any]]:
     grouped: dict[str, list[AlfredSnapshot]] = defaultdict(list)
     for snapshot in snapshots:
-        if snapshot.series_id not in SERIES:
-            continue
-        grouped[snapshot.series_id].append(snapshot)
+        if snapshot.series_id in SERIES:
+            grouped[snapshot.series_id].append(snapshot)
 
     output: list[dict[str, Any]] = []
     for series_id, series_snapshots in sorted(grouped.items()):
         ordered = sorted(series_snapshots, key=lambda item: (item.vintage_date, item.snapshot_digest))
         if len({item.vintage_date for item in ordered}) != len(ordered):
             raise ValueError(f"Duplicate ALFRED vintage date for {series_id}.")
-        previous_map: dict[date, str | None] | None = None
+        if not ordered:
+            raise ValueError(f"No snapshots supplied for {series_id}.")
+
         current_value: dict[date, str | None] = {}
         revision_index: dict[date, int] = {}
         first_print_state: dict[date, str] = {}
 
         for snapshot_index, snapshot in enumerate(ordered):
             value_map = snapshot.value_map()
-            observation_dates = sorted(set(value_map) | set(current_value))
-            for observation_date in observation_dates:
-                new_present = observation_date in value_map
-                new_value = value_map.get(observation_date)
+            for observation_date in sorted(value_map):
+                new_value = value_map[observation_date]
                 old_known = observation_date in current_value
                 old_value = current_value.get(observation_date)
 
-                if snapshot_index == 0 and new_present:
+                # A missing marker is not a print. On the first frozen snapshot it is
+                # simply unknown; if it later becomes non-missing, that later vintage
+                # is the first observable print inside the frozen capture window.
+                if snapshot_index == 0 and not old_known:
+                    if new_value is None:
+                        continue
                     current_value[observation_date] = new_value
                     revision_index[observation_date] = 0
                     first_print_state[observation_date] = "pre_window_unknown"
@@ -291,9 +293,9 @@ def build_version_history(snapshots: Iterable[AlfredSnapshot]) -> list[dict[str,
                     )
                     continue
 
-                if not new_present:
-                    continue
                 if not old_known:
+                    if new_value is None:
+                        continue
                     current_value[observation_date] = new_value
                     revision_index[observation_date] = 0
                     first_print_state[observation_date] = "known"
@@ -304,12 +306,13 @@ def build_version_history(snapshots: Iterable[AlfredSnapshot]) -> list[dict[str,
                             value=new_value,
                             previous_value=None,
                             revision_index=0,
-                            revision_type="first_print" if new_value is not None else "first_print_missing",
+                            revision_type="first_print",
                             first_print_state="known",
                             snapshot=snapshot,
                         )
                     )
                     continue
+
                 if new_value == old_value:
                     continue
 
@@ -328,9 +331,6 @@ def build_version_history(snapshots: Iterable[AlfredSnapshot]) -> list[dict[str,
                         snapshot=snapshot,
                     )
                 )
-            previous_map = value_map
-        if previous_map is None:
-            raise ValueError(f"No snapshots supplied for {series_id}.")
 
     output.sort(
         key=lambda item: (
@@ -463,7 +463,9 @@ def reconstruct_series_as_of(
     }
 
 
-def _same_date_value(left: Mapping[str, Any], right: Mapping[str, Any]) -> tuple[date, Decimal, Decimal] | None:
+def _same_date_value(
+    left: Mapping[str, Any], right: Mapping[str, Any]
+) -> tuple[date, Decimal, Decimal] | None:
     if left.get("state") != "known" or right.get("state") != "known":
         return None
     left_fact = left.get("fact")
@@ -495,9 +497,12 @@ def build_rates_macro_state(
 
     nominal_real = _same_date_value(selected[SERIES_DGS10], selected[SERIES_DFII10])
     nominal_curve = _same_date_value(selected[SERIES_DGS10], selected[SERIES_DGS2])
-    derived_breakeven: dict[str, Any]
     if nominal_real is None:
-        derived_breakeven = {"state": "unknown", "value": None, "observation_date": None}
+        derived_breakeven: dict[str, Any] = {
+            "state": "unknown",
+            "value": None,
+            "observation_date": None,
+        }
     else:
         day, nominal_10y, real_10y = nominal_real
         derived_breakeven = {
@@ -507,9 +512,12 @@ def build_rates_macro_state(
             "formula": "DGS10-DFII10",
         }
 
-    slope: dict[str, Any]
     if nominal_curve is None:
-        slope = {"state": "unknown", "value": None, "observation_date": None}
+        slope: dict[str, Any] = {
+            "state": "unknown",
+            "value": None,
+            "observation_date": None,
+        }
     else:
         day, nominal_10y, nominal_2y = nominal_curve
         slope = {
@@ -523,7 +531,10 @@ def build_rates_macro_state(
     validation_delta: str | None = None
     if derived_breakeven["state"] == "known" and official_reference.get("state") == "known":
         fact = official_reference.get("fact")
-        if isinstance(fact, Mapping) and fact.get("observation_date") == derived_breakeven["observation_date"]:
+        if (
+            isinstance(fact, Mapping)
+            and fact.get("observation_date") == derived_breakeven["observation_date"]
+        ):
             validation_delta = _fmt(
                 _decimal(derived_breakeven["value"], name="derived breakeven")
                 - _decimal(fact["value"], name="official breakeven")
@@ -584,6 +595,6 @@ def verify_rates_macro_state(state: Mapping[str, Any]) -> bool:
         return False
     if body.get("directional_influence") != REAL_YIELD_DIRECTIONAL_INFLUENCE:
         return False
-    if body.get("predictive_edge_claimed") is not False or body.get("trading_gate_created") is not False:
+    if body.get("predictive_edge_claimed") is not False:
         return False
-    return True
+    return body.get("trading_gate_created") is False
