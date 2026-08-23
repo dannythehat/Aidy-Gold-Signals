@@ -406,12 +406,15 @@ def main() -> int:
 
     source_rows = []
     for item in source_checks:
+        source_payload = {
+            key: value for key, value in item.items() if key != "recorded_at_utc"
+        }
         row = {
             "experiment_id": experiment_id,
             "base_sha": BASE_SHA,
             "head_sha": head_sha,
             **item,
-            "source_payload": item,
+            "source_payload": source_payload,
         }
         row["row_digest"] = _row_digest(row)
         source_rows.append(row)
