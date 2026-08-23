@@ -23,13 +23,20 @@ Reasons:
 
 Source-use scope for AIDY Day 27 is internal research/backtesting with raw vendor data not redistributed. This contract does not assert a broader redistribution or commercial market-data licence. Any future use outside that scope requires a fresh source/licensing check rather than silently inheriting this acceptance.
 
-## Frozen source period
+## Frozen source periods
 
-The canonical Day-16/23/24/25 research case set contains 36 hourly XAUUSD cases from 2025-01-06 through 2025-01-07 UTC. Day 27 therefore freezes the source archive to **HistData XAUUSD Generic ASCII tick January 2025**.
+The canonical Day-16/23/24/25 research case set contains 36 hourly XAUUSD cases from 2025-01-06 through 2025-01-07 UTC.
+
+Day 27 freezes **two source archives before outcome analysis**:
+
+- **December 2024 HistData XAUUSD Generic ASCII ticks** — baseline only;
+- **January 2025 HistData XAUUSD Generic ASCII ticks** — case/anchor quotes only.
+
+The January cases are therefore normalized exclusively against already-existing December history. No January quote that occurs after a case timestamp can enter that case's baseline.
 
 No month is selected after looking at J3 outcomes.
 
-The original ZIP and CSV payload are identified by SHA-256. Analytical rows retain both digests, source file name, source dataset and source timezone.
+Each original ZIP and CSV payload is identified by SHA-256. Analytical rows retain both digests, source file name, source dataset and source timezone.
 
 ## Time and provenance
 
@@ -44,7 +51,7 @@ Every accepted tick must have:
 
 Malformed price geometry fails closed.
 
-All Day-27 quote data is `retrospective_history` and `pit_eligible=false`. It is research evidence, not a claim that AIDY observed those quotes live in January 2025.
+All Day-27 quote data is `retrospective_history` and `pit_eligible=false`. It is research evidence, not a claim that AIDY observed those quotes live in 2024/2025.
 
 ## Canonical quote reduction
 
@@ -68,7 +75,7 @@ The HistData volume column is deliberately ignored and is not stored in the Day-
 
 ## Anchor spread state
 
-For historical case timestamp `T`, the anchor quote is the latest canonical minute quote whose source tick timestamp is `<= T` and no more than **120 seconds** old.
+For historical case timestamp `T`, the anchor quote is the latest canonical **January-2025** minute quote whose source tick timestamp is `<= T` and no more than **120 seconds** old.
 
 If no such quote exists, anchor spread state is `unknown`.
 
@@ -84,25 +91,25 @@ Spread is:
 
 ## Frozen weekday × time-of-day baseline
 
-The spread baseline is frozen **before future outcome analysis**.
+The spread baseline is frozen from **December-2024 quotes only**, before any January case spread is normalized and before future outcome analysis.
 
 Clock normalization:
 
 - timezone: UTC;
 - weekday: Monday=0 through Sunday=6;
 - time bucket: 15-minute clock slot, 0–95;
-- observations: canonical per-minute genuine bid/ask quotes from the frozen January-2025 source archive;
+- observations: canonical per-minute genuine bid/ask quotes from the frozen December-2024 source archive only;
 - minimum bucket sample: 20 minute quotes;
 - baseline center: arithmetic mean spread bps;
 - baseline scale: sample standard deviation spread bps.
 
 A bucket with fewer than 20 observations or zero standard deviation is `insufficient`.
 
-For a known anchor:
+For a known January anchor:
 
-`spread_z = (anchor_spread_bps - matched_bucket_mean) / matched_bucket_std`
+`spread_z = (anchor_spread_bps - matched_December_bucket_mean) / matched_December_bucket_std`
 
-This is explicitly designed so ordinary New-York-vs-Asia activity is normalized rather than rediscovered and mislabeled as alpha.
+This is explicitly designed so ordinary New-York-vs-Asia activity is normalized rather than rediscovered and mislabeled as alpha, while also preventing later January observations from leaking into an earlier January case.
 
 The full baseline has a deterministic SHA-256 digest and `outcome_fields_used=false`.
 
@@ -178,12 +185,13 @@ A result that mainly rediscovers ordinary time-of-day/session activity is a fail
 
 Day 27 passes only if all of the following hold:
 
-- genuine historical Bid and Ask are ingested from the frozen source archive;
+- genuine historical Bid and Ask are ingested from both frozen source archives;
 - source ZIP and CSV payload SHA-256 are preserved;
 - source timestamps, Bid, Ask and derived spread are retained on canonical quote rows;
 - Ask below Bid fails closed;
 - no volume/depth/order-flow field is promoted into Day-27 evidence;
-- anchor joins never use later ticks;
+- January anchor joins never use later ticks;
+- the normalization baseline uses December 2024 only;
 - missing quote periods remain unknown;
 - weekday × 15-minute baseline is frozen before outcome analysis;
 - spread-z uses only the matched weekday/clock bucket;
