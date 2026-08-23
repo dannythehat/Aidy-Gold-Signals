@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 import day28_macro_vintage_acceptance as acceptance
 import httpx
 
-from aidy.macro_vintages import AlfredSnapshot, SERIES_T10YIE
+from aidy.macro_vintages import SERIES_T10YIE, AlfredSnapshot
 
 _FRED_OBSERVATIONS_URL = "https://api.stlouisfed.org/fred/series/observations"
 _RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
