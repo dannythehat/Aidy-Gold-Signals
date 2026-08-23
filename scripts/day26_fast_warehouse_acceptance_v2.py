@@ -21,6 +21,10 @@ def _load_pit_probe_at_frozen_t(
     independently valid when first_observed_at <= T. The earlier harness
     incorrectly replaced T with the snapshot's own captured_at, which could
     discard candles that were genuinely known by the frozen cutoff.
+
+    Missing PIT candle history is preserved as unknown. This matches the frozen
+    Day-26 contract and the accepted Day-7 warehouse behavior; it must never be
+    fabricated merely to make a real PIT probe non-empty.
     """
     snapshot_table = f"{project}.{dataset}.market_snapshots"
     snapshot_config = support.query_config(
@@ -77,15 +81,12 @@ def _load_pit_probe_at_frozen_t(
         label="pit-candles",
         job_config=candle_config,
     )
-    if not rows:
-        raise RuntimeError(
-            "Day 26 PIT probe found no canonical Gold candles known by the frozen cutoff."
-        )
     print(
         "WAREHOUSE pit-probe: "
         f"evaluation_t={cutoff.isoformat()} "
         f"snapshot_captured_at={support.utc(snapshot['captured_at']).isoformat()} "
-        f"candle_rows={len(rows)}",
+        f"candle_rows={len(rows)} "
+        f"candle_state={'observed' if rows else 'unknown'}",
         flush=True,
     )
     return support.utc(cutoff), snapshot, rows
