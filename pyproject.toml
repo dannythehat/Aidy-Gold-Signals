@@ -9,6 +9,8 @@ description = "AIDY Signals Gold market intelligence and Telegram signal provide
 requires-python = ">=3.13"
 dependencies = [
   "httpx>=0.27",
+  "pdfplumber>=0.11",
+  "xlrd>=2.0",
 ]
 
 [dependency-groups]
