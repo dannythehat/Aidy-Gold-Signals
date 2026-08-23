@@ -6,7 +6,7 @@ import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from statistics import median
@@ -29,6 +29,12 @@ CME_GOLD_CALENDAR_URL = (
 )
 CME_GOLD_CALENDAR_DOWNLOAD_URL = (
     "https://www.cmegroup.com/CmeWS/mvc/ProductCalendar/Download.xls?productId=437"
+)
+CME_GOLD_SETTLEMENTS_URL = (
+    "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/437/FUT"
+)
+CME_GOLD_VOLUME_URL_TEMPLATE = (
+    "https://www.cmegroup.com/CmeWS/mvc/Volume/Details/F/437/{trade_date}/P"
 )
 CME_ALLOWED_HOSTS = ("cmegroup.com", "www.cmegroup.com")
 MAX_BULLETIN_BYTES = 8_000_000
@@ -144,8 +150,9 @@ class CmeGoldBulletinRow:
 @dataclass(frozen=True, slots=True)
 class CmeGoldBulletinSnapshot:
     trade_date: date
-    bulletin_number: int
+    bulletin_number: int | None
     publication_state: str
+    official_published_at: datetime | None
     source_url: str
     final_url: str
     first_observed_at: datetime
@@ -160,6 +167,11 @@ class CmeGoldBulletinSnapshot:
                 "trade_date": self.trade_date.isoformat(),
                 "bulletin_number": self.bulletin_number,
                 "publication_state": self.publication_state,
+                "official_published_at": (
+                    None
+                    if self.official_published_at is None
+                    else self.official_published_at.isoformat()
+                ),
                 "source_url": self.source_url,
                 "final_url": self.final_url,
                 "first_observed_at": self.first_observed_at.isoformat(),
@@ -303,11 +315,109 @@ def parse_cme_gold_bulletin_text(
         trade_date=trade_date,
         bulletin_number=bulletin_number,
         publication_state=publication_state,
+        official_published_at=None,
         source_url=source_url,
         final_url=final_url,
         first_observed_at=_utc(first_observed_at),
         source_sha256=sha256(source_bytes).hexdigest(),
         extracted_text_sha256=sha256(text.encode()).hexdigest(),
+        rows=tuple(sorted(rows, key=lambda row: row.contract_month)),
+    )
+
+
+def _integer(value: object, *, name: str) -> int:
+    text = str(value).replace(",", "").strip()
+    if not re.fullmatch(r"[+-]?\d+", text):
+        raise CmeContractError(f"cme_json_{name}_invalid")
+    return int(text)
+
+
+def parse_cme_gold_official_json(
+    settlements_payload: Mapping[str, Any],
+    volume_payload: Mapping[str, Any],
+    *,
+    first_observed_at: datetime | str,
+    settlements_url: str,
+    volume_url: str,
+) -> CmeGoldBulletinSnapshot:
+    _official_url(settlements_url)
+    _official_url(volume_url)
+    settlement_trade_date = datetime.strptime(
+        str(settlements_payload.get("tradeDate") or ""), "%m/%d/%Y"
+    ).replace(tzinfo=UTC).date()
+    volume_trade_date = datetime.strptime(
+        str(volume_payload.get("tradeDate") or ""), "%Y%m%d"
+    ).replace(tzinfo=UTC).date()
+    if settlement_trade_date != volume_trade_date:
+        raise CmeContractError("cme_json_trade_date_disagreement")
+    if settlements_payload.get("empty") is True or volume_payload.get("empty") is True:
+        raise CmeContractError("cme_json_empty")
+    if str(settlements_payload.get("reportType") or "").lower() != "final":
+        raise CmeContractError("cme_json_report_not_final")
+    published_at = _utc(str(volume_payload.get("updateTime") or ""))
+
+    volume_by_label: dict[str, Mapping[str, Any]] = {}
+    for raw in volume_payload.get("monthData") or []:
+        item = dict(raw)
+        match = re.fullmatch(r"([A-Z]{3})\s+(\d{4})", str(item.get("month") or ""))
+        if match is None:
+            continue
+        label = f"{match.group(1)}{match.group(2)[-2:]}"
+        volume_by_label[label] = item
+
+    rows: list[CmeGoldBulletinRow] = []
+    for raw in settlements_payload.get("settlements") or []:
+        item = dict(raw)
+        match = re.fullmatch(r"([A-Z]{3})\s+(\d{2})", str(item.get("month") or ""))
+        if match is None:
+            continue
+        label = f"{match.group(1)}{match.group(2)}"
+        volume = volume_by_label.get(label)
+        if volume is None:
+            continue
+        raw_settlement = str(item.get("settle") or "").strip()
+        settle_match = re.fullmatch(r"(\d+(?:\.\d+)?)([ABNP])?", raw_settlement)
+        if settle_match is None:
+            raise CmeContractError("cme_json_settlement_invalid")
+        settlement = _decimal(settle_match.group(1), name="settlement", positive=True)
+        settlement_change = _decimal(
+            str(item.get("change") or "").replace(",", ""), name="settlement change"
+        )
+        prior_settlement = settlement - settlement_change
+        if prior_settlement <= 0:
+            raise CmeContractError("cme_json_prior_settlement_invalid")
+        rows.append(
+            CmeGoldBulletinRow(
+                contract_label=label,
+                contract_code=_contract_code(label),
+                contract_month=_contract_month(label),
+                settlement=_fmt(settlement),
+                settlement_change=_fmt(settlement_change),
+                settlement_change_bps=_fmt(
+                    settlement_change / prior_settlement * Decimal(10_000)
+                ),
+                open_interest=_integer(volume.get("atClose"), name="open_interest"),
+                open_interest_change=_integer(
+                    volume.get("change"), name="open_interest_change"
+                ),
+                settlement_indicator=settle_match.group(2),
+            )
+        )
+    if not rows:
+        raise CmeContractError("cme_json_gc_contract_rows_missing")
+    canonical_payload = canonical_json(
+        {"settlements": settlements_payload, "volume_open_interest": volume_payload}
+    ).encode()
+    return CmeGoldBulletinSnapshot(
+        trade_date=settlement_trade_date,
+        bulletin_number=None,
+        publication_state="final",
+        official_published_at=published_at,
+        source_url=settlements_url,
+        final_url=volume_url,
+        first_observed_at=_utc(first_observed_at),
+        source_sha256=sha256(canonical_payload).hexdigest(),
+        extracted_text_sha256=sha256(canonical_payload).hexdigest(),
         rows=tuple(sorted(rows, key=lambda row: row.contract_month)),
     )
 
@@ -330,6 +440,11 @@ class CmePublicBulletinGateway:
                 headers={"User-Agent": "AIDY-Gold-Signals/Day30 official CME evidence"},
             )
         try:
+            json_snapshot = self._fetch_official_json(
+                first_observed_at=first_observed_at, client=client
+            )
+            if json_snapshot is not None:
+                return json_snapshot
             response = client.get(CME_BULLETIN_URL)
             if response.status_code != 200:
                 raise CmeContractError(f"cme_bulletin_http_{response.status_code}")
@@ -356,6 +471,49 @@ class CmePublicBulletinGateway:
             if owns_client:
                 client.close()
 
+    def _fetch_official_json(
+        self,
+        *,
+        first_observed_at: datetime | str,
+        client: httpx.Client,
+    ) -> CmeGoldBulletinSnapshot | None:
+        observed = _utc(first_observed_at)
+        headers = {
+            "Accept": "application/json,text/plain,*/*",
+            "Referer": "https://www.cmegroup.com/markets/metals/precious/gold.html",
+        }
+        for offset in range(11):
+            candidate = observed.date() - timedelta(days=offset)
+            compact = candidate.strftime("%Y%m%d")
+            volume_url = CME_GOLD_VOLUME_URL_TEMPLATE.format(trade_date=compact)
+            response = client.get(volume_url, headers=headers)
+            if response.status_code in {400, 404}:
+                continue
+            if response.status_code != 200:
+                return None
+            try:
+                volume_payload = response.json()
+            except ValueError:
+                return None
+            if volume_payload.get("empty") is True or not volume_payload.get("monthData"):
+                continue
+            settlements_url = f"{CME_GOLD_SETTLEMENTS_URL}?tradeDate={candidate:%m/%d/%Y}"
+            settlement_response = client.get(settlements_url, headers=headers)
+            if settlement_response.status_code != 200:
+                return None
+            try:
+                settlements_payload = settlement_response.json()
+            except ValueError:
+                return None
+            return parse_cme_gold_official_json(
+                settlements_payload,
+                volume_payload,
+                first_observed_at=observed,
+                settlements_url=settlements_url,
+                volume_url=volume_url,
+            )
+        return None
+
 
 def build_daily_contract_records(snapshot: CmeGoldBulletinSnapshot) -> list[dict[str, Any]]:
     revision_index = 1 if snapshot.publication_state == "final" else 0
@@ -363,7 +521,7 @@ def build_daily_contract_records(snapshot: CmeGoldBulletinSnapshot) -> list[dict
     for row in snapshot.rows:
         record: dict[str, Any] = {
             "record_version": CME_DAILY_RECORD_VERSION,
-            "source": "cme_group_daily_bulletin",
+            "source": "cme_group_public_daily_contract_evidence",
             "source_url": snapshot.source_url,
             "final_url": snapshot.final_url,
             "source_sha256": snapshot.source_sha256,
@@ -371,7 +529,11 @@ def build_daily_contract_records(snapshot: CmeGoldBulletinSnapshot) -> list[dict
             "snapshot_digest": snapshot.snapshot_digest,
             "bulletin_number": snapshot.bulletin_number,
             "publication_state": snapshot.publication_state,
-            "official_published_at": None,
+            "official_published_at": (
+                None
+                if snapshot.official_published_at is None
+                else snapshot.official_published_at.isoformat()
+            ),
             "first_observed_at": snapshot.first_observed_at.isoformat(),
             "trade_date": snapshot.trade_date.isoformat(),
             "contract_label": row.contract_label,
@@ -414,6 +576,8 @@ def verify_daily_contract_record(record: Mapping[str, Any]) -> bool:
         _official_url(str(body["source_url"]))
         _official_url(str(body["final_url"]))
         _utc(str(body["first_observed_at"]))
+        if body.get("official_published_at") is not None:
+            _utc(str(body["official_published_at"]))
         date.fromisoformat(str(body["trade_date"]))
         date.fromisoformat(str(body["contract_month"]))
         _decimal(body["settlement"], name="settlement", positive=True)

@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from aidy.cme_contract_intelligence import (
-    CME_BULLETIN_URL,
     CME_CALENDAR_VERSION,
     CME_CONTRACT_INTELLIGENCE_VERSION,
     CME_DAILY_RECORD_VERSION,
@@ -239,7 +238,13 @@ def main() -> int:
     trade_date = max(str(row["trade_date"]) for row in daily_records)
     source_manifest_digest = digest(
         {
-            "bulletin_url": CME_BULLETIN_URL,
+            "daily_source_urls": sorted(
+                {
+                    str(url)
+                    for row in daily_records
+                    for url in (row["source_url"], row["final_url"])
+                }
+            ),
             "bulletin_source_sha256": sorted({row["source_sha256"] for row in daily_records}),
             "calendar_url": CME_GOLD_CALENDAR_DOWNLOAD_URL,
             "calendar_source_sha256": sorted(

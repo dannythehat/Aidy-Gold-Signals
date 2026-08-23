@@ -9,8 +9,9 @@ Day 30 adds public CME Gold (`GC`) futures contract evidence to AIDY. It does no
 append-only evidence store, Day 19 point-in-time rules, Day 25 market-structure epochs, Day 26 price
 structure, Day 28 revision rules, or Day 29 event intelligence.
 
-The only live inputs are the free official CME Group Metals Futures Daily Bulletin PDF and Gold
-Product Calendar XLS. Redirects must remain on the CME HTTPS allowlist. Historical bulk settlement
+The only live inputs are the free official CME Group daily settlement JSON, final per-month
+volume/open-interest JSON, Metals Futures Daily Bulletin PDF fallback, and Gold Product Calendar XLS.
+Redirects must remain on the CME HTTPS allowlist. Historical bulk settlement
 or open-interest data from DataMine is outside this acceptance and is not silently licensed,
 backfilled or fabricated. TAS is optional P2 and remains `unknown_not_ingested` in this version.
 
@@ -24,8 +25,9 @@ backfilled or fabricated. TAS is optional P2 and remains `unknown_not_ingested` 
 - daily open interest and daily open-interest change;
 - a stable fact key and immutable record digest.
 
-CME does not place a reliable publication timestamp inside the PDF. Therefore
-`official_published_at` remains null and `first_observed_at` is the conservative PIT boundary.
+CME's final volume/open-interest JSON provides an explicit UTC update time, which is preserved as
+`official_published_at`; `first_observed_at` remains the AIDY PIT boundary. If the JSON bundle is
+unavailable and the official PDF fallback is used, `official_published_at` remains null.
 Open interest is explicitly `daily_t_plus_1`; no intraday open interest is inferred. Preliminary and
 final rows remain separate immutable revisions. Reconstruction at T excludes observations first seen
 after T and chooses the highest revision then latest qualifying observation for each fact.
@@ -89,4 +91,3 @@ Day 30 acceptance must:
 8. show `intraday_open_interest_inferred=false`, `historical_bulk_backfilled=false`,
    `predictive_edge_claimed=false`, `trading_gate_created=false`,
    `accepted_prior_modules_modified=false` and `super_signals_modified=false`.
-

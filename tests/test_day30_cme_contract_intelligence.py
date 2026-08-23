@@ -13,6 +13,7 @@ from aidy.cme_contract_intelligence import (
     build_contract_roll_state,
     build_daily_contract_records,
     parse_cme_gold_bulletin_text,
+    parse_cme_gold_official_json,
     parse_gold_calendar_table,
     run_j6_descriptive,
     select_daily_contract_records_as_of,
@@ -98,6 +99,79 @@ def test_bulletin_rejects_missing_header_section_and_official_host() -> None:
         )
 
 
+def test_official_json_bundle_joins_settlement_with_final_daily_open_interest() -> None:
+    settlements = {
+        "tradeDate": "08/21/2026",
+        "reportType": "Final",
+        "empty": False,
+        "settlements": [
+            {
+                "month": "DEC 26",
+                "change": "+109.2",
+                "settle": "4680.6",
+            }
+        ],
+    }
+    volume = {
+        "tradeDate": "20260821",
+        "updateTime": "2026-08-22T05:20:07.000Z",
+        "empty": False,
+        "monthData": [
+            {
+                "month": "DEC 2026",
+                "atClose": "328,666",
+                "change": "3,082",
+            }
+        ],
+    }
+    snapshot = parse_cme_gold_official_json(
+        settlements,
+        volume,
+        first_observed_at="2026-08-23T12:00:00+00:00",
+        settlements_url=(
+            "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/"
+            "437/FUT?tradeDate=08/21/2026"
+        ),
+        volume_url=(
+            "https://www.cmegroup.com/CmeWS/mvc/Volume/Details/F/437/20260821/P"
+        ),
+    )
+    assert snapshot.publication_state == "final"
+    assert snapshot.bulletin_number is None
+    assert snapshot.official_published_at == datetime(2026, 8, 22, 5, 20, 7, tzinfo=UTC)
+    assert snapshot.rows[0].contract_code == "GCZ26"
+    assert snapshot.rows[0].open_interest == 328666
+    assert snapshot.rows[0].open_interest_change == 3082
+    records = build_daily_contract_records(snapshot)
+    assert records[0]["official_published_at"] == "2026-08-22T05:20:07+00:00"
+    assert verify_daily_contract_record(records[0])
+
+
+def test_official_json_bundle_rejects_nonfinal_and_mismatched_trade_dates() -> None:
+    settlements = {
+        "tradeDate": "08/21/2026",
+        "reportType": "Preliminary",
+        "empty": False,
+        "settlements": [],
+    }
+    volume = {
+        "tradeDate": "20260820",
+        "updateTime": "2026-08-22T05:20:07+00:00",
+        "empty": False,
+        "monthData": [],
+    }
+    with pytest.raises(CmeContractError, match="trade_date_disagreement"):
+        parse_cme_gold_official_json(
+            settlements,
+            volume,
+            first_observed_at="2026-08-23T12:00:00+00:00",
+            settlements_url=(
+                "https://www.cmegroup.com/CmeWS/mvc/Settlements/Futures/Settlements/437/FUT"
+            ),
+            volume_url=(
+                "https://www.cmegroup.com/CmeWS/mvc/Volume/Details/F/437/20260820/P"
+            ),
+        )
 def test_pit_selection_excludes_future_observations_and_prefers_final_revision() -> None:
     preliminary = _records()
     final = _records(observed=datetime(2026, 8, 22, 16, tzinfo=UTC), final=True)
