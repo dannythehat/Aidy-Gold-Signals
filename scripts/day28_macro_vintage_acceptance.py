@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
 from day26_acceptance_support import CANDIDATE_COUNT, CANDIDATE_DIGEST, load_candidate_snapshot
 from day26_price_structure_acceptance import _bigquery_client
 
