@@ -5,6 +5,7 @@ from pathlib import Path
 
 import day28_macro_vintage_acceptance as acceptance
 import httpx
+
 from aidy.macro_vintages import (
     AlfredSnapshot,
     MacroVintageError,
