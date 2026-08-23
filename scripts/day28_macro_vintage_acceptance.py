@@ -6,7 +6,6 @@ import os
 import subprocess
 from collections import Counter
 from datetime import UTC, date, datetime, timedelta
-from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -22,9 +21,6 @@ from aidy.macro_vintages import (
     REAL_YIELD_ROLE,
     SERIES,
     SERIES_CPI,
-    SERIES_DFII10,
-    SERIES_DGS10,
-    SERIES_DGS2,
     AlfredSnapshot,
     alfred_url,
     build_rates_macro_state,
@@ -121,7 +117,8 @@ def _load_snapshots(cache_dir: Path) -> list[AlfredSnapshot]:
                     response = client.get(url)
                     if response.status_code != 200:
                         raise RuntimeError(
-                            f"Day 28 ALFRED fetch failed {series_id} {vintage}: HTTP {response.status_code}"
+                            f"Day 28 ALFRED fetch failed {series_id} {vintage}: "
+                            f"HTTP {response.status_code}"
                         )
                     raw = response.content
                 snapshot = parse_alfred_csv(
@@ -158,6 +155,16 @@ def _snapshot_payload(snapshot: AlfredSnapshot) -> dict[str, Any]:
         "source_url": snapshot.source_url,
         "source_sha256": snapshot.source_sha256,
         "snapshot_digest": snapshot.snapshot_digest,
+    }
+
+
+def _source_fingerprint(snapshot: AlfredSnapshot) -> dict[str, Any]:
+    return {
+        "series_id": snapshot.series_id,
+        "vintage_date": snapshot.vintage_date.isoformat(),
+        "source_sha256": snapshot.source_sha256,
+        "snapshot_digest": snapshot.snapshot_digest,
+        "value_count": len(snapshot.values),
     }
 
 
@@ -220,7 +227,8 @@ def _existing_rows(
         query_parameters=[bigquery.ScalarQueryParameter("experiment", "STRING", experiment_id)]
     )
     rows = client.query(
-        f"SELECT `{identity_field}` identity_value FROM `{table_id}` WHERE experiment_id=@experiment ORDER BY identity_value",
+        f"SELECT `{identity_field}` identity_value FROM `{table_id}` "
+        "WHERE experiment_id=@experiment ORDER BY identity_value",
         job_config=config,
     ).result()
     return [str(row["identity_value"]) for row in rows]
@@ -279,7 +287,10 @@ def _persist_experiment_rows(
 
 
 def _write_json(path: Path, value: Any) -> None:
-    path.write_text(json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -308,18 +319,10 @@ def main() -> int:
     print("DAY28 SOURCE frozen ALFRED capture start", flush=True)
     snapshots = _load_snapshots(cache)
     source_manifest = [_snapshot_payload(snapshot) for snapshot in snapshots]
-    source_manifest_digest = digest(
-        [
-            {
-                "series_id": item["series_id"],
-                "vintage_date": item["vintage_date"],
-                "source_sha256": item["source_sha256"],
-                "snapshot_digest": item["snapshot_digest"],
-            }
-            for item in source_manifest
-        ]
-    )
+    source_fingerprints = [_source_fingerprint(snapshot) for snapshot in snapshots]
+    source_manifest_digest = digest(source_fingerprints)
     _write_json(output / "source_manifest.json", source_manifest)
+    _write_json(output / "source_fingerprints.json", source_fingerprints)
 
     versions = build_version_history(snapshots)
     if versions != build_version_history(reversed(snapshots)):
@@ -351,8 +354,10 @@ def main() -> int:
             raise RuntimeError(f"Day 28 case {case['case_id']} failed rates-state verification.")
         if state["evidence_family"] != EVIDENCE_FAMILY:
             raise RuntimeError("Day 28 rates family drifted.")
-        if state["independent_confirmation_units"] != 1 or state["components_not_independent"] is not True:
+        if state["independent_confirmation_units"] != 1:
             raise RuntimeError("Day 28 rates components were double-counted.")
+        if state["components_not_independent"] is not True:
+            raise RuntimeError("Day 28 rates components lost non-independent labelling.")
         if state["real_yield_role"] != REAL_YIELD_ROLE:
             raise RuntimeError("Day 28 real-yield role drifted.")
         if state["directional_influence"] != REAL_YIELD_DIRECTIONAL_INFLUENCE:
@@ -394,11 +399,21 @@ def main() -> int:
                 "slope_value": slope["value"],
                 "slope_observation_date": slope["observation_date"],
                 "cpi_state": cpi["state"],
-                "cpi_revision_index": None if not isinstance(cpi_fact, dict) else cpi_fact["revision_index"],
-                "cpi_first_print_state": None if not isinstance(cpi_fact, dict) else cpi_fact["first_print_state"],
-                "cpi_publication_date": None if not isinstance(cpi_fact, dict) else cpi_fact["publication_date"],
-                "cpi_vintage_date": None if not isinstance(cpi_fact, dict) else cpi_fact["vintage_date"],
-                "official_breakeven_validation_delta": state["official_breakeven_reference"]["derived_minus_official"],
+                "cpi_revision_index": (
+                    None if not isinstance(cpi_fact, dict) else cpi_fact["revision_index"]
+                ),
+                "cpi_first_print_state": (
+                    None if not isinstance(cpi_fact, dict) else cpi_fact["first_print_state"]
+                ),
+                "cpi_publication_date": (
+                    None if not isinstance(cpi_fact, dict) else cpi_fact["publication_date"]
+                ),
+                "cpi_vintage_date": (
+                    None if not isinstance(cpi_fact, dict) else cpi_fact["vintage_date"]
+                ),
+                "official_breakeven_validation_delta": state[
+                    "official_breakeven_reference"
+                ]["derived_minus_official"],
                 "state_json": state,
                 "recorded_at_utc": recorded_at,
             }
@@ -408,7 +423,8 @@ def main() -> int:
         raise RuntimeError("Day 28 did not reproduce all frozen cases.")
     if known_breakeven != CANDIDATE_COUNT or known_slope != CANDIDATE_COUNT:
         raise RuntimeError(
-            f"Day 28 expected same-date derived rates for all cases; breakeven={known_breakeven}, slope={known_slope}."
+            "Day 28 expected same-date derived rates for all cases; "
+            f"breakeven={known_breakeven}, slope={known_slope}."
         )
     if known_cpi != CANDIDATE_COUNT:
         raise RuntimeError(f"Day 28 expected PIT-known CPI context for all cases, found {known_cpi}.")
