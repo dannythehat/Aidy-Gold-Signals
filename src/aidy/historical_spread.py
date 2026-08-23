@@ -125,7 +125,7 @@ def _decimal(value: Any, *, name: str) -> Decimal:
     return parsed
 
 
-def _fmt(value: Decimal | float | int | None) -> str | None:
+def _fmt(value: Decimal | float | None) -> str | None:
     if value is None:
         return None
     dec = value if isinstance(value, Decimal) else Decimal(str(value))
