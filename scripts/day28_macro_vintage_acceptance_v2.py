@@ -264,7 +264,27 @@ def _build_rates_macro_state_with_aligned_reference(
 
 def _persist_with_fred_metadata(*args: Any, **kwargs: Any) -> int:
     rows = kwargs.get("rows")
+    fields = kwargs.get("fields")
     table_id = str(kwargs.get("table_id", ""))
+
+    if (
+        table_id.endswith(f".{acceptance.CASE_TABLE}")
+        and isinstance(rows, list)
+        and isinstance(fields, list)
+    ):
+        field_names = {str(field[0]) for field in fields if isinstance(field, tuple) and field}
+        if "head_sha" not in field_names:
+            fields.insert(1, ("head_sha", "STRING", "REQUIRED"))
+        head_sha = acceptance.subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True
+        ).strip()
+        if len(head_sha) != 40:
+            raise RuntimeError("Day 28 case evidence requires an exact Git head SHA.")
+        for row in rows:
+            if not isinstance(row, dict):
+                raise TypeError("Day 28 case evidence row is not an object.")
+            row["head_sha"] = head_sha
+
     if (
         table_id.endswith(f".{acceptance.SUMMARY_TABLE}")
         and isinstance(rows, list)
