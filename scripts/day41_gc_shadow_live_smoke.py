@@ -39,6 +39,7 @@ from aidy.historical_backfill import (
 HISTORICAL_SMOKE_MAX_COST_USD = Decimal("0.25")
 DATABENTO_SYMBOLOGY_URL = "https://hist.databento.com/v0/symbology.resolve"
 PAIR_MAX_SKEW_SECONDS = 60
+LIQUID_ANCHOR_HOUR_UTC = 15
 
 
 def _parse_utc_timestamp(value: object, *, name: str) -> datetime:
@@ -78,11 +79,6 @@ def _last_fully_available_utc_day(dataset_range: dict[str, object]) -> datetime:
     if target_start < available_start or target_end > available_end:
         raise RuntimeError("Databento has no fully entitled UTC day for Day 41 acceptance.")
     return target_start
-
-
-def _gc_request_window(target_day: datetime) -> tuple[datetime, datetime]:
-    target_end = target_day + timedelta(days=1)
-    return target_end - timedelta(minutes=10), target_end
 
 
 def _symbology_resolve(
@@ -159,6 +155,32 @@ def _histdata_decimal(raw: str, *, field: str, line_number: int) -> Decimal:
             f"HistData target-window {field} is not a positive finite value at line {line_number}."
         )
     return value
+
+
+def _latest_liquid_histdata_anchor(payload_text: str, *, cutoff_utc: datetime) -> datetime:
+    anchors: list[datetime] = []
+    latest_seen: datetime | None = None
+    reader = csv.reader(io.StringIO(payload_text), delimiter=";")
+    for line_number, row in enumerate(reader, start=1):
+        if not row or all(not value.strip() for value in row) or len(row) < 1:
+            continue
+        source_time_utc = _histdata_row_time(row[0].strip(), line_number=line_number)
+        if latest_seen is None or source_time_utc > latest_seen:
+            latest_seen = source_time_utc
+        if source_time_utc >= cutoff_utc:
+            continue
+        if source_time_utc.weekday() >= 5:
+            continue
+        if source_time_utc.hour == LIQUID_ANCHOR_HOUR_UTC and source_time_utc.minute == 0:
+            anchors.append(source_time_utc)
+
+    if not anchors:
+        latest_text = latest_seen.isoformat() if latest_seen is not None else "none"
+        raise RuntimeError(
+            "HistData contains no eligible weekday 15:00 UTC anchor before the Databento "
+            f"entitlement cutoff; latest HistData timestamp={latest_text}."
+        )
+    return max(anchors)
 
 
 def _target_histdata_bar(payload_text: str, gc_observed_at: datetime) -> dict[str, object]:
@@ -282,17 +304,27 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     observed_at = datetime.now(UTC)
+    cache_dir = root / ".day41_histdata_cache"
 
     raw_path = Path(args.raw_gc)
     with DatabentoHistoricalClient.from_env() as client:
         entitlement = client.assert_gc_entitlement()
         dataset_range = client.dataset_range()
-        target_day = _last_fully_available_utc_day(dataset_range)
-        request_start, request_end = _gc_request_window(target_day)
+        last_full_day = _last_fully_available_utc_day(dataset_range)
+        cutoff_utc = last_full_day + timedelta(days=1)
+
+        hist_period = HistDataPeriod(last_full_day.year, last_full_day.month)
+        hist_archive_path = download_histdata_period(hist_period, cache_dir=cache_dir)
+        hist_archive = read_histdata_archive(hist_archive_path, hist_period)
+        anchor_utc = _latest_liquid_histdata_anchor(
+            hist_archive.payload_text,
+            cutoff_utc=cutoff_utc,
+        )
+
         request = HistoricalRequest(
             schema="ohlcv-1m",
-            start=request_start.isoformat(),
-            end=request_end.isoformat(),
+            start=anchor_utc.isoformat(),
+            end=(anchor_utc + timedelta(minutes=1)).isoformat(),
         )
         quote = client.estimate_cost(request)
         if quote.quoted_cost_usd > HISTORICAL_SMOKE_MAX_COST_USD:
@@ -301,8 +333,8 @@ def main() -> int:
             )
         receipt = client.download_jsonl(request, quote=quote, output_path=raw_path)
 
-    start_date = target_day.date().isoformat()
-    end_date = (target_day.date() + timedelta(days=1)).isoformat()
+    start_date = anchor_utc.date().isoformat()
+    end_date = (anchor_utc.date() + timedelta(days=1)).isoformat()
     continuous_resolution = _symbology_resolve(
         api_key,
         symbols=GC_CONTINUOUS_SYMBOL,
@@ -330,11 +362,11 @@ def main() -> int:
     )
     if not observations:
         raise RuntimeError("Databento returned no mapped GC minute observations.")
-    gc = max(observations, key=lambda item: item.observed_at)
+    gc = min(observations, key=lambda item: abs((item.observed_at - anchor_utc).total_seconds()))
 
     xau, histdata_evidence = _matching_histdata_xau(
         gc.observed_at,
-        cache_dir=root / ".day41_histdata_cache",
+        cache_dir=cache_dir,
     )
     pair = pair_shadow_observations(gc, xau, max_skew_seconds=PAIR_MAX_SKEW_SECONDS)
     if pair["paired"] is not True:
@@ -351,6 +383,8 @@ def main() -> int:
         "candidate_head_sha": head_sha,
         "observed_at_utc": observed_at.isoformat(),
         "target_historical_utc_day": start_date,
+        "histdata_anchor_rule": "latest_weekday_1500_utc_before_fully_entitled_databento_cutoff",
+        "histdata_anchor_utc": anchor_utc.isoformat(),
         "genuine_databento_observation_ingested": True,
         "genuine_histdata_xau_observation_ingested": True,
         "historical_research_pair": True,
@@ -380,6 +414,7 @@ def main() -> int:
                 "ok": True,
                 "candidate_head_sha": head_sha,
                 "target_historical_utc_day": start_date,
+                "histdata_anchor_utc": anchor_utc.isoformat(),
                 "provider": pair["gc"]["provider"],
                 "contract_symbol": pair["gc"]["contract_symbol"],
                 "gc_observed_at_utc": pair["gc"]["observed_at_utc"],
