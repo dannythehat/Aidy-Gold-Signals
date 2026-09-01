@@ -14,6 +14,7 @@ from aidy.self_consistency_v2 import self_consistency_manifest_v2
 BASE_SHA = "0a402ab092c973db3976b46a485142b6a0a003d0"
 EXPECTED_FILES = (
     "migrations/d1/0004_end_to_end_cycles.sql",
+    "src/aidy/decision_ledger.py",
     "src/aidy/safety_gates_v2.py",
     "src/aidy/openai_gateway_v2.py",
     "src/aidy/self_consistency_v2.py",
@@ -126,6 +127,7 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
         "stale_and_outage_fail_closed_required": True,
         "shadow_replay_private_forward_leakage_forbidden": True,
         "watcher_management_state_continuity_required": True,
+        "secret_false_positive_hardening_audited": True,
         "deterministic_evidence_required": True,
         "formal_forward_evidence_created": False,
         "day53_started": False,
