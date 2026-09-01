@@ -28,6 +28,23 @@ def digest(value: object) -> str:
     return sha256(canonical_json(value).encode()).hexdigest()
 
 
+def normalize_databento_api_key(raw: str) -> str:
+    """Normalize common secret wrappers without weakening Databento's key contract."""
+
+    if not isinstance(raw, str):
+        raise ShadowSpineError("Databento API key secret must be text.")
+    key = raw.strip()
+    if key.startswith("DATABENTO_API_KEY="):
+        key = key.split("=", 1)[1].strip()
+    if len(key) >= 2 and key[0] == key[-1] and key[0] in {"\"", "'"}:
+        key = key[1:-1].strip()
+    if len(key) != 32 or not key.startswith("db-"):
+        raise ShadowSpineError(
+            "Databento API key secret is not a 32-character key starting with db-."
+        )
+    return key
+
+
 def _decimal(value: Any, *, name: str) -> Decimal:
     try:
         result = Decimal(str(value))
