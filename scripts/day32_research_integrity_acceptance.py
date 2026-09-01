@@ -310,7 +310,8 @@ def _identity_for_path(manifest: Mapping[str, Any], path_prefix: str) -> str:
     ]
     if not matches:
         raise RuntimeError(f"Day 32 leak fixture path is not attested: {path_prefix}")
-    return str(sorted(matches, key=lambda row: str(row["json_path"]))[0]["field_identity"])
+    selected = min(matches, key=lambda row: str(row["json_path"]))
+    return str(selected["field_identity"])
 
 
 def build_artifacts(now: datetime, head_sha: str) -> dict[str, Any]:
@@ -413,7 +414,9 @@ def _write(path: Path, value: object) -> None:
     path.write_text(canonical_json(value) + "\n", encoding="utf-8")
 
 
-def _expected_records(values: Iterable[tuple[str, Mapping[str, Any]]]) -> dict[str, dict[str, str]]:
+def _expected_records(
+    values: Iterable[tuple[str, Mapping[str, Any]]],
+) -> dict[str, dict[str, str]]:
     expected: dict[str, dict[str, str]] = {}
     for identity, record in values:
         if identity in expected:
