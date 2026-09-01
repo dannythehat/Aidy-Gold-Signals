@@ -1,0 +1,156 @@
+name: AIDY Day 46 Paper Simulator Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/paper_simulator.py"
+      - "tests/test_day46_paper_simulator.py"
+      - "scripts/day46_paper_simulator_acceptance.py"
+      - "docs/day46-paper-simulator-invalidation-contract.md"
+      - ".github/workflows/day46-paper-simulator-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day46-paper-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  DAY46_BASE_SHA: 0b413c23eb5b720bce227bb62ca35787855fb81d
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 45 base and bounded Day 46 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY46_BASE_SHA" HEAD)" = "$DAY46_BASE_SHA"
+          allowed='^(src/aidy/paper_simulator.py|tests/test_day46_paper_simulator.py|scripts/day46_paper_simulator_acceptance.py|docs/day46-paper-simulator-invalidation-contract.md|.github/workflows/day46-paper-simulator-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY46_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 46 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/paper_simulator.py \
+            tests/test_day46_paper_simulator.py \
+            scripts/day46_paper_simulator_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Enforce no execution integrations in Day 46 module
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|telegram|super_signals|broker|account|follower)' src/aidy/paper_simulator.py; then
+            echo "Day 46 simulator imported a forbidden execution integration"
+            exit 1
+          fi
+
+      - name: Focused Day 46 adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day46_paper_simulator.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Deterministic Day 46 acceptance evidence A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day46_paper_simulator_acceptance.py \
+            --output-dir day46_artifacts_a \
+            > /tmp/day46-summary-a.json
+          cat /tmp/day46-summary-a.json
+
+      - name: Deterministic Day 46 acceptance evidence B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day46_paper_simulator_acceptance.py \
+            --output-dir day46_artifacts_b \
+            > /tmp/day46-summary-b.json
+          cat /tmp/day46-summary-b.json
+
+      - name: Require byte-identical restart-safe evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day46_artifacts_a day46_artifacts_b
+
+      - name: Enforce Day 46 paper-only boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import subprocess
+
+          with open("day46_artifacts_a/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "0b413c23eb5b720bce227bb62ca35787855fb81d", result
+          assert result["head_sha"] == head, result
+          assert result["paper_position_count"] == 2, result
+          assert result["long_final_state"] == "closed_targets", result
+          assert result["long_realized_r"] == "1.000000", result
+          assert result["long_thesis_status"] == "triggered", result
+          assert result["short_final_state"] == "closed_stop", result
+          assert result["short_realized_r"] == "-0.500000", result
+          assert result["restart_replay_byte_identical"] is True, result
+          assert result["all_state_digests_valid"] is True, result
+          assert result["all_outcome_attachments_valid"] is True, result
+          assert result["ex_ante_records_unchanged"] is True, result
+          assert result["economic_and_thesis_outcomes_separate"] is True, result
+          assert result["pit_only_observation_contract"] is True, result
+          assert result["paper_only"] is True, result
+          assert result["execution_authority"] is False, result
+          assert result["broker_access_used"] is False, result
+          assert result["account_access_used"] is False, result
+          assert result["follower_access_used"] is False, result
+          assert result["telegram_action_used"] is False, result
+          assert result["mt5_action_used"] is False, result
+          assert result["formal_forward_evidence_created"] is False, result
+          assert result["predictive_edge_claimed"] is False, result
+          assert result["super_signals_modified"] is False, result
+          PY
+
+      - name: Preserve Day 46 acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day46-paper-simulator-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day46_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
