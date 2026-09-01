@@ -85,29 +85,27 @@ def test_replay_shadow_and_non_live_states_never_publish(source_state: str) -> N
 
 def test_manage_message_is_deterministic_provider_instruction() -> None:
     message = format_provider_message(_manage_decision(), decision_id="aidy_dec_update123")
-    assert message == "\n".join(
-        [
-            "🔄 AI Signal — TRADE UPDATE",
-            "XAUUSD",
-            "Trade ID: aidy_dec_12345678",
-            "Move SL to 2492",
-            "New TP1 2510",
-            "New TP2 2520",
-            "Update ID: aidy_dec_update123",
-        ]
+    expected = (
+        "🔄 AI Signal — TRADE UPDATE\n"
+        "XAUUSD\n"
+        "Trade ID: aidy_dec_12345678\n"
+        "Move SL to 2492\n"
+        "New TP1 2510\n"
+        "New TP2 2520\n"
+        "Update ID: aidy_dec_update123"
     )
+    assert message == expected
 
 
 def test_close_message_is_deterministic_provider_instruction() -> None:
     message = format_provider_message(_close_decision(), decision_id="aidy_dec_close123")
-    assert message == "\n".join(
-        [
-            "✅ AI Signal — CLOSE TRADE",
-            "XAUUSD — CLOSE FULL TRADE",
-            "Trade ID: aidy_dec_12345678",
-            "Update ID: aidy_dec_close123",
-        ]
+    expected = (
+        "✅ AI Signal — CLOSE TRADE\n"
+        "XAUUSD — CLOSE FULL TRADE\n"
+        "Trade ID: aidy_dec_12345678\n"
+        "Update ID: aidy_dec_close123"
     )
+    assert message == expected
 
 
 def test_simulated_send_and_retry_are_idempotent() -> None:
