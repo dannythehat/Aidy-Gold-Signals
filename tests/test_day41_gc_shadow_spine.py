@@ -53,6 +53,30 @@ def test_databento_jsonl_requires_mapped_contract_identity() -> None:
     assert rows[0].provider == "Databento"
 
 
+def test_databento_real_json_header_shape_is_supported() -> None:
+    payload = json.dumps(
+        {
+            "hd": {
+                "ts_event": "2026-09-01T07:00:00.000000000Z",
+                "rtype": 35,
+                "publisher_id": 1,
+                "instrument_id": 12345,
+            },
+            "open": "4520.100000000",
+            "high": "4522.400000000",
+            "low": "4518.700000000",
+            "close": "4521.500000000",
+            "volume": 1234,
+            "symbol": "GCZ6",
+        }
+    )
+    rows = parse_databento_ohlcv_jsonl(payload)
+    assert len(rows) == 1
+    assert rows[0].contract_symbol == "GCZ6"
+    assert rows[0].observed_at == BASE
+    assert rows[0].price == Decimal("4521.500000000")
+
+
 def test_databento_anonymous_instrument_fails_closed() -> None:
     payload = json.dumps(
         {
