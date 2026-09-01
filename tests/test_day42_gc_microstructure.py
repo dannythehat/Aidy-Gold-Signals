@@ -44,14 +44,7 @@ def _row(
         "side": side,
         "price": price,
         "size": size,
-        "levels": [
-            {
-                "bid_px": bid,
-                "ask_px": ask,
-                "bid_sz": 12,
-                "ask_sz": 15,
-            }
-        ],
+        "levels": [{"bid_px": bid, "ask_px": ask, "bid_sz": 12, "ask_sz": 15}],
     }
 
 
@@ -64,7 +57,7 @@ def _minute(
     distance_bps: str,
 ) -> MinuteMicrostructure:
     minute = datetime(2026, 1, 5, 15, 0, tzinfo=UTC) + timedelta(weeks=index)
-    anchored = Decimal("4500")
+    anchored = Decimal(4500)
     last = anchored * (Decimal(1) + Decimal(distance_bps) / Decimal(10000))
     return MinuteMicrostructure(
         minute_utc=minute,
@@ -72,12 +65,12 @@ def _minute(
         session="london_new_york_overlap",
         trade_count=3,
         trade_volume=Decimal(volume),
-        buy_aggressor_volume=Decimal("2"),
-        sell_aggressor_volume=Decimal("1"),
-        unknown_side_volume=Decimal("0"),
-        known_side_volume=Decimal("3"),
+        buy_aggressor_volume=Decimal(2),
+        sell_aggressor_volume=Decimal(1),
+        unknown_side_volume=Decimal(0),
+        known_side_volume=Decimal(3),
         signed_trade_imbalance=Decimal(signed),
-        vwap=Decimal("4500"),
+        vwap=Decimal(4500),
         last_trade_price=last,
         mean_spread_bps=Decimal(spread_bps),
         median_spread_bps=Decimal(spread_bps),
@@ -100,9 +93,7 @@ def _split_binding() -> dict[str, object]:
 
 def test_tbbo_parser_uses_genuine_trade_and_pretrade_bbo() -> None:
     payload = json.dumps(_row(second=1, side="B", price="4500.0", size=3))
-    trades = parse_databento_tbbo_jsonl(payload, contract_by_instrument_id=CONTRACT_MAP)
-    assert len(trades) == 1
-    trade = trades[0]
+    trade = parse_databento_tbbo_jsonl(payload, contract_by_instrument_id=CONTRACT_MAP)[0]
     assert trade.contract_symbol == "GCZ6"
     assert trade.price == Decimal("4500.0")
     assert trade.size == Decimal(3)
@@ -159,8 +150,9 @@ def test_minute_features_use_trade_size_price_and_known_aggressor_flow() -> None
             _row(second=20, side="N", price="4501", size=3),
         )
     )
-    trades = parse_databento_tbbo_jsonl(payload, contract_by_instrument_id=CONTRACT_MAP)
-    minute = aggregate_tbbo_minutes(trades)[0]
+    minute = aggregate_tbbo_minutes(
+        parse_databento_tbbo_jsonl(payload, contract_by_instrument_id=CONTRACT_MAP)
+    )[0]
     assert minute.trade_count == 3
     assert minute.trade_volume == Decimal(6)
     assert minute.buy_aggressor_volume == Decimal(2)
@@ -194,47 +186,42 @@ def test_session_vwap_is_deterministic_and_cumulative_inside_session() -> None:
     )
     assert len(rows) == 2
     assert rows[0].session == rows[1].session
-    assert rows[0].anchored_vwap == Decimal("4500")
-    assert rows[1].anchored_vwap == Decimal("4502")
+    assert rows[0].anchored_vwap == Decimal(4500)
+    assert rows[1].anchored_vwap == Decimal(4502)
     assert rows[0].anchor_identity == rows[1].anchor_identity
 
 
-def test_weekday_clock_baseline_is_frozen_without_outcomes() -> None:
-    minutes = [
+def _baseline_minutes() -> list[MinuteMicrostructure]:
+    return [
         _minute(
             index=index,
             volume=str(100 + index),
-            spread_bps=str(1 + index / 100),
+            spread_bps=str(Decimal(1) + Decimal(index) / Decimal(100)),
             signed=str(Decimal("0.1") + Decimal(index) / Decimal(1000)),
             distance_bps=str(Decimal("0.5") + Decimal(index) / Decimal(100)),
         )
         for index in range(20)
     ]
+
+
+def test_weekday_clock_baseline_is_frozen_without_outcomes() -> None:
+    minutes = _baseline_minutes()
     baseline = build_weekday_clock_baseline(minutes)
     assert verify_weekday_clock_baseline(baseline)
     assert baseline["baseline_version"] == BASELINE_VERSION
     assert baseline["outcome_fields_used"] is False
     assert baseline["ordinary_session_activity_can_count_as_alpha"] is False
-    bucket = baseline["groups"]["6:60"]
+    bucket = baseline["groups"]["0:60"]
     assert bucket["volume"]["state"] == "known"
     assert bucket["spread_bps"]["state"] == "known"
 
 
 def test_normalization_uses_matching_weekday_clock_bucket() -> None:
-    minutes = [
-        _minute(
-            index=index,
-            volume=str(100 + index),
-            spread_bps=str(Decimal("1") + Decimal(index) / Decimal(100)),
-            signed=str(Decimal("0.1") + Decimal(index) / Decimal(1000)),
-            distance_bps=str(Decimal("0.5") + Decimal(index) / Decimal(100)),
-        )
-        for index in range(20)
-    ]
+    minutes = _baseline_minutes()
     baseline = build_weekday_clock_baseline(minutes)
     normalized = normalize_minute(minutes[-1], baseline)
     assert normalized["state"] == "known"
-    assert normalized["baseline_key"] == "6:60"
+    assert normalized["baseline_key"] == "0:60"
     assert normalized["volume_z"] is not None
     assert normalized["spread_z"] is not None
     assert normalized["ordinary_session_activity_can_count_as_alpha"] is False
@@ -262,9 +249,7 @@ def test_shadow_experiment_retains_insufficient_result_without_gate() -> None:
         {"independent_episode_id": "episode-1", "incremental_statistic": "99"},
     ]
     result = run_shadow_experiment(
-        experiment="J2",
-        eligible_rows=rows,
-        split_binding=_split_binding(),
+        experiment="J2", eligible_rows=rows, split_binding=_split_binding()
     )
     assert result["effective_independent_n"] == 1
     assert result["result_state"] == "insufficient"
@@ -278,9 +263,7 @@ def test_shadow_experiment_can_report_preregistered_null() -> None:
         for index in range(30)
     ]
     result = run_shadow_experiment(
-        experiment="J3",
-        eligible_rows=rows,
-        split_binding=_split_binding(),
+        experiment="J3", eligible_rows=rows, split_binding=_split_binding()
     )
     assert result["effective_independent_n"] == 30
     assert result["result_state"] == "null"
@@ -294,9 +277,7 @@ def test_non_null_shadow_result_still_cannot_promote_gate() -> None:
         for index in range(30)
     ]
     result = run_shadow_experiment(
-        experiment="J2",
-        eligible_rows=rows,
-        split_binding=_split_binding(),
+        experiment="J2", eligible_rows=rows, split_binding=_split_binding()
     )
     assert result["result_state"] == "descriptive_non_null"
     assert result["gate_promoted"] is False
