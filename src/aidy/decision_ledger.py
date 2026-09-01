@@ -120,11 +120,35 @@ def _text(value: Any, *, name: str, maximum: int = 256) -> str:
     return normalized
 
 
+def _optional_text(value: Any, *, name: str, maximum: int = 256) -> str | None:
+    if value is None:
+        return None
+    return _text(value, name=name, maximum=maximum)
+
+
 def _safe_id(value: Any, *, name: str) -> str:
     normalized = _text(value, name=name, maximum=192)
     if not _SAFE_ID.fullmatch(normalized):
         raise ValueError(f"{name} has an unsafe identifier format.")
     return normalized
+
+
+def _assert_no_secrets_or_hidden_reasoning(value: Any, *, path: str) -> None:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            normalized = str(key).strip().lower()
+            if normalized in _SECRET_KEYS:
+                raise ValueError(f"Secret-bearing field is forbidden at {path}.{key}.")
+            if normalized in _HIDDEN_REASONING_KEYS:
+                raise ValueError(f"Hidden reasoning field is forbidden at {path}.{key}.")
+            _assert_no_secrets_or_hidden_reasoning(item, path=f"{path}.{key}")
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            _assert_no_secrets_or_hidden_reasoning(item, path=f"{path}[{index}]")
+    elif isinstance(value, str):
+        lowered = value.strip().lower()
+        if any(marker in lowered for marker in _SECRET_MARKERS):
+            raise ValueError(f"Secret-like value is forbidden at {path}.")
 
 
 def _assert_ex_ante_safe(value: Any, *, path: str = "ex_ante") -> None:
@@ -159,9 +183,13 @@ def _unique_ids(values: Iterable[Any], *, name: str) -> list[str]:
 
 
 def _sampling_metadata(value: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise TypeError("sampling_metadata must be a mapping.")
     required = {"seed_supported", "seed", "temperature_supported", "temperature"}
     if set(value) != required:
-        raise ValueError("sampling_metadata must contain the exact supported/seed/temperature fields.")
+        raise ValueError(
+            "sampling_metadata must contain the exact supported/seed/temperature fields."
+        )
     seed_supported = value["seed_supported"]
     temperature_supported = value["temperature_supported"]
     if not isinstance(seed_supported, bool) or not isinstance(temperature_supported, bool):
@@ -209,36 +237,54 @@ def build_reproducibility_bundle(
 ) -> dict[str, Any]:
     if not isinstance(context, Mapping):
         raise TypeError("context must be a mapping.")
-    supplied_hash = str(context.get("context_hash") or "")
-    if not supplied_hash or supplied_hash != compute_context_hash(context):
+    context_snapshot = copy.deepcopy(dict(context))
+    _assert_ex_ante_safe(context_snapshot, path="context")
+    supplied_hash = str(context_snapshot.get("context_hash") or "")
+    if not supplied_hash or supplied_hash != compute_context_hash(context_snapshot):
         raise ValueError("Context hash is missing or invalid.")
-    context_version = _text(context.get("context_packet_version"), name="context_packet_version")
-    if effective_n is not None and (isinstance(effective_n, bool) or not isinstance(effective_n, int) or effective_n < 0):
+    context_version = _text(
+        context_snapshot.get("context_packet_version"), name="context_packet_version"
+    )
+    if effective_n is not None and (
+        isinstance(effective_n, bool)
+        or not isinstance(effective_n, int)
+        or effective_n < 0
+    ):
         raise ValueError("effective_n must be a non-negative integer or null.")
     cases = _unique_ids(analogue_case_ids, name="analogue_case_ids")
-    source_versions = context.get("source_contract_versions")
+    source_versions = context_snapshot.get("source_contract_versions")
     source_versions = dict(source_versions) if isinstance(source_versions, Mapping) else {}
     bundle: dict[str, Any] = {
         "bundle_version": REPRODUCIBILITY_BUNDLE_VERSION,
         "context_packet_version": context_version,
         "context_hash": supplied_hash,
         "source_contract_versions": source_versions,
-        "prompt_version": None if prompt_version is None else _text(prompt_version, name="prompt_version"),
-        "prompt_digest": None if prompt_digest is None else _text(prompt_digest, name="prompt_digest"),
-        "gateway_version": None if gateway_version is None else _text(gateway_version, name="gateway_version"),
-        "model_id": None if model_id is None else _text(model_id, name="model_id"),
+        "prompt_version": _optional_text(prompt_version, name="prompt_version"),
+        "prompt_digest": _optional_text(prompt_digest, name="prompt_digest"),
+        "gateway_version": _optional_text(gateway_version, name="gateway_version"),
+        "model_id": _optional_text(model_id, name="model_id"),
         "strategy_version": _text(strategy_version, name="strategy_version"),
         "config_version": _text(config_version, name="config_version"),
         "sampling_metadata": _sampling_metadata(sampling_metadata),
-        "regime_state": None if regime_state is None else copy.deepcopy(dict(regime_state)),
+        "regime_state": None
+        if regime_state is None
+        else copy.deepcopy(dict(regime_state)),
         "setup_state": None if setup_state is None else copy.deepcopy(dict(setup_state)),
-        "evidence_grade": None if evidence_grade is None else _text(evidence_grade, name="evidence_grade"),
+        "evidence_grade": _optional_text(evidence_grade, name="evidence_grade"),
         "effective_n": effective_n,
-        "evidence_report_digest": None if evidence_report_digest is None else _text(evidence_report_digest, name="evidence_report_digest"),
-        "analogue_retrieval_version": None if analogue_retrieval_version is None else _text(analogue_retrieval_version, name="analogue_retrieval_version"),
-        "analogue_retrieval_digest": None if analogue_retrieval_digest is None else _text(analogue_retrieval_digest, name="analogue_retrieval_digest"),
+        "evidence_report_digest": _optional_text(
+            evidence_report_digest, name="evidence_report_digest"
+        ),
+        "analogue_retrieval_version": _optional_text(
+            analogue_retrieval_version, name="analogue_retrieval_version"
+        ),
+        "analogue_retrieval_digest": _optional_text(
+            analogue_retrieval_digest, name="analogue_retrieval_digest"
+        ),
         "analogue_case_ids": cases,
-        "selective_layer_state": None if selective_layer_state is None else copy.deepcopy(dict(selective_layer_state)),
+        "selective_layer_state": None
+        if selective_layer_state is None
+        else copy.deepcopy(dict(selective_layer_state)),
     }
     _assert_ex_ante_safe(bundle, path="reproducibility_bundle")
     bundle["bundle_digest"] = digest(bundle)
@@ -246,13 +292,24 @@ def build_reproducibility_bundle(
 
 
 def verify_reproducibility_bundle(bundle: Mapping[str, Any]) -> bool:
+    if not isinstance(bundle, Mapping):
+        return False
     supplied = str(bundle.get("bundle_digest") or "")
-    body = dict(bundle)
+    body = copy.deepcopy(dict(bundle))
     body.pop("bundle_digest", None)
+    try:
+        _assert_ex_ante_safe(body, path="reproducibility_bundle")
+    except (TypeError, ValueError):
+        return False
     return bool(supplied) and supplied == digest(body)
 
 
-def _gate_receipt(value: Mapping[str, Any] | None, *, stage: str) -> dict[str, Any] | None:
+def _gate_receipt(
+    value: Mapping[str, Any] | None,
+    *,
+    stage: str,
+    context_hash: str,
+) -> dict[str, Any] | None:
     if value is None:
         return None
     if not isinstance(value, Mapping):
@@ -260,6 +317,8 @@ def _gate_receipt(value: Mapping[str, Any] | None, *, stage: str) -> dict[str, A
     receipt = copy.deepcopy(dict(value))
     if receipt.get("gate_version") != SAFETY_GATES_VERSION or receipt.get("stage") != stage:
         raise ValueError(f"{stage} gate receipt version/stage mismatch.")
+    if receipt.get("context_hash") != context_hash:
+        raise ValueError(f"{stage} gate receipt does not bind the exact context hash.")
     if not verify_safety_gate_digest(receipt):
         raise ValueError(f"{stage} gate receipt digest is invalid.")
     _assert_ex_ante_safe(receipt, path=f"{stage}_gate_receipt")
@@ -296,7 +355,9 @@ def _gateway_snapshot(value: Mapping[str, Any] | None) -> dict[str, Any] | None:
     return snapshot
 
 
-def _decision_snapshot(value: Mapping[str, Any] | None) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None]:
+def _decision_snapshot(
+    value: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None]:
     if value is None:
         return None, None, None
     normalized = validate_master_trader_decision_versioned(value)
@@ -332,7 +393,9 @@ def _validate_disposition(
         if pre.get("status") != "blocked" or pre.get("model_call_allowed") is not False:
             raise ValueError("pre_model_blocked requires a blocked pre-model receipt.")
         if gateway is not None or post is not None or decision is not None:
-            raise ValueError("pre_model_blocked cannot contain gateway/post-model/decision state.")
+            raise ValueError(
+                "pre_model_blocked cannot contain gateway/post-model/decision state."
+            )
         return
     if pre.get("status") != "passed" or pre.get("model_call_allowed") is not True:
         raise ValueError(f"{disposition} requires a passed pre-model receipt.")
@@ -361,6 +424,60 @@ def _validate_disposition(
         raise ValueError("decision_admitted requires an actionable decision.")
 
 
+def _validate_cross_links(
+    *,
+    context: Mapping[str, Any],
+    instruction_type: str,
+    pre: Mapping[str, Any],
+    gateway: Mapping[str, Any] | None,
+    post: Mapping[str, Any] | None,
+    decision: Mapping[str, Any] | None,
+    decision_digest: str | None,
+    repro: Mapping[str, Any],
+    quality: Mapping[str, Any],
+) -> None:
+    context_hash = str(context["context_hash"])
+    if pre.get("instruction_type") != instruction_type:
+        raise ValueError("Pre-model receipt instruction_type does not match the evaluation.")
+    if repro.get("context_hash") != context_hash:
+        raise ValueError("Reproducibility bundle does not bind the exact context hash.")
+    if repro.get("context_packet_version") != context.get("context_packet_version"):
+        raise ValueError("Reproducibility bundle context version does not match the evaluation.")
+    context_sources = context.get("source_contract_versions")
+    context_sources = dict(context_sources) if isinstance(context_sources, Mapping) else {}
+    if repro.get("source_contract_versions") != context_sources:
+        raise ValueError("Reproducibility source-contract identities do not match the context.")
+    context_quality = context.get("data_quality")
+    context_quality = dict(context_quality) if isinstance(context_quality, Mapping) else {}
+    if dict(quality) != context_quality:
+        raise ValueError("data_quality_flags must exactly match context.data_quality.")
+    context_as_of = _utc(context.get("as_of_utc"), name="context.as_of_utc")
+    if decision is not None:
+        decision_time = _utc(decision.get("evaluated_at_utc"), name="decision.evaluated_at_utc")
+        if decision_time != context_as_of:
+            raise ValueError("Decision evaluation time does not match the exact context as-of.")
+    if gateway is None:
+        if any(
+            repro.get(field) is not None
+            for field in ("prompt_version", "prompt_digest", "gateway_version", "model_id")
+        ):
+            raise ValueError("No-model evaluation cannot claim prompt/gateway/model identities.")
+    else:
+        for field in ("prompt_version", "prompt_digest", "gateway_version", "model_id"):
+            if repro.get(field) != gateway.get(field):
+                raise ValueError(
+                    f"Reproducibility {field} does not match the gateway snapshot."
+                )
+        if decision is None:
+            if gateway.get("decision_digest") is not None:
+                raise ValueError("Gateway decision_digest must be null when no decision exists.")
+        elif gateway.get("decision_digest") != decision_digest:
+            raise ValueError("Gateway decision digest does not match the stored decision.")
+    if post is not None and decision is not None:
+        if post.get("decision_action") != decision.get("action"):
+            raise ValueError("Post-model decision_action does not match the stored decision.")
+
+
 def build_ex_ante_evaluation_record(
     *,
     context: Mapping[str, Any],
@@ -376,14 +493,24 @@ def build_ex_ante_evaluation_record(
     if not isinstance(context, Mapping):
         raise TypeError("context must be a mapping.")
     context_snapshot = copy.deepcopy(dict(context))
+    _assert_ex_ante_safe(context_snapshot, path="context_snapshot")
     context_hash = str(context_snapshot.get("context_hash") or "")
     if not context_hash or context_hash != compute_context_hash(context_snapshot):
         raise ValueError("Context hash is missing or invalid.")
     evaluated_at = _utc(context_snapshot.get("as_of_utc"), name="context.as_of_utc")
-    pre = _gate_receipt(pre_model_receipt, stage="pre_model")
+    instruction = _text(instruction_type, name="instruction_type")
+    pre = _gate_receipt(
+        pre_model_receipt,
+        stage="pre_model",
+        context_hash=context_hash,
+    )
     if pre is None:
         raise ValueError("pre_model_receipt is required for every evaluation.")
-    post = _gate_receipt(post_model_receipt, stage="post_model")
+    post = _gate_receipt(
+        post_model_receipt,
+        stage="post_model",
+        context_hash=context_hash,
+    )
     gateway = _gateway_snapshot(gateway_result)
     decision_snapshot, decision_digest, falsifiable = _decision_snapshot(decision)
     _validate_disposition(
@@ -393,15 +520,26 @@ def build_ex_ante_evaluation_record(
         post=post,
         decision=decision_snapshot,
     )
-    if not isinstance(reproducibility_bundle, Mapping) or not verify_reproducibility_bundle(reproducibility_bundle):
+    if not isinstance(reproducibility_bundle, Mapping) or not verify_reproducibility_bundle(
+        reproducibility_bundle
+    ):
         raise ValueError("reproducibility_bundle is invalid.")
     repro = copy.deepcopy(dict(reproducibility_bundle))
-    if repro.get("context_hash") != context_hash or repro.get("context_packet_version") != context_snapshot.get("context_packet_version"):
-        raise ValueError("Reproducibility bundle does not bind the exact context.")
+    if not isinstance(data_quality_flags, Mapping):
+        raise TypeError("data_quality_flags must be a mapping.")
     quality = copy.deepcopy(dict(data_quality_flags))
-    _assert_ex_ante_safe(context_snapshot, path="context_snapshot")
     _assert_ex_ante_safe(quality, path="data_quality_flags")
-    instruction = _text(instruction_type, name="instruction_type")
+    _validate_cross_links(
+        context=context_snapshot,
+        instruction_type=instruction,
+        pre=pre,
+        gateway=gateway,
+        post=post,
+        decision=decision_snapshot,
+        decision_digest=decision_digest,
+        repro=repro,
+        quality=quality,
+    )
     identity_body = {
         "ledger_version": DECISION_LEDGER_VERSION,
         "context_hash": context_hash,
@@ -443,11 +581,29 @@ def build_ex_ante_evaluation_record(
 
 
 def verify_ex_ante_record(record: Mapping[str, Any]) -> bool:
+    if not isinstance(record, Mapping):
+        return False
     supplied = str(record.get("ex_ante_digest") or "")
     body = copy.deepcopy(dict(record))
     body.pop("ex_ante_digest", None)
     try:
         _assert_ex_ante_safe(body, path="ex_ante_record")
+        context = body.get("context_snapshot")
+        repro = body.get("reproducibility_bundle")
+        if not isinstance(context, Mapping) or not isinstance(repro, Mapping):
+            return False
+        if body.get("context_hash") != context.get("context_hash"):
+            return False
+        if str(context.get("context_hash") or "") != compute_context_hash(context):
+            return False
+        if body.get("reproducibility_bundle_digest") != repro.get("bundle_digest"):
+            return False
+        if not verify_reproducibility_bundle(repro):
+            return False
+        if body.get("outcome_attachment_count") != 0:
+            return False
+        if body.get("outcome_fields_present") is not False:
+            return False
     except (TypeError, ValueError):
         return False
     return bool(supplied) and supplied == digest(body)
@@ -466,7 +622,10 @@ def reconcile_ex_ante_record(
         raise ValueError("Existing ex-ante record is invalid.")
     if existing.get("evaluation_id") != candidate.get("evaluation_id"):
         raise ValueError("Cannot reconcile different evaluation identities.")
-    if existing.get("ex_ante_digest") != candidate.get("ex_ante_digest") or canonical_json(existing) != canonical_json(candidate):
+    if (
+        existing.get("ex_ante_digest") != candidate.get("ex_ante_digest")
+        or canonical_json(existing) != canonical_json(candidate)
+    ):
         raise ValueError("Immutable ex-ante record mutation detected.")
     return copy.deepcopy(dict(existing))
 
@@ -524,30 +683,22 @@ def build_outcome_attachment(
     return record
 
 
-def _assert_no_secrets_or_hidden_reasoning(value: Any, *, path: str) -> None:
-    if isinstance(value, Mapping):
-        for key, item in value.items():
-            normalized = str(key).strip().lower()
-            if normalized in _SECRET_KEYS:
-                raise ValueError(f"Secret-bearing field is forbidden at {path}.{key}.")
-            if normalized in _HIDDEN_REASONING_KEYS:
-                raise ValueError(f"Hidden reasoning field is forbidden at {path}.{key}.")
-            _assert_no_secrets_or_hidden_reasoning(item, path=f"{path}.{key}")
-    elif isinstance(value, (list, tuple)):
-        for index, item in enumerate(value):
-            _assert_no_secrets_or_hidden_reasoning(item, path=f"{path}[{index}]")
-    elif isinstance(value, str):
-        lowered = value.strip().lower()
-        if any(marker in lowered for marker in _SECRET_MARKERS):
-            raise ValueError(f"Secret-like value is forbidden at {path}.")
-
-
 def verify_outcome_attachment(attachment: Mapping[str, Any]) -> bool:
+    if not isinstance(attachment, Mapping):
+        return False
     supplied = str(attachment.get("attachment_digest") or "")
     body = copy.deepcopy(dict(attachment))
     body.pop("attachment_digest", None)
     try:
         _assert_no_secrets_or_hidden_reasoning(body, path="outcome_attachment")
+        if body.get("attachment_version") != OUTCOME_ATTACHMENT_VERSION:
+            return False
+        if body.get("attachment_type") not in OUTCOME_ATTACHMENT_TYPES:
+            return False
+        if _utc(body.get("attached_at_utc"), name="attached_at_utc") <= _utc(
+            body.get("evaluated_at_utc"), name="evaluated_at_utc"
+        ):
+            return False
     except (TypeError, ValueError):
         return False
     return bool(supplied) and supplied == digest(body)
@@ -566,7 +717,10 @@ def reconcile_outcome_attachment(
         raise ValueError("Existing outcome attachment is invalid.")
     if existing.get("attachment_id") != candidate.get("attachment_id"):
         raise ValueError("Cannot reconcile different outcome attachment identities.")
-    if existing.get("attachment_digest") != candidate.get("attachment_digest") or canonical_json(existing) != canonical_json(candidate):
+    if (
+        existing.get("attachment_digest") != candidate.get("attachment_digest")
+        or canonical_json(existing) != canonical_json(candidate)
+    ):
         raise ValueError("Conflicting immutable outcome attachment detected.")
     return copy.deepcopy(dict(existing))
 
@@ -605,6 +759,11 @@ def decision_ledger_manifest() -> dict[str, Any]:
         "every_cycle_gets_stable_evaluation_id": True,
         "every_cycle_gets_stable_decision_id": True,
         "duplicate_identical_evaluation_is_idempotent": True,
+        "exact_context_hash_bound_to_gate_receipts": True,
+        "exact_data_quality_bound_to_context": True,
+        "gateway_decision_digest_bound_to_stored_decision": True,
+        "decision_time_bound_to_context_asof": True,
+        "model_prompt_gateway_identities_cross_checked": True,
         "ex_ante_mutation_allowed": False,
         "outcome_attachment_mutates_ex_ante": False,
         "future_outcomes_allowed_in_ex_ante": False,
