@@ -10,18 +10,25 @@ from pathlib import Path
 
 import httpx
 
-from aidy.databento_gc import DatabentoHistoricalClient, HistoricalRequest
+from aidy.databento_gc import (
+    DATABENTO_DATASET,
+    GC_CONTINUOUS_SYMBOL,
+    DatabentoHistoricalClient,
+    HistoricalRequest,
+)
 from aidy.gc_shadow_spine import (
     canonical_json,
     day41_architecture_manifest,
     normalize_databento_api_key,
     pair_shadow_observations,
     parse_databento_ohlcv_jsonl,
+    resolve_gc_contract_map,
     xau_observation_from_gold_api,
 )
 
 LIVE_SMOKE_MAX_COST_USD = Decimal("0.25")
 GOLD_API_URL = "https://api.gold-api.com/price/XAU"
+DATABENTO_SYMBOLOGY_URL = "https://hist.databento.com/v0/symbology.resolve"
 
 
 def _gold_api_payload() -> dict[str, object]:
@@ -77,6 +84,55 @@ def _available_ohlcv_window(dataset_range: dict[str, object]) -> tuple[datetime,
     return request_start, request_end
 
 
+def _symbology_resolve(
+    api_key: str,
+    *,
+    symbols: str,
+    stype_in: str,
+    stype_out: str,
+    start_date: str,
+    end_date: str,
+) -> dict[str, object]:
+    response = httpx.post(
+        DATABENTO_SYMBOLOGY_URL,
+        auth=httpx.BasicAuth(api_key, ""),
+        timeout=20.0,
+        data={
+            "dataset": DATABENTO_DATASET,
+            "symbols": symbols,
+            "stype_in": stype_in,
+            "stype_out": stype_out,
+            "start_date": start_date,
+            "end_date": end_date,
+        },
+        headers={"User-Agent": "AIDY-Signals/Day41"},
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise TypeError("Databento symbology endpoint returned a non-object payload.")
+    return payload
+
+
+def _continuous_instrument_ids(payload: dict[str, object]) -> list[str]:
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        raise RuntimeError("Databento continuous resolution is missing its result mapping.")
+    entries = result.get(GC_CONTINUOUS_SYMBOL)
+    if not isinstance(entries, list) or not entries:
+        raise RuntimeError("Databento continuous resolution returned no GC instruments.")
+    instrument_ids = sorted(
+        {
+            str(entry.get("s"))
+            for entry in entries
+            if isinstance(entry, dict) and str(entry.get("s", "")).isdigit()
+        }
+    )
+    if not instrument_ids:
+        raise RuntimeError("Databento continuous resolution returned no numeric GC instrument IDs.")
+    return instrument_ids
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="day41_live_evidence.json")
@@ -86,7 +142,8 @@ def main() -> int:
     raw_key = os.environ.get("DATABENTO_API_KEY", "")
     if not raw_key.strip():
         raise RuntimeError("DATABENTO_API_KEY is required for genuine Day 41 evidence.")
-    os.environ["DATABENTO_API_KEY"] = normalize_databento_api_key(raw_key)
+    api_key = normalize_databento_api_key(raw_key)
+    os.environ["DATABENTO_API_KEY"] = api_key
 
     root = Path(__file__).resolve().parents[1]
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
@@ -109,7 +166,33 @@ def main() -> int:
             )
         receipt = client.download_jsonl(request, quote=quote, output_path=raw_path)
 
-    observations = parse_databento_ohlcv_jsonl(raw_path.read_text(encoding="utf-8"))
+    start_date = request_start.date().isoformat()
+    end_date = (request_end.date() + timedelta(days=1)).isoformat()
+    continuous_resolution = _symbology_resolve(
+        api_key,
+        symbols=GC_CONTINUOUS_SYMBOL,
+        stype_in="continuous",
+        stype_out="instrument_id",
+        start_date=start_date,
+        end_date=end_date,
+    )
+    instrument_ids = _continuous_instrument_ids(continuous_resolution)
+    raw_resolutions: dict[str, dict[str, object]] = {}
+    for instrument_id in instrument_ids:
+        raw_resolutions[instrument_id] = _symbology_resolve(
+            api_key,
+            symbols=instrument_id,
+            stype_in="instrument_id",
+            stype_out="raw_symbol",
+            start_date=start_date,
+            end_date=end_date,
+        )
+    contract_map = resolve_gc_contract_map(continuous_resolution, raw_resolutions)
+
+    observations = parse_databento_ohlcv_jsonl(
+        raw_path.read_text(encoding="utf-8"),
+        contract_by_instrument_id=contract_map,
+    )
     if not observations:
         raise RuntimeError("Databento returned no mapped GC minute observations.")
     gc = max(observations, key=lambda item: item.observed_at)
@@ -134,6 +217,13 @@ def main() -> int:
         "databento_quote_usd": str(quote.quoted_cost_usd),
         "databento_live_smoke_max_cost_usd": str(LIVE_SMOKE_MAX_COST_USD),
         "databento_download_receipt": receipt,
+        "databento_contract_map": {str(key): value for key, value in sorted(contract_map.items())},
+        "databento_symbology_resolution_digest": canonical_json(
+            {
+                "continuous": continuous_resolution,
+                "raw": raw_resolutions,
+            }
+        ),
         "shadow_pair": pair,
         "architecture": day41_architecture_manifest(),
         "paid_subscription_activated": False,
