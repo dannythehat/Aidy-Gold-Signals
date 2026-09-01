@@ -145,7 +145,7 @@ def _insert_snapshot(
 @pytest.mark.asyncio
 async def test_live_observer_records_mid_only_feed_as_pre_model_block() -> None:
     store, cohort = await _active_store()
-    d1 = store._db  # noqa: SLF001 - test owns the in-memory store
+    d1 = store._db
     captured = SCHEDULED + timedelta(seconds=2)
     _insert_snapshot(d1, snapshot_id="snapshot-mid-only", captured_at=captured)
 
@@ -176,7 +176,7 @@ async def test_live_observer_records_mid_only_feed_as_pre_model_block() -> None:
 @pytest.mark.asyncio
 async def test_duplicate_same_five_minute_bucket_is_idempotent() -> None:
     store, cohort = await _active_store()
-    d1 = store._db  # noqa: SLF001
+    d1 = store._db
     _insert_snapshot(
         d1,
         snapshot_id="snapshot-duplicate",
@@ -207,7 +207,7 @@ async def test_duplicate_same_five_minute_bucket_is_idempotent() -> None:
 @pytest.mark.asyncio
 async def test_non_due_minute_does_not_create_forward_record() -> None:
     store, cohort = await _active_store()
-    d1 = store._db  # noqa: SLF001
+    d1 = store._db
     not_due = SCHEDULED + timedelta(minutes=1)
     _insert_snapshot(d1, snapshot_id="snapshot-not-due", captured_at=not_due)
     result = await observe_private_forward_snapshot(
@@ -227,7 +227,7 @@ async def test_non_due_minute_does_not_create_forward_record() -> None:
 @pytest.mark.asyncio
 async def test_snapshot_before_activation_never_backfills() -> None:
     store, cohort = await _active_store()
-    d1 = store._db  # noqa: SLF001
+    d1 = store._db
     _insert_snapshot(
         d1,
         snapshot_id="snapshot-before-activation",
@@ -246,7 +246,7 @@ async def test_snapshot_before_activation_never_backfills() -> None:
 @pytest.mark.asyncio
 async def test_decision_grade_snapshot_still_fails_closed_until_adapter_is_enabled() -> None:
     store, _ = await _active_store()
-    d1 = store._db  # noqa: SLF001
+    d1 = store._db
     _insert_snapshot(
         d1,
         snapshot_id="snapshot-decision-grade",
@@ -270,7 +270,7 @@ async def test_decision_grade_snapshot_still_fails_closed_until_adapter_is_enabl
 @pytest.mark.asyncio
 async def test_status_exposes_active_cohort_and_noninflated_progress() -> None:
     store, cohort = await _active_store()
-    d1 = store._db  # noqa: SLF001
+    d1 = store._db
     _insert_snapshot(
         d1,
         snapshot_id="snapshot-status",
