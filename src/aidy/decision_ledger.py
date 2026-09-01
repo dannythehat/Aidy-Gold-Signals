@@ -85,7 +85,8 @@ _OUTCOME_KEYS = frozenset(
         "trade_outcome_bundle_version",
     }
 )
-_SECRET_MARKERS = ("sk-", "bearer ", "-----begin private key-----")
+_SECRET_PHRASES = ("bearer ", "-----begin private key-----")
+_OPENAI_SECRET_PATTERN = re.compile(r"(?<![A-Za-z0-9])sk-[A-Za-z0-9_-]{8,}", re.IGNORECASE)
 
 
 def canonical_json(value: object) -> str:
@@ -94,6 +95,13 @@ def canonical_json(value: object) -> str:
 
 def digest(value: object) -> str:
     return sha256(canonical_json(value).encode()).hexdigest()
+
+
+def _contains_secret_like_text(value: str) -> bool:
+    lowered = value.strip().casefold()
+    return any(marker in lowered for marker in _SECRET_PHRASES) or bool(
+        _OPENAI_SECRET_PATTERN.search(value)
+    )
 
 
 def _utc(value: Any, *, name: str) -> datetime:
@@ -145,10 +153,8 @@ def _assert_no_secrets_or_hidden_reasoning(value: Any, *, path: str) -> None:
     elif isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
             _assert_no_secrets_or_hidden_reasoning(item, path=f"{path}[{index}]")
-    elif isinstance(value, str):
-        lowered = value.strip().lower()
-        if any(marker in lowered for marker in _SECRET_MARKERS):
-            raise ValueError(f"Secret-like value is forbidden at {path}.")
+    elif isinstance(value, str) and _contains_secret_like_text(value):
+        raise ValueError(f"Secret-like value is forbidden at {path}.")
 
 
 def _assert_ex_ante_safe(value: Any, *, path: str = "ex_ante") -> None:
@@ -169,10 +175,8 @@ def _assert_ex_ante_safe(value: Any, *, path: str = "ex_ante") -> None:
     elif isinstance(value, (list, tuple)):
         for index, item in enumerate(value):
             _assert_ex_ante_safe(item, path=f"{path}[{index}]")
-    elif isinstance(value, str):
-        lowered = value.strip().lower()
-        if any(marker in lowered for marker in _SECRET_MARKERS):
-            raise ValueError(f"Secret-like value is forbidden at {path}.")
+    elif isinstance(value, str) and _contains_secret_like_text(value):
+        raise ValueError(f"Secret-like value is forbidden at {path}.")
 
 
 def _unique_ids(values: Iterable[Any], *, name: str) -> list[str]:
