@@ -131,7 +131,8 @@ def parse_databento_ohlcv_jsonl(payload: str) -> list[GcObservation]:
 
     `map_symbols=true` may emit symbol-mapping rows separately from market-data rows,
     so the parser tracks mapped raw GC contract identities and refuses anonymous
-    instrument IDs. This is deliberate: Day 41 requires an auditable contract identity.
+    instrument IDs. Databento text encodings place event metadata under the `hd`
+    object, while synthetic fixtures may provide `ts_event` at the top level.
     """
 
     mapped_contract: str | None = None
@@ -159,6 +160,9 @@ def parse_databento_ohlcv_jsonl(payload: str) -> list[GcObservation]:
         if price_value is None:
             continue
         timestamp_value = row.get("ts_event") or row.get("ts_recv")
+        header = row.get("hd")
+        if timestamp_value is None and isinstance(header, dict):
+            timestamp_value = header.get("ts_event")
         if timestamp_value is None:
             continue
         contract = mapping_candidate or mapped_contract
