@@ -16,7 +16,12 @@ from aidy.publication_ledger import (
     deliver_with_ledger,
     reconstruct_exact_publication,
 )
-from aidy.telegram_publisher import SimulatedTelegramTransport, build_publication_envelope, canonical_json, digest
+from aidy.telegram_publisher import (
+    SimulatedTelegramTransport,
+    build_publication_envelope,
+    canonical_json,
+    digest,
+)
 
 BASE_SHA = "8765d0d3743ac3b59a1083aea14876615df5bb42"
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +32,7 @@ _cycle = _DAY34["_cycle"]
 
 
 class Prepared:
-    def __init__(self, db: "LocalD1", sql: str, params=()) -> None:
+    def __init__(self, db: LocalD1, sql: str, params=()) -> None:
         self.db = db
         self.sql = sql
         self.params = params
