@@ -17,6 +17,7 @@ from aidy.gc_shadow_spine import (
     normalize_databento_api_key,
     pair_shadow_observations,
     parse_databento_ohlcv_jsonl,
+    resolve_gc_contract_map,
     xau_observation_from_gold_api,
 )
 
@@ -75,6 +76,63 @@ def test_databento_real_json_header_shape_is_supported() -> None:
     assert rows[0].contract_symbol == "GCZ6"
     assert rows[0].observed_at == BASE
     assert rows[0].price == Decimal("4521.500000000")
+
+
+def test_databento_continuous_contract_is_bound_via_instrument_id() -> None:
+    payload = json.dumps(
+        {
+            "hd": {
+                "ts_event": "2026-09-01T07:00:00.000000000Z",
+                "instrument_id": 12345,
+            },
+            "close": "4521.500000000",
+            "symbol": "GC.n.0",
+        }
+    )
+    rows = parse_databento_ohlcv_jsonl(payload, contract_by_instrument_id={12345: "GCZ6"})
+    assert len(rows) == 1
+    assert rows[0].contract_symbol == "GCZ6"
+
+
+def test_gc_contract_map_uses_two_step_databento_resolution() -> None:
+    continuous = {
+        "status": 0,
+        "not_found": [],
+        "result": {
+            "GC.n.0": [
+                {"d0": "2026-09-01", "d1": "2026-09-02", "s": "12345"},
+            ]
+        },
+    }
+    raw = {
+        "12345": {
+            "status": 0,
+            "not_found": [],
+            "result": {
+                "12345": [
+                    {"d0": "2026-09-01", "d1": "2026-09-02", "s": "GCZ6"},
+                ]
+            },
+        }
+    }
+    assert resolve_gc_contract_map(continuous, raw) == {12345: "GCZ6"}
+
+
+def test_gc_contract_map_fails_closed_on_non_gc_raw_symbol() -> None:
+    continuous = {
+        "status": 0,
+        "not_found": [],
+        "result": {"GC.n.0": [{"s": "12345"}]},
+    }
+    raw = {
+        "12345": {
+            "status": 0,
+            "not_found": [],
+            "result": {"12345": [{"s": "ESZ6"}]},
+        }
+    }
+    with pytest.raises(ShadowSpineError, match="uniquely"):
+        resolve_gc_contract_map(continuous, raw)
 
 
 def test_databento_anonymous_instrument_fails_closed() -> None:
