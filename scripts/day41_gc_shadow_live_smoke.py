@@ -1,0 +1,120 @@
+from __future__ import annotations
+
+import argparse
+import json
+import os
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
+from pathlib import Path
+
+import httpx
+
+from aidy.databento_gc import DatabentoHistoricalClient, HistoricalRequest
+from aidy.gc_shadow_spine import (
+    canonical_json,
+    day41_architecture_manifest,
+    pair_shadow_observations,
+    parse_databento_ohlcv_jsonl,
+    xau_observation_from_gold_api,
+)
+
+LIVE_SMOKE_MAX_COST_USD = Decimal("0.25")
+GOLD_API_URL = "https://api.gold-api.com/price/XAU"
+
+
+def _gold_api_payload() -> dict[str, object]:
+    response = httpx.get(
+        GOLD_API_URL,
+        timeout=20.0,
+        headers={"Accept": "application/json", "User-Agent": "AIDY-Signals/Day41"},
+    )
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise RuntimeError("Gold API returned a non-object payload.")
+    return payload
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", default="day41_live_evidence.json")
+    parser.add_argument("--raw-gc", default="day41_gc_sample.jsonl")
+    args = parser.parse_args()
+
+    if not os.environ.get("DATABENTO_API_KEY", "").strip():
+        raise RuntimeError("DATABENTO_API_KEY is required for genuine Day 41 evidence.")
+
+    now = datetime.now(UTC)
+    request_end = (now - timedelta(minutes=10)).replace(second=0, microsecond=0)
+    request_start = request_end - timedelta(minutes=10)
+    request = HistoricalRequest(
+        schema="ohlcv-1m",
+        start=request_start.isoformat(),
+        end=request_end.isoformat(),
+    )
+
+    raw_path = Path(args.raw_gc)
+    with DatabentoHistoricalClient.from_env() as client:
+        entitlement = client.assert_gc_entitlement()
+        quote = client.estimate_cost(request)
+        if quote.quoted_cost_usd > LIVE_SMOKE_MAX_COST_USD:
+            raise RuntimeError(
+                "Day 41 live smoke quote exceeds the stricter $0.25 acceptance cap."
+            )
+        receipt = client.download_jsonl(request, quote=quote, output_path=raw_path)
+
+    observations = parse_databento_ohlcv_jsonl(raw_path.read_text(encoding="utf-8"))
+    if not observations:
+        raise RuntimeError("Databento returned no mapped GC minute observations.")
+    gc = max(observations, key=lambda item: item.observed_at)
+
+    xau_payload = _gold_api_payload()
+    xau = xau_observation_from_gold_api(xau_payload)
+    pair = pair_shadow_observations(gc, xau)
+    if pair["paired"] is not True:
+        raise RuntimeError(
+            "Genuine Databento GC and Gold-API XAU observations exceeded the acceptance skew limit."
+        )
+
+    evidence = {
+        "evidence_version": "aidy_day41_genuine_shadow_evidence_v1",
+        "observed_at_utc": now.isoformat(),
+        "genuine_databento_observation_ingested": True,
+        "genuine_gold_api_observation_ingested": True,
+        "databento_entitlement": entitlement,
+        "databento_request": request.payload(),
+        "databento_quote_usd": str(quote.quoted_cost_usd),
+        "databento_live_smoke_max_cost_usd": str(LIVE_SMOKE_MAX_COST_USD),
+        "databento_download_receipt": receipt,
+        "shadow_pair": pair,
+        "architecture": day41_architecture_manifest(),
+        "paid_subscription_activated": False,
+        "live_gc_subscription_activated": False,
+        "live_gc_promoted": False,
+        "broker_market_data_dependency": False,
+        "api_key_recorded": False,
+    }
+    output = Path(args.output)
+    output.write_text(canonical_json(evidence) + "\n", encoding="utf-8")
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "provider": pair["gc"]["provider"],
+                "contract_symbol": pair["gc"]["contract_symbol"],
+                "gc_observed_at_utc": pair["gc"]["observed_at_utc"],
+                "xau_observed_at_utc": pair["xau"]["observed_at_utc"],
+                "timestamp_skew_seconds": pair["timestamp_skew_seconds"],
+                "basis_usd": pair["basis_usd"],
+                "quoted_cost_usd": str(quote.quoted_cost_usd),
+                "paid_subscription_activated": False,
+                "live_gc_promoted": False,
+            },
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
