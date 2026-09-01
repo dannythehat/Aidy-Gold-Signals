@@ -1,0 +1,58 @@
+name: Day 34 immutable decision ledger acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/decision_ledger.py"
+      - "tests/test_day34_decision_ledger.py"
+      - "scripts/day34_decision_ledger_acceptance.py"
+      - "docs/day34-immutable-decision-ledger-contract.md"
+      - ".github/workflows/day34-decision-ledger-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bounded acceptance dependencies
+        run: pip install -e . pytest pytest-asyncio ruff google-cloud-bigquery google-auth
+      - name: Changed-file lint
+        run: ruff check src/aidy/decision_ledger.py tests/test_day34_decision_ledger.py scripts/day34_decision_ledger_acceptance.py
+      - name: Focused adversarial tests
+        run: pytest -q tests/test_day34_decision_ledger.py
+      - name: Full regression
+        run: pytest -q
+      - name: Genuine bounded BigQuery acceptance — first pass
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+          AIDY_GCP_PROJECT_ID: aidy-signals
+          AIDY_BIGQUERY_DATASET: aidy_analytics_test
+          AIDY_BIGQUERY_LOCATION: EU
+        run: python scripts/day34_decision_ledger_acceptance.py --bigquery --output-dir day34_artifacts_a
+      - name: Genuine bounded BigQuery acceptance — same-head idempotent rerun
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+          AIDY_GCP_PROJECT_ID: aidy-signals
+          AIDY_BIGQUERY_DATASET: aidy_analytics_test
+          AIDY_BIGQUERY_LOCATION: EU
+        run: |
+          python scripts/day34_decision_ledger_acceptance.py --bigquery --output-dir day34_artifacts_b
+          diff -ru day34_artifacts_a day34_artifacts_b
+      - uses: actions/upload-artifact@v4
+        with:
+          name: day34-immutable-decision-ledger-evidence
+          path: day34_artifacts_a
+          if-no-files-found: error
+          retention-days: 7
