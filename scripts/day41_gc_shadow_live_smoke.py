@@ -233,7 +233,7 @@ def _matching_histdata_xau(
     open_time_utc = selected["open_time_utc"]
     close = selected["close"]
     if not isinstance(open_time_utc, datetime) or not isinstance(close, Decimal):
-        raise RuntimeError("HistData target-window parser returned invalid typed values.")
+        raise TypeError("HistData target-window parser returned invalid typed values.")
 
     provenance = {
         "source": HISTORICAL_XAU_REFERENCE_SOURCE,
