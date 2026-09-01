@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 from aidy.day40_gate import build_day40_manifest, canonical_json, failing_items, verify_manifest
@@ -75,7 +76,9 @@ def main() -> int:
     _write(output / "procurement.json", manifest["procurement"])
     _write(output / "summary.json", summary)
 
-    print(json.dumps(summary, sort_keys=True))
+    rendered = json.dumps(summary, sort_keys=True)
+    print(rendered)
+    print(rendered, file=sys.stderr)
     return 0 if summary["ok"] else 1
 
 
