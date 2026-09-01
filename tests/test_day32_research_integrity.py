@@ -30,6 +30,10 @@ def _packet() -> dict[str, object]:
             "volatility_intelligence": "aidy_gold_volatility_intelligence_v1",
         },
         "features": {"atr": None, "trend": "up"},
+        "event_intelligence": {
+            "state": "known",
+            "next_scheduled_event_at": (NOW + timedelta(days=1)).isoformat(),
+        },
         "volatility_state": {
             "gvz": {"state": "known", "value_annualized_percent": "27.29"},
             "realized_volatility": {"state": "unknown_insufficient_daily_history"},
@@ -38,35 +42,62 @@ def _packet() -> dict[str, object]:
     }
 
 
-def _policy(contract: str = "context_v7") -> dict[str, object]:
+def _policy(
+    contract: str = "context_v7",
+    *,
+    observation: datetime = NOW,
+    first_observed: datetime = NOW,
+    publication: datetime | None = None,
+    timing_semantics: str = "derived_at_asof",
+    surface_state: str = "accepted_staged_context",
+    pit_state: str = "true",
+    decision_input_eligible: bool = True,
+    retrospective_eligible: bool = True,
+    historical_backfill_allowed: bool = False,
+) -> dict[str, object]:
     return {
         "field_contract": contract,
         "contract_version": "v1",
         "source": "accepted_context_packet",
         "evidence_family": "market_context",
         "provenance_class": "point_in_time",
-        "pit_reconstructable": "true",
+        "pit_reconstructable": pit_state,
         "reconstruction_method": "immutable_asof_selection",
         "reconstruction_version": "v1",
-        "retrospective_eligible": True,
+        "retrospective_eligible": retrospective_eligible,
+        "historical_backfill_allowed": historical_backfill_allowed,
         "evaluation_eligible": True,
-        "decision_input_eligible": True,
+        "decision_input_eligible": decision_input_eligible,
         "staleness_rule": "inherit_source_contract",
+        "observation_timestamp": observation.isoformat(),
+        "publication_timestamp": None if publication is None else publication.isoformat(),
+        "first_observed_timestamp": first_observed.isoformat(),
+        "timing_semantics": timing_semantics,
+        "surface_state": surface_state,
+        "quality_state": "verified_or_explicit_unknown",
     }
 
 
-def _manifest() -> dict[str, object]:
+def _policies() -> dict[str, dict[str, object]]:
     packet = _packet()
-    policies = {f"$.{key}": _policy(str(key)) for key in packet if key != "context_hash"}
-    return build_field_attestation_manifest(
-        packet,
-        policies=policies,
-        observed_at=NOW - timedelta(minutes=1),
-        published_at=None,
-        first_observed_at=NOW,
-        staleness_state="fresh",
-        quality_state="verified",
+    policies = {
+        f"$.{key}": _policy(str(key))
+        for key in packet
+        if key not in {"context_hash", "event_intelligence"}
+    }
+    policies["$.event_intelligence"] = _policy("event_intelligence")
+    policies["$.event_intelligence.next_scheduled_event_at"] = _policy(
+        "event_intelligence.schedule",
+        observation=NOW + timedelta(days=1),
+        first_observed=NOW - timedelta(hours=2),
+        publication=NOW - timedelta(hours=3),
+        timing_semantics="knowledge_can_precede_effective",
     )
+    return policies
+
+
+def _manifest() -> dict[str, object]:
+    return build_field_attestation_manifest(_packet(), policies=_policies())
 
 
 def test_every_active_leaf_has_an_immutable_attestation() -> None:
@@ -76,22 +107,24 @@ def test_every_active_leaf_has_an_immutable_attestation() -> None:
     paths = {row["json_path"] for row in manifest["attestations"]}
     assert "$.features.atr" in paths
     assert "$.volatility_state.realized_volatility.state" in paths
+    assert "$.event_intelligence.next_scheduled_event_at" in paths
     assert "$.context_hash" not in paths
     assert all(row["context_hash_covered"] for row in manifest["attestations"])
+
+
+def test_manifest_separates_active_decision_and_staged_context_surfaces() -> None:
+    policies = _policies()
+    policies["$.symbol"]["surface_state"] = "active_decision_surface"
+    manifest = build_field_attestation_manifest(_packet(), policies=policies)
+    assert verify_field_attestation_manifest(manifest)
+    assert manifest["active_decision_field_count"] == 1
+    assert manifest["accepted_staged_field_count"] == manifest["active_field_count"] - 1
 
 
 def test_missing_field_policy_and_digest_tampering_fail_closed() -> None:
     packet = _packet()
     with pytest.raises(IntegrityError, match="lacks a policy"):
-        build_field_attestation_manifest(
-            packet,
-            policies={"$.symbol": _policy()},
-            observed_at=NOW,
-            published_at=NOW,
-            first_observed_at=NOW,
-            staleness_state="fresh",
-            quality_state="verified",
-        )
+        build_field_attestation_manifest(packet, policies={"$.symbol": _policy()})
     manifest = _manifest()
     manifest["attestations"][0]["quality_state"] = "fabricated"
     assert not verify_field_attestation_manifest(manifest)
@@ -100,33 +133,58 @@ def test_missing_field_policy_and_digest_tampering_fail_closed() -> None:
 @pytest.mark.parametrize("pit_state", ["false", "partial"])
 def test_false_or_partial_pit_field_cannot_be_decision_input(pit_state: str) -> None:
     packet = _packet()
-    policies = {f"$.{key}": _policy() for key in packet if key != "context_hash"}
+    policies = _policies()
     policies["$.features"]["pit_reconstructable"] = pit_state
     with pytest.raises(IntegrityError, match="cannot be decision eligible"):
-        build_field_attestation_manifest(
-            packet,
-            policies=policies,
-            observed_at=NOW,
-            published_at=NOW,
-            first_observed_at=NOW,
-            staleness_state="fresh",
-            quality_state="verified",
-        )
+        build_field_attestation_manifest(packet, policies=policies)
 
 
-def test_publication_and_first_observation_boundaries_are_conservative() -> None:
-    packet = _packet()
-    policies = {f"$.{key}": _policy() for key in packet if key != "context_hash"}
-    with pytest.raises(IntegrityError, match="cannot precede"):
-        build_field_attestation_manifest(
-            packet,
-            policies=policies,
-            observed_at=NOW,
-            published_at=None,
-            first_observed_at=NOW - timedelta(seconds=1),
-            staleness_state="unknown",
-            quality_state="partial",
-        )
+def test_ordinary_evidence_cannot_be_known_before_it_exists() -> None:
+    policies = _policies()
+    policies["$.features"] = _policy(
+        "features",
+        observation=NOW,
+        first_observed=NOW - timedelta(seconds=1),
+        timing_semantics="observation_then_knowledge",
+    )
+    with pytest.raises(IntegrityError, match="cannot precede observation"):
+        build_field_attestation_manifest(_packet(), policies=policies)
+
+
+def test_forward_known_schedule_may_be_known_before_effective_time() -> None:
+    manifest = _manifest()
+    schedule = next(
+        row
+        for row in manifest["attestations"]
+        if row["json_path"] == "$.event_intelligence.next_scheduled_event_at"
+    )
+    assert schedule["timing_semantics"] == "knowledge_can_precede_effective"
+    assert schedule["first_observed_timestamp"] < schedule["observation_timestamp"]
+    assert verify_field_attestation_manifest(manifest)
+
+
+def test_first_observation_cannot_precede_publication() -> None:
+    policies = _policies()
+    policies["$.features"] = _policy(
+        "features",
+        observation=NOW - timedelta(minutes=5),
+        publication=NOW,
+        first_observed=NOW - timedelta(minutes=1),
+        timing_semantics="observation_then_knowledge",
+    )
+    with pytest.raises(IntegrityError, match="cannot precede publication"):
+        build_field_attestation_manifest(_packet(), policies=policies)
+
+
+def test_historical_backfill_requires_retrospective_eligibility() -> None:
+    policies = _policies()
+    policies["$.features"] = _policy(
+        "features",
+        retrospective_eligible=False,
+        historical_backfill_allowed=True,
+    )
+    with pytest.raises(IntegrityError, match="requires retrospective eligibility"):
+        build_field_attestation_manifest(_packet(), policies=policies)
 
 
 @pytest.mark.parametrize(
@@ -145,31 +203,53 @@ def test_publication_and_first_observation_boundaries_are_conservative() -> None
     ],
 )
 def test_deliberate_leak_categories_are_machine_blocking(category: str) -> None:
+    manifest = _manifest()
+    identity = manifest["attestations"][0]["field_identity"]
     finding = build_leak_finding(
-        field_identity="contract:$.field",
+        field_identity=identity,
         category=category,
         detected_at=NOW,
         evidence={"fixture": category},
     )
-    audit = audit_decision_eligibility(_manifest(), [finding])
+    audit = audit_decision_eligibility(manifest, [finding])
     assert audit["unresolved_blocking_count"] == 1
     assert audit["decision_input_allowed"] is False
 
 
-def test_resolved_findings_remain_visible_without_blocking() -> None:
+def test_leak_findings_must_reference_real_attested_fields() -> None:
     finding = build_leak_finding(
-        field_identity="contract:$.field",
+        field_identity="synthetic:not-real",
+        category="publication_lag",
+        detected_at=NOW,
+        evidence={"fixture": True},
+        resolved=True,
+    )
+    with pytest.raises(IntegrityError, match="does not reference an attested field"):
+        audit_decision_eligibility(_manifest(), [finding])
+
+
+def test_resolved_findings_remain_visible_without_blocking() -> None:
+    manifest = _manifest()
+    identity = manifest["attestations"][0]["field_identity"]
+    finding = build_leak_finding(
+        field_identity=identity,
         category="publication_lag",
         detected_at=NOW,
         evidence={"publication_delay_seconds": 120},
         resolved=True,
     )
-    audit = audit_decision_eligibility(_manifest(), [finding])
+    audit = audit_decision_eligibility(manifest, [finding])
     assert audit["finding_count"] == 1
     assert audit["decision_input_allowed"] is True
 
 
-def _trial(records: list[dict[str, object]], *, number: int, holdout: str, purpose: str = "evaluation") -> dict[str, object]:
+def _trial(
+    records: list[dict[str, object]],
+    *,
+    number: int,
+    holdout: str,
+    purpose: str = "evaluation",
+) -> dict[str, object]:
     return preregister_trial(
         records,
         trial_number=number,
@@ -192,7 +272,12 @@ def _trial(records: list[dict[str, object]], *, number: int, holdout: str, purpo
 
 def test_trial_numbers_are_monotonic_and_digest_chained() -> None:
     first = _trial([], number=1, holdout="holdout-a")
-    final = finalize_trial(first, executed_at=NOW + timedelta(seconds=1), result_state="null", result={"effect": 0})
+    final = finalize_trial(
+        first,
+        executed_at=NOW + timedelta(seconds=1),
+        result_state="null",
+        result={"effect": 0},
+    )
     second = _trial([final], number=2, holdout="holdout-b")
     assert verify_trial_record(final)
     assert verify_trial_registry([final, second])
@@ -204,7 +289,12 @@ def test_trial_numbers_are_monotonic_and_digest_chained() -> None:
 @pytest.mark.parametrize("state", ["null", "insufficient", "failed", "passed"])
 def test_all_terminal_trial_results_are_retained(state: str) -> None:
     record = _trial([], number=1, holdout=f"holdout-{state}")
-    final = finalize_trial(record, executed_at=NOW + timedelta(minutes=1), result_state=state, result={"state": state})
+    final = finalize_trial(
+        record,
+        executed_at=NOW + timedelta(minutes=1),
+        result_state=state,
+        result={"state": state},
+    )
     assert verify_trial_record(final)
     assert final["result_state"] == state
     assert final["result"] == {"state": state}
@@ -213,7 +303,12 @@ def test_all_terminal_trial_results_are_retained(state: str) -> None:
 def test_execution_before_preregistration_is_rejected() -> None:
     record = _trial([], number=1, holdout="holdout-a")
     with pytest.raises(IntegrityError, match="cannot precede"):
-        finalize_trial(record, executed_at=NOW - timedelta(seconds=1), result_state="failed", result={"error": "fixture"})
+        finalize_trial(
+            record,
+            executed_at=NOW - timedelta(seconds=1),
+            result_state="failed",
+            result={"error": "fixture"},
+        )
 
 
 def test_holdout_reuse_for_tuning_is_detected_and_forbidden() -> None:
