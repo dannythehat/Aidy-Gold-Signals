@@ -17,7 +17,7 @@ For each publication AIDY persists:
 - append-only attempt records;
 - append-only reconciliation events.
 
-The existing Wrangler D1 binding already points at `migrations/d1`, so normal `wrangler d1 migrations apply AIDY_OPS ...` deployment applies Day 51's schema.
+The existing Wrangler D1 binding already points at `migrations/d1`, so normal `wrangler d1 migrations apply AIDY_OPS ...` deployment applies Day 51's schema. PR acceptance also loads the same migration chain into SQLite before behavioral tests, so schema drift fails before merge.
 
 ## Delivery state machine
 
