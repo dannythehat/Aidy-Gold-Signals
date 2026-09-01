@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install bounded acceptance dependencies
-        run: pip install -e . pytest ruff google-cloud-bigquery google-auth
+        run: pip install -e . pytest pytest-asyncio ruff google-cloud-bigquery google-auth
       - name: Changed-file lint
         run: ruff check src/aidy/research_integrity.py tests/test_day32_research_integrity.py scripts/day32_research_integrity_acceptance.py
       - name: Focused adversarial tests
