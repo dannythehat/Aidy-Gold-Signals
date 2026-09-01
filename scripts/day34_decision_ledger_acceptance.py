@@ -47,9 +47,15 @@ SUMMARY_TABLE = "research_day34_summary"
 def _args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default="day34_artifacts")
-    parser.add_argument("--project", default=os.environ.get("AIDY_GCP_PROJECT_ID", DEFAULT_PROJECT))
-    parser.add_argument("--dataset", default=os.environ.get("AIDY_BIGQUERY_DATASET", DEFAULT_DATASET))
-    parser.add_argument("--location", default=os.environ.get("AIDY_BIGQUERY_LOCATION", DEFAULT_LOCATION))
+    parser.add_argument(
+        "--project", default=os.environ.get("AIDY_GCP_PROJECT_ID", DEFAULT_PROJECT)
+    )
+    parser.add_argument(
+        "--dataset", default=os.environ.get("AIDY_BIGQUERY_DATASET", DEFAULT_DATASET)
+    )
+    parser.add_argument(
+        "--location", default=os.environ.get("AIDY_BIGQUERY_LOCATION", DEFAULT_LOCATION)
+    )
     parser.add_argument("--as-of", default="2026-09-01T02:30:00+00:00")
     parser.add_argument("--bigquery", action="store_true")
     return parser.parse_args()
@@ -81,7 +87,13 @@ def _context(now: datetime, index: int) -> dict[str, Any]:
     return value
 
 
-def _gate(stage: str, *, passed: bool, context_hash: str, checked_at: datetime) -> dict[str, Any]:
+def _gate(
+    stage: str,
+    *,
+    passed: bool,
+    context_hash: str,
+    checked_at: datetime,
+) -> dict[str, Any]:
     receipt: dict[str, Any] = {
         "gate_version": SAFETY_GATES_VERSION,
         "stage": stage,
@@ -89,7 +101,9 @@ def _gate(stage: str, *, passed: bool, context_hash: str, checked_at: datetime) 
         "context_hash": context_hash,
         "checked_at_utc": checked_at.isoformat(),
         "reason_codes": [f"day34_{stage}_{'allowed' if passed else 'blocked'}"],
-        "checks": [{"gate": "day34_fixture", "passed": passed, "reason_code": "day34_fixture"}],
+        "checks": [
+            {"gate": "day34_fixture", "passed": passed, "reason_code": "day34_fixture"}
+        ],
     }
     if stage == "pre_model":
         receipt.update(
@@ -165,10 +179,19 @@ def _v2_no_trade(evaluated_at: datetime) -> dict[str, Any]:
         {
             "thesis": None,
             "expected_horizon_minutes": None,
-            "counter_argument": "A clean directional continuation could still emerge after the present uncertainty resolves.",
+            "counter_argument": (
+                "A clean directional continuation could still emerge after the present "
+                "uncertainty resolves."
+            ),
             "invalidation_condition": None,
-            "abstention_basis": "Current evidence does not justify taking directional exposure at this decision time.",
-            "shadow_thesis": "A sustained break above the reference zone would support the bullish continuation hypothesis without exposure.",
+            "abstention_basis": (
+                "Current evidence does not justify taking directional exposure at this "
+                "decision time."
+            ),
+            "shadow_thesis": (
+                "A sustained break above the reference zone would support the bullish "
+                "continuation hypothesis without exposure."
+            ),
             "shadow_direction": "long",
             "shadow_horizon_minutes": 120,
             "shadow_evaluation_condition": {
@@ -217,7 +240,11 @@ def _gateway(decision: Mapping[str, Any] | None, *, accepted: bool) -> dict[str,
         "publication_allowed": accepted,
         "failure_reason": None if accepted else "api_transport_error",
         "structured_decision": None if decision is None else dict(decision),
-        "decision_digest": None if decision is None else master_trader_decision_digest_versioned(decision),
+        "decision_digest": (
+            None
+            if decision is None
+            else master_trader_decision_digest_versioned(decision)
+        ),
         "request_digest": "d" * 64,
         "attempts": 1,
         "latency_ms": 10,
@@ -249,7 +276,7 @@ def _cycle(now: datetime, index: int, disposition: str) -> dict[str, Any]:
     model_called = disposition != "pre_model_blocked"
     if disposition == "model_failed":
         gateway = _gateway(None, accepted=False)
-    elif disposition not in {"pre_model_blocked"}:
+    elif disposition != "pre_model_blocked":
         if disposition == "post_model_blocked":
             decision = _v2_no_trade(evaluated_at)
         elif disposition == "no_trade":
@@ -294,7 +321,10 @@ def build_artifacts(now: datetime, head_sha: str) -> dict[str, Any]:
         "no_trade",
         "decision_admitted",
     )
-    records = [_cycle(now, index, disposition) for index, disposition in enumerate(dispositions)]
+    records = [
+        _cycle(now, index, disposition)
+        for index, disposition in enumerate(dispositions)
+    ]
     if not all(verify_ex_ante_record(row) for row in records):
         raise RuntimeError("Day 34 ex-ante record verification failed")
     by_disposition = {str(row["cycle_disposition"]): row for row in records}
@@ -334,8 +364,7 @@ def build_artifacts(now: datetime, head_sha: str) -> dict[str, Any]:
     if not all(verify_outcome_attachment(row) for row in attachments):
         raise RuntimeError("Day 34 outcome attachment verification failed")
 
-    identical_rerun = reconcile_ex_ante_record(records[0], copy.deepcopy(records[0]))
-    if identical_rerun != records[0]:
+    if reconcile_ex_ante_record(records[0], copy.deepcopy(records[0])) != records[0]:
         raise RuntimeError("Day 34 identical evaluation reconciliation failed")
     mutation_detected = False
     mutated = copy.deepcopy(records[0])
@@ -375,21 +404,40 @@ def build_artifacts(now: datetime, head_sha: str) -> dict[str, Any]:
         "head_sha": head_sha,
         "experiment_id": experiment_id,
         "ledger_version": DECISION_LEDGER_VERSION,
+        "outcome_attachment_version": OUTCOME_ATTACHMENT_VERSION,
         "manifest_digest": manifest["manifest_digest"],
         "evaluation_count": len(records),
         "cycle_dispositions": [row["cycle_disposition"] for row in records],
-        "all_cycles_first_class": set(dispositions) == {row["cycle_disposition"] for row in records},
+        "all_cycles_first_class": set(dispositions)
+        == {row["cycle_disposition"] for row in records},
         "all_ex_ante_digests_valid": all(verify_ex_ante_record(row) for row in records),
         "stable_decision_id_for_blocked_cycles": all(bool(row["decision_id"]) for row in records),
         "exact_context_snapshot_retained": True,
-        "exact_ranked_analogue_ids_retained": no_trade["reproducibility_bundle"]["analogue_case_ids"] == ["case_20260801", "case_20260714"],
+        "exact_ranked_analogue_ids_retained": no_trade["reproducibility_bundle"][
+            "analogue_case_ids"
+        ]
+        == ["case_20260801", "case_20260714"],
         "effective_n_retained": no_trade["reproducibility_bundle"]["effective_n"] == 7,
-        "v2_falsifiable_metadata_retained": bool(by_disposition["post_model_blocked"]["falsifiable_thesis"]),
+        "v2_falsifiable_metadata_retained": bool(
+            by_disposition["post_model_blocked"]["falsifiable_thesis"]
+        ),
+        "exact_gate_context_binding": all(
+            row["pre_model_receipt"]["context_hash"] == row["context_hash"]
+            and (
+                row["post_model_receipt"] is None
+                or row["post_model_receipt"]["context_hash"] == row["context_hash"]
+            )
+            for row in records
+        ),
         "identical_evaluation_idempotent": True,
         "ex_ante_mutation_detected": mutation_detected,
         "outcome_attachment_count": len(attachments),
-        "outcomes_structurally_separate": all(row["outcome_fields_present"] is False for row in records),
-        "outcome_attachments_valid": all(verify_outcome_attachment(row) for row in attachments),
+        "outcomes_structurally_separate": all(
+            row["outcome_fields_present"] is False for row in records
+        ),
+        "outcome_attachments_valid": all(
+            verify_outcome_attachment(row) for row in attachments
+        ),
         "conflicting_attachment_detected": attachment_conflict_detected,
         "one_bundle_reconstruction_proven": True,
         "bigquery_write_contract": "insert_only_idempotent_reconciliation",
@@ -413,7 +461,9 @@ def _write(path: Path, value: object) -> None:
     path.write_text(canonical_json(value) + "\n", encoding="utf-8")
 
 
-def _expected_records(values: Iterable[tuple[str, Mapping[str, Any]]]) -> dict[str, dict[str, str]]:
+def _expected_records(
+    values: Iterable[tuple[str, Mapping[str, Any]]],
+) -> dict[str, dict[str, str]]:
     expected: dict[str, dict[str, str]] = {}
     for identity, record in values:
         if identity in expected:
@@ -459,12 +509,20 @@ def _persist_bigquery(
     from google.oauth2 import service_account
 
     raw = os.environ.get("AIDY_GCP_SERVICE_ACCOUNT_JSON")
-    credentials = service_account.Credentials.from_service_account_info(json.loads(raw)) if raw else None
+    credentials = (
+        service_account.Credentials.from_service_account_info(json.loads(raw))
+        if raw
+        else None
+    )
     client = bigquery.Client(project=project, credentials=credentials, location=location)
     experiment_id = str(artifacts["summary"]["experiment_id"])
     groups = {
-        LEDGER_TABLE: [(str(row["evaluation_id"]), row) for row in artifacts["records"]],
-        ATTACHMENT_TABLE: [(str(row["attachment_id"]), row) for row in artifacts["attachments"]],
+        LEDGER_TABLE: [
+            (str(row["evaluation_id"]), row) for row in artifacts["records"]
+        ],
+        ATTACHMENT_TABLE: [
+            (str(row["attachment_id"]), row) for row in artifacts["attachments"]
+        ],
         SUMMARY_TABLE: [("summary", artifacts["summary"])],
     }
     schema = [
@@ -490,9 +548,16 @@ def _persist_bigquery(
 
         expected = _expected_records(values)
         query = client.query(
-            f"SELECT identity, record_digest, record_json FROM `{table_id}` WHERE experiment_id=@experiment_id",
+            (
+                f"SELECT identity, record_digest, record_json FROM `{table_id}` "
+                "WHERE experiment_id=@experiment_id"
+            ),
             job_config=bigquery.QueryJobConfig(
-                query_parameters=[bigquery.ScalarQueryParameter("experiment_id", "STRING", experiment_id)]
+                query_parameters=[
+                    bigquery.ScalarQueryParameter(
+                        "experiment_id", "STRING", experiment_id
+                    )
+                ]
             ),
         )
         existing = [dict(row.items()) for row in query.result()]
@@ -512,20 +577,32 @@ def _persist_bigquery(
             if errors:
                 raise RuntimeError(f"Day 34 BigQuery insert failed: {errors}")
             verify_query = client.query(
-                f"SELECT identity, record_digest, record_json FROM `{table_id}` WHERE experiment_id=@experiment_id",
+                (
+                    f"SELECT identity, record_digest, record_json FROM `{table_id}` "
+                    "WHERE experiment_id=@experiment_id"
+                ),
                 job_config=bigquery.QueryJobConfig(
-                    query_parameters=[bigquery.ScalarQueryParameter("experiment_id", "STRING", experiment_id)]
+                    query_parameters=[
+                        bigquery.ScalarQueryParameter(
+                            "experiment_id", "STRING", experiment_id
+                        )
+                    ]
                 ),
             )
             verified = [dict(row.items()) for row in verify_query.result()]
             if not _reconcile_existing_records(existing=verified, expected=expected):
-                raise RuntimeError(f"Day 34 BigQuery reconciliation failed for {table_id}")
+                raise RuntimeError(
+                    f"Day 34 BigQuery reconciliation failed for {table_id}"
+                )
         counts[table_name] = len(expected)
 
     ledger_id = f"{project}.{dataset}.{LEDGER_TABLE}"
     target_evaluation = str(artifacts["records"][3]["evaluation_id"])
     one_query = client.query(
-        f"SELECT record_json FROM `{ledger_id}` WHERE experiment_id=@experiment_id AND identity=@identity",
+        (
+            f"SELECT record_json FROM `{ledger_id}` "
+            "WHERE experiment_id=@experiment_id AND identity=@identity"
+        ),
         job_config=bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("experiment_id", "STRING", experiment_id),
@@ -535,7 +612,9 @@ def _persist_bigquery(
     )
     rows = list(one_query.result())
     if len(rows) != 1:
-        raise RuntimeError("Day 34 one-query reproducibility lookup did not return exactly one row")
+        raise RuntimeError(
+            "Day 34 one-query reproducibility lookup did not return exactly one row"
+        )
     restored_record = json.loads(str(rows[0]["record_json"]))
     restored_bundle = reconstruct_non_secret_decision_bundle(restored_record)
     if restored_bundle != artifacts["reconstructed"]:
