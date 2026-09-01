@@ -202,9 +202,6 @@ class D1EndToEndCycleStore:
     async def record_paper_state(
         self, cycle_id: str, state: Mapping[str, Any], *, now_utc: datetime | str
     ) -> dict[str, Any]:
-        # Paper state may legitimately advance after observations; Day 52 entry
-        # cycles record the opening snapshot only. Active management state is
-        # versioned by its own Day-46/49 lifecycle contracts.
         return await self._record_json_artifact(
             cycle_id=cycle_id,
             json_column="paper_state_json",
@@ -299,5 +296,5 @@ class D1EndToEndCycleStore:
             raise RuntimeError(f"Invalid stored JSON in {column}.")
         decoded = json.loads(value)
         if not isinstance(decoded, dict):
-            raise RuntimeError(f"Stored artifact {column} is not an object.")
+            raise TypeError(f"Stored artifact {column} is not an object.")
         return copy.deepcopy(decoded)
