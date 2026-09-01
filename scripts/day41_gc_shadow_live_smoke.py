@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -44,6 +45,8 @@ def main() -> int:
     if not os.environ.get("DATABENTO_API_KEY", "").strip():
         raise RuntimeError("DATABENTO_API_KEY is required for genuine Day 41 evidence.")
 
+    root = Path(__file__).resolve().parents[1]
+    head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     now = datetime.now(UTC)
     request_end = (now - timedelta(minutes=10)).replace(second=0, microsecond=0)
     request_start = request_end - timedelta(minutes=10)
@@ -78,6 +81,7 @@ def main() -> int:
 
     evidence = {
         "evidence_version": "aidy_day41_genuine_shadow_evidence_v1",
+        "candidate_head_sha": head_sha,
         "observed_at_utc": now.isoformat(),
         "genuine_databento_observation_ingested": True,
         "genuine_gold_api_observation_ingested": True,
@@ -100,6 +104,7 @@ def main() -> int:
         json.dumps(
             {
                 "ok": True,
+                "candidate_head_sha": head_sha,
                 "provider": pair["gc"]["provider"],
                 "contract_symbol": pair["gc"]["contract_symbol"],
                 "gc_observed_at_utc": pair["gc"]["observed_at_utc"],
