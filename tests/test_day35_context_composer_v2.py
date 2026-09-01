@@ -93,7 +93,9 @@ def _input(
         "pit_observed": provenance == PIT_OBSERVED_PROVENANCE,
         "retrospective_replay": provenance == RETROSPECTIVE_PROVENANCE,
         "future_derived": False,
-        "analogue_match_allowed": retrieval_eligible,
+        # Day-17 requires the input boundary to permit analogue matching. Query-level
+        # insufficiency is represented independently by data_quality.retrieval_eligible.
+        "analogue_match_allowed": True,
         "live_decision_input_allowed": provenance == PIT_OBSERVED_PROVENANCE,
         "feature": {
             "feature_definition_version": FEATURE_DEFINITION_VERSION,
@@ -145,12 +147,7 @@ def _input(
     return packet
 
 
-def _case(
-    *,
-    as_of: datetime,
-    path_class: str,
-    outcome_state: str,
-) -> dict[str, object]:
+def _case(*, as_of: datetime, path_class: str, outcome_state: str) -> dict[str, object]:
     boundary = _input(as_of=as_of, provenance=RETROSPECTIVE_PROVENANCE)
     case_id = _json_digest(
         {
@@ -241,8 +238,7 @@ def _retrieval_and_report() -> tuple[dict[str, object], dict[str, object]]:
         ),
     ]
     retrieval = retrieve_analogues_v2(query=_query(), candidate_cases=candidates)
-    report = build_evidence_report_v2(retrieval=retrieval)
-    return retrieval, report
+    return retrieval, build_evidence_report_v2(retrieval=retrieval)
 
 
 def _no_comparable() -> tuple[dict[str, object], dict[str, object]]:
@@ -251,10 +247,9 @@ def _no_comparable() -> tuple[dict[str, object], dict[str, object]]:
 
 
 def _query_insufficient() -> tuple[dict[str, object], dict[str, object]]:
-    retrieval = retrieve_analogues_v2(
-        query=_query(retrieval_eligible=False),
-        candidate_cases=[],
-    )
+    query = _query(retrieval_eligible=False)
+    assert query["query_retrieval_eligible"] is False
+    retrieval = retrieve_analogues_v2(query=query, candidate_cases=[])
     return retrieval, build_evidence_report_v2(retrieval=retrieval)
 
 
@@ -341,12 +336,16 @@ def test_manifest_freezes_counter_first_and_no_leak_boundaries() -> None:
     assert manifest["composer_version"] == CONTEXT_COMPOSER_VERSION_V2
     assert manifest["counter_evidence_first"] is True
     assert manifest["same_selection_identity_for_support_and_counter"] is True
+    assert manifest["same_format_schema_for_support_and_counter"] is True
     assert manifest["effective_n_mandatory"] is True
     assert manifest["evidence_grade_mandatory"] is True
+    assert manifest["no_comparable_case_first_class"] is True
     assert manifest["raw_future_evaluation_allowed_in_dossier"] is False
     assert manifest["validated_aggregate_statistics_only"] is True
     assert manifest["gateway_promoted_by_day35"] is False
     assert manifest["trading_gate_created_by_day35"] is False
+    assert manifest["predictive_edge_claimed"] is False
+    assert manifest["super_signals_modified"] is False
 
 
 def test_composer_is_deterministic_and_digest_stable() -> None:
@@ -387,36 +386,36 @@ def test_support_and_counter_share_exact_selection_and_format_identity() -> None
     ]
 
 
-def test_aggregate_support_and_counter_are_both_visible_from_same_selection() -> None:
+def test_aggregate_support_and_counter_are_visible_from_same_selection() -> None:
     dossier = _compose()
-    support_240 = next(
+    support = next(
         row
         for row in dossier["support_evidence"]["statistics"]
         if row["statistic_name"] == "move_path_class_240m"
     )
-    counter_240 = next(
+    counter = next(
         row
         for row in dossier["counter_evidence"]["statistics"]
         if row["statistic_name"] == "move_path_class_240m"
     )
-    assert support_240["counts"] == {"directional_up": 1}
-    assert counter_240["counts"] == {"directional_down": 1}
+    assert support["counts"] == {"directional_up": 1}
+    assert counter["counts"] == {"directional_down": 1}
 
 
-def test_trade_outcome_aggregate_populates_support_counter_and_failure_profile() -> None:
+def test_trade_outcome_aggregate_and_failure_profile_are_visible() -> None:
     dossier = _compose()
-    support_240 = next(
+    support = next(
         row
         for row in dossier["support_evidence"]["statistics"]
         if row["statistic_name"] == "trade_outcome_state_240m"
     )
-    counter_240 = next(
+    counter = next(
         row
         for row in dossier["counter_evidence"]["statistics"]
         if row["statistic_name"] == "trade_outcome_state_240m"
     )
-    assert support_240["counts"] == {"target_before_stop": 1}
-    assert counter_240["counts"] == {"stop_before_any_target": 1}
+    assert support["counts"] == {"target_before_stop": 1}
+    assert counter["counts"] == {"stop_before_any_target": 1}
     failure = dossier["setup_family_failure_profile"]
     assert failure["setup_family"] == "trend_momentum"
     assert failure["failure_or_nonresolution_counts"] == {
@@ -425,7 +424,7 @@ def test_trade_outcome_aggregate_populates_support_counter_and_failure_profile()
     }
 
 
-def test_effective_n_grade_provenance_temporal_dispersion_and_invalidation_are_mandatory() -> None:
+def test_effective_n_grade_provenance_uncertainty_and_invalidation_are_mandatory() -> None:
     dossier = _compose()
     assert dossier["counter_evidence"]["effective_n"] == 3
     assert dossier["support_evidence"]["effective_n"] == 3
@@ -439,15 +438,18 @@ def test_effective_n_grade_provenance_temporal_dispersion_and_invalidation_are_m
 def test_raw_historical_future_objects_never_enter_dossier() -> None:
     dossier = _compose()
     keys = set(_walk_keys(dossier))
-    assert "future_evaluation" not in keys
-    assert "move_bundle" not in keys
-    assert "trade_outcome_bundle" not in keys
-    assert "mfe" not in keys
-    assert "mae" not in keys
+    for forbidden in (
+        "future_evaluation",
+        "move_bundle",
+        "trade_outcome_bundle",
+        "mfe",
+        "mae",
+    ):
+        assert forbidden not in keys
     assert dossier["raw_future_evaluation_included"] is False
 
 
-def test_report_from_different_or_tampered_selection_is_rejected() -> None:
+def test_report_from_tampered_selection_is_rejected() -> None:
     retrieval, report = _retrieval_and_report()
     changed = copy.deepcopy(report)
     changed["effective_independent_n"] = 999
@@ -481,15 +483,21 @@ def test_no_comparable_case_is_honest_first_class_output() -> None:
 def test_query_insufficient_quality_is_honest_first_class_output() -> None:
     retrieval, report = _query_insufficient()
     dossier = _compose(retrieval=retrieval, report=report)
+    assert retrieval["no_comparable_reason"] == "query_retrieval_eligible_false"
     assert dossier["history_state"]["state"] == "query_insufficient_quality"
     assert dossier["history_state"]["comparable_history_available"] is False
     assert dossier["history_state"]["historical_signal_invented"] is False
+    assert dossier["uncertainty"]["effective_n"] == 0
 
 
 def test_token_pressure_drops_optional_detail_not_mandatory_evidence() -> None:
     full = _compose()
-    full_size = len(canonical_json(full).encode())
-    trimmed = _compose(max_bundle_bytes=full_size - 1)
+    pre_final = copy.deepcopy(full)
+    pre_final.pop("dossier_digest")
+    pre_final.pop("trimmed_optional_sections")
+    pre_final.pop("token_pressure_applied")
+    pre_final_size = len(canonical_json(pre_final).encode())
+    trimmed = _compose(max_bundle_bytes=pre_final_size - 1)
     assert trimmed["token_pressure_applied"] is True
     assert trimmed["trimmed_optional_sections"]
     for key in (
@@ -545,13 +553,32 @@ def test_recursive_state_rejects_secrets_and_hidden_reasoning(field: str) -> Non
 
 @pytest.mark.parametrize(
     "field",
-    ["account_balance", "broker", "metaapi", "mt5", "telegram", "vantage", "follower_position"],
+    [
+        "account_balance",
+        "broker",
+        "metaapi",
+        "mt5",
+        "telegram",
+        "vantage",
+        "follower_position",
+    ],
 )
 def test_recursive_invalidation_rejects_runtime_account_state(field: str) -> None:
     invalidation = _invalidation()
     invalidation["nested"] = {"deeper": {field: "runtime"}}
     with pytest.raises(ValueError, match="Runtime account"):
         _compose(invalidation=invalidation)
+
+
+@pytest.mark.parametrize(
+    "secret_value",
+    ["sk-example-not-real", "Bearer example", "-----BEGIN PRIVATE KEY-----example"],
+)
+def test_recursive_secret_like_values_are_rejected(secret_value: str) -> None:
+    state = _aidy_state()
+    state["nested"] = {"value": secret_value}
+    with pytest.raises(ValueError, match="Secret-like value"):
+        _compose(state=state)
 
 
 def test_invalid_context_hash_fails_closed() -> None:
@@ -561,17 +588,20 @@ def test_invalid_context_hash_fails_closed() -> None:
         _compose(context=context)
 
 
-def test_context_must_remain_objective_and_exclude_retrospective_and_broker_state() -> None:
-    for field, value, match in (
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
         ("objective_only", False, "objective_only"),
         ("retrospective_history_included", True, "Raw retrospective"),
         ("broker_follower_state_included", True, "Broker/follower"),
-    ):
-        context = _context()
-        context[field] = value
-        context["context_hash"] = compute_context_hash(context)
-        with pytest.raises(ValueError, match=match):
-            _compose(context=context)
+    ],
+)
+def test_context_boundary_flags_fail_closed(field: str, value: object, match: str) -> None:
+    context = _context()
+    context[field] = value
+    context["context_hash"] = compute_context_hash(context)
+    with pytest.raises(ValueError, match=match):
+        _compose(context=context)
 
 
 def test_directional_hypothesis_requires_setup_family() -> None:
@@ -611,3 +641,43 @@ def test_short_hypothesis_reverses_directional_move_support_and_counter() -> Non
     )
     assert support["counts"] == {"directional_down": 1}
     assert counter["counts"] == {"directional_up": 1}
+
+
+def test_none_hypothesis_does_not_invent_directional_move_evidence() -> None:
+    retrieval, report = _retrieval_and_report()
+    dossier = compose_context_v2(
+        context=_context(),
+        aidy_state=_aidy_state(),
+        retrieval=retrieval,
+        evidence_report=report,
+        hypothesis_direction="none",
+        setup_family=None,
+        invalidation_inputs=_invalidation(),
+    )
+    support = next(
+        row
+        for row in dossier["support_evidence"]["statistics"]
+        if row["statistic_name"] == "move_path_class_240m"
+    )
+    counter = next(
+        row
+        for row in dossier["counter_evidence"]["statistics"]
+        if row["statistic_name"] == "move_path_class_240m"
+    )
+    assert support["counts"] == {}
+    assert counter["counts"] == {}
+    assert dossier["hypothesis"] == {"direction": "none", "setup_family": None}
+
+
+def test_invalid_hypothesis_direction_is_rejected() -> None:
+    retrieval, report = _retrieval_and_report()
+    with pytest.raises(ValueError, match="long, short or none"):
+        compose_context_v2(
+            context=_context(),
+            aidy_state=_aidy_state(),
+            retrieval=retrieval,
+            evidence_report=report,
+            hypothesis_direction="maybe",
+            setup_family="trend_momentum",
+            invalidation_inputs=_invalidation(),
+        )
