@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -10,7 +9,6 @@ from uuid import uuid4
 from aidy.telegram_publisher import (
     TelegramPublicationError,
     TelegramTransport,
-    canonical_json,
     digest,
     verify_publication_envelope,
 )
@@ -46,7 +44,7 @@ def _row_value(row: object, key: str, default: object = None) -> object:
         return row.get(key, default)
     try:
         return row[key]  # type: ignore[index]
-    except Exception:
+    except (KeyError, IndexError, TypeError):
         return getattr(row, key, default)
 
 
@@ -85,7 +83,10 @@ class D1PublicationLedgerStore:
         correction_reason_code: str | None = None,
     ) -> dict[str, Any]:
         if not verify_publication_envelope(envelope):
-            raise TelegramPublicationError("publication_ledger_envelope_invalid", "Verified publication envelope required.")
+            raise TelegramPublicationError(
+                "publication_ledger_envelope_invalid",
+                "Verified publication envelope required.",
+            )
         created = _iso(created_at_utc)
         publication_id = str(envelope["publication_id"])
         await self._stmt(
@@ -198,7 +199,8 @@ class D1PublicationLedgerStore:
         )
         await self._db.batch([update, insert])
         attempt = await self._first(
-            "SELECT * FROM publication_attempts WHERE attempt_id=? LIMIT 1", attempt_id
+            "SELECT * FROM publication_attempts WHERE attempt_id=? LIMIT 1",
+            attempt_id,
         )
         if attempt is None:
             current = await self.get_delivery(publication_id)
@@ -446,9 +448,15 @@ async def deliver_with_ledger(
         return {"status": lease.status, "delivery": lease.delivery, "transport_called": False}
 
     try:
-        sent = transport.send_message(chat_id=str(envelope["chat_id"]), text=str(envelope["message"]))
+        sent = transport.send_message(
+            chat_id=str(envelope["chat_id"]),
+            text=str(envelope["message"]),
+        )
         if str(sent.get("chat_id")) != str(envelope["chat_id"]):
-            raise TelegramPublicationError("telegram_transport_invalid", "Telegram returned a different destination.")
+            raise TelegramPublicationError(
+                "telegram_transport_invalid",
+                "Telegram returned a different destination.",
+            )
         sent_at = _utc(sent.get("sent_at_utc"), name="sent_at_utc")  # type: ignore[arg-type]
         message_id = int(sent["message_id"])
         transport_name = str(sent.get("transport") or "unknown")
@@ -465,7 +473,7 @@ async def deliver_with_ledger(
             "transport_called": True,
             "error_code": exc.code,
         }
-    except Exception:
+    except Exception:  # noqa: BLE001 - unknown transport outcomes must fail closed as uncertain
         failed = await store.record_failure(
             lease,
             error_code="telegram_transport_unknown_exception",
