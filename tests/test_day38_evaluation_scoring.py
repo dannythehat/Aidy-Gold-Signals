@@ -50,7 +50,7 @@ def _j16_rows(*, reverse: bool = False, n: int = 12) -> list[dict[str, object]]:
                 {
                     "query_id": f"{grade}-{index:02d}",
                     "as_of_utc": (
-                        BASE + timedelta(days=index * 5, hours=grade_index)
+                        BASE + timedelta(days=index * 5 + grade_index * 2)
                     ).isoformat(),
                     "dataset_grade": grade,
                     "effective_n": 40 if grade == "established_dataset" else 12,
