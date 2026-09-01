@@ -24,9 +24,9 @@ from aidy.master_watcher import (
     WATCHER_OBSERVATION_VERSION,
     WATCHER_RECEIPT_VERSION,
     WATCHER_VERSION,
-    digest as watcher_digest,
     watcher_observation_digest,
 )
+from aidy.master_watcher import digest as watcher_digest
 from aidy.paper_simulator import (
     PAPER_OBSERVATION_VERSION,
     apply_paper_observation,
