@@ -1,0 +1,420 @@
+name: AIDY Day 53 Live Forward Activation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/forward_live_observer.py"
+      - "src/entry.py"
+      - "tests/test_day53_live_forward_observer.py"
+      - "scripts/day53_prepare_live_activation.py"
+      - "docs/day53-live-forward-activation.md"
+      - ".github/workflows/day53-live-forward-activation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/aidy/forward_live_observer.py"
+      - "src/entry.py"
+      - "tests/test_day53_live_forward_observer.py"
+      - "scripts/day53_prepare_live_activation.py"
+      - "docs/day53-live-forward-activation.md"
+      - ".github/workflows/day53-live-forward-activation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DAY53_LIVE_BASE_SHA: 9a16f9381b3f9e2db5bcf2f42691aa3a8139eaa8
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+jobs:
+  acceptance:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify accepted base and bounded activation surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY53_LIVE_BASE_SHA" HEAD)" = "$DAY53_LIVE_BASE_SHA"
+          allowed='^(src/aidy/forward_live_observer.py|src/entry.py|tests/test_day53_live_forward_observer.py|scripts/day53_prepare_live_activation.py|docs/day53-live-forward-activation.md|.github/workflows/day53-live-forward-activation.yml)$'
+          unexpected="$(git diff --name-only "$DAY53_LIVE_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 53 live activation changes:"; echo "$unexpected"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check src/aidy/forward_live_observer.py src/entry.py tests/test_day53_live_forward_observer.py scripts/day53_prepare_live_activation.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused live-forward tests
+        shell: bash
+        run: |
+          uv run pytest -q \
+            tests/test_day53_live_forward_observer.py \
+            tests/test_day53_immediate_start.py \
+            tests/test_day53_formal_forward.py \
+            tests/test_runtime_schedule.py \
+            tests/test_day2_deployment_contract.py
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
+
+      - name: Deterministic activation builder A
+        shell: bash
+        run: |
+          uv run python scripts/day53_prepare_live_activation.py \
+            --accepted-code-head "${{ github.event.pull_request.head.sha }}" \
+            --activated-at-utc "2026-09-01T16:35:00+00:00" \
+            --output-dir day53_live_builder_a
+
+      - name: Deterministic activation builder B
+        shell: bash
+        run: |
+          uv run python scripts/day53_prepare_live_activation.py \
+            --accepted-code-head "${{ github.event.pull_request.head.sha }}" \
+            --activated-at-utc "2026-09-01T16:35:00+00:00" \
+            --output-dir day53_live_builder_b
+
+      - name: Require byte-identical builder evidence
+        shell: bash
+        run: diff -ru day53_live_builder_a day53_live_builder_b
+
+      - name: Preserve PR acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-live-forward-pr-${{ github.event.pull_request.head.sha }}
+          path: day53_live_builder_a/
+          if-no-files-found: error
+          retention-days: 90
+
+  live-activation:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact main head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require exact main and deployment credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$(git branch -r --contains HEAD | grep -c 'origin/main')" -ge 1
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Install project dependencies and rerun code gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check src/aidy/forward_live_observer.py src/entry.py tests/test_day53_live_forward_observer.py scripts/day53_prepare_live_activation.py
+          uv run pytest -q tests/test_day53_live_forward_observer.py tests/test_day53_immediate_start.py tests/test_day53_formal_forward.py
+          uv run pytest -q
+
+      - name: Build live Cloudflare configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='gold_api'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='60'
+          assert cfg.get('secrets',{}).get('required',[]) == []
+          text=json.dumps(cfg).lower()
+          for forbidden in ('metaapi','vantage','mt5','super_signals'):
+              assert forbidden not in text
+          json.dump(cfg, open('wrangler.day53.live.jsonc','w',encoding='utf-8'), indent=2)
+
+          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched, open('wrangler.day53.scheduler.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply complete D1 migration chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day53.live.jsonc > /tmp/migration.txt 2>&1
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.live.jsonc \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('aidy_forward_cohorts','aidy_forward_evaluations','aidy_forward_outcomes') ORDER BY name" \
+            > /tmp/forward-tables.json
+          grep -q 'aidy_forward_cohorts' /tmp/forward-tables.json
+          grep -q 'aidy_forward_evaluations' /tmp/forward-tables.json
+          grep -q 'aidy_forward_outcomes' /tmp/forward-tables.json
+
+      - name: Freeze final main SHA and prepare activation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTIVATED_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "ACTIVATED_AT=${ACTIVATED_AT}" >> "$GITHUB_ENV"
+          uv run python scripts/day53_prepare_live_activation.py \
+            --accepted-code-head "$GITHUB_SHA" \
+            --activated-at-utc "$ACTIVATED_AT" \
+            --output-dir day53_live_activation
+          echo "COHORT_ID=$(cat day53_live_activation/cohort_id.txt)" >> "$GITHUB_ENV"
+
+      - name: Refuse a conflicting active amended cohort
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.live.jsonc \
+            --command "SELECT cohort_id,accepted_code_head,state FROM aidy_forward_cohorts WHERE cohort_version='aidy_formal_forward_cohort_v2_immediate_start' AND state='active' ORDER BY activated_at_utc" \
+            > /tmp/existing-active.json
+          python - <<'PY'
+          import json, os
+          payload=json.load(open('/tmp/existing-active.json', encoding='utf-8'))
+          rows=[]
+          for batch in payload:
+              rows.extend(batch.get('results') or [])
+          expected=os.environ['COHORT_ID']
+          conflicts=[row for row in rows if row.get('cohort_id') != expected]
+          assert not conflicts, conflicts
+          PY
+
+      - name: Activate exact frozen cohort in D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config wrangler.day53.live.jsonc \
+            --file day53_live_activation/activation.sql > /tmp/activation.txt 2>&1
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.live.jsonc \
+            --command "SELECT cohort_id,cohort_version,manifest_version,manifest_digest,accepted_code_head,earliest_start_utc,prepared_at_utc,activated_at_utc,state,broker_or_account_state_allowed,follower_state_allowed,super_signals_dependency_allowed,live_money_execution_allowed FROM aidy_forward_cohorts WHERE cohort_id='${COHORT_ID}' LIMIT 1" \
+            > /tmp/active-cohort.json
+          python - <<'PY'
+          import json, os
+          payload=json.load(open('/tmp/active-cohort.json', encoding='utf-8'))
+          rows=[]
+          for batch in payload:
+              rows.extend(batch.get('results') or [])
+          assert len(rows)==1, rows
+          row=rows[0]
+          assert row['cohort_id']==os.environ['COHORT_ID'], row
+          assert row['accepted_code_head']==os.environ['GITHUB_SHA'], row
+          assert row['state']=='active', row
+          assert row['activated_at_utc']==os.environ['ACTIVATED_AT'], row
+          for key in ('broker_or_account_state_allowed','follower_state_allowed','super_signals_dependency_allowed','live_money_execution_allowed'):
+              assert int(row[key])==0, row
+          PY
+
+      - name: Deploy forward-enabled Worker and one-minute scheduler
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day53.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy > /tmp/worker-deploy.txt 2>&1
+          echo PASS > /tmp/worker-deployed
+          npx --yes wrangler@4 deploy --config wrangler.day53.scheduler.live.jsonc > /tmp/scheduler-deploy.txt 2>&1
+          echo PASS > /tmp/scheduler-deployed
+
+      - name: Verify deployed forward flag and cohort identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health.json || true
+            curl -fsS "${AIDY_TEST_WORKER_URL}/day53/forward-status" > /tmp/forward-status.json || true
+            if python - <<'PY'
+          import json, os
+          try:
+              health=json.load(open('/tmp/health.json', encoding='utf-8'))
+              status=json.load(open('/tmp/forward-status.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          forward=status.get('forward') or {}
+          ok=(
+              health.get('capture_enabled') is True
+              and health.get('formal_forward_enabled') is True
+              and status.get('ok') is True
+              and forward.get('deployment_enabled') is True
+              and forward.get('active') is True
+              and forward.get('cohort_id') == os.environ['COHORT_ID']
+              and forward.get('accepted_code_head') == os.environ['GITHUB_SHA']
+          )
+          raise SystemExit(0 if ok else 1)
+          PY
+            then break; fi
+            sleep 5
+          done
+          python - <<'PY'
+          import json, os
+          health=json.load(open('/tmp/health.json', encoding='utf-8'))
+          status=json.load(open('/tmp/forward-status.json', encoding='utf-8'))
+          forward=status['forward']
+          assert health['formal_forward_enabled'] is True, health
+          assert forward['active'] is True, status
+          assert forward['cohort_id']==os.environ['COHORT_ID'], status
+          assert forward['accepted_code_head']==os.environ['GITHUB_SHA'], status
+          PY
+
+      - name: Require first genuine scheduled post-activation forward row
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 42); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.live.jsonc \
+              --command "SELECT record_id,record_json,record_digest,cohort_id,cycle_id,evaluated_at_utc,disposition,data_quality_state,data_quality_reason_code,episode_id,recorded_at_utc FROM aidy_forward_evaluations WHERE cohort_id='${COHORT_ID}' AND evaluated_at_utc >= '${ACTIVATED_AT}' ORDER BY evaluated_at_utc ASC LIMIT 1" \
+              > /tmp/first-forward-row.json
+            if python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/first-forward-row.json', encoding='utf-8'))
+          rows=[]
+          for batch in payload:
+              rows.extend(batch.get('results') or [])
+          raise SystemExit(0 if rows else 1)
+          PY
+            then found=1; break; fi
+            sleep 10
+          done
+          test "$found" = "1"
+          python - <<'PY'
+          import json, os
+          from datetime import datetime
+          payload=json.load(open('/tmp/first-forward-row.json', encoding='utf-8'))
+          rows=[]
+          for batch in payload:
+              rows.extend(batch.get('results') or [])
+          assert len(rows)==1, rows
+          row=rows[0]
+          record=json.loads(row['record_json'])
+          assert row['cohort_id']==os.environ['COHORT_ID'], row
+          assert datetime.fromisoformat(row['evaluated_at_utc']) >= datetime.fromisoformat(os.environ['ACTIVATED_AT']), row
+          assert row['disposition']=='pre_model_blocked', row
+          assert row['data_quality_state']=='failure', row
+          assert row['data_quality_reason_code'] in {
+              'missing_genuine_live_ohlc_and_spread',
+              'missing_genuine_live_spread',
+              'missing_genuine_live_ohlc',
+              'market_reference_unavailable',
+              'market_reference_not_complete',
+              'market_reference_stale',
+              'market_reference_age_unknown',
+              'market_reference_age_invalid',
+          }, row
+          assert record['self_consistency_digest'] is None, record
+          assert record['decision_id'] is None, record
+          assert record['formal_forward_eligible'] is True, record
+          assert record['broker_or_account_state_used'] is False, record
+          assert record['follower_state_used'] is False, record
+          assert record['super_signals_used'] is False, record
+          assert record['live_money_execution_used'] is False, record
+          with open('/tmp/first-record-id.txt','w',encoding='utf-8') as fh:
+              fh.write(row['record_id'])
+          PY
+          echo PASS > /tmp/scheduled-forward-row
+
+      - name: Verify status sample accounting remains non-inflated
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "${AIDY_TEST_WORKER_URL}/day53/forward-status" > /tmp/final-forward-status.json
+          python - <<'PY'
+          import json, os
+          payload=json.load(open('/tmp/final-forward-status.json', encoding='utf-8'))
+          assert payload.get('ok') is True, payload
+          forward=payload['forward']
+          progress=forward['progress']
+          assert forward['active'] is True, forward
+          assert forward['cohort_id']==os.environ['COHORT_ID'], forward
+          assert forward['accepted_code_head']==os.environ['GITHUB_SHA'], forward
+          assert int(progress['raw_evaluation_count']) >= 1, progress
+          assert int(progress['model_resolved_episode_independent_n']) == 0, progress
+          assert progress['day54_sample_gate_met'] is False, progress
+          assert progress['blocked_or_failed_cycles_can_satisfy_day54_gate'] is False, progress
+          assert forward['openai_called_for_pre_model_block'] is False, forward
+          assert forward['telegram_publication_enabled'] is False, forward
+          PY
+
+      - name: Roll forward observer safe-off on live failure
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          if [ ! -f /tmp/worker-deployed ]; then echo NOT_NEEDED > /tmp/rollback; exit 0; fi
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.day53.live.jsonc', encoding='utf-8'))
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          json.dump(cfg, open('wrangler.day53.rollback.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          cp wrangler.day53.rollback.jsonc wrangler.jsonc
+          uv run pywrangler deploy > /tmp/rollback-worker.txt 2>&1
+          if [ $? -eq 0 ]; then echo PASS_FORWARD_SAFE_OFF > /tmp/rollback; else echo ROLLBACK_FAILED > /tmp/rollback; fi
+
+      - name: Preserve remote activation evidence
+        if: always()
+        shell: bash
+        run: |
+          set -u
+          mkdir -p day53_live_evidence
+          cp day53_live_activation/*.json day53_live_evidence/ 2>/dev/null || true
+          cp /tmp/active-cohort.json day53_live_evidence/ 2>/dev/null || true
+          cp /tmp/health.json day53_live_evidence/ 2>/dev/null || true
+          cp /tmp/forward-status.json day53_live_evidence/ 2>/dev/null || true
+          cp /tmp/first-forward-row.json day53_live_evidence/ 2>/dev/null || true
+          cp /tmp/final-forward-status.json day53_live_evidence/ 2>/dev/null || true
+          {
+            echo "accepted_code_head=${GITHUB_SHA}"
+            echo "activated_at_utc=${ACTIVATED_AT:-unknown}"
+            echo "cohort_id=${COHORT_ID:-unknown}"
+            echo "migration=$(test -f /tmp/forward-tables.json && echo PASS || echo NOT_REACHED)"
+            echo "worker_deployed=$(cat /tmp/worker-deployed 2>/dev/null || echo NOT_REACHED)"
+            echo "scheduler_deployed=$(cat /tmp/scheduler-deployed 2>/dev/null || echo NOT_REACHED)"
+            echo "scheduled_forward_row=$(cat /tmp/scheduled-forward-row 2>/dev/null || echo NOT_REACHED)"
+            echo "rollback=$(cat /tmp/rollback 2>/dev/null || echo NOT_NEEDED)"
+          } > day53_live_evidence/summary.txt
+
+      - name: Upload remote activation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-live-activation-${{ github.sha }}
+          path: day53_live_evidence/
+          if-no-files-found: warn
+          retention-days: 90
