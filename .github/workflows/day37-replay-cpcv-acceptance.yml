@@ -1,0 +1,49 @@
+name: Day 37 frozen replay CPCV acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/replay_evaluation.py"
+      - "src/aidy/replay_experiment.py"
+      - "tests/test_day37_replay_evaluation.py"
+      - "scripts/day37_replay_cpcv_acceptance.py"
+      - "docs/day37-frozen-replay-cpcv-contract.md"
+      - ".github/workflows/day37-replay-cpcv-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bounded acceptance dependencies
+        run: pip install -e . pytest pytest-asyncio ruff
+      - name: Changed-file lint
+        run: ruff check src/aidy/replay_evaluation.py src/aidy/replay_experiment.py tests/test_day37_replay_evaluation.py scripts/day37_replay_cpcv_acceptance.py
+      - name: Focused adversarial tests
+        run: pytest -q tests/test_day37_replay_evaluation.py
+      - name: Full regression
+        run: pytest -q
+      - name: Deterministic acceptance run A
+        run: python scripts/day37_replay_cpcv_acceptance.py --output-dir day37_artifacts_a
+      - name: Deterministic acceptance run B
+        run: python scripts/day37_replay_cpcv_acceptance.py --output-dir day37_artifacts_b
+      - name: Byte-for-byte deterministic artifact check
+        run: diff -ru day37_artifacts_a day37_artifacts_b
+      - uses: actions/upload-artifact@v4
+        with:
+          name: day37-replay-cpcv-evidence
+          path: day37_artifacts_a
+          if-no-files-found: error
+          retention-days: 7
