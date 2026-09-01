@@ -84,7 +84,7 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
         "selective_abstention_shadow": _component(
             str(selective["layer_version"]), selective
         ),
-        "gc_xau_shadow": _component(str(gc["shadow_version"]), gc),
+        "gc_xau_shadow": _component(str(gc["manifest_version"]), gc),
         "macro_surprise": {
             "version": SURPRISE_CAPTURE_VERSION,
             "digest": digest(macro_identity),
