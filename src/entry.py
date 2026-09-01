@@ -13,6 +13,7 @@ from aidy.continuity_auditor import audit_window
 from aidy.cross_market import CrossMarketGateway
 from aidy.cross_market_recorder import AidyCrossMarketRecorderService
 from aidy.cross_market_storage import D1CrossMarketOperationalEvidenceStore
+from aidy.forward_live_observer import live_forward_status, observe_private_forward_snapshot
 from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
 from aidy.runtime import run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
@@ -21,6 +22,15 @@ from aidy.storage_contracts import AidyMarketRepository
 def _repository(env):
     operational = D1CrossMarketOperationalEvidenceStore(env.AIDY_OPS)
     return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
+
+
+def _formal_forward_enabled(env) -> bool:
+    return str(getattr(env, "AIDY_FORMAL_FORWARD_ENABLED", "false")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 def _scheduled_at_from_queue_body(body: object) -> datetime:
@@ -53,6 +63,24 @@ async def _write_test_queue_error(env, settings: AidySettings | None, exc: Excep
     )
 
 
+async def _write_test_forward_error(env, exc: Exception, *, scheduled_at: datetime) -> None:
+    if str(getattr(env, "AIDY_ENV", "")).lower() != "test":
+        return
+    payload = {
+        "observed_at": datetime.now(UTC).isoformat(),
+        "scheduled_at": scheduled_at.astimezone(UTC).isoformat(),
+        "exception_type": type(exc).__name__,
+        "message": str(exc)[:1000],
+        "traceback": traceback.format_exc()[-6000:],
+        "capture_retry_requested": False,
+        "reason": "forward_observer_failure_must_not_duplicate_market_capture",
+    }
+    await env.AIDY_MEMORY.put(
+        "diagnostics/day53-forward-observer-error.json",
+        json.dumps(payload, sort_keys=True),
+    )
+
+
 class Default(WorkerEntrypoint):
     async def fetch(self, request):
         url = urlparse(request.url)
@@ -65,12 +93,26 @@ class Default(WorkerEntrypoint):
                     "runtime": "cloudflare-workers",
                     "environment": str(getattr(self.env, "AIDY_ENV", "unknown")),
                     "capture_enabled": settings.capture_enabled,
+                    "formal_forward_enabled": _formal_forward_enabled(self.env),
                     "market_data_source": settings.market_data_source,
                     "market_data_ownership": settings.market_data_ownership,
                     "cross_market_source": "public_official_daily",
                     "scheduler": "queue-consumer",
                 }
             )
+
+        if request.method == "GET" and url.path == "/day53/forward-status":
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            try:
+                status = await live_forward_status(self.env.AIDY_OPS)
+            except (TypeError, ValueError, RuntimeError) as exc:
+                return Response.json(
+                    {"ok": False, "error": type(exc).__name__, "message": str(exc)},
+                    status=500,
+                )
+            status["deployment_enabled"] = _formal_forward_enabled(self.env)
+            return Response.json({"ok": True, "forward": status})
 
         if request.method == "POST" and url.path == "/day1/storage-smoke":
             if str(self.env.AIDY_ENV).lower() != "test":
@@ -209,13 +251,25 @@ class Default(WorkerEntrypoint):
                 settings = AidySettings.from_worker_env(worker_env)
                 _, repository = _repository(worker_env)
                 scheduled_at = _scheduled_at_from_queue_body(message.body)
-                await run_worker_scheduled_cycle(
+                result = await run_worker_scheduled_cycle(
                     settings,
                     repository=repository,
                     scheduled_at=scheduled_at,
                 )
-            except Exception as exc:  # noqa: BLE001 - queue failures must retry safely
+            except Exception as exc:  # noqa: BLE001 - capture failures must retry safely
                 await _write_test_queue_error(worker_env, settings, exc)
                 message.retry(delaySeconds=30)
-            else:
-                message.ack()
+                continue
+
+            if _formal_forward_enabled(worker_env):
+                snapshot_id = None if result.market is None else result.market.snapshot_id
+                try:
+                    await observe_private_forward_snapshot(
+                        d1=worker_env.AIDY_OPS,
+                        scheduled_at=scheduled_at,
+                        snapshot_id=snapshot_id,
+                    )
+                except Exception as exc:  # noqa: BLE001 - do not duplicate successful capture
+                    await _write_test_forward_error(worker_env, exc, scheduled_at=scheduled_at)
+
+            message.ack()
