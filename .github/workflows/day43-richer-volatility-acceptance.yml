@@ -1,0 +1,143 @@
+name: AIDY Day 43 Richer Volatility Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/richer_volatility.py"
+      - "tests/test_day43_richer_volatility.py"
+      - "scripts/day43_richer_volatility_acceptance.py"
+      - "docs/day43-richer-volatility-j7-j8-contract.md"
+      - ".github/workflows/day43-richer-volatility-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day43-richer-volatility-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  DAY43_BASE_SHA: 3d32b5c8afebdfc29552cc76c61c4d254606e122
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 42 base and bounded Day 43 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY43_BASE_SHA" HEAD)" = "$DAY43_BASE_SHA"
+          allowed='^(src/aidy/richer_volatility.py|tests/test_day43_richer_volatility.py|scripts/day43_richer_volatility_acceptance.py|docs/day43-richer-volatility-j7-j8-contract.md|.github/workflows/day43-richer-volatility-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY43_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 43 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/richer_volatility.py \
+            tests/test_day43_richer_volatility.py \
+            scripts/day43_richer_volatility_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused Day 43 adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day43_richer_volatility.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Exact-head deterministic acceptance A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day43_richer_volatility_acceptance.py \
+            --output-dir day43_artifacts_a \
+            > /tmp/day43-summary-a.json
+          cat /tmp/day43-summary-a.json
+
+      - name: Exact-head deterministic acceptance B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day43_richer_volatility_acceptance.py \
+            --output-dir day43_artifacts_b \
+            > /tmp/day43-summary-b.json
+          cat /tmp/day43-summary-b.json
+
+      - name: Require byte-identical deterministic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day43_artifacts_a day43_artifacts_b
+
+      - name: Enforce volatility research and no-promotion boundary
+        shell: bash
+        env:
+          CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary = json.loads(Path('day43_artifacts_a/summary.json').read_text(encoding='utf-8'))
+          assert summary['head_sha'] == os.environ['CANDIDATE_HEAD_SHA'], summary
+          assert summary['explicit_iv_horizon_calendar_days'] == 30, summary
+          assert summary['explicit_rv_horizons_trading_days'] == [5, 10, 21], summary
+          assert summary['jump_estimator_reused'] == 'realized_variation_minus_bipower_variation', summary
+          assert summary['vol_of_vol_window_trading_days'] == 21, summary
+          assert summary['redundant_volatility_estimators_added'] is False, summary
+          assert summary['event_kink_not_fabricated'] is True, summary
+          assert summary['unexplained_shock_market_derived_only'] is True, summary
+          assert summary['news_or_sentiment_input_used'] is False, summary
+          assert summary['narrative_or_intent_label_used'] is False, summary
+          assert summary['j7_result_state'] in {'insufficient', 'null', 'descriptive_non_null'}, summary
+          assert summary['j8_result_state'] in {'insufficient', 'null', 'descriptive_non_null'}, summary
+          assert summary['null_or_insufficient_results_retained'] is True, summary
+          assert summary['day32_trial_registry_bound'] is True, summary
+          assert summary['day37_purge_embargo_bound'] is True, summary
+          assert summary['threshold_tuning_on_evaluation_set_allowed'] is False, summary
+          assert summary['cvol_purchase_authorized'] is False, summary
+          assert summary['features_shadow_only'] is True, summary
+          assert summary['regime_or_abstention_conditioning_promoted'] is False, summary
+          assert summary['formal_forward_evidence_created'] is False, summary
+          assert summary['predictive_edge_claimed'] is False, summary
+          assert summary['trading_gate_created'] is False, summary
+          PY
+
+      - name: Preserve Day 43 acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day43-richer-volatility-${{ github.event.pull_request.head.sha }}
+          path: day43_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
