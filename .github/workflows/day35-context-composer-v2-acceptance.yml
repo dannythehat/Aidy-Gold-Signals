@@ -1,0 +1,48 @@
+name: Day 35 Context Composer V2 acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/context_composer_v2.py"
+      - "tests/test_day35_context_composer_v2.py"
+      - "scripts/day35_context_composer_acceptance.py"
+      - "docs/day35-context-composer-v2-contract.md"
+      - ".github/workflows/day35-context-composer-v2-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bounded acceptance dependencies
+        run: pip install -e . pytest pytest-asyncio ruff
+      - name: Changed-file lint
+        run: ruff check src/aidy/context_composer_v2.py tests/test_day35_context_composer_v2.py scripts/day35_context_composer_acceptance.py
+      - name: Focused adversarial tests
+        run: pytest -q tests/test_day35_context_composer_v2.py
+      - name: Full regression
+        run: pytest -q
+      - name: Deterministic acceptance run A
+        run: python scripts/day35_context_composer_acceptance.py --output-dir day35_artifacts_a
+      - name: Deterministic acceptance run B
+        run: python scripts/day35_context_composer_acceptance.py --output-dir day35_artifacts_b
+      - name: Byte-for-byte deterministic artifact check
+        run: diff -ru day35_artifacts_a day35_artifacts_b
+      - uses: actions/upload-artifact@v4
+        with:
+          name: day35-context-composer-v2-evidence
+          path: day35_artifacts_a
+          if-no-files-found: error
+          retention-days: 7
