@@ -1,0 +1,168 @@
+name: AIDY Day 39 Controlled Strategy Promotion Acceptance
+
+on:
+  pull_request:
+    paths:
+      - "src/aidy/strategy_promotion.py"
+      - "tests/test_day39_strategy_promotion.py"
+      - "scripts/day39_strategy_promotion_acceptance.py"
+      - "docs/day39-controlled-strategy-promotion.md"
+      - ".github/workflows/day39-strategy-promotion-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      DAY39_BASE_SHA: a1d0306d23406962fab1b10aa5e18ce8df73bdb2
+
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 38 base and bounded Day 39 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY39_BASE_SHA" HEAD)" = "$DAY39_BASE_SHA"
+          allowed='^(src/aidy/strategy_promotion.py|tests/test_day39_strategy_promotion.py|scripts/day39_strategy_promotion_acceptance.py|docs/day39-controlled-strategy-promotion.md|.github/workflows/day39-strategy-promotion-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY39_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 39 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/strategy_promotion.py \
+            tests/test_day39_strategy_promotion.py \
+            scripts/day39_strategy_promotion_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused adversarial Day 39 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day39_strategy_promotion.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"; exit 1; }
+          python - <<'PY'
+          import json
+          import os
+
+          info = json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Exact-head immutable promotion architecture evidence A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day39_strategy_promotion_acceptance.py \
+            --bigquery \
+            --output-dir day39_artifacts_a \
+            > /tmp/day39-summary-a.json
+          cat /tmp/day39-summary-a.json
+
+      - name: Exact-head immutable promotion architecture evidence B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day39_strategy_promotion_acceptance.py \
+            --bigquery \
+            --output-dir day39_artifacts_b \
+            > /tmp/day39-summary-b.json
+          cat /tmp/day39-summary-b.json
+
+      - name: Byte-for-byte deterministic acceptance evidence check
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day39_artifacts_a day39_artifacts_b
+
+      - name: Enforce Day 39 no-autonomy and no-fake-promotion contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import subprocess
+
+          with open("day39_artifacts_a/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "a1d0306d23406962fab1b10aa5e18ce8df73bdb2", result
+          assert result["head_sha"] == head, result
+          assert result["architecture_fixture_only"] is True, result
+          assert result["actual_strategy_promotion_performed"] is False, result
+          assert result["promotion_authorized_for_live_strategy"] is False, result
+          assert result["trial_count"] == 4, result
+          assert result["trial_result_states"] == ["null", "insufficient", "failed", "passed"], result
+          assert result["failed_null_insufficient_trials_retained"] is True, result
+          assert result["complete_trial_count_used_for_multiple_testing"] is True, result
+          assert result["multiple_testing_method"] == "deflated_sharpe_ratio", result
+          assert result["promotion_fixture_status"] == "promote", result
+          assert result["promotion_owner_approval_required"] is True, result
+          assert result["fixture_deterministic_rollback_path_exercised"] is True, result
+          assert result["rollback_manual_execution_required"] is True, result
+          assert result["final_active_version_is_original_champion"] is True, result
+          assert result["champion_overwrite_allowed"] is False, result
+          assert result["version_deletion_allowed"] is False, result
+          assert result["holdout_reuse_for_tuning_allowed"] is False, result
+          assert result["autonomous_self_modification_allowed"] is False, result
+          assert result["predictive_edge_claimed"] is False, result
+          assert result["trading_gate_created"] is False, result
+          assert result["broker_side_effects_allowed"] is False, result
+          assert result["telegram_side_effects_allowed"] is False, result
+          assert result["super_signals_side_effects_allowed"] is False, result
+          PY
+
+      - name: Preserve exact Day 39 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day39-promotion-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day39_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
