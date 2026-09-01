@@ -6,9 +6,11 @@ from decimal import Decimal
 
 import pytest
 
-from aidy.replay_evaluation import HOLDOUT_ACCESS_VERSION, digest as replay_digest
+from aidy.replay_evaluation import HOLDOUT_ACCESS_VERSION
+from aidy.replay_evaluation import digest as replay_digest
 from aidy.research_integrity import (
     IntegrityError,
+    digest as trial_digest,
     finalize_trial,
     preregister_trial,
     verify_trial_registry,
@@ -25,6 +27,7 @@ from aidy.strategy_promotion import (
     build_rollback_record,
     build_strategy_version,
     deflated_sharpe_ratio,
+    digest as promotion_digest,
     evaluate_promotion,
     promotion_manifest,
     verify_multiple_testing_control,
@@ -67,13 +70,21 @@ def _version(
 def _policy() -> dict[str, object]:
     return build_promotion_policy(
         metric_criteria=[
-            {"metric": "judgement_score", "direction": "higher", "minimum_delta": "0.02"},
+            {
+                "metric": "judgement_score",
+                "direction": "higher",
+                "minimum_delta": "0.02",
+            },
             {
                 "metric": "risk_coverage_quality",
                 "direction": "higher",
                 "minimum_delta": "0.02",
             },
-            {"metric": "decision_stability", "direction": "higher", "minimum_delta": "0.01"},
+            {
+                "metric": "decision_stability",
+                "direction": "higher",
+                "minimum_delta": "0.01",
+            },
         ],
         safety_criteria=[
             {
@@ -92,7 +103,7 @@ def _policy() -> dict[str, object]:
     )
 
 
-def _registry(
+def _trial_registry(
     champion: dict[str, object],
     challenger: dict[str, object],
     policy: dict[str, object],
@@ -102,19 +113,20 @@ def _registry(
     rows: list[dict[str, object]] = []
     states = ("null", "insufficient", "failed", candidate_state)
     for number, state in enumerate(states, start=1):
-        holdout = f"day39-holdout-{number}" if number < 4 else FINAL_HOLDOUT
+        final = number == len(states)
+        holdout = FINAL_HOLDOUT if final else f"day39-holdout-{number}"
         frozen: dict[str, object] = {"attempt": number}
-        if number == 4:
+        if final:
             frozen = {
                 "champion_version_digest": champion["version_digest"],
                 "challenger_version_digest": challenger["version_digest"],
                 "promotion_policy_digest": policy["policy_digest"],
-                "declared_trial_count": 4,
+                "declared_trial_count": len(states),
             }
         registered = preregister_trial(
             rows,
             trial_number=number,
-            hypothesis=f"challenger attempt {number} improves the pre-specified metrics",
+            hypothesis=f"challenger attempt {number} improves pre-specified metrics",
             null_hypothesis=f"challenger attempt {number} does not improve them",
             dataset_version=DATASET_VERSION,
             feature_context_version="aidy_market_context_v7_volatility_state",
@@ -126,7 +138,7 @@ def _registry(
             purge="240m",
             embargo="240m",
             evaluation_identity=(
-                EVALUATION_IDENTITY if number == 4 else f"day39-evaluation-{number}"
+                EVALUATION_IDENTITY if final else f"day39-evaluation-{number}"
             ),
             holdout_identity=holdout,
             preregistered_at=NOW + timedelta(minutes=number),
@@ -209,9 +221,9 @@ def _decision(
         parent=str(champion["version_digest"]),
     )
     policy = _policy()
-    registry = _registry(champion, challenger, policy, candidate_state=candidate_state)
-    access = _holdout_access(registry[-1], challenger)
-    control = _multiple_testing(registry, strong=strong_dsr)
+    registry = _trial_registry(
+        champion, challenger, policy, candidate_state=candidate_state
+    )
     decision = evaluate_promotion(
         champion_version=champion,
         challenger_version=challenger,
@@ -238,8 +250,8 @@ def _decision(
             "safety_violation_rate": "0.01",
             "grounding_failure_rate": "0.01",
         },
-        multiple_testing_control=control,
-        holdout_access_record=access,
+        multiple_testing_control=_multiple_testing(registry, strong=strong_dsr),
+        holdout_access_record=_holdout_access(registry[-1], challenger),
         evaluation_identity=EVALUATION_IDENTITY,
         holdout_identity=FINAL_HOLDOUT,
         evaluated_at=NOW + timedelta(hours=2),
@@ -302,15 +314,14 @@ def test_policy_rejects_single_metric_promotion_rules() -> None:
         )
 
 
-def test_day32_trial_registry_retains_failed_null_and_insufficient_attempts() -> None:
+def test_trial_registry_retains_failed_null_and_insufficient_attempts() -> None:
     champion = _version("champion-v1", registered_offset=0)
     challenger = _version(
         "challenger-v2",
         registered_offset=1,
         parent=str(champion["version_digest"]),
     )
-    policy = _policy()
-    registry = _registry(champion, challenger, policy)
+    registry = _trial_registry(champion, challenger, _policy())
     assert [row["result_state"] for row in registry] == [
         "null",
         "insufficient",
@@ -319,15 +330,14 @@ def test_day32_trial_registry_retains_failed_null_and_insufficient_attempts() ->
     ]
 
 
-def test_existing_day32_contract_forbids_holdout_reuse_for_tuning() -> None:
+def test_day32_contract_forbids_holdout_reuse_for_tuning() -> None:
     champion = _version("champion-v1", registered_offset=0)
     challenger = _version(
         "challenger-v2",
         registered_offset=1,
         parent=str(champion["version_digest"]),
     )
-    policy = _policy()
-    registry = _registry(champion, challenger, policy)
+    registry = _trial_registry(champion, challenger, _policy())
     with pytest.raises(IntegrityError):
         preregister_trial(
             registry,
@@ -356,7 +366,7 @@ def test_multiple_testing_control_uses_complete_registry_count() -> None:
         registered_offset=1,
         parent=str(champion["version_digest"]),
     )
-    registry = _registry(champion, challenger, _policy())
+    registry = _trial_registry(champion, challenger, _policy())
     report = _multiple_testing(registry)
     assert verify_multiple_testing_control(report)
     assert report["trial_count"] == 4
@@ -368,14 +378,14 @@ def test_multiple_testing_control_uses_complete_registry_count() -> None:
     }
 
 
-def test_multiple_testing_control_without_sharpe_does_not_invent_dsr() -> None:
+def test_no_sharpe_claim_does_not_invent_dsr() -> None:
     champion = _version("champion-v1", registered_offset=0)
     challenger = _version(
         "challenger-v2",
         registered_offset=1,
         parent=str(champion["version_digest"]),
     )
-    registry = _registry(champion, challenger, _policy())
+    registry = _trial_registry(champion, challenger, _policy())
     report = build_multiple_testing_control(registry)
     assert report["method"] == "trial_count_only"
     assert report["sharpe_claimed"] is False
@@ -422,7 +432,7 @@ def test_clean_broad_improvement_can_recommend_promotion() -> None:
     assert decision["owner_approval_still_required"] is True
 
 
-def test_single_great_metric_cannot_compensate_for_primary_degradation() -> None:
+def test_single_great_metric_cannot_compensate_for_degradation() -> None:
     *_, decision = _decision(
         challenger_metrics={
             "judgement_score": "0.99",
@@ -454,7 +464,7 @@ def test_dsr_failure_blocks_sharpe_based_promotion() -> None:
 
 
 @pytest.mark.parametrize("state", ["null", "insufficient", "failed"])
-def test_nonpassing_challenger_trials_remain_auditable_and_inconclusive(state: str) -> None:
+def test_nonpassing_trials_are_auditable_and_inconclusive(state: str) -> None:
     *_, decision = _decision(candidate_state=state)
     assert decision["status"] == "inconclusive"
     assert decision["trial_result_state"] == state
@@ -469,16 +479,15 @@ def test_incomplete_declared_trial_count_is_rejected() -> None:
         parent=str(champion["version_digest"]),
     )
     policy = _policy()
-    registry = _registry(champion, challenger, policy)
+    registry = _trial_registry(champion, challenger, policy)
     last = copy.deepcopy(registry[-1])
     last["frozen_parameters"]["declared_trial_count"] = 3
-    last_body = dict(last)
-    last_body.pop("trial_digest")
-    from aidy.research_integrity import digest as trial_digest
-
-    last["trial_digest"] = trial_digest(last_body)
+    body = dict(last)
+    body.pop("trial_digest")
+    last["trial_digest"] = trial_digest(body)
     broken = [*registry[:-1], last]
     assert verify_trial_registry(broken)
+
     with pytest.raises(PromotionIntegrityError, match="declared_trial_count"):
         evaluate_promotion(
             champion_version=champion,
@@ -512,7 +521,7 @@ def test_incomplete_declared_trial_count_is_rejected() -> None:
         )
 
 
-def test_missing_or_mutated_holdout_access_is_rejected() -> None:
+def test_mutated_holdout_access_is_rejected() -> None:
     champion = _version("champion-v1", registered_offset=0)
     challenger = _version(
         "challenger-v2",
@@ -520,9 +529,10 @@ def test_missing_or_mutated_holdout_access_is_rejected() -> None:
         parent=str(champion["version_digest"]),
     )
     policy = _policy()
-    registry = _registry(champion, challenger, policy)
+    registry = _trial_registry(champion, challenger, policy)
     access = _holdout_access(registry[-1], challenger)
     access["silent_promotion_allowed"] = True
+
     with pytest.raises(PromotionIntegrityError, match="holdout access"):
         evaluate_promotion(
             champion_version=champion,
@@ -556,7 +566,11 @@ def test_missing_or_mutated_holdout_access_is_rejected() -> None:
         )
 
 
-def test_registry_promotion_is_append_only_and_manual() -> None:
+def _promoted_registry() -> tuple[
+    dict[str, object],
+    dict[str, object],
+    dict[str, object],
+]:
     champion, challenger, _, _, decision = _decision()
     registry = build_registry_snapshot(
         versions=[champion, challenger],
@@ -571,12 +585,18 @@ def test_registry_promotion_is_append_only_and_manual() -> None:
     assert verify_registry_event(event)
     promoted = apply_registry_event(registry, event)
     assert verify_registry_snapshot(promoted)
+    return champion, challenger, promoted
+
+
+def test_registry_promotion_is_append_only_and_manual() -> None:
+    champion, challenger, promoted = _promoted_registry()
     assert promoted["registered_version_count"] == 2
     assert promoted["active_champion_digest"] == challenger["version_digest"]
+    assert promoted["versions"][0]["version_digest"] == champion["version_digest"]
     assert promoted["events"][0]["autonomous_execution_allowed"] is False
 
 
-def test_registry_rejects_champion_deletion_or_unregistered_target() -> None:
+def test_registry_rejects_unregistered_target() -> None:
     champion, challenger, _, _, decision = _decision()
     registry = build_registry_snapshot(
         versions=[champion, challenger],
@@ -592,26 +612,13 @@ def test_registry_rejects_champion_deletion_or_unregistered_target() -> None:
     bad["to_version_digest"] = "not-registered"
     body = dict(bad)
     body.pop("event_digest")
-    from aidy.strategy_promotion import digest as promotion_digest
-
     bad["event_digest"] = promotion_digest(body)
     with pytest.raises(PromotionIntegrityError, match="not registered"):
         apply_registry_event(registry, bad)
 
 
-def test_rollback_is_deterministic_append_only_and_returns_to_prior_version() -> None:
-    champion, challenger, _, _, decision = _decision()
-    registry = build_registry_snapshot(
-        versions=[champion, challenger],
-        active_champion_digest=str(champion["version_digest"]),
-    )
-    promotion = build_promotion_event(
-        registry=registry,
-        decision=decision,
-        approved_by="owner",
-        approved_at=NOW + timedelta(hours=3),
-    )
-    promoted = apply_registry_event(registry, promotion)
+def test_rollback_returns_to_prior_version_without_deleting_versions() -> None:
+    champion, _, promoted = _promoted_registry()
     rollback = build_rollback_record(
         registry=promoted,
         rollback_to_version_digest=str(champion["version_digest"]),
@@ -621,29 +628,17 @@ def test_rollback_is_deterministic_append_only_and_returns_to_prior_version() ->
         approved_at=NOW + timedelta(hours=4),
     )
     assert verify_rollback_record(rollback)
-    rollback_event = build_rollback_event(
-        registry=promoted,
-        rollback_record=rollback,
+    rolled_back = apply_registry_event(
+        promoted,
+        build_rollback_event(registry=promoted, rollback_record=rollback),
     )
-    rolled_back = apply_registry_event(promoted, rollback_event)
     assert rolled_back["active_champion_digest"] == champion["version_digest"]
     assert rolled_back["event_count"] == 2
     assert rolled_back["registered_version_count"] == 2
 
 
-def test_rollback_cannot_be_triggered_merely_to_improve_performance() -> None:
-    champion, challenger, _, _, decision = _decision()
-    registry = build_registry_snapshot(
-        versions=[champion, challenger],
-        active_champion_digest=str(champion["version_digest"]),
-    )
-    promotion = build_promotion_event(
-        registry=registry,
-        decision=decision,
-        approved_by="owner",
-        approved_at=NOW,
-    )
-    promoted = apply_registry_event(registry, promotion)
+def test_performance_only_rollback_trigger_is_rejected() -> None:
+    champion, _, promoted = _promoted_registry()
     with pytest.raises(PromotionIntegrityError):
         build_rollback_record(
             registry=promoted,
