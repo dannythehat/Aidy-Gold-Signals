@@ -227,7 +227,7 @@ def test_split_purges_prior_labels_that_overlap_or_enter_purge_buffer() -> None:
     buffer_only = _case(
         111,
         as_of=BASE + timedelta(days=10, hours=18),
-        horizon_hours=12,
+        horizon_hours=20,
     )
     cases.extend([overlap, buffer_only])
     split = _split(_dataset(cases))
