@@ -19,10 +19,11 @@ from aidy.master_trader_contract_v2 import (
     validate_master_trader_decision_v2,
 )
 from aidy.openai_gateway import (
+    _RETRY_STATUS_CODES,
     OPENAI_API_KEY_ENV,
     OPENAI_API_URL,
-    OPENAI_INPUT_PER_MILLION_USD,
     OPENAI_CACHED_INPUT_PER_MILLION_USD,
+    OPENAI_INPUT_PER_MILLION_USD,
     OPENAI_MAX_ATTEMPTS,
     OPENAI_MAX_OUTPUT_TOKENS,
     OPENAI_OUTPUT_PER_MILLION_USD,
@@ -30,7 +31,6 @@ from aidy.openai_gateway import (
     OPENAI_REASONING_EFFORT,
     OPENAI_RETRY_BACKOFF_SECONDS,
     OPENAI_TIMEOUT_SECONDS,
-    _RETRY_STATUS_CODES,
     _assert_safe_prompt_input,
     _canonical_json,
     _digest,
