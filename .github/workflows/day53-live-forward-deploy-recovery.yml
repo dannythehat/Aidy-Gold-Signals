@@ -1,0 +1,255 @@
+name: AIDY Day 53 Live Forward Deploy Recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/day53-live-forward-deploy-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FROZEN_MAIN_SHA: b9ebf7ea7fa88841baaca1607b11c934e3d50868
+  FROZEN_COHORT_ID: aidy_fwd_v2_7c9ae3fabce2e3137ed8daef020e56c3
+  FROZEN_ACTIVATED_AT: 2026-09-01T16:48:37+00:00
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+jobs:
+  recover-live-deployment:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'day53/live-forward-deploy-recovery'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout recovery head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prove runtime source is byte-identical to frozen main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          git diff --exit-code "$FROZEN_MAIN_SHA" -- \
+            src/aidy src/entry.py migrations/d1 wrangler.test.example.jsonc wrangler.scheduler.test.jsonc
+          changed="$(git diff --name-only "$FROZEN_MAIN_SHA"...HEAD)"
+          test "$changed" = ".github/workflows/day53-live-forward-deploy-recovery.yml"
+
+      - name: Install deployment dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Build forward-off and forward-on configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          base['d1_databases'][0]['database_name']='aidy-ops-test'
+          base['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          base['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          base['vars']['AIDY_CAPTURE_ENABLED']='true'
+          base['vars']['AIDY_MARKET_DATA_SOURCE']='gold_api'
+          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='60'
+          off=json.loads(json.dumps(base))
+          off['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          on=json.loads(json.dumps(base))
+          on['vars']['AIDY_FORMAL_FORWARD_ENABLED']='true'
+          for cfg in (off,on):
+              text=json.dumps(cfg).lower()
+              for forbidden in ('metaapi','vantage','mt5','super_signals'):
+                  assert forbidden not in text
+          json.dump(off, open('wrangler.day53.recovery.off.jsonc','w',encoding='utf-8'), indent=2)
+          json.dump(on, open('wrangler.day53.recovery.on.jsonc','w',encoding='utf-8'), indent=2)
+
+          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched, open('wrangler.day53.recovery.scheduler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Verify frozen cohort is still exact and empty
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.recovery.off.jsonc \
+            --command "SELECT cohort_id,accepted_code_head,activated_at_utc,state FROM aidy_forward_cohorts WHERE cohort_id='${FROZEN_COHORT_ID}' LIMIT 1" \
+            | tee /tmp/cohort.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.recovery.off.jsonc \
+            --command "SELECT COUNT(*) AS n FROM aidy_forward_evaluations WHERE cohort_id='${FROZEN_COHORT_ID}'" \
+            | tee /tmp/pre-count.json
+          python - <<'PY'
+          import json, os
+          cohort=[]
+          for batch in json.load(open('/tmp/cohort.json', encoding='utf-8')):
+              cohort.extend(batch.get('results') or [])
+          assert len(cohort)==1, cohort
+          row=cohort[0]
+          assert row['cohort_id']==os.environ['FROZEN_COHORT_ID'], row
+          assert row['accepted_code_head']==os.environ['FROZEN_MAIN_SHA'], row
+          assert row['activated_at_utc']==os.environ['FROZEN_ACTIVATED_AT'], row
+          assert row['state']=='active', row
+          counts=[]
+          for batch in json.load(open('/tmp/pre-count.json', encoding='utf-8')):
+              counts.extend(batch.get('results') or [])
+          assert len(counts)==1 and int(counts[0]['n'])==0, counts
+          PY
+
+      - name: Diagnostic Worker deploy with forward disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day53.recovery.off.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/worker-off-deploy.txt
+          echo PASS > /tmp/worker-off-pass
+
+      - name: Diagnostic scheduler deploy with visible output
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config wrangler.day53.recovery.scheduler.jsonc 2>&1 | tee /tmp/scheduler-deploy.txt
+          echo PASS > /tmp/scheduler-pass
+
+      - name: Enable exact frozen runtime forward observer
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day53.recovery.on.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/worker-on-deploy.txt
+          echo PASS > /tmp/worker-on-pass
+
+      - name: Verify deployed cohort identity and forward flag
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 18); do
+            curl -fsS "${AIDY_TEST_WORKER_URL}/health" | tee /tmp/health.json || true
+            curl -fsS "${AIDY_TEST_WORKER_URL}/day53/forward-status" | tee /tmp/status.json || true
+            if python - <<'PY'
+          import json, os
+          try:
+              h=json.load(open('/tmp/health.json', encoding='utf-8'))
+              p=json.load(open('/tmp/status.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          f=p.get('forward') or {}
+          ok=(h.get('formal_forward_enabled') is True and p.get('ok') is True and f.get('active') is True and f.get('cohort_id')==os.environ['FROZEN_COHORT_ID'] and f.get('accepted_code_head')==os.environ['FROZEN_MAIN_SHA'])
+          raise SystemExit(0 if ok else 1)
+          PY
+            then break; fi
+            sleep 5
+          done
+          python - <<'PY'
+          import json, os
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          p=json.load(open('/tmp/status.json', encoding='utf-8'))
+          f=p['forward']
+          assert h['formal_forward_enabled'] is True, h
+          assert f['cohort_id']==os.environ['FROZEN_COHORT_ID'], f
+          assert f['accepted_code_head']==os.environ['FROZEN_MAIN_SHA'], f
+          assert f['activated_at_utc']==os.environ['FROZEN_ACTIVATED_AT'], f
+          PY
+
+      - name: Require genuine scheduled post-recovery forward row
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 42); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.recovery.on.jsonc \
+              --command "SELECT record_id,record_json,record_digest,cycle_id,evaluated_at_utc,disposition,data_quality_state,data_quality_reason_code,recorded_at_utc FROM aidy_forward_evaluations WHERE cohort_id='${FROZEN_COHORT_ID}' AND evaluated_at_utc >= '${FROZEN_ACTIVATED_AT}' ORDER BY evaluated_at_utc ASC LIMIT 1" \
+              > /tmp/first-row.json
+            if python - <<'PY'
+          import json
+          rows=[]
+          for batch in json.load(open('/tmp/first-row.json', encoding='utf-8')):
+              rows.extend(batch.get('results') or [])
+          raise SystemExit(0 if rows else 1)
+          PY
+            then found=1; break; fi
+            sleep 10
+          done
+          test "$found" = "1"
+          python - <<'PY'
+          import json
+          rows=[]
+          for batch in json.load(open('/tmp/first-row.json', encoding='utf-8')):
+              rows.extend(batch.get('results') or [])
+          assert len(rows)==1, rows
+          row=rows[0]
+          record=json.loads(row['record_json'])
+          assert row['disposition']=='pre_model_blocked', row
+          assert row['data_quality_state']=='failure', row
+          assert record['self_consistency_digest'] is None, record
+          assert record['decision_id'] is None, record
+          assert record['broker_or_account_state_used'] is False, record
+          assert record['follower_state_used'] is False, record
+          assert record['super_signals_used'] is False, record
+          assert record['live_money_execution_used'] is False, record
+          PY
+          cat /tmp/first-row.json
+
+      - name: Verify blocked evidence cannot inflate Day 54 N
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS "${AIDY_TEST_WORKER_URL}/day53/forward-status" | tee /tmp/final-status.json
+          python - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/final-status.json', encoding='utf-8'))
+          f=p['forward']
+          progress=f['progress']
+          assert f['cohort_id']==os.environ['FROZEN_COHORT_ID'], f
+          assert int(progress['raw_evaluation_count']) >= 1, progress
+          assert int(progress['model_resolved_episode_independent_n']) == 0, progress
+          assert progress['day54_sample_gate_met'] is False, progress
+          assert progress['blocked_or_failed_cycles_can_satisfy_day54_gate'] is False, progress
+          assert f['openai_called_for_pre_model_block'] is False, f
+          assert f['telegram_publication_enabled'] is False, f
+          PY
+
+      - name: Safe-off if recovery does not fully prove live collection
+        if: failure()
+        shell: bash
+        run: |
+          set +e
+          cp wrangler.day53.recovery.off.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/recovery-safe-off.txt
+
+      - name: Upload recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-live-recovery-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            /tmp/cohort.json
+            /tmp/pre-count.json
+            /tmp/worker-off-deploy.txt
+            /tmp/scheduler-deploy.txt
+            /tmp/worker-on-deploy.txt
+            /tmp/health.json
+            /tmp/status.json
+            /tmp/first-row.json
+            /tmp/final-status.json
+            /tmp/recovery-safe-off.txt
+          if-no-files-found: warn
+          retention-days: 90
