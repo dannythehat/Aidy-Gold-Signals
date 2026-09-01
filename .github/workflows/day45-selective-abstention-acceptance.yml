@@ -1,0 +1,174 @@
+name: AIDY Day 45 Selective Abstention Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/selective_abstention.py"
+      - "tests/test_day45_selective_abstention.py"
+      - "scripts/day45_selective_abstention_acceptance.py"
+      - "docs/day45-selective-abstention-j9-j10-contract.md"
+      - ".github/workflows/day45-selective-abstention-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day45-selective-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+  AIDY_BIGQUERY_DATASET: aidy_analytics_test
+  AIDY_BIGQUERY_LOCATION: EU
+  DAY45_BASE_SHA: 531930fda3d684ad0a76417989445cc6387e4c7d
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 44 base and bounded Day 45 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY45_BASE_SHA" HEAD)" = "$DAY45_BASE_SHA"
+          allowed='^(src/aidy/selective_abstention.py|tests/test_day45_selective_abstention.py|scripts/day45_selective_abstention_acceptance.py|docs/day45-selective-abstention-j9-j10-contract.md|.github/workflows/day45-selective-abstention-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY45_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 45 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/selective_abstention.py \
+            tests/test_day45_selective_abstention.py \
+            scripts/day45_selective_abstention_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused Day 45 adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day45_selective_abstention.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"; exit 1; }
+          python - <<'PY'
+          import json
+          import os
+
+          info = json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Genuine frozen warehouse Day 45 evaluation A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day45_selective_abstention_acceptance.py \
+            --output-dir day45_artifacts_a \
+            > /tmp/day45-summary-a.json
+          cat /tmp/day45-summary-a.json
+
+      - name: Genuine frozen warehouse Day 45 evaluation B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day45_selective_abstention_acceptance.py \
+            --output-dir day45_artifacts_b \
+            > /tmp/day45-summary-b.json
+          cat /tmp/day45-summary-b.json
+
+      - name: Require byte-identical deterministic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day45_artifacts_a day45_artifacts_b
+
+      - name: Enforce Day 45 shadow-only and scientific boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import subprocess
+
+          with open("day45_artifacts_a/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "531930fda3d684ad0a76417989445cc6387e4c7d", result
+          assert result["head_sha"] == head, result
+          assert result["scientific_result_uses_genuine_frozen_warehouse_cases"] is True, result
+          assert result["warehouse_raw_eligible_case_n"] >= result["warehouse_effective_episode_n"], result
+          assert result["episode_policy"] == "greedy_chronological_nonoverlap_240m_outcome_blind", result
+          assert result["j9_result_state"] in {"insufficient", "selective_lower_risk", "null_or_worse"}, result
+          assert result["j10_result_state"] in {"insufficient", "conditioning_present", "null_no_instability_conditioning"}, result
+          assert result["insufficient_result_is_valid"] is True, result
+          assert result["model_confidence_used"] is False, result
+          assert result["matched_coverage_random_baseline_required"] is True, result
+          assert result["shadow_only"] is True, result
+          assert result["master_trader_gate_created"] is False, result
+          assert result["publication_gate_created"] is False, result
+          assert result["automatic_promotion_allowed"] is False, result
+          assert result["formal_forward_evidence_created"] is False, result
+          assert result["predictive_edge_claimed"] is False, result
+          assert result["super_signals_modified"] is False, result
+          if result["experiment"] is not None:
+              experiment = result["experiment"]
+              assert experiment["raw_n"]["test"] >= experiment["effective_n"]["test"], result
+              assert experiment["risk_coverage"]["risk_grid_frozen_before_test"] is True, result
+              assert experiment["risk_coverage"]["risk_coverage_tuning_on_test_allowed"] is False, result
+              assert experiment["j9"]["matched_random_coverage_identical"] is True, result
+              assert experiment["master_trader_gate_created"] is False, result
+              assert experiment["publication_gate_created"] is False, result
+              assert experiment["model_confidence_used"] is False, result
+          PY
+
+      - name: Preserve Day 45 acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day45-selective-abstention-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day45_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
