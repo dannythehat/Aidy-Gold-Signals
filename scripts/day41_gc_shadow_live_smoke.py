@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import os
 import subprocess
 from datetime import UTC, datetime, time, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 import httpx
@@ -31,7 +33,6 @@ from aidy.historical_backfill import (
     RETROSPECTIVE_PROVENANCE,
     HistDataPeriod,
     download_histdata_period,
-    parse_histdata_m1,
     read_histdata_archive,
 )
 
@@ -137,36 +138,118 @@ def _continuous_instrument_ids(payload: dict[str, object]) -> list[str]:
     return instrument_ids
 
 
-def _matching_histdata_xau(gc_observed_at: datetime, *, cache_dir: Path) -> tuple[XauObservation, dict[str, object]]:
-    period = HistDataPeriod(gc_observed_at.year, gc_observed_at.month)
-    archive_path = download_histdata_period(period, cache_dir=cache_dir)
-    archive = read_histdata_archive(archive_path, period)
-    bars, stats = parse_histdata_m1(archive.payload_text)
-    nearest = min(
-        bars,
-        key=lambda bar: abs((bar.open_time_utc - gc_observed_at).total_seconds()),
-    )
-    skew = abs((nearest.open_time_utc - gc_observed_at).total_seconds())
-    if skew > PAIR_MAX_SKEW_SECONDS:
+def _histdata_row_time(raw: str, *, line_number: int) -> datetime:
+    try:
+        return datetime.strptime(f"{raw}-0500", "%Y%m%d %H%M%S%z").astimezone(UTC)
+    except ValueError as exc:
+        raise RuntimeError(
+            f"HistData target-window timestamp is invalid at line {line_number}."
+        ) from exc
+
+
+def _histdata_decimal(raw: str, *, field: str, line_number: int) -> Decimal:
+    try:
+        value = Decimal(raw)
+    except InvalidOperation as exc:
+        raise RuntimeError(
+            f"HistData target-window {field} is invalid at line {line_number}."
+        ) from exc
+    if not value.is_finite() or value <= 0:
+        raise RuntimeError(
+            f"HistData target-window {field} is not a positive finite value at line {line_number}."
+        )
+    return value
+
+
+def _target_histdata_bar(payload_text: str, gc_observed_at: datetime) -> dict[str, object]:
+    candidates: list[dict[str, object]] = []
+    reader = csv.reader(io.StringIO(payload_text), delimiter=";")
+    for line_number, row in enumerate(reader, start=1):
+        if not row or all(not value.strip() for value in row):
+            continue
+        if len(row) < 5:
+            continue
+        source_open_time = row[0].strip()
+        source_time_utc = _histdata_row_time(source_open_time, line_number=line_number)
+        skew = abs((source_time_utc - gc_observed_at).total_seconds())
+        if skew > PAIR_MAX_SKEW_SECONDS:
+            continue
+        values = tuple(value.strip() for value in row[1:5])
+        open_value, high_value, low_value, close_value = (
+            _histdata_decimal(value, field=field, line_number=line_number)
+            for value, field in zip(
+                values,
+                ("open", "high", "low", "close"),
+                strict=True,
+            )
+        )
+        if high_value < max(open_value, low_value, close_value):
+            raise RuntimeError("HistData target-window high invariant failed.")
+        if low_value > min(open_value, high_value, close_value):
+            raise RuntimeError("HistData target-window low invariant failed.")
+        candidates.append(
+            {
+                "line_number": line_number,
+                "source_open_time": source_open_time,
+                "open_time_utc": source_time_utc,
+                "ohlc": values,
+                "close": close_value,
+                "skew_seconds": skew,
+            }
+        )
+
+    if not candidates:
         raise RuntimeError(
             "HistData XAUUSD has no M1 bar within 60 seconds of the Databento GC observation."
         )
+    minimum_skew = min(float(item["skew_seconds"]) for item in candidates)
+    nearest = [item for item in candidates if float(item["skew_seconds"]) == minimum_skew]
+    nearest_times = {item["open_time_utc"] for item in nearest}
+    if len(nearest_times) != 1:
+        raise RuntimeError("HistData target-window has ambiguous equally-near timestamps.")
+    unique_ohlc = {item["ohlc"] for item in nearest}
+    if len(unique_ohlc) != 1:
+        raise RuntimeError("HistData target minute contains conflicting duplicate candles.")
+
+    selected = nearest[0]
+    return {
+        "source_open_time": selected["source_open_time"],
+        "open_time_utc": selected["open_time_utc"],
+        "close": selected["close"],
+        "pair_skew_seconds": minimum_skew,
+        "target_duplicate_rows": len(nearest),
+    }
+
+
+def _matching_histdata_xau(
+    gc_observed_at: datetime,
+    *,
+    cache_dir: Path,
+) -> tuple[XauObservation, dict[str, object]]:
+    period = HistDataPeriod(gc_observed_at.year, gc_observed_at.month)
+    archive_path = download_histdata_period(period, cache_dir=cache_dir)
+    archive = read_histdata_archive(archive_path, period)
+    selected = _target_histdata_bar(archive.payload_text, gc_observed_at)
+    open_time_utc = selected["open_time_utc"]
+    close = selected["close"]
+    if not isinstance(open_time_utc, datetime) or not isinstance(close, Decimal):
+        raise RuntimeError("HistData target-window parser returned invalid typed values.")
 
     provenance = {
         "source": HISTORICAL_XAU_REFERENCE_SOURCE,
         "source_file": archive.zip_name,
         "source_file_sha256": archive.zip_sha256,
         "source_payload_sha256": archive.payload_sha256,
-        "source_open_time": nearest.source_open_time,
-        "open_time_utc": nearest.open_time_utc.isoformat(),
-        "close": nearest.close,
+        "source_open_time": selected["source_open_time"],
+        "open_time_utc": open_time_utc.isoformat(),
+        "close": str(close),
         "price_basis": "bid",
         "provenance_class": RETROSPECTIVE_PROVENANCE,
         "pit_eligible": False,
     }
     xau = XauObservation(
-        observed_at=nearest.open_time_utc,
-        price=Decimal(nearest.close),
+        observed_at=open_time_utc,
+        price=close,
         source=HISTORICAL_XAU_REFERENCE_SOURCE,
         source_digest=digest(provenance),
         provenance_class=RETROSPECTIVE_PROVENANCE,
@@ -176,8 +259,10 @@ def _matching_histdata_xau(gc_observed_at: datetime, *, cache_dir: Path) -> tupl
         **provenance,
         "archive_payload_name": archive.payload_name,
         "archive_status_report_sha256": archive.status_report_sha256,
-        "parsed_m1_rows": stats.rows,
-        "pair_skew_seconds": skew,
+        "pair_skew_seconds": selected["pair_skew_seconds"],
+        "target_duplicate_rows": selected["target_duplicate_rows"],
+        "full_archive_global_conflicts_ignored": False,
+        "target_window_only_parsing": True,
     }
     return xau, evidence
 
