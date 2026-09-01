@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aidy.day23_research import realized_dispersion
+from aidy.day23_research import digest as day23_digest, realized_dispersion
 from aidy.evaluation_scoring import (
     build_j16_grade_validity_report,
     build_j21_setup_differentiation_report,
@@ -27,7 +27,7 @@ QUERY_COUNT = 1000
 DEFAULT_DATASET = "aidy_analytics_test"
 DEFAULT_LOCATION = "EU"
 SUMMARY_TABLE = "research_day38_evaluation_summary"
-EXPERIMENT = "day38-evaluation-scorers-j16-j21-20260901-v1"
+EXPERIMENT_PREFIX = "day38-evaluation-scorers-j16-j21-20260901-v1"
 
 DIRECTIONS = {
     str(item["setup_id"]): str(item["direction"]) for item in SETUP_DEFINITIONS
@@ -108,7 +108,7 @@ def _load_day24_results(
         supplied = str(payload.get("result_digest") or "")
         body = dict(payload)
         body.pop("result_digest", None)
-        if not supplied or supplied != payload_digest or supplied != digest(body):
+        if not supplied or supplied != payload_digest or supplied != day23_digest(body):
             raise SystemExit("Day-24 immutable result payload digest mismatch.")
         query_id = str(payload["query_id"])
         if query_id != str(raw["query_id"]) or query_id in ids:
@@ -144,7 +144,7 @@ def _load_frozen_cases(client: Any, project: str, dataset: str) -> list[dict[str
         }
         for item in rows
     ]
-    if digest(snapshot) != CANDIDATE_DIGEST:
+    if day23_digest(snapshot) != CANDIDATE_DIGEST:
         raise SystemExit("Frozen candidate case store changed since accepted Day 24.")
     return rows
 
@@ -290,9 +290,11 @@ def _persist_summary(
     not_found: type[Exception],
     table_id: str,
     summary: dict[str, Any],
+    *,
+    experiment_id: str,
 ) -> None:
     _ensure_summary_table(client, bigquery, not_found, table_id)
-    config = _query_config(bigquery, [("experiment", "STRING", EXPERIMENT)])
+    config = _query_config(bigquery, [("experiment", "STRING", experiment_id)])
     existing = list(
         client.query(
             f"""SELECT payload_digest, summary_payload
@@ -314,7 +316,7 @@ def _persist_summary(
         table_id,
         [
             {
-                "experiment_id": EXPERIMENT,
+                "experiment_id": experiment_id,
                 "base_sha": summary["base_sha"],
                 "head_sha": summary["head_sha"],
                 "payload_digest": summary["summary_digest"],
@@ -346,6 +348,7 @@ def main() -> int:
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    experiment_id = f"{EXPERIMENT_PREFIX}-{head_sha[:12]}"
 
     day24_results = _load_day24_results(client, bigquery, args.project, args.dataset)
     frozen_cases = _load_frozen_cases(client, args.project, args.dataset)
@@ -365,7 +368,7 @@ def main() -> int:
     manifest = evaluation_manifest()
     summary: dict[str, Any] = {
         "ok": True,
-        "experiment_id": EXPERIMENT,
+        "experiment_id": experiment_id,
         "base_sha": BASE_SHA,
         "head_sha": head_sha,
         "day23_experiment_id": DAY23_EXPERIMENT,
@@ -414,6 +417,7 @@ def main() -> int:
         NotFound,
         f"{args.project}.{args.dataset}.{SUMMARY_TABLE}",
         summary,
+        experiment_id=experiment_id,
     )
     print(canonical_json(summary))
     return 0
