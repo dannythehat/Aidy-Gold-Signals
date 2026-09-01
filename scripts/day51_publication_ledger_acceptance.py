@@ -87,6 +87,15 @@ class AmbiguousFailureTransport:
         raise RuntimeError("simulated ambiguous network outcome")
 
 
+class DeterministicIdFactory:
+    def __init__(self) -> None:
+        self.sequence = 0
+
+    def __call__(self, kind: str) -> str:
+        self.sequence += 1
+        return f"aidy_{kind}_acceptance_{self.sequence:04d}"
+
+
 def _args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="AIDY Day 51 publication ledger acceptance")
     parser.add_argument("--output-dir", default="day51_artifacts")
@@ -98,7 +107,7 @@ def _head_sha() -> str:
 
 
 async def build_artifacts(head_sha: str) -> dict[str, Any]:
-    store = D1PublicationLedgerStore(LocalD1())
+    store = D1PublicationLedgerStore(LocalD1(), id_factory=DeterministicIdFactory())
     decision = _cycle(FIXTURE_TIME, 0, "decision_admitted")
     decision_before = copy.deepcopy(decision)
     envelope = build_publication_envelope(ex_ante_record=decision, chat_id=CHAT_ID)
