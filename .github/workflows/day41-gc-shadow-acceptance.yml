@@ -117,15 +117,18 @@ jobs:
         shell: bash
         env:
           DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+          CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           python - <<'PY'
           import json
+          import os
           from decimal import Decimal
           from pathlib import Path
 
           evidence=json.loads(Path('day41_live_evidence.json').read_text(encoding='utf-8'))
           pair=evidence['shadow_pair']
+          assert evidence['candidate_head_sha'] == os.environ['CANDIDATE_HEAD_SHA'], evidence
           assert evidence['genuine_databento_observation_ingested'] is True, evidence
           assert evidence['genuine_gold_api_observation_ingested'] is True, evidence
           assert Decimal(evidence['databento_quote_usd']) <= Decimal('0.25'), evidence
@@ -133,7 +136,7 @@ jobs:
           assert pair['gc']['provider'] == 'Databento', pair
           assert pair['gc']['dataset'] == 'GLBX.MDP3', pair
           contract=pair['gc']['contract_symbol']
-          assert contract.startswith('GC') and contract != 'GC.N.0', pair
+          assert contract.startswith('GC') and contract.upper() != 'GC.N.0', pair
           assert pair['xau']['source'] == 'gold_api_public', pair
           assert pair['xau']['symbol'] == 'XAUUSD', pair
           assert pair['gc_shadow_only'] is True, pair
@@ -144,7 +147,7 @@ jobs:
           assert evidence['live_gc_promoted'] is False, evidence
           assert evidence['broker_market_data_dependency'] is False, evidence
           assert evidence['api_key_recorded'] is False, evidence
-          secret='${DATABENTO_API_KEY}'
+          secret=os.environ['DATABENTO_API_KEY']
           text=Path('day41_live_evidence.json').read_text(encoding='utf-8')
           assert secret and secret not in text
           PY
