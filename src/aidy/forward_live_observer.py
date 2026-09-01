@@ -9,8 +9,8 @@ from uuid import UUID
 
 from aidy.forward_evaluation import build_forward_evaluation_record, digest
 from aidy.forward_start_amendment import (
-    D1ImmediateForwardEvaluationStore,
     FORWARD_COHORT_VERSION_V2,
+    D1ImmediateForwardEvaluationStore,
 )
 from aidy.runtime import interval_due
 
@@ -241,9 +241,7 @@ async def observe_private_forward_snapshot(
         disposition = "pre_model_blocked"
         data_quality_state = "failure"
 
-    observed_at = _utc(clock(), name="clock")
-    if observed_at < captured:
-        observed_at = captured
+    observed_at = max(_utc(clock(), name="clock"), captured)
 
     record = build_forward_evaluation_record(
         cohort=cohort,
