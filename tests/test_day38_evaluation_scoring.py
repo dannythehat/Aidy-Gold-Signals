@@ -6,9 +6,9 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from aidy.evaluation_scoring import (
-    EvaluationIntegrityError,
     REQUIRED_SCORE_DIMENSIONS,
     SUBJECTIVE_METHOD,
+    EvaluationIntegrityError,
     build_human_calibration_record,
     build_j16_grade_validity_report,
     build_j21_setup_differentiation_report,
