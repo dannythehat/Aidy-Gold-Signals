@@ -9,6 +9,7 @@ import pytest
 from aidy.gc_shadow_spine import (
     DAY41_PROMOTION_POLICY_VERSION,
     DAY41_SHADOW_VERSION,
+    HISTORICAL_XAU_REFERENCE_SOURCE,
     GcObservation,
     ShadowSpineError,
     XauObservation,
@@ -158,6 +159,8 @@ def test_gold_api_normalizes_independent_xau_reference() -> None:
     assert result.symbol == "XAUUSD"
     assert result.source == "gold_api_public"
     assert result.price == Decimal("4500.25")
+    assert result.provenance_class == "live_observation"
+    assert result.pit_eligible is True
 
 
 def test_basis_pair_binds_sources_contract_and_timestamps() -> None:
@@ -175,9 +178,43 @@ def test_basis_pair_binds_sources_contract_and_timestamps() -> None:
     assert pair["xau"]["source"] == "gold_api_public"
     assert pair["basis_usd"] == "21.25"
     assert pair["timestamp_skew_seconds"] == 15.0
+    assert pair["historical_research_pair"] is False
+    assert pair["formal_forward_evidence_eligible"] is False
     assert pair["gc_shadow_only"] is True
     assert pair["xau_reference_retained"] is True
     assert pair["live_gc_promoted"] is False
+
+
+def test_retrospective_histdata_pair_is_explicitly_not_forward_evidence() -> None:
+    gc = GcObservation(BASE, Decimal("4521.50"), "GCZ6", source_digest="a" * 64)
+    xau = XauObservation(
+        BASE,
+        Decimal("4500.25"),
+        source=HISTORICAL_XAU_REFERENCE_SOURCE,
+        source_digest="b" * 64,
+        provenance_class="retrospective_history",
+        pit_eligible=False,
+    )
+    pair = pair_shadow_observations(gc, xau, max_skew_seconds=60)
+    assert pair["paired"] is True
+    assert pair["xau"]["source"] == HISTORICAL_XAU_REFERENCE_SOURCE
+    assert pair["xau"]["provenance_class"] == "retrospective_history"
+    assert pair["xau"]["pit_eligible"] is False
+    assert pair["historical_research_pair"] is True
+    assert pair["formal_forward_evidence_eligible"] is False
+
+
+def test_retrospective_histdata_cannot_masquerade_as_pit_eligible() -> None:
+    gc = GcObservation(BASE, Decimal("4521.50"), "GCZ6")
+    xau = XauObservation(
+        BASE,
+        Decimal("4500.25"),
+        source=HISTORICAL_XAU_REFERENCE_SOURCE,
+        provenance_class="retrospective_history",
+        pit_eligible=True,
+    )
+    with pytest.raises(ShadowSpineError, match="Historical XAU reference provenance"):
+        pair_shadow_observations(gc, xau)
 
 
 def test_timestamp_skew_does_not_create_fake_basis() -> None:
@@ -225,6 +262,9 @@ def test_day41_manifest_preserves_shadow_and_broker_free_boundaries() -> None:
     assert manifest["provider"] == "Databento"
     assert manifest["dataset"] == "GLBX.MDP3"
     assert manifest["continuous_symbol"] == "GC.n.0"
+    assert manifest["historical_xau_reference_source"] == HISTORICAL_XAU_REFERENCE_SOURCE
+    assert manifest["free_historical_pair_allowed"] is True
+    assert manifest["formal_forward_evidence_created"] is False
     assert manifest["vendor_separable_adapter"] is True
     assert manifest["gc_shadow_only"] is True
     assert manifest["xau_reference_retained"] is True
