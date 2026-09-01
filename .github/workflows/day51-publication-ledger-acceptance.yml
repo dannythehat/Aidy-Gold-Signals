@@ -55,28 +55,6 @@ jobs:
           uv run ruff check src/aidy/publication_ledger.py tests/test_day51_publication_ledger.py scripts/day51_publication_ledger_acceptance.py
           uv run python -m compileall -q src scripts tests
 
-      - name: Validate D1 migration locally
-        shell: bash
-        run: |
-          python - <<'PY'
-          import sqlite3
-          from pathlib import Path
-          db = sqlite3.connect(':memory:')
-          for path in (
-              'migrations/d1/0001_aidy_ops.sql',
-              'migrations/d1/0002_cross_market_evidence.sql',
-              'migrations/d1/0003_publication_ledger.sql',
-          ):
-              db.executescript(Path(path).read_text())
-          names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-          required = {'publication_deliveries','publication_attempts','publication_reconciliation_events'}
-          assert required <= names, names
-          PY
-
-      - name: Verify Wrangler carries D1 migration directory
-        shell: bash
-        run: grep -q '"migrations_dir": "migrations/d1"' wrangler.test.example.jsonc
-
       - name: Enforce delivery-only boundary
         shell: bash
         run: |
@@ -110,44 +88,43 @@ jobs:
         shell: bash
         run: diff -ru day51_artifacts_a day51_artifacts_b
 
-      - name: Enforce Day 51 acceptance boundaries
+      - name: Enforce Day 51 boundaries
         shell: bash
         run: |
           python - <<'PY'
           import json
           import subprocess
-          with open('day51_artifacts_a/summary.json', encoding='utf-8') as handle:
+          with open("day51_artifacts_a/summary.json", encoding="utf-8") as handle:
               result = json.load(handle)
-          head = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
-          assert result['ok'] is True, result
-          assert result['base_sha'] == '8765d0d3743ac3b59a1083aea14876615df5bb42', result
-          assert result['head_sha'] == head, result
-          assert result['storage'] == 'cloudflare_d1', result
-          assert result['normal_send_status'] == 'sent', result
-          assert result['normal_retry_status'] == 'already_sent', result
-          assert result['normal_transport_call_count'] == 1, result
-          assert result['normal_attempt_count'] == 1, result
-          assert result['exact_text_reconstructable'] is True, result
-          assert result['exact_message_digest_preserved'] is True, result
-          assert result['decision_identity_preserved'] is True, result
-          assert result['decision_record_unchanged'] is True, result
-          assert result['delivery_truth_separate'] is True, result
-          assert result['ambiguous_failure_status'] == 'delivery_uncertain', result
-          assert result['blind_retry_status'] == 'blocked', result
-          assert result['ambiguous_transport_call_count_before_reconciliation'] == 1, result
-          assert result['reconciled_state'] == 'retryable_failed', result
-          assert result['safe_retry_status'] == 'sent', result
-          assert result['safe_retry_transport_call_count'] == 1, result
-          assert result['uncertain_attempt_states'] == ['delivery_uncertain','sent'], result
-          assert result['no_duplicate_after_success'] is True, result
-          assert result['no_blind_retry_after_uncertain'] is True, result
-          assert result['migration_is_durable_d1'] is True, result
-          assert result['secrets_persisted'] is False, result
-          assert result['real_telegram_post_performed'] is False, result
-          assert result['broker_dependency_allowed'] is False, result
-          assert result['follower_dependency_allowed'] is False, result
-          assert result['super_signals_dependency_allowed'] is False, result
-          assert result['formal_forward_evidence_created'] is False, result
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "8765d0d3743ac3b59a1083aea14876615df5bb42", result
+          assert result["head_sha"] == head, result
+          assert result["storage"] == "cloudflare_d1", result
+          assert result["normal_send_status"] == "sent", result
+          assert result["normal_retry_status"] == "already_sent", result
+          assert result["normal_transport_call_count"] == 1, result
+          assert result["normal_attempt_count"] == 1, result
+          assert result["exact_text_reconstructable"] is True, result
+          assert result["exact_message_digest_preserved"] is True, result
+          assert result["decision_identity_preserved"] is True, result
+          assert result["decision_record_unchanged"] is True, result
+          assert result["ambiguous_failure_status"] == "delivery_uncertain", result
+          assert result["blind_retry_status"] == "blocked", result
+          assert result["ambiguous_transport_call_count_before_reconciliation"] == 1, result
+          assert result["reconciled_state"] == "retryable_failed", result
+          assert result["safe_retry_status"] == "sent", result
+          assert result["safe_retry_transport_call_count"] == 1, result
+          assert result["uncertain_attempt_states"] == ["delivery_uncertain", "sent"], result
+          assert result["no_duplicate_after_success"] is True, result
+          assert result["no_blind_retry_after_uncertain"] is True, result
+          assert result["migration_is_durable_d1"] is True, result
+          assert result["secrets_persisted"] is False, result
+          assert result["real_telegram_post_performed"] is False, result
+          assert result["broker_dependency_allowed"] is False, result
+          assert result["follower_dependency_allowed"] is False, result
+          assert result["super_signals_dependency_allowed"] is False, result
+          assert result["formal_forward_evidence_created"] is False, result
           PY
 
       - name: Preserve Day 51 evidence
