@@ -22,7 +22,7 @@ START = datetime(2026, 9, 20, 0, 0, tzinfo=UTC)
 
 
 class Prepared:
-    def __init__(self, db: "LocalD1", sql: str, params=()) -> None:
+    def __init__(self, db: LocalD1, sql: str, params=()) -> None:
         self.db = db
         self.sql = sql
         self.params = params
