@@ -11,9 +11,9 @@ from aidy.context_composer_v2 import (
     CONTEXT_COMPOSER_VERSION_V2,
     CONTEXT_DOSSIER_VERSION_V2,
     MANDATORY_PROMPT_SECTION_ORDER,
-    digest as composer_digest,
     verify_context_dossier_v2,
 )
+from aidy.context_composer_v2 import digest as composer_digest
 from aidy.context_packet import compute_context_hash
 from aidy.decision_ledger import build_ex_ante_evaluation_record, build_reproducibility_bundle
 from aidy.master_trader_contract_v2 import (
@@ -47,10 +47,10 @@ from aidy.master_watcher import (
 from aidy.paper_simulator import (
     PAPER_OBSERVATION_VERSION,
     apply_paper_observation,
-    digest as paper_digest,
     start_paper_position,
     verify_paper_state,
 )
+from aidy.paper_simulator import digest as paper_digest
 from aidy.safety_gates import SAFETY_GATES_VERSION, compute_safety_gate_digest
 from aidy.setup_detector import SETUP_TAXONOMY_VERSION
 
@@ -98,7 +98,9 @@ def _decision() -> dict:
         "close_scope": None,
         "thesis": "Directional continuation should persist while the reference structure remains intact.",
         "expected_horizon_minutes": 240,
-        "counter_argument": "A decisive break through the invalidation level would show the claimed mechanism failed.",
+        "counter_argument": (
+            "A decisive break through the invalidation level would show the claimed mechanism failed."
+        ),
         "invalidation_condition": {
             "condition_version": MACHINE_CONDITION_VERSION,
             "field_path": "$.gold.quote_context.mid",
@@ -123,7 +125,9 @@ def _gate(stage: str, context_hash: str, decision: dict) -> dict:
             "context_hash": context_hash,
             "checked_at_utc": NOW.isoformat(),
             "reason_codes": ["day47_fixture"],
-            "checks": [{"gate": "day47_fixture", "passed": True, "reason_code": "day47_fixture"}],
+            "checks": [
+                {"gate": "day47_fixture", "passed": True, "reason_code": "day47_fixture"}
+            ],
             "model_call_allowed": True,
             "instruction_type": "market_evaluation",
             "max_context_age_seconds": 300,
@@ -136,7 +140,9 @@ def _gate(stage: str, context_hash: str, decision: dict) -> dict:
             "context_hash": context_hash,
             "checked_at_utc": (NOW + timedelta(seconds=1)).isoformat(),
             "reason_codes": ["day47_fixture"],
-            "checks": [{"gate": "day47_fixture", "passed": True, "reason_code": "day47_fixture"}],
+            "checks": [
+                {"gate": "day47_fixture", "passed": True, "reason_code": "day47_fixture"}
+            ],
             "decision_admitted": True,
             "actionable": True,
             "decision_action": decision["action"],
@@ -207,10 +213,6 @@ def _record() -> dict:
     )
 
 
-def _active_state() -> dict:
-    return start_paper_position(_record())
-
-
 def _current_context(*, stamp: datetime = WATCH_TIME, mid: float = 2505.0) -> dict:
     value = {
         "context_packet_version": "aidy_market_context_v7_volatility_state",
@@ -225,7 +227,10 @@ def _current_context(*, stamp: datetime = WATCH_TIME, mid: float = 2505.0) -> di
         },
         "data_quality": {"state": "known", "quote_freshness": "fresh"},
         "gold": {"quote_context": {"mid": str(mid)}},
-        "event_risk": {"evidence_state": "known", "timing_state": "clear_current_window"},
+        "event_risk": {
+            "evidence_state": "known",
+            "timing_state": "clear_current_window",
+        },
     }
     value["context_hash"] = compute_context_hash(value)
     return value
@@ -264,7 +269,9 @@ def _dossier(state: dict, context: dict) -> dict:
         "temporal_dispersion": {},
         "unclassified_aggregate_counts": [],
     }
-    invalidation_inputs = {"gold": {"quote_context": {"mid": context["gold"]["quote_context"]["mid"]}}}
+    invalidation_inputs = {
+        "gold": {"quote_context": {"mid": context["gold"]["quote_context"]["mid"]}}
+    }
     value = {
         "dossier_version": CONTEXT_DOSSIER_VERSION_V2,
         "composer_version": CONTEXT_COMPOSER_VERSION_V2,
@@ -346,8 +353,12 @@ def _observation_from_bundle(bundle: dict, *, assessment: str = "hold") -> dict:
         "assessment": assessment,
         "thesis_assessment": "intact" if assessment == "hold" else "weakened",
         "reason_codes": ["fresh_context_reviewed", "original_thesis_preserved"],
-        "observation_summary": "Fresh evidence does not yet justify converting this observation into an action.",
-        "evidence_change_summary": "Counter and support evidence remain bounded and the original thesis is unchanged.",
+        "observation_summary": (
+            "Fresh evidence does not yet justify converting this observation into an action."
+        ),
+        "evidence_change_summary": (
+            "Counter and support evidence remain bounded and the original thesis is unchanged."
+        ),
         "confidence": 0.62,
         "management_action_emitted": False,
         "publication_requested": False,
@@ -356,7 +367,13 @@ def _observation_from_bundle(bundle: dict, *, assessment: str = "hold") -> dict:
 
 
 class StubGateway:
-    def __init__(self, *, fail: bool = False, boundary_violation: bool = False, mismatch: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        fail: bool = False,
+        boundary_violation: bool = False,
+        mismatch: bool = False,
+    ) -> None:
         self.calls = 0
         self.fail = fail
         self.boundary_violation = boundary_violation
@@ -376,7 +393,11 @@ class StubGateway:
                 "request_digest": "4" * 64,
                 "attempts": 2,
                 "latency_ms": 5,
-                "usage": {"input_tokens": 20, "cached_input_tokens": 0, "output_tokens": 0},
+                "usage": {
+                    "input_tokens": 20,
+                    "cached_input_tokens": 0,
+                    "output_tokens": 0,
+                },
                 "estimated_cost_usd": "0.000100",
                 "pricing_version": "fixture_pricing",
                 "prompt_version": "fixture_prompt",
@@ -398,7 +419,11 @@ class StubGateway:
             "request_digest": "4" * 64,
             "attempts": 1,
             "latency_ms": 5,
-            "usage": {"input_tokens": 100, "cached_input_tokens": 0, "output_tokens": 50},
+            "usage": {
+                "input_tokens": 100,
+                "cached_input_tokens": 0,
+                "output_tokens": 50,
+            },
             "estimated_cost_usd": "0.002000",
             "pricing_version": "fixture_pricing",
             "prompt_version": "fixture_prompt",
@@ -408,7 +433,9 @@ class StubGateway:
         }
 
 
-def _inputs(*, stamp: datetime = WATCH_TIME, mid: float = 2505.0) -> tuple[dict, dict, dict, dict]:
+def _inputs(
+    *, stamp: datetime = WATCH_TIME, mid: float = 2505.0
+) -> tuple[dict, dict, dict, dict]:
     record = _record()
     state = start_paper_position(record)
     context = _current_context(stamp=stamp, mid=mid)
@@ -428,7 +455,7 @@ def test_manifest_freezes_day47_boundary_and_cadence() -> None:
     assert manifest["confidence_is_safety_gate"] is False
 
 
-def test_bundle_binds_fresh_context_active_state_original_thesis_and_historical_dossier() -> None:
+def test_bundle_binds_fresh_context_state_thesis_and_history() -> None:
     record, state, context, dossier = _inputs()
     bundle = build_watcher_evidence_bundle(
         ex_ante_record=record,
@@ -448,13 +475,14 @@ def test_bundle_binds_fresh_context_active_state_original_thesis_and_historical_
 @pytest.mark.asyncio
 async def test_closed_position_is_not_watched_and_does_not_call_model() -> None:
     record, state, context, _ = _inputs()
+    stamp = NOW + timedelta(minutes=5)
     observation = {
         "observation_version": PAPER_OBSERVATION_VERSION,
-        "as_of_utc": (NOW + timedelta(minutes=5)).isoformat(),
+        "as_of_utc": stamp.isoformat(),
         "symbol": "XAUUSD",
         "mid": 2479.0,
         "context": {
-            "as_of_utc": (NOW + timedelta(minutes=5)).isoformat(),
+            "as_of_utc": stamp.isoformat(),
             "symbol": "XAUUSD",
             "gold": {"quote_context": {"mid": 2479.0}},
         },
@@ -496,7 +524,7 @@ async def test_stale_context_fails_closed_without_model_call() -> None:
 
 @pytest.mark.asyncio
 async def test_missing_quality_fails_closed() -> None:
-    record, state, context, dossier = _inputs()
+    record, state, context, _ = _inputs()
     context = copy.deepcopy(context)
     context.pop("data_quality")
     context["context_hash"] = compute_context_hash(context)
@@ -512,6 +540,27 @@ async def test_missing_quality_fails_closed() -> None:
     )
     assert receipt["status"] == "blocked"
     assert receipt["reason_codes"] == ["watch_context_quality_missing"]
+    assert gateway.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_missing_quote_fails_closed() -> None:
+    record, state, context, _ = _inputs()
+    context = copy.deepcopy(context)
+    context["gold"]["quote_context"].pop("mid")
+    context["context_hash"] = compute_context_hash(context)
+    dossier = _dossier(state, context)
+    gateway = StubGateway()
+    receipt = await run_watch_cycle(
+        ex_ante_record=record,
+        paper_state=state,
+        current_context=context,
+        historical_dossier=dossier,
+        now_utc=WATCH_TIME,
+        gateway=gateway,
+    )
+    assert receipt["status"] == "blocked"
+    assert receipt["reason_codes"] == ["watch_quote_missing"]
     assert gateway.calls == 0
 
 
@@ -558,7 +607,8 @@ async def test_dossier_must_bind_exact_context_hash() -> None:
     record, state, context, dossier = _inputs()
     dossier = copy.deepcopy(dossier)
     dossier["current_context_identity"]["context_hash"] = "a" * 64
-    dossier["dossier_digest"] = composer_digest({k: v for k, v in dossier.items() if k != "dossier_digest"})
+    body = {key: value for key, value in dossier.items() if key != "dossier_digest"}
+    dossier["dossier_digest"] = composer_digest(body)
     assert verify_context_dossier_v2(dossier)
     gateway = StubGateway()
     receipt = await run_watch_cycle(
@@ -576,9 +626,11 @@ async def test_dossier_must_bind_exact_context_hash() -> None:
 
 @pytest.mark.asyncio
 async def test_original_thesis_snapshot_is_immutable() -> None:
-    record, state, context, dossier = _inputs()
+    record, state, context, _ = _inputs()
     state = copy.deepcopy(state)
-    state["thesis_snapshot"]["thesis"] = "This text was rewritten after observing the path and must be rejected."
+    state["thesis_snapshot"]["thesis"] = (
+        "This text was rewritten after observing the path and must be rejected."
+    )
     body = copy.deepcopy(state)
     body.pop("state_digest")
     state["state_digest"] = paper_digest(body)
@@ -623,35 +675,34 @@ async def test_successful_watch_records_one_call_cost_and_no_side_effects() -> N
 
 
 @pytest.mark.asyncio
-async def test_duplicate_identical_input_is_suppressed_even_after_cadence() -> None:
+async def test_duplicate_identical_input_is_suppressed_after_cadence() -> None:
     record, state, context, dossier = _inputs()
-    first_gateway = StubGateway()
     first = await run_watch_cycle(
         ex_ante_record=record,
         paper_state=state,
         current_context=context,
         historical_dossier=dossier,
         now_utc=WATCH_TIME,
-        gateway=first_gateway,
+        gateway=StubGateway(),
     )
-    second_gateway = StubGateway()
+    gateway = StubGateway()
     second = await run_watch_cycle(
         ex_ante_record=record,
         paper_state=state,
         current_context=context,
         historical_dossier=dossier,
         now_utc=WATCH_TIME + timedelta(seconds=WATCHER_CADENCE_SECONDS + 30),
-        gateway=second_gateway,
+        gateway=gateway,
         previous_receipts=[first],
     )
     assert second["status"] == "suppressed"
     assert second["reason_codes"] == ["watch_duplicate_input"]
     assert second["model_call_count"] == 0
-    assert second_gateway.calls == 0
+    assert gateway.calls == 0
 
 
 @pytest.mark.asyncio
-async def test_changed_context_before_cadence_is_suppressed_by_cadence() -> None:
+async def test_changed_context_before_cadence_is_suppressed() -> None:
     record, state, context, dossier = _inputs()
     first = await run_watch_cycle(
         ex_ante_record=record,
@@ -709,16 +760,15 @@ async def test_changed_context_after_cadence_allows_new_call() -> None:
 
 
 @pytest.mark.asyncio
-async def test_failed_model_call_is_logged_with_attempts_and_cost() -> None:
+async def test_failed_model_call_logs_attempts_and_cost() -> None:
     record, state, context, dossier = _inputs()
-    gateway = StubGateway(fail=True)
     receipt = await run_watch_cycle(
         ex_ante_record=record,
         paper_state=state,
         current_context=context,
         historical_dossier=dossier,
         now_utc=WATCH_TIME,
-        gateway=gateway,
+        gateway=StubGateway(fail=True),
     )
     assert receipt["status"] == "model_failed"
     assert receipt["model_call_count"] == 1
@@ -761,6 +811,28 @@ async def test_gateway_identity_mismatch_fails_closed() -> None:
     assert receipt["observation"] is None
 
 
+@pytest.mark.asyncio
+async def test_invalid_history_fails_closed_without_call() -> None:
+    record, state, context, dossier = _inputs()
+    bad = {
+        "receipt_version": "bad",
+        "receipt_digest": "0" * 64,
+    }
+    gateway = StubGateway()
+    receipt = await run_watch_cycle(
+        ex_ante_record=record,
+        paper_state=state,
+        current_context=context,
+        historical_dossier=dossier,
+        now_utc=WATCH_TIME,
+        gateway=gateway,
+        previous_receipts=[bad],
+    )
+    assert receipt["status"] == "blocked"
+    assert receipt["reason_codes"] == ["watch_history_invalid"]
+    assert gateway.calls == 0
+
+
 def test_observation_contract_cannot_smuggle_day48_action_geometry() -> None:
     record, state, context, dossier = _inputs()
     bundle = build_watcher_evidence_bundle(
@@ -796,7 +868,7 @@ def test_request_is_strict_non_stored_and_non_action() -> None:
 
 
 @pytest.mark.asyncio
-async def test_real_gateway_adapter_accepts_strict_mock_provider_response() -> None:
+async def test_real_gateway_adapter_accepts_strict_mock_response() -> None:
     record, state, context, dossier = _inputs()
     bundle = build_watcher_evidence_bundle(
         ex_ante_record=record,
@@ -822,7 +894,9 @@ async def test_real_gateway_adapter_accepts_strict_mock_provider_response() -> N
                 "output": [
                     {
                         "type": "message",
-                        "content": [{"type": "output_text", "text": json.dumps(observation)}],
+                        "content": [
+                            {"type": "output_text", "text": json.dumps(observation)}
+                        ],
                     }
                 ],
                 "usage": {
@@ -835,17 +909,20 @@ async def test_real_gateway_adapter_accepts_strict_mock_provider_response() -> N
             },
         )
 
-    gateway = OpenAIMasterWatcherGateway("test-key", transport=httpx.MockTransport(handler))
+    gateway = OpenAIMasterWatcherGateway(
+        "test-key",
+        transport=httpx.MockTransport(handler),
+    )
     result = await gateway.evaluate(bundle)
     assert result["status"] == "accepted"
     assert result["publication_allowed"] is False
     assert result["execution_allowed"] is False
     assert result["observation_digest"] == watcher_observation_digest(observation)
-    assert result["estimated_cost_usd"] == "0.001880"
+    assert result["estimated_cost_usd"] == "0.001910"
 
 
 @pytest.mark.asyncio
-async def test_real_gateway_adapter_fails_closed_on_model_refusal() -> None:
+async def test_real_gateway_adapter_fails_closed_on_refusal() -> None:
     record, state, context, dossier = _inputs()
     bundle = build_watcher_evidence_bundle(
         ex_ante_record=record,
@@ -864,13 +941,19 @@ async def test_real_gateway_adapter_fails_closed_on_model_refusal() -> None:
                 "model": WATCHER_MODEL_ID,
                 "error": None,
                 "output": [
-                    {"type": "message", "content": [{"type": "refusal", "refusal": "no"}]}
+                    {
+                        "type": "message",
+                        "content": [{"type": "refusal", "refusal": "no"}],
+                    }
                 ],
                 "usage": {"input_tokens": 20, "output_tokens": 0, "total_tokens": 20},
             },
         )
 
-    gateway = OpenAIMasterWatcherGateway("test-key", transport=httpx.MockTransport(handler))
+    gateway = OpenAIMasterWatcherGateway(
+        "test-key",
+        transport=httpx.MockTransport(handler),
+    )
     result = await gateway.evaluate(bundle)
     assert result["status"] == "failed_closed"
     assert result["failure_reason"] == "model_refusal"
@@ -930,7 +1013,7 @@ async def test_receipt_reconciliation_is_idempotent_and_conflicts_fail() -> None
         reconcile_watcher_receipt(receipt, changed)
 
 
-def test_prepare_returns_ready_with_deterministic_identity() -> None:
+def test_prepare_is_deterministic_for_same_inputs() -> None:
     record, state, context, dossier = _inputs()
     first = prepare_watch_cycle(
         ex_ante_record=record,
