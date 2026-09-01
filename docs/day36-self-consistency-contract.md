@@ -55,7 +55,9 @@ The disagreement score is deterministic: `(3 - majority_count) / 3`, reported to
 
 ## Ledger integration
 
-All three sample decision digests, vote identities, eligibility states, gateway statuses, post-model safety states, disagreement metrics, consensus result, token usage, attempt counts, latency and estimated cost are exposed through a non-secret `selective_layer_state` payload compatible with the accepted Day-34 reproducibility bundle.
+The Day-34 selective-layer projection must preserve **all three sample slots and all three validated decisions when present**, not only hashes. It also preserves decision digests, vote identities, eligibility states, gateway statuses, post-model safety states, disagreement metrics, consensus result, token usage, attempt counts, latency and estimated cost. The projection is non-secret, digest-protected and compatible with the accepted Day-34 reproducibility bundle.
+
+A failed or blocked sample is represented by an explicit `null` decision in its sample slot; this is retained evidence, not silently dropped. The projection re-validates every non-null decision against the Day-20 contract and its recorded decision digest before ledger export.
 
 ## Boundaries
 
@@ -66,7 +68,7 @@ Day 36 does not weaken Day-20 or Day-22 validation, grant confidence any sizing/
 Before merge:
 
 1. changed-file Ruff passes;
-2. focused Day-36 adversarial tests pass;
+2. focused Day-36 adversarial tests pass, including full three-decision ledger projection tests;
 3. full repository regression passes;
 4. two exact-head acceptance artifacts are byte-identical;
 5. accepted PR head is merged only with expected-head protection.
