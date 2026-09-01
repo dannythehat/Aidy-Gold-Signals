@@ -5,6 +5,7 @@ import json
 import math
 import re
 from collections.abc import Mapping, Sequence
+from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
@@ -59,6 +60,51 @@ _VAGUE_STATEMENTS = frozenset(
         "evidence insufficient",
     }
 )
+_FORBIDDEN_CONDITION_SEGMENTS = frozenset(
+    {
+        "account",
+        "account_balance",
+        "account_equity",
+        "account_id",
+        "analysis",
+        "balance",
+        "broker",
+        "broker_account",
+        "chain_of_thought",
+        "counterfactual",
+        "equity",
+        "evaluation_only",
+        "follower",
+        "follower_id",
+        "future_evaluation",
+        "future_return",
+        "future_returns",
+        "hidden_reasoning",
+        "horizon_assessments",
+        "lot_size",
+        "mae",
+        "margin",
+        "metaapi",
+        "mfe",
+        "mt5",
+        "outcome",
+        "outcome_label",
+        "outcomes",
+        "pnl",
+        "position",
+        "position_id",
+        "realized_pnl",
+        "reasoning_trace",
+        "risk_pct",
+        "risk_percent",
+        "scratchpad",
+        "super_signals",
+        "telegram",
+        "thoughts",
+        "ticket",
+        "vantage",
+    }
+)
 
 
 def _canonical_json(value: object) -> str:
@@ -88,12 +134,6 @@ def _bounded_statement(
     if len(words) < minimum_words or text.casefold() in _VAGUE_STATEMENTS:
         raise ValueError(f"{name} is too vague to be auditable.")
     return text
-
-
-def _nullable_statement(value: Any, *, name: str) -> str | None:
-    if value is None:
-        return None
-    return _bounded_statement(value, name=name)
 
 
 def _horizon(value: Any, *, name: str, required: bool) -> int | None:
@@ -131,38 +171,6 @@ def _condition_value(value: Any, *, value_type: str, name: str) -> Any:
     raise ValueError(f"{name}.value_type is unsupported.")
 
 
-def validate_machine_condition(value: Any, *, name: str) -> dict[str, Any]:
-    if not isinstance(value, Mapping):
-        raise TypeError(f"{name} must be a JSON object.")
-    required = {"condition_version", "field_path", "operator", "value_type", "value"}
-    fields = set(value)
-    if fields != required:
-        missing = sorted(required - fields)
-        extras = sorted(fields - required)
-        raise ValueError(f"{name} fields mismatch; missing={missing}, extras={extras}.")
-    if value["condition_version"] != MACHINE_CONDITION_VERSION:
-        raise ValueError(f"{name}.condition_version is unsupported.")
-    field_path = value["field_path"]
-    if not isinstance(field_path, str) or not _PATH.fullmatch(field_path.strip()):
-        raise ValueError(f"{name}.field_path must be a safe absolute JSON path.")
-    operator = value["operator"]
-    if operator not in SUPPORTED_CONDITION_OPERATORS:
-        raise ValueError(f"{name}.operator is unsupported.")
-    value_type = value["value_type"]
-    if value_type not in SUPPORTED_CONDITION_VALUE_TYPES:
-        raise ValueError(f"{name}.value_type is unsupported.")
-    if operator in {"lt", "lte", "gt", "gte"} and value_type != "number":
-        raise ValueError(f"{name} ordering operators require value_type=number.")
-    normalized_value = _condition_value(value["value"], value_type=value_type, name=name)
-    return {
-        "condition_version": MACHINE_CONDITION_VERSION,
-        "field_path": field_path.strip(),
-        "operator": operator,
-        "value_type": value_type,
-        "value": normalized_value,
-    }
-
-
 def _path_tokens(path: str) -> list[str | int]:
     if not _PATH.fullmatch(path):
         raise ValueError("field_path must be a validated absolute JSON path.")
@@ -190,6 +198,45 @@ def _path_tokens(path: str) -> list[str | int]:
     return tokens
 
 
+def validate_machine_condition(value: Any, *, name: str) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise TypeError(f"{name} must be a JSON object.")
+    required = {"condition_version", "field_path", "operator", "value_type", "value"}
+    fields = set(value)
+    if fields != required:
+        missing = sorted(required - fields)
+        extras = sorted(fields - required)
+        raise ValueError(f"{name} fields mismatch; missing={missing}, extras={extras}.")
+    if value["condition_version"] != MACHINE_CONDITION_VERSION:
+        raise ValueError(f"{name}.condition_version is unsupported.")
+    field_path = value["field_path"]
+    if not isinstance(field_path, str) or not _PATH.fullmatch(field_path.strip()):
+        raise ValueError(f"{name}.field_path must be a safe absolute JSON path.")
+    normalized_path = field_path.strip()
+    path_segments = {
+        token.casefold() for token in _path_tokens(normalized_path) if isinstance(token, str)
+    }
+    forbidden = sorted(path_segments & _FORBIDDEN_CONDITION_SEGMENTS)
+    if forbidden:
+        raise ValueError(f"{name}.field_path contains forbidden evidence segments: {forbidden}.")
+    operator = value["operator"]
+    if operator not in SUPPORTED_CONDITION_OPERATORS:
+        raise ValueError(f"{name}.operator is unsupported.")
+    value_type = value["value_type"]
+    if value_type not in SUPPORTED_CONDITION_VALUE_TYPES:
+        raise ValueError(f"{name}.value_type is unsupported.")
+    if operator in {"lt", "lte", "gt", "gte"} and value_type != "number":
+        raise ValueError(f"{name} ordering operators require value_type=number.")
+    normalized_value = _condition_value(value["value"], value_type=value_type, name=name)
+    return {
+        "condition_version": MACHINE_CONDITION_VERSION,
+        "field_path": normalized_path,
+        "operator": operator,
+        "value_type": value_type,
+        "value": normalized_value,
+    }
+
+
 def _resolve_path(context: Mapping[str, Any], path: str) -> Any:
     current: Any = context
     for token in _path_tokens(path):
@@ -208,6 +255,18 @@ def _resolve_path(context: Mapping[str, Any], path: str) -> Any:
     return current
 
 
+def _decimal_observation(value: Any) -> Decimal | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if not isinstance(value, (int, float, Decimal, str)):
+        return None
+    try:
+        parsed = Decimal(str(value).strip())
+    except (InvalidOperation, ValueError):
+        return None
+    return parsed if parsed.is_finite() else None
+
+
 def evaluate_machine_condition(
     condition: Mapping[str, Any], context: Mapping[str, Any]
 ) -> bool | None:
@@ -217,30 +276,36 @@ def evaluate_machine_condition(
     observed = _resolve_path(context, normalized["field_path"])
     value_type = normalized["value_type"]
     if value_type == "number":
-        if isinstance(observed, bool) or not isinstance(observed, (int, float)):
+        observed_number = _decimal_observation(observed)
+        expected_number = _decimal_observation(normalized["value"])
+        if observed_number is None or expected_number is None:
             return None
-        if not math.isfinite(float(observed)):
-            return None
+        left: Any = observed_number
+        right: Any = expected_number
     elif value_type == "text":
         if not isinstance(observed, str):
             return None
-    elif not isinstance(observed, bool):
-        return None
+        left = observed
+        right = normalized["value"]
+    else:
+        if not isinstance(observed, bool):
+            return None
+        left = observed
+        right = normalized["value"]
 
-    expected = normalized["value"]
     operator = normalized["operator"]
     if operator == "eq":
-        return observed == expected
+        return left == right
     if operator == "neq":
-        return observed != expected
+        return left != right
     if operator == "lt":
-        return observed < expected
+        return left < right
     if operator == "lte":
-        return observed <= expected
+        return left <= right
     if operator == "gt":
-        return observed > expected
+        return left > right
     if operator == "gte":
-        return observed >= expected
+        return left >= right
     raise AssertionError("Validated operator became unsupported.")
 
 
@@ -453,6 +518,8 @@ def master_trader_contract_manifest_v2() -> dict[str, Any]:
         "machine_condition_version": MACHINE_CONDITION_VERSION,
         "machine_condition_operators": list(SUPPORTED_CONDITION_OPERATORS),
         "machine_condition_unknown_propagates": True,
+        "machine_condition_exact_decimal_strings_supported": True,
+        "machine_condition_forbidden_future_or_runtime_paths": True,
         "actionable_thesis_required": True,
         "actionable_expected_horizon_required": True,
         "counter_argument_required_for_all_actions": True,
