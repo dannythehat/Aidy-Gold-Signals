@@ -193,7 +193,7 @@ def _partition_rows(
         seen_window[episode_id] = window
         partitions[window].append(row)
 
-    for name, values in partitions.items():
+    for values in partitions.values():
         values.sort(
             key=lambda row: (_utc(row["as_of_utc"], name="as_of_utc"), str(row["episode_id"]))
         )
