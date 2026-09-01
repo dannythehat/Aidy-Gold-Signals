@@ -45,7 +45,7 @@ def _args() -> argparse.Namespace:
 def _load(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
-        raise RuntimeError(f"Day 43 evidence is not an object: {path}")
+        raise TypeError(f"Day 43 evidence is not an object: {path}")
     return value
 
 
