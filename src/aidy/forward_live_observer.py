@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -15,6 +16,7 @@ from aidy.runtime import interval_due
 
 FORWARD_LIVE_OBSERVER_VERSION = "aidy_day53_live_forward_observer_v1"
 FORWARD_OBSERVATION_INTERVAL_SECONDS = 300
+Clock = Callable[[], datetime]
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,6 +178,7 @@ async def observe_private_forward_snapshot(
     d1: Any,
     scheduled_at: datetime,
     snapshot_id: UUID | str | None,
+    clock: Clock = lambda: datetime.now(UTC),
 ) -> ForwardLiveObservationResult:
     scheduled = _utc(scheduled_at, name="scheduled_at")
     if not interval_due(
@@ -238,11 +241,15 @@ async def observe_private_forward_snapshot(
         disposition = "pre_model_blocked"
         data_quality_state = "failure"
 
+    observed_at = _utc(clock(), name="clock")
+    if observed_at < captured:
+        observed_at = captured
+
     record = build_forward_evaluation_record(
         cohort=cohort,
         cycle_id=cycle_id,
         instruction_type="market_evaluation",
-        evaluated_at_utc=scheduled,
+        evaluated_at_utc=observed_at,
         context_hash=_context_hash(snapshot),
         disposition=disposition,
         data_quality_state=data_quality_state,
@@ -267,7 +274,7 @@ async def observe_private_forward_snapshot(
     )
     stored = await D1ImmediateForwardEvaluationStore(d1).record_evaluation(
         record,
-        recorded_at_utc=datetime.now(UTC),
+        recorded_at_utc=observed_at,
     )
     return ForwardLiveObservationResult(
         status="recorded",
@@ -311,3 +318,24 @@ async def live_forward_status(d1: Any) -> dict[str, Any]:
         "openai_called_for_pre_model_block": False,
         "telegram_publication_enabled": False,
     }
+
+
+def day53_live_forward_manifest() -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "manifest_version": "aidy_day53_live_forward_activation_v1",
+        "observer_version": FORWARD_LIVE_OBSERVER_VERSION,
+        "observation_interval_seconds": FORWARD_OBSERVATION_INTERVAL_SECONDS,
+        "requires_active_amended_cohort": True,
+        "scheduled_timestamp_may_predate_snapshot_evaluation": False,
+        "missing_live_ohlc_or_spread_fails_pre_model": True,
+        "blocked_cycles_count_toward_day54_model_resolved_n": False,
+        "decision_adapter_enabled_by_this_change": False,
+        "openai_called_for_pre_model_block": False,
+        "telegram_publication_enabled": False,
+        "broker_or_account_state_allowed": False,
+        "follower_state_allowed": False,
+        "super_signals_dependency_allowed": False,
+        "live_money_execution_allowed": False,
+    }
+    result["manifest_digest"] = digest(result)
+    return result
