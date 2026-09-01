@@ -8,7 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aidy.day23_research import digest as day23_digest, realized_dispersion
+from aidy.day23_research import digest as day23_digest
+from aidy.day23_research import realized_dispersion
 from aidy.evaluation_scoring import (
     build_j16_grade_validity_report,
     build_j21_setup_differentiation_report,
