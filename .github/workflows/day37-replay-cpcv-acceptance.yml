@@ -6,7 +6,9 @@ on:
     paths:
       - "src/aidy/replay_evaluation.py"
       - "src/aidy/replay_experiment.py"
+      - "src/aidy/replay_scoring.py"
       - "tests/test_day37_replay_evaluation.py"
+      - "tests/test_day37_replay_guardrails.py"
       - "scripts/day37_replay_cpcv_acceptance.py"
       - "docs/day37-frozen-replay-cpcv-contract.md"
       - ".github/workflows/day37-replay-cpcv-acceptance.yml"
@@ -30,9 +32,9 @@ jobs:
       - name: Install bounded acceptance dependencies
         run: pip install -e . pytest pytest-asyncio ruff
       - name: Changed-file lint
-        run: ruff check src/aidy/replay_evaluation.py src/aidy/replay_experiment.py tests/test_day37_replay_evaluation.py scripts/day37_replay_cpcv_acceptance.py
+        run: ruff check src/aidy/replay_evaluation.py src/aidy/replay_experiment.py src/aidy/replay_scoring.py tests/test_day37_replay_evaluation.py tests/test_day37_replay_guardrails.py scripts/day37_replay_cpcv_acceptance.py
       - name: Focused adversarial tests
-        run: pytest -q tests/test_day37_replay_evaluation.py
+        run: pytest -q tests/test_day37_replay_evaluation.py tests/test_day37_replay_guardrails.py
       - name: Full regression
         run: pytest -q
       - name: Deterministic acceptance run A
