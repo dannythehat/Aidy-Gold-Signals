@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from aidy.databento_gc import day40_free_first_procurement_record
 
@@ -303,13 +304,11 @@ def verify_manifest(manifest: Mapping[str, Any]) -> bool:
         return False
     if body.get("base_sha") != DAY40_BASE_SHA:
         return False
-    if body.get("paid_market_data_activated") is not False:
-        return False
-    if body.get("live_gc_subscription_activated") is not False:
-        return False
-    if body.get("formal_forward_paper_evaluation_started") is not False:
-        return False
-    return True
+    return (
+        body.get("paid_market_data_activated") is False
+        and body.get("live_gc_subscription_activated") is False
+        and body.get("formal_forward_paper_evaluation_started") is False
+    )
 
 
 def failing_items(checklist: Mapping[str, Any]) -> Iterable[str]:
