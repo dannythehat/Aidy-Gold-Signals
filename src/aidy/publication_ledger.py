@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -65,8 +65,14 @@ class D1PublicationLedgerStore:
     trading decision, thesis, model output or Day 34 ex-ante ledger.
     """
 
-    def __init__(self, database: object) -> None:
+    def __init__(
+        self,
+        database: object,
+        *,
+        id_factory: Callable[[str], str] | None = None,
+    ) -> None:
         self._db = database
+        self._id_factory = id_factory or (lambda kind: f"aidy_{kind}_{uuid4().hex}")
 
     def _stmt(self, sql: str, *params: object) -> object:
         return self._db.prepare(sql).bind(*params)
@@ -163,8 +169,8 @@ class D1PublicationLedgerStore:
         if state in {"delivery_uncertain", "permanent_failed"}:
             return AttemptLease("blocked", publication_id, delivery=delivery)
 
-        lease_token = f"aidy_lease_{uuid4().hex}"
-        attempt_id = f"aidy_attempt_{uuid4().hex}"
+        lease_token = self._id_factory("lease")
+        attempt_id = self._id_factory("attempt")
         lease_until = attempted + timedelta(seconds=max(30, int(lease_seconds)))
         update = self._stmt(
             """
