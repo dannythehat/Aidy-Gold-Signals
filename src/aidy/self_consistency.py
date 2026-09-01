@@ -4,7 +4,7 @@ import copy
 import json
 from collections import Counter
 from collections.abc import Awaitable, Mapping
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any, Protocol
 
