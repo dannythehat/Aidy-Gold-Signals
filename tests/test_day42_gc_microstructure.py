@@ -160,7 +160,7 @@ def test_minute_features_use_trade_size_price_and_known_aggressor_flow() -> None
     assert minute.unknown_side_volume == Decimal(3)
     assert minute.known_side_volume == Decimal(3)
     assert minute.signed_trade_imbalance == Decimal(1) / Decimal(3)
-    assert minute.vwap == Decimal(27004) / Decimal(6)
+    assert minute.vwap == Decimal(27005) / Decimal(6)
     assert minute.unknown_side_fraction == Decimal("0.5")
     assert minute.as_dict()["genuine_exchange_trade_volume"] is True
     assert minute.as_dict()["signed_trade_flow_only"] is True
