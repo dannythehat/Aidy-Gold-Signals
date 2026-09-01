@@ -79,7 +79,8 @@ def _available_ohlcv_window(dataset_range: dict[str, object]) -> tuple[datetime,
     request_end = available_end.replace(second=0, microsecond=0)
     if request_end > available_end:
         request_end -= timedelta(minutes=1)
-    request_start = max(request_end - timedelta(minutes=10), available_start)
+    day_start = request_end.replace(hour=0, minute=0, second=0, microsecond=0)
+    request_start = max(request_end - timedelta(minutes=10), available_start, day_start)
     if request_start >= request_end:
         raise RuntimeError("Databento ohlcv-1m range is too short for the Day 41 smoke test.")
     return request_start, request_end
@@ -92,23 +93,26 @@ def _symbology_resolve(
     stype_in: str,
     stype_out: str,
     start_date: str,
-    end_date: str,
 ) -> dict[str, object]:
+    form = {
+        "dataset": DATABENTO_DATASET,
+        "symbols": symbols,
+        "stype_in": stype_in,
+        "stype_out": stype_out,
+        "start_date": start_date,
+    }
     response = httpx.post(
         DATABENTO_SYMBOLOGY_URL,
         auth=httpx.BasicAuth(api_key, ""),
         timeout=20.0,
-        data={
-            "dataset": DATABENTO_DATASET,
-            "symbols": symbols,
-            "stype_in": stype_in,
-            "stype_out": stype_out,
-            "start_date": start_date,
-            "end_date": end_date,
-        },
+        data=form,
         headers={"User-Agent": "AIDY-Signals/Day41"},
     )
-    response.raise_for_status()
+    if response.is_error:
+        safe_body = response.text.replace(api_key, "***")[:1000]
+        raise RuntimeError(
+            f"Databento symbology resolve failed with HTTP {response.status_code}: {safe_body}"
+        )
     payload = response.json()
     if not isinstance(payload, dict):
         raise TypeError("Databento symbology endpoint returned a non-object payload.")
@@ -168,14 +172,12 @@ def main() -> int:
         receipt = client.download_jsonl(request, quote=quote, output_path=raw_path)
 
     start_date = request_start.date().isoformat()
-    end_date = (request_end.date() + timedelta(days=1)).isoformat()
     continuous_resolution = _symbology_resolve(
         api_key,
         symbols=GC_CONTINUOUS_SYMBOL,
         stype_in="continuous",
         stype_out="instrument_id",
         start_date=start_date,
-        end_date=end_date,
     )
     instrument_ids = _continuous_instrument_ids(continuous_resolution)
     raw_resolutions: dict[str, dict[str, object]] = {}
@@ -186,7 +188,6 @@ def main() -> int:
             stype_in="instrument_id",
             stype_out="raw_symbol",
             start_date=start_date,
-            end_date=end_date,
         )
     contract_map = resolve_gc_contract_map(continuous_resolution, raw_resolutions)
 
