@@ -4,7 +4,7 @@ import copy
 import json
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation, ROUND_CEILING
+from decimal import ROUND_CEILING, Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
@@ -193,8 +193,8 @@ def _partition_rows(
         seen_window[episode_id] = window
         partitions[window].append(row)
 
-    for name in partitions:
-        partitions[name].sort(
+    for name, values in partitions.items():
+        values.sort(
             key=lambda row: (_utc(row["as_of_utc"], name="as_of_utc"), str(row["episode_id"]))
         )
     return partitions, raw_counts
