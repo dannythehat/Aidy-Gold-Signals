@@ -120,7 +120,7 @@ jobs:
           CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          python - <<'PY'
+          uv run python - <<'PY'
           import json
           import os
           from decimal import Decimal
