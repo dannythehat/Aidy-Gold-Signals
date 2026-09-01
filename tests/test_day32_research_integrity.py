@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -18,6 +21,15 @@ from aidy.research_integrity import (
 )
 
 NOW = datetime(2026, 8, 23, 15, tzinfo=UTC)
+
+
+def _acceptance_module() -> ModuleType:
+    path = Path(__file__).parents[1] / "scripts" / "day32_research_integrity_acceptance.py"
+    spec = importlib.util.spec_from_file_location("day32_acceptance", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _packet() -> dict[str, object]:
@@ -241,6 +253,38 @@ def test_resolved_findings_remain_visible_without_blocking() -> None:
     audit = audit_decision_eligibility(manifest, [finding])
     assert audit["finding_count"] == 1
     assert audit["decision_input_allowed"] is True
+
+
+def test_bigquery_reconciliation_is_insert_only_and_idempotent() -> None:
+    acceptance = _acceptance_module()
+    values = [("a", {"value": 1}), ("b", {"value": 2})]
+    expected = acceptance._expected_records(values)
+    assert acceptance._reconcile_existing_records(existing=[], expected=expected) is False
+    existing = [
+        {"identity": identity, **payload}
+        for identity, payload in sorted(expected.items())
+    ]
+    assert acceptance._reconcile_existing_records(existing=existing, expected=expected) is True
+
+
+def test_bigquery_reconciliation_rejects_mutation_duplicate_and_identity_drift() -> None:
+    acceptance = _acceptance_module()
+    expected = acceptance._expected_records([("a", {"value": 1})])
+    mutated = [{"identity": "a", **expected["a"]}]
+    mutated[0]["record_digest"] = "0" * 64
+    with pytest.raises(RuntimeError, match="digest mismatch"):
+        acceptance._reconcile_existing_records(existing=mutated, expected=expected)
+    duplicate = [
+        {"identity": "a", **expected["a"]},
+        {"identity": "a", **expected["a"]},
+    ]
+    with pytest.raises(RuntimeError, match="duplicate immutable identities"):
+        acceptance._reconcile_existing_records(existing=duplicate, expected=expected)
+    with pytest.raises(RuntimeError, match="identity set drift"):
+        acceptance._reconcile_existing_records(
+            existing=[{"identity": "other", **expected["a"]}],
+            expected=expected,
+        )
 
 
 def _trial(
