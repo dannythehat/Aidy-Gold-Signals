@@ -15,9 +15,9 @@ from aidy.master_watcher import (
     WATCHER_OBSERVATION_VERSION,
     WATCHER_PROMPT_VERSION,
     WATCHER_REASONING_EFFORT,
-    digest as watcher_digest,
     watcher_observation_digest,
 )
+from aidy.master_watcher import digest as watcher_digest
 from aidy.paper_simulator import verify_paper_state
 from aidy.telegram_publisher import SimulatedTelegramTransport
 
