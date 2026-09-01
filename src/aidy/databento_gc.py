@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Self
 
 import httpx
 
@@ -169,13 +170,13 @@ class DatabentoHistoricalClient:
         )
 
     @classmethod
-    def from_env(cls, **kwargs: Any) -> "DatabentoHistoricalClient":
+    def from_env(cls, **kwargs: Any) -> Self:
         return cls(os.environ.get("DATABENTO_API_KEY", ""), **kwargs)
 
     def close(self) -> None:
         self._client.close()
 
-    def __enter__(self) -> "DatabentoHistoricalClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -232,7 +233,7 @@ class DatabentoHistoricalClient:
         self,
         request: HistoricalRequest,
         *,
-        prior_committed_usd: Decimal | str | float = Decimal("0"),
+        prior_committed_usd: Decimal | str | float = Decimal(0),
     ) -> CostQuote:
         payload = request.payload()
         result = self._get_json("/metadata.get_cost", params=payload)
