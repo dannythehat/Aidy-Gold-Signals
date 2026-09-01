@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Iterable, Mapping
-from datetime import datetime
 from typing import Any
 
 from aidy.context_composer_v2 import compose_context_v2, verify_context_dossier_v2
@@ -11,12 +10,7 @@ from aidy.decision_ledger import (
     build_reproducibility_bundle,
     verify_ex_ante_record,
 )
-from aidy.end_to_end_store import (
-    END_TO_END_RUNTIME_VERSION,
-    D1EndToEndCycleStore,
-    canonical_json,
-    digest,
-)
+from aidy.end_to_end_store import END_TO_END_RUNTIME_VERSION, D1EndToEndCycleStore, digest
 from aidy.management_contract_v2 import (
     build_management_action_record,
     verify_management_action_record,
@@ -157,12 +151,12 @@ def _build_ex_ante_from_consensus(
         raise ValueError("No representative self-consistency decision exists.")
     raw = consensus.get("representative_decision")
     if not isinstance(raw, Mapping):
-        raise ValueError("Representative decision is missing.")
+        raise TypeError("Representative decision is missing.")
     decision = validate_master_trader_decision_versioned(raw)
     gateway = _gateway_snapshot_from_sample(sample)
     post = sample.get("post_model_receipt")
     if not isinstance(post, Mapping):
-        raise ValueError("Representative post-model receipt is missing.")
+        raise TypeError("Representative post-model receipt is missing.")
     repro = _reproducibility(
         context=context,
         retrieval=retrieval,
@@ -173,7 +167,7 @@ def _build_ex_ante_from_consensus(
     )
     quality = context.get("data_quality")
     if not isinstance(quality, Mapping):
-        raise ValueError("Current context has no data_quality mapping.")
+        raise TypeError("Current context has no data_quality mapping.")
     disposition = "no_trade" if decision["action"] == "no_trade" else "decision_admitted"
     record = build_ex_ante_evaluation_record(
         context=context,
@@ -325,9 +319,16 @@ async def run_market_evaluation_cycle(
     if existing is not None:
         if not verify_ex_ante_record(existing):
             await cycle_store.mark_state(
-                cycle_id, "failed_closed", now_utc=now_utc, error_code="day52_stored_ex_ante_invalid"
+                cycle_id,
+                "failed_closed",
+                now_utc=now_utc,
+                error_code="day52_stored_ex_ante_invalid",
             )
-            return _result(cycle_id=cycle_id, status="failed_closed", reason_code="day52_stored_ex_ante_invalid")
+            return _result(
+                cycle_id=cycle_id,
+                status="failed_closed",
+                reason_code="day52_stored_ex_ante_invalid",
+            )
         decision = existing.get("decision")
         if isinstance(decision, Mapping) and decision.get("action") == "no_trade":
             return _result(
@@ -474,7 +475,9 @@ async def run_market_evaluation_cycle(
     )
     publication["paper_state"] = paper
     publication["model_call_count"] = 3
-    publication["result_digest"] = digest({key: value for key, value in publication.items() if key != "result_digest"})
+    publication["result_digest"] = digest(
+        {key: value for key, value in publication.items() if key != "result_digest"}
+    )
     return publication
 
 
@@ -764,7 +767,9 @@ async def run_management_cycle(
     publication["next_paper_state"] = next_state
     publication["watcher_receipt_digest"] = watcher["receipt_digest"]
     publication["management_model_call_count"] = 3
-    publication["result_digest"] = digest({key: value for key, value in publication.items() if key != "result_digest"})
+    publication["result_digest"] = digest(
+        {key: value for key, value in publication.items() if key != "result_digest"}
+    )
     return publication
 
 
