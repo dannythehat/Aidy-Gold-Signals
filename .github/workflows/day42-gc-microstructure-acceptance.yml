@@ -1,0 +1,176 @@
+name: AIDY Day 42 GC Microstructure Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gc_microstructure.py"
+      - "tests/test_day42_gc_microstructure.py"
+      - "scripts/day42_gc_microstructure_acceptance.py"
+      - "docs/day42-gc-microstructure-j2-j3-contract.md"
+      - ".github/workflows/day42-gc-microstructure-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day42-gc-microstructure-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  DAY42_BASE_SHA: 8672ad19ba40ceaed2cf0f042c8e2af3694896a5
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 41 base and bounded Day 42 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY42_BASE_SHA" HEAD)" = "$DAY42_BASE_SHA"
+          allowed='^(src/aidy/gc_microstructure.py|tests/test_day42_gc_microstructure.py|scripts/day42_gc_microstructure_acceptance.py|docs/day42-gc-microstructure-j2-j3-contract.md|.github/workflows/day42-gc-microstructure-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY42_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 42 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/gc_microstructure.py \
+            tests/test_day42_gc_microstructure.py \
+            scripts/day42_gc_microstructure_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused Day 42 adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day42_gc_microstructure.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Exact-head deterministic acceptance A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day42_gc_microstructure_acceptance.py \
+            --output-dir day42_artifacts_a \
+            > /tmp/day42-summary-a.json
+          cat /tmp/day42-summary-a.json
+
+      - name: Exact-head deterministic acceptance B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day42_gc_microstructure_acceptance.py \
+            --output-dir day42_artifacts_b \
+            > /tmp/day42-summary-b.json
+          cat /tmp/day42-summary-b.json
+
+      - name: Require byte-identical deterministic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day42_artifacts_a day42_artifacts_b
+
+      - name: Genuine Databento GC TBBO shadow smoke
+        shell: bash
+        env:
+          DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${DATABENTO_API_KEY:-}" || { echo "DATABENTO_API_KEY secret is missing"; exit 1; }
+          uv run python scripts/day42_gc_microstructure_acceptance.py \
+            --genuine \
+            --raw-tbbo /tmp/day42_gc_tbbo.jsonl \
+            --output-dir day42_genuine \
+            > /tmp/day42-genuine-summary.json
+          cat /tmp/day42-genuine-summary.json
+
+      - name: Enforce genuine microstructure and no-promotion boundary
+        shell: bash
+        env:
+          DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+          CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json
+          import os
+          from decimal import Decimal
+          from pathlib import Path
+
+          from aidy.gc_shadow_spine import normalize_databento_api_key
+
+          path = Path('day42_genuine/genuine_tbbo_shadow_evidence.json')
+          evidence = json.loads(path.read_text(encoding='utf-8'))
+          assert evidence['head_sha'] == os.environ['CANDIDATE_HEAD_SHA'], evidence
+          assert evidence['source_provider'] == 'Databento', evidence
+          assert evidence['source_dataset'] == 'GLBX.MDP3', evidence
+          assert evidence['source_schema'] == 'tbbo', evidence
+          assert evidence['genuine_trade_rows'] > 0, evidence
+          assert evidence['genuine_microstructure_minutes'] > 0, evidence
+          assert Decimal(evidence['genuine_exchange_trade_volume']) > 0, evidence
+          assert Decimal(evidence['databento_quote_usd']) <= Decimal('0.25'), evidence
+          assert evidence['resolved_contracts'], evidence
+          assert all(str(symbol).startswith('GC') and str(symbol).upper() != 'GC.N.0' for symbol in evidence['resolved_contracts']), evidence
+          assert evidence['unknown_aggressor_side_imputed'] is False, evidence
+          assert evidence['normalization_frozen_before_outcome_analysis'] is True, evidence
+          assert evidence['ordinary_session_activity_can_count_as_alpha'] is False, evidence
+          assert evidence['depth_claimed'] is False, evidence
+          assert evidence['order_book_imbalance_claimed'] is False, evidence
+          assert evidence['mbo_used'] is False, evidence
+          assert evidence['mbp10_used'] is False, evidence
+          assert evidence['j2_result']['result_state'] in {'insufficient', 'null', 'descriptive_non_null'}, evidence
+          assert evidence['j3_result']['result_state'] in {'insufficient', 'null', 'descriptive_non_null'}, evidence
+          assert evidence['null_or_insufficient_results_retained'] is True, evidence
+          assert evidence['features_shadow_only'] is True, evidence
+          assert evidence['pit_eligible'] is False, evidence
+          assert evidence['formal_forward_evidence_created'] is False, evidence
+          assert evidence['gate_promoted'] is False, evidence
+          assert evidence['predictive_edge_claimed'] is False, evidence
+          assert evidence['paid_subscription_activated'] is False, evidence
+          assert evidence['live_gc_subscription_activated'] is False, evidence
+          assert evidence['broker_market_data_dependency'] is False, evidence
+          assert evidence['api_key_recorded'] is False, evidence
+          raw_secret = os.environ['DATABENTO_API_KEY']
+          normalized_secret = normalize_databento_api_key(raw_secret)
+          text = path.read_text(encoding='utf-8')
+          assert raw_secret not in text
+          assert normalized_secret not in text
+          PY
+
+      - name: Preserve Day 42 acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day42-gc-microstructure-${{ github.event.pull_request.head.sha }}
+          path: |
+            day42_artifacts_a/
+            day42_genuine/genuine_tbbo_shadow_evidence.json
+          if-no-files-found: error
+          retention-days: 90
