@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "migrations/d1/0004_end_to_end_cycles.sql"
+      - "src/aidy/decision_ledger.py"
       - "src/aidy/safety_gates_v2.py"
       - "src/aidy/openai_gateway_v2.py"
       - "src/aidy/self_consistency_v2.py"
@@ -41,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git merge-base "$DAY52_BASE_SHA" HEAD)" = "$DAY52_BASE_SHA"
-          allowed='^(migrations/d1/0004_end_to_end_cycles.sql|src/aidy/safety_gates_v2.py|src/aidy/openai_gateway_v2.py|src/aidy/self_consistency_v2.py|src/aidy/self_consistency_ledger_v2.py|src/aidy/end_to_end_store.py|src/aidy/paper_management_runtime.py|src/aidy/end_to_end.py|tests/test_day52_end_to_end.py|tests/test_day52_management_end_to_end.py|scripts/day52_end_to_end_acceptance.py|docs/day52-end-to-end-fidelity-restart.md|.github/workflows/day52-end-to-end-acceptance.yml)$'
+          allowed='^(migrations/d1/0004_end_to_end_cycles.sql|src/aidy/decision_ledger.py|src/aidy/safety_gates_v2.py|src/aidy/openai_gateway_v2.py|src/aidy/self_consistency_v2.py|src/aidy/self_consistency_ledger_v2.py|src/aidy/end_to_end_store.py|src/aidy/paper_management_runtime.py|src/aidy/end_to_end.py|tests/test_day52_end_to_end.py|tests/test_day52_management_end_to_end.py|scripts/day52_end_to_end_acceptance.py|docs/day52-end-to-end-fidelity-restart.md|.github/workflows/day52-end-to-end-acceptance.yml)$'
           unexpected="$(git diff --name-only "$DAY52_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
           test -z "$unexpected" || { echo "Unexpected Day 52 changes:"; echo "$unexpected"; exit 1; }
 
@@ -59,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run ruff check src/aidy/safety_gates_v2.py src/aidy/openai_gateway_v2.py src/aidy/self_consistency_v2.py src/aidy/self_consistency_ledger_v2.py src/aidy/end_to_end_store.py src/aidy/paper_management_runtime.py src/aidy/end_to_end.py tests/test_day52_end_to_end.py tests/test_day52_management_end_to_end.py scripts/day52_end_to_end_acceptance.py
+          uv run ruff check src/aidy/decision_ledger.py src/aidy/safety_gates_v2.py src/aidy/openai_gateway_v2.py src/aidy/self_consistency_v2.py src/aidy/self_consistency_ledger_v2.py src/aidy/end_to_end_store.py src/aidy/paper_management_runtime.py src/aidy/end_to_end.py tests/test_day52_end_to_end.py tests/test_day52_management_end_to_end.py scripts/day52_end_to_end_acceptance.py
           uv run python -m compileall -q src scripts tests
 
       - name: Enforce standalone AIDY boundary
