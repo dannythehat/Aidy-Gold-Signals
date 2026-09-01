@@ -1,0 +1,175 @@
+name: AIDY Day 41 GC Shadow Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gc_shadow_spine.py"
+      - "tests/test_day41_gc_shadow_spine.py"
+      - "scripts/day41_gc_shadow_acceptance.py"
+      - "scripts/day41_gc_shadow_live_smoke.py"
+      - "docs/day41-gc-shadow-basis-contract.md"
+      - ".github/workflows/day41-gc-shadow-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day41-gc-shadow-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  DAY41_BASE_SHA: abe751749a20f9951b2456db9c7a048a8f60554f
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 40 base and bounded Day 41 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY41_BASE_SHA" HEAD)" = "$DAY41_BASE_SHA"
+          allowed='^(src/aidy/gc_shadow_spine.py|tests/test_day41_gc_shadow_spine.py|scripts/day41_gc_shadow_acceptance.py|scripts/day41_gc_shadow_live_smoke.py|docs/day41-gc-shadow-basis-contract.md|.github/workflows/day41-gc-shadow-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY41_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 41 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/gc_shadow_spine.py \
+            tests/test_day41_gc_shadow_spine.py \
+            scripts/day41_gc_shadow_acceptance.py \
+            scripts/day41_gc_shadow_live_smoke.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused Day 41 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day41_gc_shadow_spine.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Exact-head deterministic acceptance A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day41_gc_shadow_acceptance.py \
+            --output-dir day41_artifacts_a \
+            > /tmp/day41-summary-a.json
+          cat /tmp/day41-summary-a.json
+
+      - name: Exact-head deterministic acceptance B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day41_gc_shadow_acceptance.py \
+            --output-dir day41_artifacts_b \
+            > /tmp/day41-summary-b.json
+          cat /tmp/day41-summary-b.json
+
+      - name: Require byte-identical deterministic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day41_artifacts_a day41_artifacts_b
+
+      - name: Genuine Databento GC and HistData XAU historical shadow smoke
+        shell: bash
+        env:
+          DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "${DATABENTO_API_KEY:-}" || { echo "DATABENTO_API_KEY secret is missing"; exit 1; }
+          uv run python scripts/day41_gc_shadow_live_smoke.py \
+            --output day41_historical_evidence.json \
+            --raw-gc /tmp/day41_gc_sample.jsonl \
+            > /tmp/day41-historical-summary.json
+          cat /tmp/day41-historical-summary.json
+
+      - name: Enforce genuine historical shadow and no-promotion boundary
+        shell: bash
+        env:
+          DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+          CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json
+          import os
+          from decimal import Decimal
+          from pathlib import Path
+
+          from aidy.gc_shadow_spine import normalize_databento_api_key
+
+          evidence=json.loads(Path('day41_historical_evidence.json').read_text(encoding='utf-8'))
+          pair=evidence['shadow_pair']
+          assert evidence['candidate_head_sha'] == os.environ['CANDIDATE_HEAD_SHA'], evidence
+          assert evidence['genuine_databento_observation_ingested'] is True, evidence
+          assert evidence['genuine_histdata_xau_observation_ingested'] is True, evidence
+          assert evidence['historical_research_pair'] is True, evidence
+          assert evidence['formal_forward_evidence_created'] is False, evidence
+          assert evidence['pit_eligible'] is False, evidence
+          assert Decimal(evidence['databento_quote_usd']) <= Decimal('0.25'), evidence
+          assert pair['paired'] is True, pair
+          assert pair['gc']['provider'] == 'Databento', pair
+          assert pair['gc']['dataset'] == 'GLBX.MDP3', pair
+          contract=pair['gc']['contract_symbol']
+          assert contract.startswith('GC') and contract.upper() != 'GC.N.0', pair
+          assert pair['xau']['source'] == 'histdata_historical', pair
+          assert pair['xau']['symbol'] == 'XAUUSD', pair
+          assert pair['xau']['provenance_class'] == 'retrospective_history', pair
+          assert pair['xau']['pit_eligible'] is False, pair
+          assert pair['historical_research_pair'] is True, pair
+          assert pair['formal_forward_evidence_eligible'] is False, pair
+          assert pair['timestamp_skew_seconds'] <= 60, pair
+          assert pair['gc_shadow_only'] is True, pair
+          assert pair['xau_reference_retained'] is True, pair
+          assert pair['silent_source_substitution_allowed'] is False, pair
+          assert evidence['paid_subscription_activated'] is False, evidence
+          assert evidence['live_gc_subscription_activated'] is False, evidence
+          assert evidence['live_gc_promoted'] is False, evidence
+          assert evidence['broker_market_data_dependency'] is False, evidence
+          assert evidence['api_key_recorded'] is False, evidence
+          raw_secret=os.environ['DATABENTO_API_KEY']
+          normalized_secret=normalize_databento_api_key(raw_secret)
+          text=Path('day41_historical_evidence.json').read_text(encoding='utf-8')
+          assert raw_secret and raw_secret not in text
+          assert normalized_secret not in text
+          PY
+
+      - name: Preserve Day 41 acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day41-gc-shadow-${{ github.event.pull_request.head.sha }}
+          path: |
+            day41_artifacts_a/
+            day41_historical_evidence.json
+          if-no-files-found: error
+          retention-days: 90
