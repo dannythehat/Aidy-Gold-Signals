@@ -54,7 +54,7 @@ P0_REQUIREMENTS: tuple[P0Requirement, ...] = (
         "P0-03",
         "Purging, embargo, episode deduplication and effective independent sample size",
         (
-            ("src/aidy/replay_evaluation.py", ("purge", "embargo", "episode")),
+            ("src/aidy/replay_evaluation.py", ("purge_minutes", "embargo_minutes")),
             ("src/aidy/evaluation_scoring.py", ("effective_n", "_dedupe_exact_episode_rows")),
         ),
     ),
@@ -129,8 +129,8 @@ P0_REQUIREMENTS: tuple[P0Requirement, ...] = (
         "P0-15",
         "Experiment/trial preregistration and holdout reuse prevention",
         (
-            ("src/aidy/research_integrity.py", ("trial", "preregister")),
-            ("src/aidy/replay_evaluation.py", ("holdout", "reuse")),
+            ("src/aidy/research_integrity.py", ("trial_number", "holdout reuse for tuning is forbidden")),
+            ("docs/day37-frozen-replay-cpcv-contract.md", ("holdout", "reused", "preregistered trial")),
         ),
     ),
     P0Requirement(
