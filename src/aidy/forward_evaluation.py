@@ -372,9 +372,10 @@ def verify_forward_evaluation_record(
             return False
         if body["data_quality_state"] not in DATA_QUALITY_STATES:
             return False
-        if body["disposition"] == "no_trade" and body["data_quality_state"] != "known_good":
-            return False
-        return True
+        return not (
+            body["disposition"] == "no_trade"
+            and body["data_quality_state"] != "known_good"
+        )
     except (KeyError, TypeError, ValueError):
         return False
 
