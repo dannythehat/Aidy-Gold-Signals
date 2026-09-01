@@ -66,6 +66,8 @@ result = await deliver_with_ledger(
 
 `envelope` must already be a verified Day 50 publication envelope derived from an admitted immutable decision. Day 52 owns end-to-end orchestration from watcher through publisher/ledger.
 
+Production lease and attempt identifiers use random UUID-derived identities by default. The store accepts an injected ID factory only so frozen acceptance/replay evidence can use deterministic operational IDs; this does not alter publication identity, decision identity or production safety behavior.
+
 ## Acceptance
 
 The exact PR head must pass focused Day 51 adversarial tests, the full repository regression, deterministic A/B evidence comparison, and boundary assertions before merge. Acceptance never sends a real Telegram message.
