@@ -8,7 +8,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from aidy.replay_evaluation import HOLDOUT_ACCESS_VERSION, digest as replay_digest
+from aidy.replay_evaluation import HOLDOUT_ACCESS_VERSION
+from aidy.replay_evaluation import digest as replay_digest
 from aidy.research_integrity import finalize_trial, preregister_trial, verify_trial_registry
 from aidy.strategy_promotion import (
     REQUIRED_COMPONENTS,
@@ -363,8 +364,7 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
 def _query_config(bigquery: Any, pairs: list[tuple[str, str, Any]]) -> Any:
     return bigquery.QueryJobConfig(
         query_parameters=[
-            bigquery.ScalarQueryParameter(name, kind, value)
-            for name, kind, value in pairs
+            bigquery.ScalarQueryParameter(name, kind, value) for name, kind, value in pairs
         ]
     )
 
