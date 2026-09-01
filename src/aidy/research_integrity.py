@@ -6,12 +6,18 @@ from collections.abc import Iterable, Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Any, Literal, TypedDict
 
-ATTESTATION_VERSION = "aidy_pit_field_attestation_v1"
-ATTESTATION_MANIFEST_VERSION = "aidy_pit_attestation_manifest_v1"
+ATTESTATION_VERSION = "aidy_pit_field_attestation_v2"
+ATTESTATION_MANIFEST_VERSION = "aidy_pit_attestation_manifest_v2"
 LEAK_AUDIT_VERSION = "aidy_deliberate_leak_audit_v1"
 TRIAL_REGISTRY_VERSION = "aidy_experiment_trial_registry_v1"
 
 PITState = Literal["true", "false", "partial"]
+TimingSemantics = Literal[
+    "observation_then_knowledge",
+    "knowledge_can_precede_effective",
+    "derived_at_asof",
+]
+SurfaceState = Literal["active_decision_surface", "accepted_staged_context"]
 RESULT_STATES = {"preregistered", "passed", "null", "insufficient", "failed"}
 BLOCKING_LEAK_CATEGORIES = {
     "revision_after_decision",
@@ -37,9 +43,16 @@ class FieldPolicy(TypedDict):
     reconstruction_method: str
     reconstruction_version: str
     retrospective_eligible: bool
+    historical_backfill_allowed: bool
     evaluation_eligible: bool
     decision_input_eligible: bool
     staleness_rule: str
+    observation_timestamp: str
+    publication_timestamp: str | None
+    first_observed_timestamp: str
+    timing_semantics: TimingSemantics
+    surface_state: SurfaceState
+    quality_state: str
 
 
 class IntegrityError(ValueError):
@@ -59,6 +72,10 @@ def _utc(value: datetime | str, *, name: str) -> str:
     if parsed.tzinfo is None:
         raise IntegrityError(f"{name} must be timezone-aware")
     return parsed.astimezone(UTC).isoformat()
+
+
+def _utc_dt(value: datetime | str, *, name: str) -> datetime:
+    return datetime.fromisoformat(_utc(value, name=name))
 
 
 def _leaf_paths(value: object, prefix: str = "$") -> list[str]:
@@ -87,43 +104,75 @@ def _policy_for(path: str, policies: Mapping[str, FieldPolicy]) -> FieldPolicy:
     return max(matches, key=lambda item: len(item[0]))[1]
 
 
+def _validate_policy(path: str, policy: Mapping[str, Any]) -> dict[str, Any]:
+    normalized = dict(policy)
+    pit_state = normalized.get("pit_reconstructable")
+    if pit_state not in {"true", "false", "partial"}:
+        raise IntegrityError(f"invalid PIT state for {path}")
+    if normalized.get("decision_input_eligible") and pit_state != "true":
+        raise IntegrityError(f"false/partial PIT field cannot be decision eligible: {path}")
+    if normalized.get("historical_backfill_allowed") and not normalized.get(
+        "retrospective_eligible"
+    ):
+        raise IntegrityError(f"historical backfill requires retrospective eligibility: {path}")
+    if normalized.get("surface_state") not in {
+        "active_decision_surface",
+        "accepted_staged_context",
+    }:
+        raise IntegrityError(f"invalid surface state for {path}")
+    if normalized.get("timing_semantics") not in {
+        "observation_then_knowledge",
+        "knowledge_can_precede_effective",
+        "derived_at_asof",
+    }:
+        raise IntegrityError(f"invalid timing semantics for {path}")
+
+    observation = _utc_dt(normalized["observation_timestamp"], name="observation_timestamp")
+    first_observed = _utc_dt(
+        normalized["first_observed_timestamp"], name="first_observed_timestamp"
+    )
+    publication_raw = normalized.get("publication_timestamp")
+    publication = (
+        None
+        if publication_raw is None
+        else _utc_dt(publication_raw, name="publication_timestamp")
+    )
+
+    semantics = normalized["timing_semantics"]
+    if semantics == "observation_then_knowledge" and first_observed < observation:
+        raise IntegrityError(
+            f"first_observed_at cannot precede observation for ordinary evidence: {path}"
+        )
+    if semantics == "derived_at_asof" and first_observed != observation:
+        raise IntegrityError(f"derived-at-asof evidence must share one timestamp: {path}")
+    if publication is not None and first_observed < publication:
+        raise IntegrityError(f"first observation cannot precede publication: {path}")
+
+    normalized["observation_timestamp"] = observation.isoformat()
+    normalized["first_observed_timestamp"] = first_observed.isoformat()
+    normalized["publication_timestamp"] = (
+        None if publication is None else publication.isoformat()
+    )
+    return normalized
+
+
 def build_field_attestation_manifest(
     packet: Mapping[str, Any],
     *,
     policies: Mapping[str, FieldPolicy],
-    observed_at: datetime | str,
-    published_at: datetime | str | None,
-    first_observed_at: datetime | str,
-    staleness_state: str,
-    quality_state: str,
 ) -> dict[str, Any]:
     if not packet or "context_hash" not in packet:
         raise IntegrityError("a hashed model-facing context packet is required")
-    observation = _utc(observed_at, name="observed_at")
-    first_observed = _utc(first_observed_at, name="first_observed_at")
-    publication = _utc(published_at, name="published_at") if published_at else None
-    if first_observed < observation:
-        raise IntegrityError("first_observed_at cannot precede observation timestamp")
     rows: list[dict[str, Any]] = []
     for path in _leaf_paths(packet):
         if path == "$.context_hash":
             continue
-        policy = dict(_policy_for(path, policies))
-        pit_state = policy["pit_reconstructable"]
-        if pit_state not in {"true", "false", "partial"}:
-            raise IntegrityError(f"invalid PIT state for {path}")
-        if policy["decision_input_eligible"] and pit_state != "true":
-            raise IntegrityError(f"false/partial PIT field cannot be decision eligible: {path}")
+        policy = _validate_policy(path, _policy_for(path, policies))
         row: dict[str, Any] = {
             "attestation_version": ATTESTATION_VERSION,
             "field_identity": f"{policy['field_contract']}:{path}",
             "json_path": path,
             **policy,
-            "observation_timestamp": observation,
-            "publication_timestamp": publication,
-            "first_observed_timestamp": first_observed,
-            "staleness_state": staleness_state,
-            "quality_state": quality_state,
             "context_hash_covered": True,
             "context_hash": str(packet["context_hash"]),
         }
@@ -136,6 +185,12 @@ def build_field_attestation_manifest(
         "manifest_version": ATTESTATION_MANIFEST_VERSION,
         "context_hash": str(packet["context_hash"]),
         "active_field_count": len(rows),
+        "active_decision_field_count": sum(
+            1 for row in rows if row["surface_state"] == "active_decision_surface"
+        ),
+        "accepted_staged_field_count": sum(
+            1 for row in rows if row["surface_state"] == "accepted_staged_context"
+        ),
         "attestations": rows,
     }
     manifest["manifest_digest"] = digest(manifest)
@@ -151,7 +206,11 @@ def verify_field_attestation_manifest(manifest: Mapping[str, Any]) -> bool:
             return False
         if body["active_field_count"] != len(rows) or not rows:
             return False
+        if body["active_decision_field_count"] + body["accepted_staged_field_count"] != len(rows):
+            return False
         identities = set()
+        active_count = 0
+        staged_count = 0
         for raw in rows:
             row = dict(raw)
             row_digest = str(row.pop("attestation_digest", ""))
@@ -159,12 +218,16 @@ def verify_field_attestation_manifest(manifest: Mapping[str, Any]) -> bool:
                 return False
             if row["context_hash"] != body["context_hash"] or row["context_hash_covered"] is not True:
                 return False
-            if row["decision_input_eligible"] and row["pit_reconstructable"] != "true":
-                return False
+            _validate_policy(str(row["json_path"]), row)
             if row["field_identity"] in identities:
                 return False
             identities.add(row["field_identity"])
-        return True
+            active_count += int(row["surface_state"] == "active_decision_surface")
+            staged_count += int(row["surface_state"] == "accepted_staged_context")
+        return (
+            active_count == body["active_decision_field_count"]
+            and staged_count == body["accepted_staged_field_count"]
+        )
     except (KeyError, TypeError, ValueError):
         return False
 
@@ -192,9 +255,12 @@ def build_leak_finding(
     return finding
 
 
-def audit_decision_eligibility(manifest: Mapping[str, Any], findings: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+def audit_decision_eligibility(
+    manifest: Mapping[str, Any], findings: Iterable[Mapping[str, Any]]
+) -> dict[str, Any]:
     if not verify_field_attestation_manifest(manifest):
         raise IntegrityError("invalid attestation manifest")
+    valid_identities = {str(row["field_identity"]) for row in manifest["attestations"]}
     verified: list[dict[str, Any]] = []
     unresolved = 0
     for raw in findings:
@@ -202,8 +268,13 @@ def audit_decision_eligibility(manifest: Mapping[str, Any], findings: Iterable[M
         supplied = str(finding.pop("finding_digest", ""))
         if supplied != digest(finding) or finding.get("audit_version") != LEAK_AUDIT_VERSION:
             raise IntegrityError("invalid leak finding digest or version")
+        identity = str(finding.get("field_identity") or "")
+        if identity not in valid_identities:
+            raise IntegrityError(f"leak finding does not reference an attested field: {identity}")
         finding["finding_digest"] = supplied
-        unresolved += int(finding.get("severity") == "blocking" and finding.get("resolved") is not True)
+        unresolved += int(
+            finding.get("severity") == "blocking" and finding.get("resolved") is not True
+        )
         verified.append(finding)
     result: dict[str, Any] = {
         "audit_version": LEAK_AUDIT_VERSION,
@@ -272,7 +343,13 @@ def preregister_trial(
     return record
 
 
-def finalize_trial(record: Mapping[str, Any], *, executed_at: datetime | str, result_state: str, result: Mapping[str, Any]) -> dict[str, Any]:
+def finalize_trial(
+    record: Mapping[str, Any],
+    *,
+    executed_at: datetime | str,
+    result_state: str,
+    result: Mapping[str, Any],
+) -> dict[str, Any]:
     if not verify_trial_record(record) or record["result_state"] != "preregistered":
         raise IntegrityError("only a valid preregistered trial can be finalized")
     executed = _utc(executed_at, name="executed_at")
@@ -294,7 +371,12 @@ def verify_trial_record(record: Mapping[str, Any]) -> bool:
     try:
         body = dict(record)
         supplied = str(body.pop("trial_digest", ""))
-        return bool(supplied) and supplied == digest(body) and record["registry_version"] == TRIAL_REGISTRY_VERSION and record["result_state"] in RESULT_STATES
+        return (
+            bool(supplied)
+            and supplied == digest(body)
+            and record["registry_version"] == TRIAL_REGISTRY_VERSION
+            and record["result_state"] in RESULT_STATES
+        )
     except (KeyError, TypeError, ValueError):
         return False
 
