@@ -13,6 +13,7 @@ on:
       - "src/aidy/paper_management_runtime.py"
       - "src/aidy/end_to_end.py"
       - "tests/test_day52_end_to_end.py"
+      - "tests/test_day52_management_end_to_end.py"
       - "scripts/day52_end_to_end_acceptance.py"
       - "docs/day52-end-to-end-fidelity-restart.md"
       - ".github/workflows/day52-end-to-end-acceptance.yml"
@@ -40,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git merge-base "$DAY52_BASE_SHA" HEAD)" = "$DAY52_BASE_SHA"
-          allowed='^(migrations/d1/0004_end_to_end_cycles.sql|src/aidy/safety_gates_v2.py|src/aidy/openai_gateway_v2.py|src/aidy/self_consistency_v2.py|src/aidy/self_consistency_ledger_v2.py|src/aidy/end_to_end_store.py|src/aidy/paper_management_runtime.py|src/aidy/end_to_end.py|tests/test_day52_end_to_end.py|scripts/day52_end_to_end_acceptance.py|docs/day52-end-to-end-fidelity-restart.md|.github/workflows/day52-end-to-end-acceptance.yml)$'
+          allowed='^(migrations/d1/0004_end_to_end_cycles.sql|src/aidy/safety_gates_v2.py|src/aidy/openai_gateway_v2.py|src/aidy/self_consistency_v2.py|src/aidy/self_consistency_ledger_v2.py|src/aidy/end_to_end_store.py|src/aidy/paper_management_runtime.py|src/aidy/end_to_end.py|tests/test_day52_end_to_end.py|tests/test_day52_management_end_to_end.py|scripts/day52_end_to_end_acceptance.py|docs/day52-end-to-end-fidelity-restart.md|.github/workflows/day52-end-to-end-acceptance.yml)$'
           unexpected="$(git diff --name-only "$DAY52_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
           test -z "$unexpected" || { echo "Unexpected Day 52 changes:"; echo "$unexpected"; exit 1; }
 
@@ -58,7 +59,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run ruff check src/aidy/safety_gates_v2.py src/aidy/openai_gateway_v2.py src/aidy/self_consistency_v2.py src/aidy/self_consistency_ledger_v2.py src/aidy/end_to_end_store.py src/aidy/paper_management_runtime.py src/aidy/end_to_end.py tests/test_day52_end_to_end.py
+          uv run ruff check src/aidy/safety_gates_v2.py src/aidy/openai_gateway_v2.py src/aidy/self_consistency_v2.py src/aidy/self_consistency_ledger_v2.py src/aidy/end_to_end_store.py src/aidy/paper_management_runtime.py src/aidy/end_to_end.py tests/test_day52_end_to_end.py tests/test_day52_management_end_to_end.py scripts/day52_end_to_end_acceptance.py
           uv run python -m compileall -q src scripts tests
 
       - name: Enforce standalone AIDY boundary
@@ -72,29 +73,25 @@ jobs:
 
       - name: Focused Day 52 adversarial tests
         shell: bash
-        run: uv run pytest -q tests/test_day52_end_to_end.py
+        run: uv run pytest -q tests/test_day52_end_to_end.py tests/test_day52_management_end_to_end.py
 
       - name: Full repository regression
         shell: bash
         run: uv run pytest -q
 
       - name: Deterministic acceptance A
-        if: hashFiles('scripts/day52_end_to_end_acceptance.py') != ''
         shell: bash
         run: uv run python scripts/day52_end_to_end_acceptance.py --output-dir day52_artifacts_a
 
       - name: Deterministic acceptance B
-        if: hashFiles('scripts/day52_end_to_end_acceptance.py') != ''
         shell: bash
         run: uv run python scripts/day52_end_to_end_acceptance.py --output-dir day52_artifacts_b
 
       - name: Require byte-identical evidence
-        if: hashFiles('scripts/day52_end_to_end_acceptance.py') != ''
         shell: bash
         run: diff -ru day52_artifacts_a day52_artifacts_b
 
       - name: Preserve Day 52 evidence
-        if: hashFiles('scripts/day52_end_to_end_acceptance.py') != ''
         uses: actions/upload-artifact@v4
         with:
           name: aidy-day52-end-to-end-${{ github.event.pull_request.head.sha || github.sha }}
