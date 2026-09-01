@@ -81,4 +81,6 @@ The exact candidate head must pass:
 - watcher/management identity and state-continuity tests;
 - deterministic A/B evidence output comparison.
 
+Static-check defects discovered during Day 52 are corrected in source; acceptance rules are not relaxed or bypassed.
+
 Only an exact-head green candidate may merge to `main`.
