@@ -324,7 +324,7 @@ def test_tuning_trial_experiment_cannot_gain_holdout_access() -> None:
         split_manifest=split,
         cpcv_manifest=cpcv,
         frozen_version_digest="v" * 64,
-        frozen_configuration={"threshold": "frozen"},
+        frozen_configuration={"composer": "v2", "self_consistency_k": 3},
         created_at=NOW,
     )
     assert experiment["holdout_access_allowed"] is False
