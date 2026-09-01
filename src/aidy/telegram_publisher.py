@@ -287,7 +287,7 @@ class TelegramBotTransport:
             )
             response.raise_for_status()
             payload = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
+        except (httpx.HTTPError, ValueError):
             raise TelegramPublicationError(
                 "telegram_transport_failed", "Telegram send failed closed; secret-bearing provider details were suppressed."
             ) from None
