@@ -16,7 +16,6 @@ from aidy.paper_simulator import (
     normalize_paper_observation,
     paper_position_outcome_payload,
     start_paper_position,
-    verify_paper_state,
 )
 from aidy.pit_reconstruction import normalize_as_of
 
