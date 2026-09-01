@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import json
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -284,12 +283,14 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
     long_attachment = build_paper_outcome_attachment(
         ex_ante_record=long_record,
         state=long_state,
-        attached_at_utc=datetime.fromisoformat(long_state["closed_at_utc"]) + timedelta(seconds=1),
+        attached_at_utc=datetime.fromisoformat(long_state["closed_at_utc"])
+        + timedelta(seconds=1),
     )
     short_attachment = build_paper_outcome_attachment(
         ex_ante_record=short_record,
         state=short_state,
-        attached_at_utc=datetime.fromisoformat(short_state["closed_at_utc"]) + timedelta(seconds=1),
+        attached_at_utc=datetime.fromisoformat(short_state["closed_at_utc"])
+        + timedelta(seconds=1),
     )
     attachments = [long_attachment, short_attachment]
     if not all(verify_outcome_attachment(item) for item in attachments):
