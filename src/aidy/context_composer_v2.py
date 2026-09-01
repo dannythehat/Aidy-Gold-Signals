@@ -254,7 +254,7 @@ def _symmetrical_evidence(
         labels = support_labels if side == "support" else counter_labels
         counts = statistic.get("counts")
         if not isinstance(counts, Mapping):
-            raise ValueError("Day-24 statistic counts are malformed.")
+            raise TypeError("Day-24 statistic counts are malformed.")
         rates = statistic.get("rates")
         rates_map = rates if isinstance(rates, Mapping) else None
         rows.append(
@@ -280,7 +280,7 @@ def _uncertainty_counts(
         classified = support_labels | counter_labels
         counts = statistic.get("counts")
         if not isinstance(counts, Mapping):
-            raise ValueError("Day-24 statistic counts are malformed.")
+            raise TypeError("Day-24 statistic counts are malformed.")
         rows.append(
             {
                 "statistic_name": name,
