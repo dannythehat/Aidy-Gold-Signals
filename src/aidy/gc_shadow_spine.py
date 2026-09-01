@@ -43,7 +43,7 @@ def _timestamp(value: Any, *, name: str) -> datetime:
         parsed = value
     elif isinstance(value, str) and value.strip():
         try:
-            parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(value.strip())
         except ValueError as exc:
             raise ShadowSpineError(f"{name} must be an ISO-8601 timestamp.") from exc
     elif isinstance(value, int) and not isinstance(value, bool):
@@ -151,7 +151,7 @@ def parse_databento_ohlcv_jsonl(payload: str) -> list[GcObservation]:
                 "Databento GC observation is missing a mapped raw contract identity."
             )
         price = _decimal(price_value, name="GC price")
-        if price < Decimal("100") or price > Decimal("100000"):
+        if price < Decimal(100) or price > Decimal(100000):
             raise ShadowSpineError("GC price is outside the sanity envelope.")
         observed_at = _timestamp(timestamp_value, name="GC observation time")
         source_body = {
@@ -181,7 +181,7 @@ def xau_observation_from_gold_api(payload: dict[str, Any]) -> XauObservation:
         price=_decimal(payload.get("price"), name="XAU price"),
         source_digest=digest(payload),
     )
-    if result.price < Decimal("100") or result.price > Decimal("100000"):
+    if result.price < Decimal(100) or result.price > Decimal(100000):
         raise ShadowSpineError("XAU price is outside the sanity envelope.")
     return result
 
@@ -202,7 +202,7 @@ def pair_shadow_observations(
     skew_seconds = abs((gc.observed_at - xau.observed_at).total_seconds())
     paired = skew_seconds <= max_skew_seconds
     basis = gc.price - xau.price if paired else None
-    basis_bps = (basis / xau.price * Decimal("10000")) if basis is not None else None
+    basis_bps = (basis / xau.price * Decimal(10000)) if basis is not None else None
     body: dict[str, Any] = {
         "shadow_version": DAY41_SHADOW_VERSION,
         "state": "paired" if paired else "unpaired_timestamp_skew",
