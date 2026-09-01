@@ -87,8 +87,10 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
         raise RuntimeError("Day 52 gateway crossed the provider boundary.")
     if self_consistency.get("sample_count") != 3:
         raise RuntimeError("Day 52 self-consistency is no longer k=3.")
-    if self_consistency.get("no_safe_majority_action") != "abstain_without_synthetic_decision":
-        raise RuntimeError("Day 52 no-majority behavior drifted.")
+    if self_consistency.get("no_safe_majority_action") != "no_external_action":
+        raise RuntimeError("Day 52 no-majority external-action behavior drifted.")
+    if self_consistency.get("no_fake_no_trade_decision_on_abstain") is not True:
+        raise RuntimeError("Day 52 no-majority path may fabricate a no_trade decision.")
 
     file_digests: dict[str, str] = {}
     for filename in EXPECTED_FILES:
