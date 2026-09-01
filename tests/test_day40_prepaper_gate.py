@@ -8,9 +8,9 @@ import pytest
 
 from aidy.databento_gc import (
     ALLOWED_RESEARCH_SCHEMAS,
+    DATABENTO_DATASET,
     DAY40_CREDIT_RESERVE_USD,
     DAY40_CREDIT_SPEND_CAP_USD,
-    DATABENTO_DATASET,
     DatabentoAuthenticationError,
     DatabentoHistoricalClient,
     DatabentoPolicyError,
