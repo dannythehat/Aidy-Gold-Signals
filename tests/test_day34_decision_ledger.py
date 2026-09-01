@@ -16,9 +16,10 @@ from aidy.decision_ledger import (
     build_reproducibility_bundle,
     canonical_json,
     decision_ledger_manifest,
-    reconstruct_non_secret_decision_bundle,
+    digest,
     reconcile_ex_ante_record,
     reconcile_outcome_attachment,
+    reconstruct_non_secret_decision_bundle,
     verify_ex_ante_record,
     verify_outcome_attachment,
     verify_reproducibility_bundle,
@@ -81,13 +82,13 @@ def _gate(stage: str, *, passed: bool, context_hash: str) -> dict[str, object]:
     return value
 
 
-def _base_v1(action: str) -> dict[str, object]:
+def _base_v1(action: str, *, evaluated_at: datetime = NOW) -> dict[str, object]:
     return {
         "contract_version": MASTER_TRADER_CONTRACT_VERSION,
         "action": action,
         "symbol": "XAUUSD",
-        "evaluated_at_utc": NOW.isoformat(),
-        "valid_until_utc": (NOW + timedelta(minutes=15)).isoformat(),
+        "evaluated_at_utc": evaluated_at.isoformat(),
+        "valid_until_utc": (evaluated_at + timedelta(minutes=15)).isoformat(),
         "confidence": 0.75,
         "setup_taxonomy_version": SETUP_TAXONOMY_VERSION,
         "setup_codes": [],
@@ -106,14 +107,14 @@ def _base_v1(action: str) -> dict[str, object]:
     }
 
 
-def _no_trade_v1() -> dict[str, object]:
-    value = _base_v1("no_trade")
+def _no_trade_v1(*, evaluated_at: datetime = NOW) -> dict[str, object]:
+    value = _base_v1("no_trade", evaluated_at=evaluated_at)
     value["reason_codes"] = ["evidence_insufficient"]
     return value
 
 
-def _new_trade_v1() -> dict[str, object]:
-    value = _base_v1("new_trade")
+def _new_trade_v1(*, evaluated_at: datetime = NOW) -> dict[str, object]:
+    value = _base_v1("new_trade", evaluated_at=evaluated_at)
     value.update(
         {
             "setup_codes": ["trend_pullback_long"],
@@ -127,16 +128,6 @@ def _new_trade_v1() -> dict[str, object]:
     return value
 
 
-def _condition(path: str = "$.gold.quote_context.mid") -> dict[str, object]:
-    return {
-        "condition_version": MACHINE_CONDITION_VERSION,
-        "field_path": path,
-        "operator": "lte",
-        "value_type": "number",
-        "value": 2478.0,
-    }
-
-
 def _v2_no_trade() -> dict[str, object]:
     value = _no_trade_v1()
     value["contract_version"] = MASTER_TRADER_CONTRACT_VERSION_V2
@@ -144,10 +135,17 @@ def _v2_no_trade() -> dict[str, object]:
         {
             "thesis": None,
             "expected_horizon_minutes": None,
-            "counter_argument": "A clean continuation could still emerge after the current uncertainty clears.",
+            "counter_argument": (
+                "A clean continuation could still emerge after the current uncertainty clears."
+            ),
             "invalidation_condition": None,
-            "abstention_basis": "Evidence quality is incomplete and does not justify taking exposure now.",
-            "shadow_thesis": "A sustained break higher would support the bullish continuation hypothesis without exposure.",
+            "abstention_basis": (
+                "Evidence quality is incomplete and does not justify taking exposure now."
+            ),
+            "shadow_thesis": (
+                "A sustained break higher would support the bullish continuation hypothesis "
+                "without exposure."
+            ),
             "shadow_direction": "long",
             "shadow_horizon_minutes": 120,
             "shadow_evaluation_condition": {
@@ -162,13 +160,17 @@ def _v2_no_trade() -> dict[str, object]:
     return value
 
 
-def _repro(context: dict[str, object], *, prompt: str | None = "aidy_master_trader_prompt_v1") -> dict[str, object]:
+def _repro(
+    context: dict[str, object],
+    *,
+    model_called: bool = True,
+) -> dict[str, object]:
     return build_reproducibility_bundle(
         context=context,
-        prompt_version=prompt,
-        prompt_digest=None if prompt is None else "a" * 64,
-        gateway_version=None if prompt is None else "aidy_openai_reasoning_gateway_v1",
-        model_id=None if prompt is None else "gpt-5.6-sol",
+        prompt_version="aidy_master_trader_prompt_v1" if model_called else None,
+        prompt_digest="a" * 64 if model_called else None,
+        gateway_version="aidy_openai_reasoning_gateway_v1" if model_called else None,
+        model_id="gpt-5.6-sol" if model_called else None,
         strategy_version="aidy_strategy_config_v1",
         config_version="aidy_runtime_config_v1",
         sampling_metadata={
@@ -189,14 +191,22 @@ def _repro(context: dict[str, object], *, prompt: str | None = "aidy_master_trad
     )
 
 
-def _gateway(decision: dict[str, object] | None, *, accepted: bool = True) -> dict[str, object]:
+def _gateway(
+    decision: dict[str, object] | None,
+    *,
+    accepted: bool = True,
+) -> dict[str, object]:
     return {
         "gateway_version": "aidy_openai_reasoning_gateway_v1",
         "status": "accepted" if accepted else "failed_closed",
         "publication_allowed": accepted,
         "failure_reason": None if accepted else "api_transport_error",
         "structured_decision": decision,
-        "decision_digest": None if decision is None else master_trader_decision_digest_versioned(decision),
+        "decision_digest": (
+            None
+            if decision is None
+            else master_trader_decision_digest_versioned(decision)
+        ),
         "request_digest": "d" * 64,
         "attempts": 1,
         "latency_ms": 10,
@@ -213,13 +223,21 @@ def _gateway(decision: dict[str, object] | None, *, accepted: bool = True) -> di
     }
 
 
-def _record(disposition: str, *, decision: dict[str, object] | None = None) -> dict[str, object]:
+def _record(
+    disposition: str,
+    *,
+    decision: dict[str, object] | None = None,
+) -> dict[str, object]:
     context = _context()
-    pre = _gate("pre_model", passed=disposition != "pre_model_blocked", context_hash=str(context["context_hash"]))
+    pre = _gate(
+        "pre_model",
+        passed=disposition != "pre_model_blocked",
+        context_hash=str(context["context_hash"]),
+    )
     if disposition == "pre_model_blocked":
         gateway = None
         post = None
-        repro = _repro(context, prompt=None)
+        repro = _repro(context, model_called=False)
     elif disposition == "model_failed":
         gateway = _gateway(None, accepted=False)
         post = None
@@ -228,10 +246,20 @@ def _record(disposition: str, *, decision: dict[str, object] | None = None) -> d
         if decision is None:
             decision = _no_trade_v1() if disposition == "no_trade" else _new_trade_v1()
         gateway = _gateway(decision)
-        post = _gate("post_model", passed=disposition in {"no_trade", "decision_admitted"}, context_hash=str(context["context_hash"]))
+        post = _gate(
+            "post_model",
+            passed=disposition in {"no_trade", "decision_admitted"},
+            context_hash=str(context["context_hash"]),
+        )
         post["decision_action"] = decision["action"]
         post["actionable"] = disposition == "decision_admitted"
-        post["downstream_action"] = "no_action" if disposition == "no_trade" else decision["action"] if disposition == "decision_admitted" else None
+        post["downstream_action"] = (
+            "no_action"
+            if disposition == "no_trade"
+            else decision["action"]
+            if disposition == "decision_admitted"
+            else None
+        )
         post["gate_digest"] = compute_safety_gate_digest(post)
         repro = _repro(context)
     return build_ex_ante_evaluation_record(
@@ -247,7 +275,61 @@ def _record(disposition: str, *, decision: dict[str, object] | None = None) -> d
     )
 
 
-def test_manifest_freezes_non_mutation_and_separation_boundaries():
+def _build_direct(
+    *,
+    disposition: str = "no_trade",
+    context: dict[str, object] | None = None,
+    pre: dict[str, object] | None = None,
+    gateway: dict[str, object] | None = None,
+    post: dict[str, object] | None = None,
+    decision: dict[str, object] | None = None,
+    repro: dict[str, object] | None = None,
+    quality: dict[str, object] | None = None,
+) -> dict[str, object]:
+    context = _context() if context is None else context
+    if decision is None and disposition not in {"pre_model_blocked", "model_failed"}:
+        decision = _no_trade_v1() if disposition in {"no_trade", "post_model_blocked"} else _new_trade_v1()
+    if pre is None:
+        pre = _gate(
+            "pre_model",
+            passed=disposition != "pre_model_blocked",
+            context_hash=str(context["context_hash"]),
+        )
+    if gateway is None and disposition not in {"pre_model_blocked"}:
+        gateway = _gateway(decision, accepted=disposition != "model_failed")
+    if post is None and disposition not in {"pre_model_blocked", "model_failed"}:
+        post = _gate(
+            "post_model",
+            passed=disposition in {"no_trade", "decision_admitted"},
+            context_hash=str(context["context_hash"]),
+        )
+        post["decision_action"] = decision["action"]
+        post["actionable"] = disposition == "decision_admitted"
+        post["downstream_action"] = (
+            "no_action"
+            if disposition == "no_trade"
+            else decision["action"]
+            if disposition == "decision_admitted"
+            else None
+        )
+        post["gate_digest"] = compute_safety_gate_digest(post)
+    if repro is None:
+        repro = _repro(context, model_called=disposition != "pre_model_blocked")
+    quality = context["data_quality"] if quality is None else quality
+    return build_ex_ante_evaluation_record(
+        context=context,
+        instruction_type="market_evaluation",
+        cycle_disposition=disposition,
+        pre_model_receipt=pre,
+        gateway_result=gateway,
+        post_model_receipt=post,
+        decision=decision,
+        reproducibility_bundle=repro,
+        data_quality_flags=quality,
+    )
+
+
+def test_manifest_freezes_non_mutation_and_cross_link_boundaries():
     manifest = decision_ledger_manifest()
     assert manifest["ledger_version"] == DECISION_LEDGER_VERSION
     assert manifest["ex_ante_mutation_allowed"] is False
@@ -255,12 +337,16 @@ def test_manifest_freezes_non_mutation_and_separation_boundaries():
     assert manifest["future_outcomes_allowed_in_ex_ante"] is False
     assert manifest["hidden_reasoning_stored"] is False
     assert manifest["secrets_stored"] is False
+    assert manifest["exact_context_hash_bound_to_gate_receipts"] is True
+    assert manifest["exact_data_quality_bound_to_context"] is True
+    assert manifest["gateway_decision_digest_bound_to_stored_decision"] is True
+    assert manifest["decision_time_bound_to_context_asof"] is True
     assert manifest["gateway_promoted_by_day34"] is False
     assert manifest["trading_gate_created_by_day34"] is False
 
 
 @pytest.mark.parametrize("disposition", CYCLE_DISPOSITIONS)
-def test_every_cycle_disposition_is_a_first_class_immutable_record(disposition: str):
+def test_every_cycle_disposition_is_first_class(disposition: str):
     record = _record(disposition)
     assert record["record_version"] == EX_ANTE_RECORD_VERSION
     assert record["cycle_disposition"] == disposition
@@ -283,7 +369,10 @@ def test_v2_falsifiable_metadata_is_retained_without_gateway_promotion():
     assert falsifiable["counter_argument"]
     assert falsifiable["abstention_basis"]
     assert falsifiable["shadow_thesis"]
-    assert falsifiable["shadow_evaluation_condition"]["condition_version"] == MACHINE_CONDITION_VERSION
+    assert (
+        falsifiable["shadow_evaluation_condition"]["condition_version"]
+        == MACHINE_CONDITION_VERSION
+    )
     assert decision_ledger_manifest()["gateway_promoted_by_day34"] is False
 
 
@@ -299,14 +388,12 @@ def test_context_snapshot_and_hash_round_trip_exactly():
     assert record["context_hash"] == record["context_snapshot"]["context_hash"]
 
 
-def test_reproducibility_bundle_preserves_exact_ranked_analogue_ids():
+def test_reproducibility_preserves_ranked_analogues_effective_n_and_grade():
     record = _record("no_trade")
-    assert record["reproducibility_bundle"]["analogue_case_ids"] == [
-        "case_20260801",
-        "case_20260714",
-    ]
-    assert record["reproducibility_bundle"]["effective_n"] == 7
-    assert record["reproducibility_bundle"]["evidence_grade"] == "exploratory"
+    repro = record["reproducibility_bundle"]
+    assert repro["analogue_case_ids"] == ["case_20260801", "case_20260714"]
+    assert repro["effective_n"] == 7
+    assert repro["evidence_grade"] == "exploratory"
 
 
 def test_reproducibility_bundle_rejects_duplicate_analogue_ids():
@@ -320,7 +407,12 @@ def test_reproducibility_bundle_rejects_duplicate_analogue_ids():
             model_id=None,
             strategy_version="strategy_v1",
             config_version="config_v1",
-            sampling_metadata={"seed_supported": False, "seed": None, "temperature_supported": False, "temperature": None},
+            sampling_metadata={
+                "seed_supported": False,
+                "seed": None,
+                "temperature_supported": False,
+                "temperature": None,
+            },
             regime_state=None,
             setup_state=None,
             evidence_grade=None,
@@ -350,7 +442,12 @@ def test_sampling_unsupported_fields_must_stay_null():
             model_id=None,
             strategy_version="strategy_v1",
             config_version="config_v1",
-            sampling_metadata={"seed_supported": False, "seed": 7, "temperature_supported": False, "temperature": None},
+            sampling_metadata={
+                "seed_supported": False,
+                "seed": 7,
+                "temperature_supported": False,
+                "temperature": None,
+            },
             regime_state=None,
             setup_state=None,
             evidence_grade=None,
@@ -361,53 +458,23 @@ def test_sampling_unsupported_fields_must_stay_null():
         )
 
 
-def test_duplicate_identical_evaluation_is_idempotent():
-    first = _record("no_trade")
-    second = deepcopy(first)
-    assert reconcile_ex_ante_record(first, second) == first
-
-
-def test_ex_ante_mutation_fails_closed():
-    first = _record("no_trade")
-    changed = deepcopy(first)
-    changed["data_quality_flags"]["quote_freshness"] = "stale"
-    changed.pop("ex_ante_digest")
-    from aidy.decision_ledger import digest
-
-    changed["ex_ante_digest"] = digest(changed)
-    with pytest.raises(ValueError, match="mutation"):
-        reconcile_ex_ante_record(first, changed)
-
-
-def test_ex_ante_digest_tamper_is_detected():
-    record = _record("no_trade")
-    record["context_snapshot"]["symbol"] = "EURUSD"
-    assert not verify_ex_ante_record(record)
-
-
-@pytest.mark.parametrize("field", ["future_evaluation", "realized_pnl", "mfe", "outcome_state"])
+@pytest.mark.parametrize(
+    "field",
+    ["future_evaluation", "realized_pnl", "mfe", "outcome_state"],
+)
 def test_future_outcome_fields_are_forbidden_in_ex_ante_context(field: str):
     context = _context()
     context[field] = "future"
     context["context_hash"] = compute_context_hash(context)
-    repro = _repro(context)
-    pre = _gate("pre_model", passed=False, context_hash=str(context["context_hash"]))
     with pytest.raises(ValueError, match="Future/outcome"):
-        build_ex_ante_evaluation_record(
-            context=context,
-            instruction_type="market_evaluation",
-            cycle_disposition="pre_model_blocked",
-            pre_model_receipt=pre,
-            gateway_result=None,
-            post_model_receipt=None,
-            decision=None,
-            reproducibility_bundle=repro,
-            data_quality_flags=context["data_quality"],
-        )
+        _repro(context)
 
 
-@pytest.mark.parametrize("field", ["api_key", "private_key", "chain_of_thought", "scratchpad"])
-def test_secrets_and_hidden_reasoning_are_forbidden_in_ex_ante_metadata(field: str):
+@pytest.mark.parametrize(
+    "field",
+    ["api_key", "private_key", "chain_of_thought", "scratchpad"],
+)
+def test_secrets_and_hidden_reasoning_are_forbidden_in_context(field: str):
     context = _context()
     context["data_quality"][field] = "secret"
     context["context_hash"] = compute_context_hash(context)
@@ -420,6 +487,78 @@ def test_invalid_context_hash_is_rejected():
     context["context_hash"] = "0" * 64
     with pytest.raises(ValueError, match="Context hash"):
         _repro(context)
+
+
+def test_pre_model_receipt_must_bind_exact_context_hash():
+    context = _context()
+    pre = _gate("pre_model", passed=True, context_hash="f" * 64)
+    with pytest.raises(ValueError, match="exact context hash"):
+        _build_direct(context=context, pre=pre)
+
+
+def test_post_model_receipt_must_bind_exact_context_hash():
+    context = _context()
+    post = _gate("post_model", passed=True, context_hash="e" * 64)
+    post["decision_action"] = "no_trade"
+    post["downstream_action"] = "no_action"
+    post["gate_digest"] = compute_safety_gate_digest(post)
+    with pytest.raises(ValueError, match="exact context hash"):
+        _build_direct(context=context, post=post)
+
+
+def test_pre_model_instruction_type_must_match_evaluation():
+    context = _context()
+    pre = _gate("pre_model", passed=True, context_hash=str(context["context_hash"]))
+    pre["instruction_type"] = "active_signal_management"
+    pre["gate_digest"] = compute_safety_gate_digest(pre)
+    with pytest.raises(ValueError, match="instruction_type"):
+        _build_direct(context=context, pre=pre)
+
+
+def test_data_quality_flags_must_exactly_match_context():
+    with pytest.raises(ValueError, match="data_quality_flags"):
+        _build_direct(quality={"state": "substituted"})
+
+
+def test_decision_time_must_match_context_asof():
+    decision = _no_trade_v1(evaluated_at=NOW + timedelta(seconds=1))
+    gateway = _gateway(decision)
+    with pytest.raises(ValueError, match="context as-of"):
+        _build_direct(decision=decision, gateway=gateway)
+
+
+def test_gateway_decision_digest_must_match_stored_decision():
+    decision = _no_trade_v1()
+    gateway = _gateway(decision)
+    gateway["decision_digest"] = "0" * 64
+    with pytest.raises(ValueError, match="Gateway decision digest"):
+        _build_direct(decision=decision, gateway=gateway)
+
+
+def test_prompt_model_gateway_identities_must_cross_check():
+    context = _context()
+    repro = _repro(context)
+    repro["model_id"] = "different-model"
+    repro.pop("bundle_digest")
+    repro["bundle_digest"] = digest(repro)
+    with pytest.raises(ValueError, match="model_id"):
+        _build_direct(context=context, repro=repro)
+
+
+def test_no_model_cycle_cannot_claim_model_identity():
+    context = _context()
+    repro = _repro(context)
+    pre = _gate("pre_model", passed=False, context_hash=str(context["context_hash"]))
+    with pytest.raises(ValueError, match="No-model"):
+        _build_direct(
+            disposition="pre_model_blocked",
+            context=context,
+            pre=pre,
+            gateway=None,
+            post=None,
+            decision=None,
+            repro=repro,
+        )
 
 
 def test_model_failed_cannot_smuggle_decision_state():
@@ -451,12 +590,33 @@ def test_pre_model_blocked_cannot_smuggle_gateway_state():
             gateway_result=_gateway(None, accepted=False),
             post_model_receipt=None,
             decision=None,
-            reproducibility_bundle=_repro(context),
+            reproducibility_bundle=_repro(context, model_called=False),
             data_quality_flags=context["data_quality"],
         )
 
 
-def test_reconstructed_bundle_contains_exact_non_secret_inputs_and_no_outcome():
+def test_duplicate_identical_evaluation_is_idempotent():
+    first = _record("no_trade")
+    assert reconcile_ex_ante_record(first, deepcopy(first)) == first
+
+
+def test_ex_ante_mutation_fails_closed_even_with_recomputed_digest():
+    first = _record("no_trade")
+    changed = deepcopy(first)
+    changed["data_quality_flags"]["quote_freshness"] = "stale"
+    changed.pop("ex_ante_digest")
+    changed["ex_ante_digest"] = digest(changed)
+    with pytest.raises(ValueError, match="mutation"):
+        reconcile_ex_ante_record(first, changed)
+
+
+def test_ex_ante_digest_tamper_is_detected():
+    record = _record("no_trade")
+    record["context_snapshot"]["symbol"] = "EURUSD"
+    assert not verify_ex_ante_record(record)
+
+
+def test_reconstructed_bundle_is_exact_and_contains_no_outcome_payload():
     record = _record("no_trade")
     bundle = reconstruct_non_secret_decision_bundle(record)
     assert bundle["evaluation_id"] == record["evaluation_id"]
@@ -465,7 +625,7 @@ def test_reconstructed_bundle_contains_exact_non_secret_inputs_and_no_outcome():
     assert "outcome_payload" not in canonical_json(bundle)
 
 
-def test_shadow_outcome_attaches_only_to_no_trade_and_is_structurally_separate():
+def test_shadow_outcome_is_structurally_separate_from_no_trade():
     record = _record("no_trade")
     original = deepcopy(record)
     attachment = build_outcome_attachment(
@@ -482,7 +642,7 @@ def test_shadow_outcome_attaches_only_to_no_trade_and_is_structurally_separate()
     assert verify_outcome_attachment(attachment)
 
 
-def test_trade_outcome_attaches_only_to_actionable_admitted_decision():
+def test_trade_outcome_attaches_to_actionable_admitted_decision():
     record = _record("decision_admitted")
     attachment = build_outcome_attachment(
         ex_ante_record=record,
@@ -557,14 +717,12 @@ def test_conflicting_outcome_attachment_fails_closed():
     changed = deepcopy(first)
     changed["outcome_payload"]["outcome_state"] = "down"
     changed.pop("attachment_digest")
-    from aidy.decision_ledger import digest
-
     changed["attachment_digest"] = digest(changed)
     with pytest.raises(ValueError, match="Conflicting"):
         reconcile_outcome_attachment(first, changed)
 
 
-def test_outcome_payload_still_rejects_secrets_and_hidden_reasoning():
+def test_outcome_payload_rejects_secrets_and_hidden_reasoning():
     record = _record("no_trade")
     with pytest.raises(ValueError, match="Secret-bearing"):
         build_outcome_attachment(
