@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from aidy.forward_evaluation import (
-    D1ForwardEvaluationStore,
     FREEZE_BREAK_REASON_CODES,
+    D1ForwardEvaluationStore,
     ForwardEvaluationError,
     canonical_json,
     digest,
@@ -31,12 +31,6 @@ _REQUIRED_COMPONENTS = frozenset(
         "gc_xau_shadow",
         "macro_surprise",
     }
-)
-_MODEL_RESOLVED_DISPOSITIONS = (
-    "self_consistency_abstain",
-    "no_trade",
-    "decision_admitted",
-    "management_admitted",
 )
 
 
