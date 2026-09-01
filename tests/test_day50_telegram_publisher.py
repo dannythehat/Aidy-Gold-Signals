@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import runpy
 from datetime import UTC, datetime
+from pathlib import Path
 
 import httpx
 import pytest
@@ -17,7 +19,12 @@ from aidy.telegram_publisher import (
     verify_publication_envelope,
     verify_publication_receipt,
 )
-from scripts.day34_decision_ledger_acceptance import _base_decision, _cycle
+
+_DAY34 = runpy.run_path(
+    str(Path(__file__).resolve().parents[1] / "scripts" / "day34_decision_ledger_acceptance.py")
+)
+_base_decision = _DAY34["_base_decision"]
+_cycle = _DAY34["_cycle"]
 
 NOW = datetime(2026, 9, 1, 14, 15, tzinfo=UTC)
 CHAT_ID = "-1001234567890"
