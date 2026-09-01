@@ -37,6 +37,48 @@ def _gold_api_payload() -> dict[str, object]:
     return payload
 
 
+def _parse_utc_timestamp(value: object, *, name: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise RuntimeError(f"Databento {name} is missing from the entitled range.")
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise RuntimeError(f"Databento {name} is not a valid ISO-8601 timestamp.") from exc
+    if parsed.tzinfo is None:
+        raise RuntimeError(f"Databento {name} must be timezone-aware.")
+    return parsed.astimezone(UTC)
+
+
+def _available_ohlcv_window(dataset_range: dict[str, object]) -> tuple[datetime, datetime]:
+    schema_map = dataset_range.get("schema")
+    if not isinstance(schema_map, dict):
+        raise RuntimeError("Databento dataset range did not include per-schema availability.")
+    ohlcv_range = schema_map.get("ohlcv-1m")
+    if not isinstance(ohlcv_range, dict):
+        raise RuntimeError("Databento account has no entitled ohlcv-1m availability range.")
+
+    available_start = _parse_utc_timestamp(
+        ohlcv_range.get("start"),
+        name="ohlcv-1m start",
+    )
+    available_end = _parse_utc_timestamp(
+        ohlcv_range.get("end"),
+        name="ohlcv-1m end",
+    )
+    if available_end <= available_start:
+        raise RuntimeError("Databento ohlcv-1m entitled range is empty.")
+
+    request_end = available_end.replace(second=0, microsecond=0)
+    if request_end > available_end:
+        request_end -= timedelta(minutes=1)
+    request_start = request_end - timedelta(minutes=10)
+    if request_start < available_start:
+        request_start = available_start
+    if request_start >= request_end:
+        raise RuntimeError("Databento ohlcv-1m range is too short for the Day 41 smoke test.")
+    return request_start, request_end
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="day41_live_evidence.json")
@@ -51,17 +93,17 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     now = datetime.now(UTC)
-    request_end = (now - timedelta(minutes=10)).replace(second=0, microsecond=0)
-    request_start = request_end - timedelta(minutes=10)
-    request = HistoricalRequest(
-        schema="ohlcv-1m",
-        start=request_start.isoformat(),
-        end=request_end.isoformat(),
-    )
 
     raw_path = Path(args.raw_gc)
     with DatabentoHistoricalClient.from_env() as client:
         entitlement = client.assert_gc_entitlement()
+        dataset_range = client.dataset_range()
+        request_start, request_end = _available_ohlcv_window(dataset_range)
+        request = HistoricalRequest(
+            schema="ohlcv-1m",
+            start=request_start.isoformat(),
+            end=request_end.isoformat(),
+        )
         quote = client.estimate_cost(request)
         if quote.quoted_cost_usd > LIVE_SMOKE_MAX_COST_USD:
             raise RuntimeError(
@@ -89,6 +131,7 @@ def main() -> int:
         "genuine_databento_observation_ingested": True,
         "genuine_gold_api_observation_ingested": True,
         "databento_entitlement": entitlement,
+        "databento_ohlcv_available_end_utc": request_end.isoformat(),
         "databento_request": request.payload(),
         "databento_quote_usd": str(quote.quoted_cost_usd),
         "databento_live_smoke_max_cost_usd": str(LIVE_SMOKE_MAX_COST_USD),
