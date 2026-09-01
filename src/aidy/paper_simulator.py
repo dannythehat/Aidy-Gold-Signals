@@ -152,8 +152,12 @@ def normalize_paper_observation(value: Mapping[str, Any]) -> dict[str, Any]:
     if not isinstance(value, Mapping):
         raise TypeError("Paper observation must be a mapping.")
     required = {"observation_version", "as_of_utc", "symbol", "mid", "context"}
-    if set(value) != required:
+    allowed = required | {"observation_digest"}
+    if set(value) not in (required, allowed):
         raise PaperSimulatorError("Paper observation fields do not match the Day 46 contract.")
+    supplied_digest = value.get("observation_digest")
+    if supplied_digest is not None and not isinstance(supplied_digest, str):
+        raise PaperSimulatorError("Paper observation digest must be text when supplied.")
     if value["observation_version"] != PAPER_OBSERVATION_VERSION:
         raise PaperSimulatorError("Unsupported paper observation version.")
     if value["symbol"] != SUPPORTED_SYMBOL:
@@ -178,7 +182,10 @@ def normalize_paper_observation(value: Mapping[str, Any]) -> dict[str, Any]:
         "mid": _q(mid),
         "context": snapshot,
     }
-    normalized["observation_digest"] = digest(normalized)
+    computed_digest = digest(normalized)
+    if supplied_digest is not None and supplied_digest != computed_digest:
+        raise PaperSimulatorError("Paper observation digest is invalid.")
+    normalized["observation_digest"] = computed_digest
     return normalized
 
 
@@ -354,10 +361,18 @@ def _realized_r(state: Mapping[str, Any]) -> Decimal:
 
 def _hit_targets(state: Mapping[str, Any], mid: Decimal) -> list[int]:
     targets = [_decimal(item, name="target", positive=True) for item in state["targets"]]
-    remaining = set(int(item) for item in state["remaining_target_indices"])
+    remaining = {int(item) for item in state["remaining_target_indices"]}
     if state["direction"] == "long":
-        return [index for index, target in enumerate(targets, start=1) if index in remaining and mid >= target]
-    return [index for index, target in enumerate(targets, start=1) if index in remaining and mid <= target]
+        return [
+            index
+            for index, target in enumerate(targets, start=1)
+            if index in remaining and mid >= target
+        ]
+    return [
+        index
+        for index, target in enumerate(targets, start=1)
+        if index in remaining and mid <= target
+    ]
 
 
 def _stop_is_hit(state: Mapping[str, Any], mid: Decimal) -> bool:
@@ -423,12 +438,13 @@ def apply_paper_observation(
     target_hits: list[int] = [] if stop_hit else _hit_targets(updated, mid)
     if target_hits:
         updated["hit_target_indices"] = sorted(
-            set(int(item) for item in updated["hit_target_indices"]) | set(target_hits)
+            {int(item) for item in updated["hit_target_indices"]} | set(target_hits)
         )
+        hit_set = set(target_hits)
         updated["remaining_target_indices"] = [
             item
             for item in updated["remaining_target_indices"]
-            if int(item) not in set(target_hits)
+            if int(item) not in hit_set
         ]
         if updated["remaining_target_indices"]:
             updated["position_state"] = "partial"
