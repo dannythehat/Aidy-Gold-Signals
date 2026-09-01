@@ -1,0 +1,92 @@
+name: AIDY Day 53 Immediate Start Amendment Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/forward_start_amendment.py"
+      - "tests/test_day53_immediate_start.py"
+      - "scripts/day53_immediate_start_acceptance.py"
+      - "docs/day53-immediate-start-amendment.md"
+      - ".github/workflows/day53-immediate-start-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DAY53_AMENDMENT_BASE_SHA: 010abc653c274b14d0a64941af9ca22eb88aa658
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify accepted base and bounded amendment surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY53_AMENDMENT_BASE_SHA" HEAD)" = "$DAY53_AMENDMENT_BASE_SHA"
+          allowed='^(src/aidy/forward_start_amendment.py|tests/test_day53_immediate_start.py|scripts/day53_immediate_start_acceptance.py|docs/day53-immediate-start-amendment.md|.github/workflows/day53-immediate-start-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY53_AMENDMENT_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 53 amendment changes:"; echo "$unexpected"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check src/aidy/forward_start_amendment.py tests/test_day53_immediate_start.py scripts/day53_immediate_start_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Enforce standalone paper-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|super_signals|broker|account|follower)' src/aidy/forward_start_amendment.py; then
+            echo "Immediate-start amendment imported a forbidden execution/downstream integration"
+            exit 1
+          fi
+
+      - name: Focused immediate-start adversarial tests
+        shell: bash
+        run: uv run pytest -q tests/test_day53_immediate_start.py tests/test_day53_formal_forward.py
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
+
+      - name: Deterministic amendment acceptance A
+        shell: bash
+        run: uv run python scripts/day53_immediate_start_acceptance.py --output-dir day53_immediate_artifacts_a
+
+      - name: Deterministic amendment acceptance B
+        shell: bash
+        run: uv run python scripts/day53_immediate_start_acceptance.py --output-dir day53_immediate_artifacts_b
+
+      - name: Require byte-identical amendment evidence
+        shell: bash
+        run: diff -ru day53_immediate_artifacts_a day53_immediate_artifacts_b
+
+      - name: Preserve immediate-start amendment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-immediate-start-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day53_immediate_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
