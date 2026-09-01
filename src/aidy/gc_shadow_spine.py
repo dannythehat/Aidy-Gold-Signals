@@ -82,6 +82,60 @@ def _contract_symbol(value: Any) -> str | None:
     return symbol
 
 
+def _resolution_entries(payload: dict[str, Any], symbol: str) -> list[dict[str, Any]]:
+    if payload.get("status") not in {0, None}:
+        raise ShadowSpineError("Databento symbology resolution did not return OK status.")
+    if payload.get("not_found"):
+        raise ShadowSpineError("Databento symbology resolution contained unresolved symbols.")
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        raise ShadowSpineError("Databento symbology resolution is missing a result mapping.")
+    entries = result.get(symbol)
+    if not isinstance(entries, list) or not entries:
+        raise ShadowSpineError(f"Databento symbology resolution has no mapping for {symbol!r}.")
+    if not all(isinstance(item, dict) for item in entries):
+        raise ShadowSpineError("Databento symbology resolution entries are malformed.")
+    return entries
+
+
+def resolve_gc_contract_map(
+    continuous_resolution: dict[str, Any],
+    raw_resolutions: dict[str, dict[str, Any]],
+) -> dict[int, str]:
+    """Build an instrument-id -> raw GC symbol map from free Databento resolution evidence."""
+
+    continuous_entries = _resolution_entries(continuous_resolution, GC_CONTINUOUS_SYMBOL)
+    instrument_ids: set[int] = set()
+    for entry in continuous_entries:
+        value = entry.get("s")
+        try:
+            instrument_id = int(str(value))
+        except (TypeError, ValueError) as exc:
+            raise ShadowSpineError("Continuous GC mapping returned a non-numeric instrument ID.") from exc
+        if instrument_id <= 0:
+            raise ShadowSpineError("Continuous GC mapping returned an invalid instrument ID.")
+        instrument_ids.add(instrument_id)
+
+    contract_map: dict[int, str] = {}
+    for instrument_id in sorted(instrument_ids):
+        key = str(instrument_id)
+        payload = raw_resolutions.get(key)
+        if not isinstance(payload, dict):
+            raise ShadowSpineError(f"Raw-symbol resolution is missing instrument {instrument_id}.")
+        entries = _resolution_entries(payload, key)
+        raw_symbols = {_contract_symbol(entry.get("s")) for entry in entries}
+        raw_symbols.discard(None)
+        if len(raw_symbols) != 1:
+            raise ShadowSpineError(
+                f"Instrument {instrument_id} does not resolve uniquely to one raw GC contract."
+            )
+        contract_map[instrument_id] = next(iter(raw_symbols))
+
+    if not contract_map:
+        raise ShadowSpineError("Databento produced no resolved GC contract identities.")
+    return contract_map
+
+
 @dataclass(frozen=True, slots=True)
 class GcObservation:
     observed_at: datetime
@@ -126,17 +180,21 @@ class XauObservation:
         return body
 
 
-def parse_databento_ohlcv_jsonl(payload: str) -> list[GcObservation]:
+def parse_databento_ohlcv_jsonl(
+    payload: str,
+    *,
+    contract_by_instrument_id: dict[int, str] | None = None,
+) -> list[GcObservation]:
     """Parse Databento pretty JSONL and retain only mapped GC OHLCV observations.
 
-    `map_symbols=true` may emit symbol-mapping rows separately from market-data rows,
-    so the parser tracks mapped raw GC contract identities and refuses anonymous
-    instrument IDs. Databento text encodings place event metadata under the `hd`
-    object, while synthetic fixtures may provide `ts_event` at the top level.
+    Historical continuous records identify the actual instrument through `hd.instrument_id`.
+    The caller can provide a Databento-symbology-derived mapping to the raw tradable GC
+    contract. Inline raw symbols remain supported, but anonymous instruments fail closed.
     """
 
     mapped_contract: str | None = None
     observations: list[GcObservation] = []
+    contract_map = contract_by_instrument_id or {}
     for raw_line in payload.splitlines():
         line = raw_line.strip()
         if not line:
@@ -160,12 +218,19 @@ def parse_databento_ohlcv_jsonl(payload: str) -> list[GcObservation]:
         if price_value is None:
             continue
         timestamp_value = row.get("ts_event") or row.get("ts_recv")
+        instrument_id: int | None = None
         header = row.get("hd")
-        if timestamp_value is None and isinstance(header, dict):
-            timestamp_value = header.get("ts_event")
+        if isinstance(header, dict):
+            if timestamp_value is None:
+                timestamp_value = header.get("ts_event")
+            raw_instrument_id = header.get("instrument_id")
+            if isinstance(raw_instrument_id, int) and not isinstance(raw_instrument_id, bool):
+                instrument_id = raw_instrument_id
         if timestamp_value is None:
             continue
-        contract = mapping_candidate or mapped_contract
+
+        resolved_contract = contract_map.get(instrument_id) if instrument_id is not None else None
+        contract = mapping_candidate or resolved_contract or mapped_contract
         if contract is None:
             raise ShadowSpineError(
                 "Databento GC observation is missing a mapped raw contract identity."
@@ -177,6 +242,7 @@ def parse_databento_ohlcv_jsonl(payload: str) -> list[GcObservation]:
         source_body = {
             "dataset": DATABENTO_DATASET,
             "continuous_symbol": GC_CONTINUOUS_SYMBOL,
+            "instrument_id": instrument_id,
             "contract_symbol": contract,
             "row": row,
         }
