@@ -321,7 +321,7 @@ def _persist_summary(
                 "base_sha": summary["base_sha"],
                 "head_sha": summary["head_sha"],
                 "payload_digest": summary["summary_digest"],
-                "summary_payload": summary,
+                "summary_payload": canonical_json(summary),
                 "recorded_at_utc": datetime.now(UTC).isoformat(),
             }
         ],
