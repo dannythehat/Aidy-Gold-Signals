@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - "src/aidy/self_consistency.py"
+      - "src/aidy/self_consistency_ledger.py"
       - "tests/test_day36_self_consistency.py"
+      - "tests/test_day36_self_consistency_ledger.py"
       - "scripts/day36_self_consistency_acceptance.py"
       - "docs/day36-self-consistency-contract.md"
       - ".github/workflows/day36-self-consistency-acceptance.yml"
@@ -29,9 +31,9 @@ jobs:
       - name: Install bounded acceptance dependencies
         run: pip install -e . pytest pytest-asyncio ruff
       - name: Changed-file lint
-        run: ruff check src/aidy/self_consistency.py tests/test_day36_self_consistency.py scripts/day36_self_consistency_acceptance.py
+        run: ruff check src/aidy/self_consistency.py src/aidy/self_consistency_ledger.py tests/test_day36_self_consistency.py tests/test_day36_self_consistency_ledger.py scripts/day36_self_consistency_acceptance.py
       - name: Focused adversarial tests
-        run: pytest -q tests/test_day36_self_consistency.py
+        run: pytest -q tests/test_day36_self_consistency.py tests/test_day36_self_consistency_ledger.py
       - name: Full regression
         run: pytest -q
       - name: Deterministic acceptance run A
