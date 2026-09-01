@@ -52,8 +52,17 @@ A condition is a strict five-field object:
 - `value` = a matching scalar value.
 
 Ordering operators are numeric-only. Wildcards, executable expressions, extra condition fields,
-non-finite numbers and type mismatches are rejected. Runtime evaluation returns `True`, `False` or
-`None`; missing or type-mismatched evidence propagates UNKNOWN rather than being treated as false.
+non-finite numbers and invalid expected-value types are rejected. Paths containing future/outcome,
+broker/account/follower, sizing or hidden-reasoning segments are also rejected, so an invalidation
+cannot be defined against hindsight or downstream execution state.
+
+AIDY frequently preserves exact decimal observations as strings. When and only when a condition
+explicitly declares `value_type=number`, a finite numeric observation encoded as a JSON number,
+`Decimal`, or exact numeric string is compared using decimal arithmetic. This avoids forcing AIDY to
+sacrifice source precision merely to make a thesis measurable.
+
+Runtime evaluation returns `True`, `False` or `None`; missing, non-numeric or otherwise type-mismatched
+evidence propagates UNKNOWN rather than being treated as false.
 
 ## Concise auditability, not hidden reasoning
 
@@ -79,5 +88,5 @@ been accepted.
 Day 33 must pass changed-file Ruff, focused adversarial V2 tests, full repository regression and a
 deterministic exact-head acceptance artifact. Acceptance proves all four representative V2 actions,
 V1 historical readability with no silent upgrade, strict schema closure, true/false/UNKNOWN machine
-condition semantics, immutable deterministic decision digests and the unchanged non-execution/safety
-boundaries above.
+condition semantics, exact-decimal numeric evaluation, rejection of future/runtime condition paths,
+immutable deterministic decision digests and the unchanged non-execution/safety boundaries above.
