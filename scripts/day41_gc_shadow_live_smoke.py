@@ -32,7 +32,7 @@ def _gold_api_payload() -> dict[str, object]:
     response.raise_for_status()
     payload = response.json()
     if not isinstance(payload, dict):
-        raise RuntimeError("Gold API returned a non-object payload.")
+        raise TypeError("Gold API returned a non-object payload.")
     return payload
 
 
