@@ -32,15 +32,18 @@ def canonical_json(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
 
 
-def _positive_decimal(value: Any, *, name: str) -> Decimal:
+def _decimal(value: Any, *, name: str, positive: bool = False) -> Decimal:
     if value is None or isinstance(value, bool):
-        raise MicrostructureError(f"{name} must be a positive finite decimal.")
+        requirement = "positive finite" if positive else "finite"
+        raise MicrostructureError(f"{name} must be a {requirement} decimal.")
     try:
         parsed = Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError) as exc:
-        raise MicrostructureError(f"{name} must be a positive finite decimal.") from exc
-    if not parsed.is_finite() or parsed <= 0:
-        raise MicrostructureError(f"{name} must be a positive finite decimal.")
+        requirement = "positive finite" if positive else "finite"
+        raise MicrostructureError(f"{name} must be a {requirement} decimal.") from exc
+    if not parsed.is_finite() or (positive and parsed <= 0):
+        requirement = "positive finite" if positive else "finite"
+        raise MicrostructureError(f"{name} must be a {requirement} decimal.")
     return parsed
 
 
@@ -148,9 +151,7 @@ def _fmt(value: Decimal | None) -> str | None:
         return None
     if value == 0:
         return "0"
-    with localcontext() as ctx:
-        ctx.prec = 34
-        text = format(value.quantize(Decimal("0.000000001")), "f").rstrip("0").rstrip(".")
+    text = format(value, "f").rstrip("0").rstrip(".")
     return text or "0"
 
 
@@ -307,7 +308,7 @@ def parse_databento_tbbo_jsonl(
     *,
     contract_by_instrument_id: Mapping[int, str],
 ) -> list[TbboTrade]:
-    """Parse genuine Databento TBBO rows without inventing depth or aggressor side."""
+    """Parse genuine Databento TBBO rows without inventing depth or trade side."""
 
     if not contract_by_instrument_id:
         raise MicrostructureError("Databento TBBO parsing requires an instrument-to-GC map.")
@@ -325,10 +326,16 @@ def parse_databento_tbbo_jsonl(
         if not isinstance(raw, Mapping):
             continue
         row = dict(raw)
-        action = row.get("action")
-        if action is not None and str(action).upper() != "T":
+        price_raw = row.get("price")
+        size_raw = row.get("size")
+        action_raw = row.get("action")
+        side_raw = row.get("side")
+        if price_raw is None and size_raw is None and action_raw is None and side_raw is None:
+            # Databento pretty/map-symbol output may contain mapping/status records.
+            continue
+        if str(action_raw or "").upper() != "T":
             raise MicrostructureError("TBBO contains a non-trade action.")
-        side = str(row.get("side") or "").upper()
+        side = str(side_raw or "").upper()
         if side not in VALID_AGGRESSOR_SIDES:
             raise MicrostructureError("TBBO trade side must be A, B or N.")
         instrument_id = _instrument_id(row)
@@ -346,13 +353,13 @@ def parse_databento_tbbo_jsonl(
         if mapped_contract is not None and inline_contract is not None and mapped_contract != inline_contract:
             raise MicrostructureError("TBBO inline and symbology-resolved contract identities conflict.")
         observed_at = _timestamp(_event_timestamp(row), name="TBBO event timestamp")
-        price = _positive_decimal(row.get("price"), name="TBBO trade price")
-        size = _positive_decimal(row.get("size"), name="TBBO trade size")
+        price = _decimal(price_raw, name="TBBO trade price", positive=True)
+        size = _decimal(size_raw, name="TBBO trade size", positive=True)
         bid_raw, ask_raw, bid_size_raw, ask_size_raw = _top_bbo(row)
-        bid = _positive_decimal(bid_raw, name="TBBO best bid")
-        ask = _positive_decimal(ask_raw, name="TBBO best ask")
-        bid_size = _positive_decimal(bid_size_raw, name="TBBO best bid size")
-        ask_size = _positive_decimal(ask_size_raw, name="TBBO best ask size")
+        bid = _decimal(bid_raw, name="TBBO best bid", positive=True)
+        ask = _decimal(ask_raw, name="TBBO best ask", positive=True)
+        bid_size = _decimal(bid_size_raw, name="TBBO best bid size", positive=True)
+        ask_size = _decimal(ask_size_raw, name="TBBO best ask size", positive=True)
         if ask < bid:
             raise MicrostructureError("TBBO best ask cannot be below best bid.")
         if price < Decimal(100) or price > Decimal(100000):
@@ -383,92 +390,66 @@ def parse_databento_tbbo_jsonl(
     return trades
 
 
-def _minute_from_trades(
-    minute: datetime,
-    contract: str,
-    trades: Sequence[TbboTrade],
-    *,
-    cumulative_price_volume: Decimal,
-    cumulative_volume: Decimal,
-    anchor_identity: str,
-) -> MinuteMicrostructure:
-    ordered = sorted(trades, key=lambda item: (item.observed_at, item.source_digest))
-    volume = sum((item.size for item in ordered), Decimal(0))
-    buy = sum((item.size for item in ordered if item.aggressor_side == "B"), Decimal(0))
-    sell = sum((item.size for item in ordered if item.aggressor_side == "A"), Decimal(0))
-    unknown = sum((item.size for item in ordered if item.aggressor_side == "N"), Decimal(0))
-    known = buy + sell
-    signed = None if known == 0 else (buy - sell) / known
-    price_volume = sum((item.price * item.size for item in ordered), Decimal(0))
-    vwap = price_volume / volume
-    cumulative_price_volume += price_volume
-    cumulative_volume += volume
-    session_vwap = cumulative_price_volume / cumulative_volume
-    spreads = [item.spread_bps for item in ordered]
-    session = session_code_at(minute)
-    return MinuteMicrostructure(
-        minute_utc=minute,
-        contract_symbol=contract,
-        session=session,
-        trade_count=len(ordered),
-        trade_volume=volume,
-        buy_aggressor_volume=buy,
-        sell_aggressor_volume=sell,
-        unknown_side_volume=unknown,
-        known_side_volume=known,
-        signed_trade_imbalance=signed,
-        vwap=vwap,
-        last_trade_price=ordered[-1].price,
-        mean_spread_bps=_mean(spreads),
-        median_spread_bps=_median(spreads),
-        session_vwap=session_vwap,
-        anchored_vwap=session_vwap,
-        anchor_identity=anchor_identity,
-        source_trade_digests=tuple(item.source_digest for item in ordered),
-    )
-
-
 def aggregate_tbbo_minutes(trades: Iterable[TbboTrade]) -> list[MinuteMicrostructure]:
-    """Aggregate genuine trades to minute features and deterministic session-anchored VWAP."""
+    """Aggregate genuine trades to minute features and session-anchored VWAP."""
 
     groups: dict[tuple[datetime, str], list[TbboTrade]] = defaultdict(list)
     for trade in trades:
         minute = trade.observed_at.astimezone(UTC).replace(second=0, microsecond=0)
         groups[(minute, trade.contract_symbol)].append(trade)
-    if not groups:
-        return []
-
-    result: list[MinuteMicrostructure] = []
     cumulative: dict[str, tuple[str, Decimal, Decimal]] = {}
-    for (minute, contract), group in sorted(groups.items(), key=lambda item: item[0]):
+    result: list[MinuteMicrostructure] = []
+    for (minute, contract), grouped in sorted(groups.items(), key=lambda item: item[0]):
+        ordered = sorted(grouped, key=lambda item: (item.observed_at, item.source_digest))
         session = session_code_at(minute)
         anchor_identity = f"{contract}:{minute.date().isoformat()}:{session}"
         prior_anchor, prior_pv, prior_volume = cumulative.get(
-            contract,
-            (anchor_identity, Decimal(0), Decimal(0)),
+            contract, (anchor_identity, Decimal(0), Decimal(0))
         )
         if prior_anchor != anchor_identity:
             prior_pv = Decimal(0)
             prior_volume = Decimal(0)
-        row = _minute_from_trades(
-            minute,
-            contract,
-            group,
-            cumulative_price_volume=prior_pv,
-            cumulative_volume=prior_volume,
+
+        volume = sum((item.size for item in ordered), Decimal(0))
+        buy = sum((item.size for item in ordered if item.aggressor_side == "B"), Decimal(0))
+        sell = sum((item.size for item in ordered if item.aggressor_side == "A"), Decimal(0))
+        unknown = sum((item.size for item in ordered if item.aggressor_side == "N"), Decimal(0))
+        known = buy + sell
+        signed = None if known == 0 else (buy - sell) / known
+        price_volume = sum((item.price * item.size for item in ordered), Decimal(0))
+        vwap = price_volume / volume
+        total_pv = prior_pv + price_volume
+        total_volume = prior_volume + volume
+        anchored_vwap = total_pv / total_volume
+        spreads = [item.spread_bps for item in ordered]
+        row = MinuteMicrostructure(
+            minute_utc=minute,
+            contract_symbol=contract,
+            session=session,
+            trade_count=len(ordered),
+            trade_volume=volume,
+            buy_aggressor_volume=buy,
+            sell_aggressor_volume=sell,
+            unknown_side_volume=unknown,
+            known_side_volume=known,
+            signed_trade_imbalance=signed,
+            vwap=vwap,
+            last_trade_price=ordered[-1].price,
+            mean_spread_bps=_mean(spreads),
+            median_spread_bps=_median(spreads),
+            session_vwap=anchored_vwap,
+            anchored_vwap=anchored_vwap,
             anchor_identity=anchor_identity,
+            source_trade_digests=tuple(item.source_digest for item in ordered),
         )
-        minute_pv = row.vwap * row.trade_volume
-        cumulative[contract] = (
-            anchor_identity,
-            prior_pv + minute_pv,
-            prior_volume + row.trade_volume,
-        )
+        cumulative[contract] = (anchor_identity, total_pv, total_volume)
         result.append(row)
     return result
 
 
 def _metric_baseline(values: Sequence[Decimal], *, minimum_n: int) -> dict[str, Any]:
+    if not values:
+        return {"sample_n": 0, "state": "insufficient", "mean": None, "std": None}
     mean, std = _mean_std(values)
     state = "known" if len(values) >= minimum_n and std > 0 else "insufficient"
     return {
@@ -509,10 +490,8 @@ def build_weekday_clock_baseline(
             "spread_bps": _metric_baseline(
                 [row.mean_spread_bps for row in rows], minimum_n=minimum_bucket_n
             ),
-            "signed_trade_imbalance": (
-                _metric_baseline(signed_values, minimum_n=minimum_bucket_n)
-                if signed_values
-                else {"sample_n": 0, "state": "insufficient", "mean": None, "std": None}
+            "signed_trade_imbalance": _metric_baseline(
+                signed_values, minimum_n=minimum_bucket_n
             ),
             "vwap_distance_bps": _metric_baseline(
                 [row.vwap_distance_bps for row in rows], minimum_n=minimum_bucket_n
@@ -556,19 +535,9 @@ def verify_weekday_clock_baseline(baseline: Mapping[str, Any]) -> bool:
 def _zscore(value: Decimal, metric: Mapping[str, Any]) -> str | None:
     if metric.get("state") != "known":
         return None
-    mean = _positive_or_zero_decimal(metric.get("mean"), name="baseline mean")
-    std = _positive_decimal(metric.get("std"), name="baseline std")
+    mean = _decimal(metric.get("mean"), name="baseline mean")
+    std = _decimal(metric.get("std"), name="baseline std", positive=True)
     return _fmt((value - mean) / std)
-
-
-def _positive_or_zero_decimal(value: Any, *, name: str) -> Decimal:
-    try:
-        parsed = Decimal(str(value))
-    except (InvalidOperation, ValueError, TypeError) as exc:
-        raise MicrostructureError(f"{name} must be a non-negative finite decimal.") from exc
-    if not parsed.is_finite() or parsed < 0:
-        raise MicrostructureError(f"{name} must be a non-negative finite decimal.")
-    return parsed
 
 
 def normalize_minute(
@@ -594,22 +563,22 @@ def normalize_minute(
             "vwap_distance_z": None,
             "ordinary_session_activity_can_count_as_alpha": False,
         }
-    volume_metric = bucket.get("volume")
-    spread_metric = bucket.get("spread_bps")
-    signed_metric = bucket.get("signed_trade_imbalance")
-    vwap_metric = bucket.get("vwap_distance_bps")
-    if not all(isinstance(item, Mapping) for item in (volume_metric, spread_metric, signed_metric, vwap_metric)):
+    metrics = {
+        name: bucket.get(name)
+        for name in ("volume", "spread_bps", "signed_trade_imbalance", "vwap_distance_bps")
+    }
+    if not all(isinstance(item, Mapping) for item in metrics.values()):
         raise MicrostructureError("Day 42 baseline metric bucket is malformed.")
-    volume_z = _zscore(minute.trade_volume, volume_metric)
-    spread_z = _zscore(minute.mean_spread_bps, spread_metric)
+    volume_z = _zscore(minute.trade_volume, metrics["volume"])
+    spread_z = _zscore(minute.mean_spread_bps, metrics["spread_bps"])
     signed_z = (
         None
         if minute.signed_trade_imbalance is None
-        else _zscore(minute.signed_trade_imbalance, signed_metric)
+        else _zscore(minute.signed_trade_imbalance, metrics["signed_trade_imbalance"])
     )
-    vwap_z = _zscore(minute.vwap_distance_bps, vwap_metric)
+    vwap_z = _zscore(minute.vwap_distance_bps, metrics["vwap_distance_bps"])
     state = "known" if volume_z is not None and spread_z is not None else "baseline_insufficient"
-    result = {
+    result: dict[str, Any] = {
         "minute_digest": minute.as_dict()["minute_digest"],
         "baseline_digest": baseline["baseline_digest"],
         "baseline_key": key,
@@ -626,7 +595,7 @@ def normalize_minute(
 
 
 def day42_experiment_plan() -> dict[str, Any]:
-    """Frozen J2/J3 shadow experiment contract; outcome thresholds are not tuned here."""
+    """Frozen J2/J3 shadow experiment contract; no outcome threshold is tuned here."""
 
     body: dict[str, Any] = {
         "plan_version": DAY42_EXPERIMENT_PLAN_VERSION,
@@ -679,14 +648,7 @@ def run_shadow_experiment(
     split_binding: Mapping[str, Any],
     minimum_independent_n: int = 30,
 ) -> dict[str, Any]:
-    """Run the pre-registered Day 42 evaluation and retain null/insufficient outcomes.
-
-    This intentionally does not invent a predictive model. Rows must already contain a
-    preregistered scalar `incremental_statistic` measured on an evaluation cohort. The
-    Day 42 acceptance run can therefore finish honestly as insufficient when no genuine
-    outcome-linked cohort exists yet, while the same contract can later report a null or
-    descriptive non-null statistic without silently changing the evaluation rule.
-    """
+    """Evaluate a preregistered shadow statistic while retaining null/insufficient results."""
 
     if experiment not in {"J2", "J3"}:
         raise MicrostructureError("Day 42 experiment must be J2 or J3.")
@@ -704,18 +666,10 @@ def run_shadow_experiment(
     for row in eligible_rows:
         episode_id = str(row.get("independent_episode_id") or "")
         statistic = row.get("incremental_statistic")
-        if not episode_id or statistic is None:
-            continue
-        if episode_id in episode_ids:
+        if not episode_id or statistic is None or episode_id in episode_ids:
             continue
         episode_ids.add(episode_id)
-        try:
-            value = Decimal(str(statistic))
-        except (InvalidOperation, ValueError) as exc:
-            raise MicrostructureError("Day 42 incremental statistic must be finite.") from exc
-        if not value.is_finite():
-            raise MicrostructureError("Day 42 incremental statistic must be finite.")
-        usable.append(value)
+        usable.append(_decimal(statistic, name="Day 42 incremental statistic"))
 
     effective_n = len(usable)
     statistic_mean = None if not usable else _mean(usable)
