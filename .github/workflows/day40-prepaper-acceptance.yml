@@ -1,0 +1,144 @@
+name: AIDY Day 40 Pre-Paper Architecture Gate
+
+on:
+  pull_request:
+    paths:
+      - "src/aidy/databento_gc.py"
+      - "src/aidy/day40_gate.py"
+      - "tests/test_day40_prepaper_gate.py"
+      - "scripts/day40_prepaper_acceptance.py"
+      - "docs/day40-pre-paper-architecture-gate.md"
+      - ".github/workflows/day40-prepaper-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    env:
+      DAY40_BASE_SHA: cb31e28c38d38c173ab857badb487a75ac601b0f
+
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 39 base and bounded Day 40 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY40_BASE_SHA" HEAD)" = "$DAY40_BASE_SHA"
+          allowed='^(src/aidy/databento_gc.py|src/aidy/day40_gate.py|tests/test_day40_prepaper_gate.py|scripts/day40_prepaper_acceptance.py|docs/day40-pre-paper-architecture-gate.md|.github/workflows/day40-prepaper-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY40_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 40 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/databento_gc.py \
+            src/aidy/day40_gate.py \
+            tests/test_day40_prepaper_gate.py \
+            scripts/day40_prepaper_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused Day 40 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day40_prepaper_gate.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Exact-head Day 40 acceptance A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day40_prepaper_acceptance.py \
+            --output-dir day40_artifacts_a \
+            > /tmp/day40-summary-a.json
+          cat /tmp/day40-summary-a.json
+
+      - name: Exact-head Day 40 acceptance B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day40_prepaper_acceptance.py \
+            --output-dir day40_artifacts_b \
+            > /tmp/day40-summary-b.json
+          cat /tmp/day40-summary-b.json
+
+      - name: Require deterministic acceptance evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day40_artifacts_a day40_artifacts_b
+
+      - name: Enforce Architecture V2 and free-first procurement contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import subprocess
+
+          with open("day40_artifacts_a/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["head_sha"] == head, result
+          assert result["base_sha"] == "cb31e28c38d38c173ab857badb487a75ac601b0f", result
+          assert result["p0_requirement_count"] == 18, result
+          assert result["p0_passed_count"] == 18, result
+          assert result["p0_failed_items"] == [], result
+          assert result["effective_n_is_authoritative_for_grading"] is True, result
+          assert result["j16_interpretation"] == (
+              "revised_to_insufficient_when_effective_n_is_inadequate"
+          ), result
+          assert result["j16_predictive_ordering_claimed"] is False, result
+          assert result["all_adversarial_fail_closed"] is True, result
+          assert result["databento_adapter_built"] is True, result
+          assert result["databento_free_first_decision"] == (
+              "go_gc_research_no_go_paid_live"
+          ), result
+          assert result["databento_free_credit_usd"] == "125.00", result
+          assert result["databento_day40_spend_cap_usd"] == "75.00", result
+          assert result["databento_reserved_credit_usd"] == "50.00", result
+          assert result["owner_approval_required_before_paid_activation"] is True, result
+          assert result["paid_market_data_activated"] is False, result
+          assert result["live_gc_subscription_activated"] is False, result
+          assert result["formal_forward_paper_evaluation_started"] is False, result
+          assert result["broker_side_effects_allowed"] is False, result
+          assert result["telegram_side_effects_allowed"] is False, result
+          assert result["super_signals_side_effects_allowed"] is False, result
+          PY
+
+      - name: Preserve exact Day 40 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day40-prepaper-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day40_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
