@@ -195,6 +195,8 @@ def test_manifest_preserves_v1_safety_and_defers_gateway_promotion() -> None:
     assert manifest["counter_argument_required_for_all_actions"] is True
     assert manifest["actionable_invalidation_required"] is True
     assert manifest["no_trade_shadow_evaluation_required"] is True
+    assert manifest["machine_condition_exact_decimal_strings_supported"] is True
+    assert manifest["machine_condition_forbidden_future_or_runtime_paths"] is True
     assert manifest["position_sizing_fields_allowed"] is False
     assert manifest["confidence_controls_position_size"] is False
     assert manifest["hidden_chain_of_thought_required"] is False
@@ -300,6 +302,19 @@ def test_machine_condition_rejects_unsafe_path_unknown_fields_and_type_mismatch(
 
 
 @pytest.mark.parametrize(
+    "path",
+    [
+        "$.future_evaluation.realized_pnl",
+        "$.broker.account_balance",
+        "$.analysis.reasoning_trace",
+    ],
+)
+def test_machine_condition_rejects_future_runtime_and_hidden_reasoning_paths(path: str) -> None:
+    with pytest.raises(ValueError, match="forbidden evidence segments"):
+        validate_machine_condition(_condition(path=path), name="invalidation_condition")
+
+
+@pytest.mark.parametrize(
     ("operator", "observed", "expected", "result"),
     [
         ("lt", 2490.0, 2500.0, True),
@@ -315,6 +330,12 @@ def test_numeric_machine_conditions_are_deterministically_evaluable(
     context = {"gold": {"quote_context": {"mid": observed}}}
     condition = _condition(operator=operator, value=expected)
     assert evaluate_machine_condition(condition, context) is result
+
+
+def test_exact_decimal_string_observations_are_numeric_when_explicitly_typed() -> None:
+    context = {"gold": {"quote_context": {"mid": "2488.000000000001"}}}
+    condition = _condition(operator="lt", value=2489.0)
+    assert evaluate_machine_condition(condition, context) is True
 
 
 def test_text_boolean_and_indexed_machine_conditions_are_evaluable() -> None:
@@ -334,11 +355,11 @@ def test_text_boolean_and_indexed_machine_conditions_are_evaluable() -> None:
     ) is True
 
 
-def test_machine_condition_unknown_or_type_mismatch_propagates_unknown() -> None:
+def test_machine_condition_unknown_or_unparseable_value_propagates_unknown() -> None:
     condition = _condition()
     assert evaluate_machine_condition(condition, {"gold": {}}) is None
     assert evaluate_machine_condition(
-        condition, {"gold": {"quote_context": {"mid": "2490"}}}
+        condition, {"gold": {"quote_context": {"mid": "not-a-number"}}}
     ) is None
 
 
