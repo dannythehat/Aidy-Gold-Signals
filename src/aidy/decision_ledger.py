@@ -473,9 +473,12 @@ def _validate_cross_links(
                 raise ValueError("Gateway decision_digest must be null when no decision exists.")
         elif gateway.get("decision_digest") != decision_digest:
             raise ValueError("Gateway decision digest does not match the stored decision.")
-    if post is not None and decision is not None:
-        if post.get("decision_action") != decision.get("action"):
-            raise ValueError("Post-model decision_action does not match the stored decision.")
+    if (
+        post is not None
+        and decision is not None
+        and post.get("decision_action") != decision.get("action")
+    ):
+        raise ValueError("Post-model decision_action does not match the stored decision.")
 
 
 def build_ex_ante_evaluation_record(
