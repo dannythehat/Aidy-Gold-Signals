@@ -1,0 +1,144 @@
+name: AIDY Day 44 Policy Cross-Asset Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/policy_cross_asset.py"
+      - "tests/test_day44_policy_cross_asset.py"
+      - "scripts/day44_policy_cross_asset_acceptance.py"
+      - "docs/day44-policy-cross-asset-j11-j14-contract.md"
+      - ".github/workflows/day44-policy-cross-asset-acceptance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day44-policy-cross-asset-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  DAY44_BASE_SHA: 5d3c21077c918db0df789898fec3dacb762fb6b3
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 43 base and bounded Day 44 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY44_BASE_SHA" HEAD)" = "$DAY44_BASE_SHA"
+          allowed='^(src/aidy/policy_cross_asset.py|tests/test_day44_policy_cross_asset.py|scripts/day44_policy_cross_asset_acceptance.py|docs/day44-policy-cross-asset-j11-j14-contract.md|.github/workflows/day44-policy-cross-asset-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY44_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 44 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/policy_cross_asset.py \
+            tests/test_day44_policy_cross_asset.py \
+            scripts/day44_policy_cross_asset_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused Day 44 adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day44_policy_cross_asset.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Exact-head deterministic acceptance A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day44_policy_cross_asset_acceptance.py \
+            --output-dir day44_artifacts_a \
+            > /tmp/day44-summary-a.json
+          cat /tmp/day44-summary-a.json
+
+      - name: Exact-head deterministic acceptance B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day44_policy_cross_asset_acceptance.py \
+            --output-dir day44_artifacts_b \
+            > /tmp/day44-summary-b.json
+          cat /tmp/day44-summary-b.json
+
+      - name: Require byte-identical deterministic evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day44_artifacts_a day44_artifacts_b
+
+      - name: Enforce Day 44 research and no-promotion boundary
+        shell: bash
+        env:
+          CANDIDATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary = json.loads(Path('day44_artifacts_a/summary.json').read_text(encoding='utf-8'))
+          assert summary['head_sha'] == os.environ['CANDIDATE_HEAD_SHA'], summary
+          assert summary['all_series_have_source_timestamp_pit_contract'] is True, summary
+          assert summary['all_source_contracts_valid'] is True, summary
+          assert summary['architecture_fixture_only'] is True, summary
+          assert summary['architecture_fixture_used_as_outcome_data'] is False, summary
+          assert summary['retrospective_fixture_decision_input_allowed'] is False, summary
+          assert summary['policy_path_independent_confirmation_units'] == 1, summary
+          assert summary['rates_independent_confirmation_units'] == 1, summary
+          assert summary['rates_double_counting_allowed'] is False, summary
+          assert summary['risk_state_is_context_not_gold_proxy'] is True, summary
+          for experiment in ('j11', 'j12', 'j13', 'j14'):
+              assert summary[f'{experiment}_result_state'] in {'insufficient', 'null', 'descriptive_non_null'}, summary
+          assert summary['null_or_insufficient_results_retained'] is True, summary
+          assert summary['day32_trial_registry_bound'] is True, summary
+          assert summary['day37_purge_embargo_bound'] is True, summary
+          assert summary['correlation_mining_allowed'] is False, summary
+          assert summary['cross_asset_features_mandatory'] == [], summary
+          assert summary['crude_copper_bitcoin_added'] is False, summary
+          assert summary['paid_live_market_data_activation_performed'] is False, summary
+          assert summary['formal_forward_evidence_created'] is False, summary
+          assert summary['predictive_edge_claimed'] is False, summary
+          assert summary['trading_gate_created'] is False, summary
+          assert summary['super_signals_modified'] is False, summary
+          PY
+
+      - name: Preserve Day 44 acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day44-policy-cross-asset-${{ github.event.pull_request.head.sha }}
+          path: day44_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
