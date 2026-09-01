@@ -41,7 +41,7 @@ def _parse_utc_timestamp(value: object, *, name: str) -> datetime:
     if not isinstance(value, str) or not value.strip():
         raise RuntimeError(f"Databento {name} is missing from the entitled range.")
     try:
-        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value.strip())
     except ValueError as exc:
         raise RuntimeError(f"Databento {name} is not a valid ISO-8601 timestamp.") from exc
     if parsed.tzinfo is None:
@@ -52,10 +52,10 @@ def _parse_utc_timestamp(value: object, *, name: str) -> datetime:
 def _available_ohlcv_window(dataset_range: dict[str, object]) -> tuple[datetime, datetime]:
     schema_map = dataset_range.get("schema")
     if not isinstance(schema_map, dict):
-        raise RuntimeError("Databento dataset range did not include per-schema availability.")
+        raise TypeError("Databento dataset range did not include per-schema availability.")
     ohlcv_range = schema_map.get("ohlcv-1m")
     if not isinstance(ohlcv_range, dict):
-        raise RuntimeError("Databento account has no entitled ohlcv-1m availability range.")
+        raise TypeError("Databento account has no entitled ohlcv-1m availability range.")
 
     available_start = _parse_utc_timestamp(
         ohlcv_range.get("start"),
@@ -71,9 +71,7 @@ def _available_ohlcv_window(dataset_range: dict[str, object]) -> tuple[datetime,
     request_end = available_end.replace(second=0, microsecond=0)
     if request_end > available_end:
         request_end -= timedelta(minutes=1)
-    request_start = request_end - timedelta(minutes=10)
-    if request_start < available_start:
-        request_start = available_start
+    request_start = max(request_end - timedelta(minutes=10), available_start)
     if request_start >= request_end:
         raise RuntimeError("Databento ohlcv-1m range is too short for the Day 41 smoke test.")
     return request_start, request_end
