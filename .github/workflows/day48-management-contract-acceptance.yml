@@ -1,0 +1,121 @@
+name: AIDY Day 48 Management Contract Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/management_contract_v2.py"
+      - "tests/test_day48_management_contract_v2.py"
+      - "scripts/day48_management_acceptance.py"
+      - "docs/day48-management-contract-v2.md"
+      - ".github/workflows/day48-management-contract-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DAY48_BASE_SHA: fe422b62efbb3814a1cf066eca6ee9cb3c9f89b0
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify Day 48 base and bounded surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY48_BASE_SHA" HEAD)" = "$DAY48_BASE_SHA"
+          allowed='^(src/aidy/management_contract_v2.py|tests/test_day48_management_contract_v2.py|scripts/day48_management_acceptance.py|docs/day48-management-contract-v2.md|.github/workflows/day48-management-contract-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY48_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 48 changes:"; echo "$unexpected"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check src/aidy/management_contract_v2.py tests/test_day48_management_contract_v2.py scripts/day48_management_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Enforce no execution integrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|telegram|super_signals|broker|account|follower)' src/aidy/management_contract_v2.py; then
+            echo "Day 48 imported a forbidden execution integration"
+            exit 1
+          fi
+
+      - name: Focused Day 48 adversarial tests
+        shell: bash
+        run: |
+          uv run pytest -q tests/test_day48_management_contract_v2.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          uv run pytest -q
+
+      - name: Deterministic acceptance A
+        shell: bash
+        run: |
+          uv run python scripts/day48_management_acceptance.py --output-dir day48_artifacts_a > /tmp/day48-a.json
+          cat /tmp/day48-a.json
+
+      - name: Deterministic acceptance B
+        shell: bash
+        run: |
+          uv run python scripts/day48_management_acceptance.py --output-dir day48_artifacts_b > /tmp/day48-b.json
+          cat /tmp/day48-b.json
+
+      - name: Require byte-identical evidence
+        shell: bash
+        run: diff -ru day48_artifacts_a day48_artifacts_b
+
+      - name: Enforce Day 48 boundaries
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          with open("day48_artifacts_a/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "fe422b62efbb3814a1cf066eca6ee9cb3c9f89b0", result
+          assert result["head_sha"] == head, result
+          assert result["exact_originating_decision_id_required"] is True, result
+          assert result["original_thesis_invalidation_immutable"] is True, result
+          assert result["wrong_or_missing_target_ids_fail_closed"] is True, result
+          assert result["risk_reducing_stop_geometry_only"] is True, result
+          assert result["every_admitted_action_ledgered"] is True, result
+          assert result["execution_allowed"] is False, result
+          assert result["account_sizing_allowed"] is False, result
+          assert result["broker_or_follower_state_allowed"] is False, result
+          assert result["super_signals_modified"] is False, result
+          PY
+
+      - name: Preserve Day 48 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day48-management-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day48_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
