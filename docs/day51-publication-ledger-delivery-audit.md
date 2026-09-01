@@ -66,6 +66,10 @@ result = await deliver_with_ledger(
 
 `envelope` must already be a verified Day 50 publication envelope derived from an admitted immutable decision. Day 52 owns end-to-end orchestration from watcher through publisher/ledger.
 
+## Acceptance
+
+The exact PR head must pass focused Day 51 adversarial tests, the full repository regression, deterministic A/B evidence comparison, and boundary assertions before merge. Acceptance never sends a real Telegram message.
+
 ## Security and system boundary
 
 - Telegram token is supplied at runtime only and is never persisted in D1 rows, attempts or reconciliation events.
