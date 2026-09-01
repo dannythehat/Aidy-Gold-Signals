@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
@@ -14,6 +15,7 @@ DAY41_PROMOTION_POLICY_VERSION = "aidy_gc_shadow_promotion_policy_v1"
 XAU_REFERENCE_SOURCE = "gold_api_public"
 MAX_ACCEPTANCE_PAIR_SKEW_SECONDS = 3600
 PROMOTION_MAX_P95_SKEW_SECONDS = 120
+_DATABENTO_KEY_PATTERN = re.compile(r"db-[A-Za-z0-9]{29}")
 
 
 class ShadowSpineError(ValueError):
@@ -29,20 +31,17 @@ def digest(value: object) -> str:
 
 
 def normalize_databento_api_key(raw: str) -> str:
-    """Normalize common secret wrappers without weakening Databento's key contract."""
+    """Extract exactly one Databento API key without logging surrounding secret text."""
 
     if not isinstance(raw, str):
         raise ShadowSpineError("Databento API key secret must be text.")
-    key = raw.strip()
-    if key.startswith("DATABENTO_API_KEY="):
-        key = key.split("=", 1)[1].strip()
-    if len(key) >= 2 and key[0] == key[-1] and key[0] in {"\"", "'"}:
-        key = key[1:-1].strip()
-    if len(key) != 32 or not key.startswith("db-"):
+    matches = _DATABENTO_KEY_PATTERN.findall(raw)
+    unique_matches = sorted(set(matches))
+    if len(unique_matches) != 1:
         raise ShadowSpineError(
-            "Databento API key secret is not a 32-character key starting with db-."
+            "Databento API key secret must contain exactly one 32-character key starting with db-."
         )
-    return key
+    return unique_matches[0]
 
 
 def _decimal(value: Any, *, name: str) -> Decimal:
