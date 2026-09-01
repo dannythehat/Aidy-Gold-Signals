@@ -14,12 +14,14 @@ from aidy.gc_shadow_spine import (
     XauObservation,
     day41_architecture_manifest,
     gc_shadow_promotion_policy,
+    normalize_databento_api_key,
     pair_shadow_observations,
     parse_databento_ohlcv_jsonl,
     xau_observation_from_gold_api,
 )
 
 BASE = datetime(2026, 9, 1, 7, 0, tzinfo=UTC)
+FAKE_DATABENTO_KEY = "db-" + ("a" * 29)
 
 
 def test_databento_jsonl_requires_mapped_contract_identity() -> None:
@@ -159,3 +161,21 @@ def test_invalid_gold_api_payload_fails_closed() -> None:
                 "updatedAt": "2026-09-01T07:00:05Z",
             }
         )
+
+
+def test_databento_api_key_raw_format_is_retained() -> None:
+    assert normalize_databento_api_key(FAKE_DATABENTO_KEY) == FAKE_DATABENTO_KEY
+
+
+def test_databento_api_key_common_wrappers_are_safely_removed() -> None:
+    assert normalize_databento_api_key(f'"{FAKE_DATABENTO_KEY}"') == FAKE_DATABENTO_KEY
+    assert normalize_databento_api_key(f"DATABENTO_API_KEY={FAKE_DATABENTO_KEY}") == FAKE_DATABENTO_KEY
+    assert (
+        normalize_databento_api_key(f"DATABENTO_API_KEY='{FAKE_DATABENTO_KEY}'")
+        == FAKE_DATABENTO_KEY
+    )
+
+
+def test_databento_api_key_invalid_final_value_fails_closed() -> None:
+    with pytest.raises(ShadowSpineError, match="32-character"):
+        normalize_databento_api_key("not-a-databento-key")
