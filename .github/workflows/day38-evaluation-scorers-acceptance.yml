@@ -1,0 +1,172 @@
+name: AIDY Day 38 Evaluation Scorers Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/evaluation_scoring.py"
+      - "tests/test_day38_evaluation_scoring.py"
+      - "scripts/day38_evaluation_acceptance.py"
+      - "docs/day38-evaluation-scorers-j16-j21.md"
+      - ".github/workflows/day38-evaluation-scorers-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: day38-evaluation-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+  AIDY_BIGQUERY_DATASET: aidy_analytics_test
+  AIDY_BIGQUERY_LOCATION: EU
+  DAY38_BASE_SHA: d800f417c8a93671875ed22378ef01eb8018c3c6
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 37 base and bounded Day 38 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY38_BASE_SHA" HEAD)" = "$DAY38_BASE_SHA"
+          allowed='^(src/aidy/evaluation_scoring.py|tests/test_day38_evaluation_scoring.py|scripts/day38_evaluation_acceptance.py|docs/day38-evaluation-scorers-j16-j21.md|.github/workflows/day38-evaluation-scorers-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY38_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 38 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/evaluation_scoring.py \
+            tests/test_day38_evaluation_scoring.py \
+            scripts/day38_evaluation_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused adversarial Day 38 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day38_evaluation_scoring.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Require existing Google Cloud credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "Missing AIDY_GCP_SERVICE_ACCOUNT_JSON"; exit 1; }
+          python - <<'PY'
+          import json
+          import os
+
+          info = json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as handle:
+              handle.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded BigQuery dependency
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Genuine frozen warehouse evaluation A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day38_evaluation_acceptance.py \
+            --output-dir day38_artifacts_a \
+            > /tmp/day38-summary-a.json
+          cat /tmp/day38-summary-a.json
+
+      - name: Genuine frozen warehouse evaluation B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day38_evaluation_acceptance.py \
+            --output-dir day38_artifacts_b \
+            > /tmp/day38-summary-b.json
+          cat /tmp/day38-summary-b.json
+
+      - name: Byte-for-byte deterministic warehouse evidence check
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day38_artifacts_a day38_artifacts_b
+
+      - name: Enforce Day 38 evidence contract without result shopping
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import subprocess
+
+          with open("day38_artifacts_a/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "d800f417c8a93671875ed22378ef01eb8018c3c6", result
+          assert result["head_sha"] == head, result
+          assert result["frozen_query_manifest_digest"] == "119d8c2a1a11cba44d8195fff81be640f7b9c084d0d7b8c28a61dedfa64e5ac5", result
+          assert result["frozen_candidate_store_digest"] == "bd3c81b54ec05b2150e6e6ecbdffbc3c1e4f943c6a23c9a8ee4977c1dc1c3a88", result
+          assert result["frozen_day24_query_count"] == 1000, result
+          assert result["j16_input_query_count"] == 1000, result
+          assert result["j16_actual_frozen_day24_warehouse_evaluation"] is True, result
+          assert result["j21_actual_frozen_case_store_evaluation"] is True, result
+          assert result["j16"]["status"] in {"pass", "null", "inconclusive"}, result
+          assert result["j16"]["post_hardening_j16_is_authoritative"] is True, result
+          assert result["j16"]["day23_baseline_is_authoritative"] is False, result
+          assert result["j21"]["status"] in {"differentiated", "null", "inconclusive"}, result
+          assert result["j21"]["setup_variant_count"] == 20, result
+          assert result["j21"]["taxonomy_expansion_allowed"] is False, result
+          assert result["j16_pass_required_for_day38_architecture_acceptance"] is False, result
+          assert result["j21_differentiation_required_for_day38_architecture_acceptance"] is False, result
+          assert result["null_and_inconclusive_scientific_results_retained"] is True, result
+          assert result["outcome_values_used_to_define_setup_labels"] is False, result
+          assert result["evaluation_episode_selection_uses_outcome_values"] is False, result
+          assert result["predictive_edge_claimed"] is False, result
+          assert result["trading_gate_created"] is False, result
+          assert result["telegram_side_effects_allowed"] is False, result
+          assert result["broker_side_effects_allowed"] is False, result
+          assert result["super_signals_side_effects_allowed"] is False, result
+          PY
+
+      - name: Preserve exact Day 38 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day38-evaluation-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day38_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
