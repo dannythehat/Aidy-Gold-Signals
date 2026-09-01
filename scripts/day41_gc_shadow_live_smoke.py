@@ -19,6 +19,7 @@ from aidy.databento_gc import (
 from aidy.gc_shadow_spine import (
     canonical_json,
     day41_architecture_manifest,
+    digest,
     normalize_databento_api_key,
     pair_shadow_observations,
     parse_databento_ohlcv_jsonl,
@@ -117,7 +118,7 @@ def _symbology_resolve(
 def _continuous_instrument_ids(payload: dict[str, object]) -> list[str]:
     result = payload.get("result")
     if not isinstance(result, dict):
-        raise RuntimeError("Databento continuous resolution is missing its result mapping.")
+        raise TypeError("Databento continuous resolution is missing its result mapping.")
     entries = result.get(GC_CONTINUOUS_SYMBOL)
     if not isinstance(entries, list) or not entries:
         raise RuntimeError("Databento continuous resolution returned no GC instruments.")
@@ -205,6 +206,10 @@ def main() -> int:
             "Genuine Databento GC and Gold-API XAU observations exceeded the acceptance skew limit."
         )
 
+    symbology_evidence = {
+        "continuous": continuous_resolution,
+        "raw": raw_resolutions,
+    }
     evidence = {
         "evidence_version": "aidy_day41_genuine_shadow_evidence_v1",
         "candidate_head_sha": head_sha,
@@ -218,12 +223,7 @@ def main() -> int:
         "databento_live_smoke_max_cost_usd": str(LIVE_SMOKE_MAX_COST_USD),
         "databento_download_receipt": receipt,
         "databento_contract_map": {str(key): value for key, value in sorted(contract_map.items())},
-        "databento_symbology_resolution_digest": canonical_json(
-            {
-                "continuous": continuous_resolution,
-                "raw": raw_resolutions,
-            }
-        ),
+        "databento_symbology_resolution_digest": digest(symbology_evidence),
         "shadow_pair": pair,
         "architecture": day41_architecture_manifest(),
         "paid_subscription_activated": False,
