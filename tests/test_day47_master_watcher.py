@@ -269,9 +269,8 @@ def _dossier(state: dict, context: dict) -> dict:
         "temporal_dispersion": {},
         "unclassified_aggregate_counts": [],
     }
-    invalidation_inputs = {
-        "gold": {"quote_context": {"mid": context["gold"]["quote_context"]["mid"]}}
-    }
+    mid = context.get("gold", {}).get("quote_context", {}).get("mid")
+    invalidation_inputs = {"gold": {"quote_context": {"mid": mid}}}
     value = {
         "dossier_version": CONTEXT_DOSSIER_VERSION_V2,
         "composer_version": CONTEXT_COMPOSER_VERSION_V2,
@@ -675,7 +674,7 @@ async def test_successful_watch_records_one_call_cost_and_no_side_effects() -> N
 
 
 @pytest.mark.asyncio
-async def test_duplicate_identical_input_is_suppressed_after_cadence() -> None:
+async def test_duplicate_identical_input_is_suppressed_at_freshness_boundary() -> None:
     record, state, context, dossier = _inputs()
     first = await run_watch_cycle(
         ex_ante_record=record,
@@ -691,13 +690,39 @@ async def test_duplicate_identical_input_is_suppressed_after_cadence() -> None:
         paper_state=state,
         current_context=context,
         historical_dossier=dossier,
-        now_utc=WATCH_TIME + timedelta(seconds=WATCHER_CADENCE_SECONDS + 30),
+        now_utc=WATCH_TIME + timedelta(seconds=WATCHER_CADENCE_SECONDS),
         gateway=gateway,
         previous_receipts=[first],
     )
     assert second["status"] == "suppressed"
     assert second["reason_codes"] == ["watch_duplicate_input"]
     assert second["model_call_count"] == 0
+    assert gateway.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_identical_input_after_freshness_boundary_is_blocked_stale() -> None:
+    record, state, context, dossier = _inputs()
+    first = await run_watch_cycle(
+        ex_ante_record=record,
+        paper_state=state,
+        current_context=context,
+        historical_dossier=dossier,
+        now_utc=WATCH_TIME,
+        gateway=StubGateway(),
+    )
+    gateway = StubGateway()
+    second = await run_watch_cycle(
+        ex_ante_record=record,
+        paper_state=state,
+        current_context=context,
+        historical_dossier=dossier,
+        now_utc=WATCH_TIME + timedelta(seconds=WATCHER_CADENCE_SECONDS + 1),
+        gateway=gateway,
+        previous_receipts=[first],
+    )
+    assert second["status"] == "blocked"
+    assert second["reason_codes"] == ["watch_context_stale"]
     assert gateway.calls == 0
 
 
@@ -814,10 +839,7 @@ async def test_gateway_identity_mismatch_fails_closed() -> None:
 @pytest.mark.asyncio
 async def test_invalid_history_fails_closed_without_call() -> None:
     record, state, context, dossier = _inputs()
-    bad = {
-        "receipt_version": "bad",
-        "receipt_digest": "0" * 64,
-    }
+    bad = {"receipt_version": "bad", "receipt_digest": "0" * 64}
     gateway = StubGateway()
     receipt = await run_watch_cycle(
         ex_ante_record=record,
@@ -977,7 +999,7 @@ async def test_history_summary_counts_calls_attempts_costs_and_suppression() -> 
         paper_state=state,
         current_context=context,
         historical_dossier=dossier,
-        now_utc=WATCH_TIME + timedelta(seconds=WATCHER_CADENCE_SECONDS + 1),
+        now_utc=WATCH_TIME + timedelta(seconds=WATCHER_CADENCE_SECONDS),
         gateway=StubGateway(),
         previous_receipts=[first],
     )
