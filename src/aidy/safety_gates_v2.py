@@ -4,15 +4,16 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
 
+from aidy.context_packet import verify_context_hash
 from aidy.master_trader_contract_v2 import (
     master_trader_decision_digest_versioned,
     validate_master_trader_decision_versioned,
 )
 from aidy.pit_reconstruction import normalize_as_of
 from aidy.safety_gates import (
+    _ACTIONS_BY_INSTRUCTION,
     DEFAULT_MAX_CONTEXT_AGE_SECONDS,
     SAFETY_GATES_VERSION,
-    _ACTIONS_BY_INSTRUCTION,
     _blockers,
     _gate,
     _pre_receipt_ok,
@@ -20,7 +21,6 @@ from aidy.safety_gates import (
     _target_count,
     compute_safety_gate_digest,
 )
-from aidy.context_packet import verify_context_hash
 
 SAFETY_GATES_V2_RUNTIME_VERSION = "aidy_day52_versioned_post_model_safety_v1"
 
@@ -228,7 +228,5 @@ def evaluate_post_model_safety_v2(
         "checks": checks,
         "runtime_adapter_version": SAFETY_GATES_V2_RUNTIME_VERSION,
     }
-    # Day 34 verifies Day-22 receipt digests and tolerates extra immutable
-    # metadata, so the adapter identity is itself authenticated here.
     result["gate_digest"] = compute_safety_gate_digest(result)
     return result
