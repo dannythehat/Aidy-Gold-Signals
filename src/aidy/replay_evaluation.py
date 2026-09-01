@@ -265,7 +265,7 @@ def build_chronological_split_manifest(
         ("calibration", "holdout", "calibration_end"),
     ):
         boundary = boundaries[boundary_key]
-        overlap_cutoff = boundary + timedelta(minutes=purge)
+        overlap_cutoff = boundary - timedelta(minutes=purge)
         ids = [
             str(row["case_id"])
             for row in nominal[prior]
