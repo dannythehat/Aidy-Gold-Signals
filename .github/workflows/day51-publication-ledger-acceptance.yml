@@ -1,0 +1,159 @@
+name: AIDY Day 51 Publication Ledger Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "migrations/d1/0003_publication_ledger.sql"
+      - "src/aidy/publication_ledger.py"
+      - "tests/test_day51_publication_ledger.py"
+      - "scripts/day51_publication_ledger_acceptance.py"
+      - "docs/day51-publication-ledger-delivery-audit.md"
+      - ".github/workflows/day51-publication-ledger-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DAY51_BASE_SHA: 8765d0d3743ac3b59a1083aea14876615df5bb42
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify Day 51 base and bounded surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY51_BASE_SHA" HEAD)" = "$DAY51_BASE_SHA"
+          allowed='^(migrations/d1/0003_publication_ledger.sql|src/aidy/publication_ledger.py|tests/test_day51_publication_ledger.py|scripts/day51_publication_ledger_acceptance.py|docs/day51-publication-ledger-delivery-audit.md|.github/workflows/day51-publication-ledger-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY51_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 51 changes:"; echo "$unexpected"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check src/aidy/publication_ledger.py tests/test_day51_publication_ledger.py scripts/day51_publication_ledger_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Validate D1 migration locally
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db = sqlite3.connect(':memory:')
+          for path in (
+              'migrations/d1/0001_aidy_ops.sql',
+              'migrations/d1/0002_cross_market_evidence.sql',
+              'migrations/d1/0003_publication_ledger.sql',
+          ):
+              db.executescript(Path(path).read_text())
+          names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+          required = {'publication_deliveries','publication_attempts','publication_reconciliation_events'}
+          assert required <= names, names
+          PY
+
+      - name: Verify Wrangler carries D1 migration directory
+        shell: bash
+        run: grep -q '"migrations_dir": "migrations/d1"' wrangler.test.example.jsonc
+
+      - name: Enforce delivery-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|super_signals|broker|account|follower)' src/aidy/publication_ledger.py; then
+            echo "Day 51 imported a forbidden execution/downstream integration"
+            exit 1
+          fi
+
+      - name: Focused Day 51 adversarial tests
+        shell: bash
+        run: uv run pytest -q tests/test_day51_publication_ledger.py
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
+
+      - name: Deterministic acceptance A
+        shell: bash
+        run: |
+          uv run python scripts/day51_publication_ledger_acceptance.py --output-dir day51_artifacts_a > /tmp/day51-a.json
+          cat /tmp/day51-a.json
+
+      - name: Deterministic acceptance B
+        shell: bash
+        run: |
+          uv run python scripts/day51_publication_ledger_acceptance.py --output-dir day51_artifacts_b > /tmp/day51-b.json
+          cat /tmp/day51-b.json
+
+      - name: Require byte-identical evidence
+        shell: bash
+        run: diff -ru day51_artifacts_a day51_artifacts_b
+
+      - name: Enforce Day 51 acceptance boundaries
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          with open('day51_artifacts_a/summary.json', encoding='utf-8') as handle:
+              result = json.load(handle)
+          head = subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip()
+          assert result['ok'] is True, result
+          assert result['base_sha'] == '8765d0d3743ac3b59a1083aea14876615df5bb42', result
+          assert result['head_sha'] == head, result
+          assert result['storage'] == 'cloudflare_d1', result
+          assert result['normal_send_status'] == 'sent', result
+          assert result['normal_retry_status'] == 'already_sent', result
+          assert result['normal_transport_call_count'] == 1, result
+          assert result['normal_attempt_count'] == 1, result
+          assert result['exact_text_reconstructable'] is True, result
+          assert result['exact_message_digest_preserved'] is True, result
+          assert result['decision_identity_preserved'] is True, result
+          assert result['decision_record_unchanged'] is True, result
+          assert result['delivery_truth_separate'] is True, result
+          assert result['ambiguous_failure_status'] == 'delivery_uncertain', result
+          assert result['blind_retry_status'] == 'blocked', result
+          assert result['ambiguous_transport_call_count_before_reconciliation'] == 1, result
+          assert result['reconciled_state'] == 'retryable_failed', result
+          assert result['safe_retry_status'] == 'sent', result
+          assert result['safe_retry_transport_call_count'] == 1, result
+          assert result['uncertain_attempt_states'] == ['delivery_uncertain','sent'], result
+          assert result['no_duplicate_after_success'] is True, result
+          assert result['no_blind_retry_after_uncertain'] is True, result
+          assert result['migration_is_durable_d1'] is True, result
+          assert result['secrets_persisted'] is False, result
+          assert result['real_telegram_post_performed'] is False, result
+          assert result['broker_dependency_allowed'] is False, result
+          assert result['follower_dependency_allowed'] is False, result
+          assert result['super_signals_dependency_allowed'] is False, result
+          assert result['formal_forward_evidence_created'] is False, result
+          PY
+
+      - name: Preserve Day 51 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day51-publication-ledger-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day51_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
