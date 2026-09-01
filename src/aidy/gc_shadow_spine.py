@@ -13,6 +13,7 @@ from aidy.databento_gc import DATABENTO_DATASET, GC_CONTINUOUS_SYMBOL
 DAY41_SHADOW_VERSION = "aidy_gc_xau_shadow_spine_v1"
 DAY41_PROMOTION_POLICY_VERSION = "aidy_gc_shadow_promotion_policy_v1"
 XAU_REFERENCE_SOURCE = "gold_api_public"
+HISTORICAL_XAU_REFERENCE_SOURCE = "histdata_historical"
 MAX_ACCEPTANCE_PAIR_SKEW_SECONDS = 3600
 PROMOTION_MAX_P95_SKEW_SECONDS = 120
 _DATABENTO_KEY_PATTERN = re.compile(r"db-[A-Za-z0-9]{29}")
@@ -167,6 +168,8 @@ class XauObservation:
     source: str = XAU_REFERENCE_SOURCE
     symbol: str = "XAUUSD"
     source_digest: str | None = None
+    provenance_class: str = "live_observation"
+    pit_eligible: bool = True
 
     def as_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -175,6 +178,8 @@ class XauObservation:
             "observed_at_utc": self.observed_at.astimezone(UTC).isoformat(),
             "price": str(self.price),
             "source_digest": self.source_digest,
+            "provenance_class": self.provenance_class,
+            "pit_eligible": self.pit_eligible,
         }
         body["observation_digest"] = digest(body)
         return body
@@ -280,7 +285,17 @@ def pair_shadow_observations(
 ) -> dict[str, Any]:
     if gc.provider != "Databento" or gc.dataset != DATABENTO_DATASET:
         raise ShadowSpineError("GC source substitution is forbidden.")
-    if xau.source != XAU_REFERENCE_SOURCE or xau.symbol != "XAUUSD":
+    if xau.symbol != "XAUUSD":
+        raise ShadowSpineError("XAU reference substitution is forbidden.")
+    if xau.source == XAU_REFERENCE_SOURCE:
+        if xau.provenance_class != "live_observation" or xau.pit_eligible is not True:
+            raise ShadowSpineError("Live XAU reference provenance is inconsistent.")
+        historical_research_pair = False
+    elif xau.source == HISTORICAL_XAU_REFERENCE_SOURCE:
+        if xau.provenance_class != "retrospective_history" or xau.pit_eligible is not False:
+            raise ShadowSpineError("Historical XAU reference provenance is inconsistent.")
+        historical_research_pair = True
+    else:
         raise ShadowSpineError("XAU reference substitution is forbidden.")
     if max_skew_seconds <= 0:
         raise ShadowSpineError("max_skew_seconds must be positive.")
@@ -299,6 +314,8 @@ def pair_shadow_observations(
         "max_pair_skew_seconds": max_skew_seconds,
         "basis_usd": str(basis) if basis is not None else None,
         "basis_bps": str(basis_bps) if basis_bps is not None else None,
+        "historical_research_pair": historical_research_pair,
+        "formal_forward_evidence_eligible": False,
         "gc_shadow_only": True,
         "xau_reference_retained": True,
         "silent_source_substitution_allowed": False,
@@ -343,6 +360,9 @@ def day41_architecture_manifest() -> dict[str, Any]:
         "dataset": DATABENTO_DATASET,
         "continuous_symbol": GC_CONTINUOUS_SYMBOL,
         "xau_reference_source": XAU_REFERENCE_SOURCE,
+        "historical_xau_reference_source": HISTORICAL_XAU_REFERENCE_SOURCE,
+        "free_historical_pair_allowed": True,
+        "formal_forward_evidence_created": False,
         "vendor_separable_adapter": True,
         "gc_shadow_only": True,
         "xau_reference_retained": True,
