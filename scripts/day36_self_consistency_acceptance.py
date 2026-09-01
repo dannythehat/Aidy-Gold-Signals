@@ -6,11 +6,14 @@ from hashlib import sha256
 from pathlib import Path
 
 from aidy.self_consistency import canonical_json, digest, self_consistency_manifest
+from aidy.self_consistency_ledger import SELF_CONSISTENCY_LEDGER_PROJECTION_VERSION
 
 BASE_SHA = "619923f813c3f6527f4c765174b91e272a4dd8a3"
 EXPECTED_FILES = (
     "src/aidy/self_consistency.py",
+    "src/aidy/self_consistency_ledger.py",
     "tests/test_day36_self_consistency.py",
+    "tests/test_day36_self_consistency_ledger.py",
     "docs/day36-self-consistency-contract.md",
     "scripts/day36_self_consistency_acceptance.py",
     ".github/workflows/day36-self-consistency-acceptance.yml",
@@ -87,6 +90,8 @@ def main() -> None:
         "independent_contract_validation_required": True,
         "independent_post_model_safety_required": True,
         "all_three_sample_receipts_ledger_ready": True,
+        "all_three_full_sample_decisions_ledger_ready": True,
+        "ledger_projection_version": SELF_CONSISTENCY_LEDGER_PROJECTION_VERSION,
         "disagreement_metrics_ledger_ready": True,
         "max_total_provider_attempts": 6,
         "multi_agent_debate_used": False,
