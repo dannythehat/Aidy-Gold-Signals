@@ -1,0 +1,50 @@
+name: Day 36 Master Trader self-consistency acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/self_consistency.py"
+      - "src/aidy/self_consistency_ledger.py"
+      - "tests/test_day36_self_consistency.py"
+      - "tests/test_day36_self_consistency_ledger.py"
+      - "scripts/day36_self_consistency_acceptance.py"
+      - "docs/day36-self-consistency-contract.md"
+      - ".github/workflows/day36-self-consistency-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bounded acceptance dependencies
+        run: pip install -e . pytest pytest-asyncio ruff
+      - name: Changed-file lint
+        run: ruff check src/aidy/self_consistency.py src/aidy/self_consistency_ledger.py tests/test_day36_self_consistency.py tests/test_day36_self_consistency_ledger.py scripts/day36_self_consistency_acceptance.py
+      - name: Focused adversarial tests
+        run: pytest -q tests/test_day36_self_consistency.py tests/test_day36_self_consistency_ledger.py
+      - name: Full regression
+        run: pytest -q
+      - name: Deterministic acceptance run A
+        run: python scripts/day36_self_consistency_acceptance.py --output-dir day36_artifacts_a
+      - name: Deterministic acceptance run B
+        run: python scripts/day36_self_consistency_acceptance.py --output-dir day36_artifacts_b
+      - name: Byte-for-byte deterministic artifact check
+        run: diff -ru day36_artifacts_a day36_artifacts_b
+      - uses: actions/upload-artifact@v4
+        with:
+          name: day36-self-consistency-evidence
+          path: day36_artifacts_a
+          if-no-files-found: error
+          retention-days: 7
