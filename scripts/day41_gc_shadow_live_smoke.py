@@ -14,6 +14,7 @@ from aidy.databento_gc import DatabentoHistoricalClient, HistoricalRequest
 from aidy.gc_shadow_spine import (
     canonical_json,
     day41_architecture_manifest,
+    normalize_databento_api_key,
     pair_shadow_observations,
     parse_databento_ohlcv_jsonl,
     xau_observation_from_gold_api,
@@ -42,8 +43,10 @@ def main() -> int:
     parser.add_argument("--raw-gc", default="day41_gc_sample.jsonl")
     args = parser.parse_args()
 
-    if not os.environ.get("DATABENTO_API_KEY", "").strip():
+    raw_key = os.environ.get("DATABENTO_API_KEY", "")
+    if not raw_key.strip():
         raise RuntimeError("DATABENTO_API_KEY is required for genuine Day 41 evidence.")
+    os.environ["DATABENTO_API_KEY"] = normalize_databento_api_key(raw_key)
 
     root = Path(__file__).resolve().parents[1]
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
