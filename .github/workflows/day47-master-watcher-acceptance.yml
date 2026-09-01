@@ -1,0 +1,158 @@
+name: AIDY Day 47 Master Watcher Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/master_watcher.py"
+      - "tests/test_day47_master_watcher.py"
+      - "scripts/day47_master_watcher_acceptance.py"
+      - "docs/day47-master-watcher-contract.md"
+      - ".github/workflows/day47-master-watcher-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day47-watcher-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  DAY47_BASE_SHA: 512a397ca71ce49807e4046ee868ec09d4f3f467
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify authoritative Day 46 base and bounded Day 47 surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$DAY47_BASE_SHA" HEAD)" = "$DAY47_BASE_SHA"
+          allowed='^(src/aidy/master_watcher.py|tests/test_day47_master_watcher.py|scripts/day47_master_watcher_acceptance.py|docs/day47-master-watcher-contract.md|.github/workflows/day47-master-watcher-acceptance.yml)$'
+          unexpected="$(git diff --name-only "$DAY47_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 47 changes:"; echo "$unexpected"; exit 1; }
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Changed-file static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/master_watcher.py \
+            tests/test_day47_master_watcher.py \
+            scripts/day47_master_watcher_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Enforce no execution or publisher integrations in Day 47 module
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|telegram|super_signals|broker|account|follower)' src/aidy/master_watcher.py; then
+            echo "Day 47 watcher imported a forbidden execution/publisher integration"
+            exit 1
+          fi
+
+      - name: Focused Day 47 adversarial tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day47_master_watcher.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
+
+      - name: Deterministic Day 47 acceptance evidence A
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day47_master_watcher_acceptance.py \
+            --output-dir day47_artifacts_a \
+            > /tmp/day47-summary-a.json
+          cat /tmp/day47-summary-a.json
+
+      - name: Deterministic Day 47 acceptance evidence B
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day47_master_watcher_acceptance.py \
+            --output-dir day47_artifacts_b \
+            > /tmp/day47-summary-b.json
+          cat /tmp/day47-summary-b.json
+
+      - name: Require byte-identical watcher evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          diff -ru day47_artifacts_a day47_artifacts_b
+
+      - name: Enforce Day 47 watcher boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import subprocess
+
+          with open("day47_artifacts_a/summary.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+
+          head = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          assert result["ok"] is True, result
+          assert result["base_sha"] == "512a397ca71ce49807e4046ee868ec09d4f3f467", result
+          assert result["head_sha"] == head, result
+          assert result["observed_count"] == 2, result
+          assert result["model_call_count"] == 2, result
+          assert result["provider_attempt_count"] == 2, result
+          assert result["estimated_cost_usd"] == "0.004000", result
+          assert result["duplicate_context_suppressed"] is True, result
+          assert result["cadence_suppressed"] is True, result
+          assert result["closed_position_blocked"] is True, result
+          assert result["stale_context_blocked"] is True, result
+          assert result["only_active_positions_called"] is True, result
+          assert result["original_thesis_immutable"] is True, result
+          assert result["original_invalidation_immutable"] is True, result
+          assert result["fresh_context_hash_bound"] is True, result
+          assert result["hardened_historical_dossier_required"] is True, result
+          assert result["all_receipt_digests_valid"] is True, result
+          assert result["cost_and_call_counts_logged"] is True, result
+          assert result["management_action_contract_emitted"] is False, result
+          assert result["day48_action_conversion_required"] is True, result
+          assert result["publication_allowed"] is False, result
+          assert result["execution_allowed"] is False, result
+          assert result["broker_account_follower_access_used"] is False, result
+          assert result["telegram_action_used"] is False, result
+          assert result["formal_forward_evidence_created"] is False, result
+          assert result["predictive_edge_claimed"] is False, result
+          assert result["super_signals_modified"] is False, result
+          PY
+
+      - name: Preserve Day 47 acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day47-master-watcher-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day47_artifacts_a/
+          if-no-files-found: error
+          retention-days: 90
