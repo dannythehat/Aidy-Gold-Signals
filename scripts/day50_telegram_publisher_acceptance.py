@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import runpy
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -18,7 +19,9 @@ from aidy.telegram_publisher import (
     verify_publication_envelope,
     verify_publication_receipt,
 )
-from scripts.day34_decision_ledger_acceptance import _cycle
+
+_DAY34 = runpy.run_path(str(Path(__file__).with_name("day34_decision_ledger_acceptance.py")))
+_cycle = _DAY34["_cycle"]
 
 BASE_SHA = "6119b97d422374d4bd7a9bd660e5ca597693fc23"
 FIXTURE_TIME = datetime(2026, 9, 1, 14, 30, tzinfo=UTC)
