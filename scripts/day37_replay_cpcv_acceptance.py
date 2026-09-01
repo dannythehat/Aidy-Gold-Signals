@@ -7,12 +7,15 @@ from pathlib import Path
 
 from aidy.replay_evaluation import canonical_json, digest, replay_harness_manifest
 from aidy.replay_experiment import REPLAY_EXPERIMENT_VERSION
+from aidy.replay_scoring import REPLAY_SCORING_GUARD_VERSION
 
 BASE_SHA = "d988a4ff29160e2d10a32e6c151d028001e941f2"
 EXPECTED_FILES = (
     "src/aidy/replay_evaluation.py",
     "src/aidy/replay_experiment.py",
+    "src/aidy/replay_scoring.py",
     "tests/test_day37_replay_evaluation.py",
+    "tests/test_day37_replay_guardrails.py",
     "docs/day37-frozen-replay-cpcv-contract.md",
     "scripts/day37_replay_cpcv_acceptance.py",
     ".github/workflows/day37-replay-cpcv-acceptance.yml",
@@ -77,13 +80,20 @@ def main() -> None:
         "head_sha": head_sha,
         "harness_version": manifest["harness_version"],
         "replay_experiment_version": REPLAY_EXPERIMENT_VERSION,
+        "replay_scoring_guard_version": REPLAY_SCORING_GUARD_VERSION,
         "chronological_splits_required": True,
         "purge_required": True,
         "embargo_required": True,
         "cpcv_pre_holdout_only": True,
         "day32_trial_registry_required": True,
+        "preregistered_configuration_binding_required": True,
+        "preregistered_split_binding_required": True,
+        "preregistered_code_head_binding_required": True,
+        "score_input_digest_bound_to_frozen_case": True,
         "holdout_tuning_allowed": False,
+        "direct_unlogged_holdout_scoring_allowed": False,
         "holdout_access_logging_required": True,
+        "holdout_score_access_digest_link_required": True,
         "future_first_observation_allowed_at_t": False,
         "same_version_reproducibility_required": True,
         "telegram_side_effects_allowed": False,
