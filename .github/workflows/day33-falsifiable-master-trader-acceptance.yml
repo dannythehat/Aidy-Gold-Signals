@@ -1,0 +1,47 @@
+name: Day 33 falsifiable Master Trader acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/master_trader_contract_v2.py"
+      - "tests/test_day33_master_trader_contract_v2.py"
+      - "scripts/day33_master_trader_contract_acceptance.py"
+      - "docs/day33-falsifiable-master-trader-contract.md"
+      - ".github/workflows/day33-falsifiable-master-trader-acceptance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bounded acceptance dependencies
+        run: pip install -e . pytest pytest-asyncio ruff
+      - name: Changed-file lint
+        run: ruff check src/aidy/master_trader_contract_v2.py tests/test_day33_master_trader_contract_v2.py scripts/day33_master_trader_contract_acceptance.py
+      - name: Focused adversarial tests
+        run: pytest -q tests/test_day33_master_trader_contract_v2.py
+      - name: Full regression
+        run: pytest -q
+      - name: Deterministic exact-head acceptance
+        run: |
+          python scripts/day33_master_trader_contract_acceptance.py --output-dir day33_artifacts_a
+          python scripts/day33_master_trader_contract_acceptance.py --output-dir day33_artifacts_b
+          diff -ru day33_artifacts_a day33_artifacts_b
+      - uses: actions/upload-artifact@v4
+        with:
+          name: day33-falsifiable-master-trader-evidence
+          path: day33_artifacts_a
+          if-no-files-found: error
+          retention-days: 7
