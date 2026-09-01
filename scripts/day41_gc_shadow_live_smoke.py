@@ -4,7 +4,7 @@ import argparse
 import json
 import os
 import subprocess
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -17,6 +17,8 @@ from aidy.databento_gc import (
     HistoricalRequest,
 )
 from aidy.gc_shadow_spine import (
+    HISTORICAL_XAU_REFERENCE_SOURCE,
+    XauObservation,
     canonical_json,
     day41_architecture_manifest,
     digest,
@@ -24,25 +26,18 @@ from aidy.gc_shadow_spine import (
     pair_shadow_observations,
     parse_databento_ohlcv_jsonl,
     resolve_gc_contract_map,
-    xau_observation_from_gold_api,
+)
+from aidy.historical_backfill import (
+    RETROSPECTIVE_PROVENANCE,
+    HistDataPeriod,
+    download_histdata_period,
+    parse_histdata_m1,
+    read_histdata_archive,
 )
 
-LIVE_SMOKE_MAX_COST_USD = Decimal("0.25")
-GOLD_API_URL = "https://api.gold-api.com/price/XAU"
+HISTORICAL_SMOKE_MAX_COST_USD = Decimal("0.25")
 DATABENTO_SYMBOLOGY_URL = "https://hist.databento.com/v0/symbology.resolve"
-
-
-def _gold_api_payload() -> dict[str, object]:
-    response = httpx.get(
-        GOLD_API_URL,
-        timeout=20.0,
-        headers={"Accept": "application/json", "User-Agent": "AIDY-Signals/Day41"},
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if not isinstance(payload, dict):
-        raise TypeError("Gold API returned a non-object payload.")
-    return payload
+PAIR_MAX_SKEW_SECONDS = 60
 
 
 def _parse_utc_timestamp(value: object, *, name: str) -> datetime:
@@ -57,7 +52,7 @@ def _parse_utc_timestamp(value: object, *, name: str) -> datetime:
     return parsed.astimezone(UTC)
 
 
-def _available_ohlcv_window(dataset_range: dict[str, object]) -> tuple[datetime, datetime]:
+def _last_fully_available_utc_day(dataset_range: dict[str, object]) -> datetime:
     schema_map = dataset_range.get("schema")
     if not isinstance(schema_map, dict):
         raise TypeError("Databento dataset range did not include per-schema availability.")
@@ -76,14 +71,17 @@ def _available_ohlcv_window(dataset_range: dict[str, object]) -> tuple[datetime,
     if available_end <= available_start:
         raise RuntimeError("Databento ohlcv-1m entitled range is empty.")
 
-    request_end = available_end.replace(second=0, microsecond=0)
-    if request_end > available_end:
-        request_end -= timedelta(minutes=1)
-    day_start = request_end.replace(hour=0, minute=0, second=0, microsecond=0)
-    request_start = max(request_end - timedelta(minutes=10), available_start, day_start)
-    if request_start >= request_end:
-        raise RuntimeError("Databento ohlcv-1m range is too short for the Day 41 smoke test.")
-    return request_start, request_end
+    target_date = available_end.date() - timedelta(days=1)
+    target_start = datetime.combine(target_date, time.min, tzinfo=UTC)
+    target_end = target_start + timedelta(days=1)
+    if target_start < available_start or target_end > available_end:
+        raise RuntimeError("Databento has no fully entitled UTC day for Day 41 acceptance.")
+    return target_start
+
+
+def _gc_request_window(target_day: datetime) -> tuple[datetime, datetime]:
+    target_end = target_day + timedelta(days=1)
+    return target_end - timedelta(minutes=10), target_end
 
 
 def _symbology_resolve(
@@ -93,19 +91,20 @@ def _symbology_resolve(
     stype_in: str,
     stype_out: str,
     start_date: str,
+    end_date: str,
 ) -> dict[str, object]:
-    form = {
-        "dataset": DATABENTO_DATASET,
-        "symbols": symbols,
-        "stype_in": stype_in,
-        "stype_out": stype_out,
-        "start_date": start_date,
-    }
     response = httpx.post(
         DATABENTO_SYMBOLOGY_URL,
         auth=httpx.BasicAuth(api_key, ""),
         timeout=20.0,
-        data=form,
+        data={
+            "dataset": DATABENTO_DATASET,
+            "symbols": symbols,
+            "stype_in": stype_in,
+            "stype_out": stype_out,
+            "start_date": start_date,
+            "end_date": end_date,
+        },
         headers={"User-Agent": "AIDY-Signals/Day41"},
     )
     if response.is_error:
@@ -138,6 +137,51 @@ def _continuous_instrument_ids(payload: dict[str, object]) -> list[str]:
     return instrument_ids
 
 
+def _matching_histdata_xau(gc_observed_at: datetime, *, cache_dir: Path) -> tuple[XauObservation, dict[str, object]]:
+    period = HistDataPeriod(gc_observed_at.year, gc_observed_at.month)
+    archive_path = download_histdata_period(period, cache_dir=cache_dir)
+    archive = read_histdata_archive(archive_path, period)
+    bars, stats = parse_histdata_m1(archive.payload_text)
+    nearest = min(
+        bars,
+        key=lambda bar: abs((bar.open_time_utc - gc_observed_at).total_seconds()),
+    )
+    skew = abs((nearest.open_time_utc - gc_observed_at).total_seconds())
+    if skew > PAIR_MAX_SKEW_SECONDS:
+        raise RuntimeError(
+            "HistData XAUUSD has no M1 bar within 60 seconds of the Databento GC observation."
+        )
+
+    provenance = {
+        "source": HISTORICAL_XAU_REFERENCE_SOURCE,
+        "source_file": archive.zip_name,
+        "source_file_sha256": archive.zip_sha256,
+        "source_payload_sha256": archive.payload_sha256,
+        "source_open_time": nearest.source_open_time,
+        "open_time_utc": nearest.open_time_utc.isoformat(),
+        "close": nearest.close,
+        "price_basis": "bid",
+        "provenance_class": RETROSPECTIVE_PROVENANCE,
+        "pit_eligible": False,
+    }
+    xau = XauObservation(
+        observed_at=nearest.open_time_utc,
+        price=Decimal(nearest.close),
+        source=HISTORICAL_XAU_REFERENCE_SOURCE,
+        source_digest=digest(provenance),
+        provenance_class=RETROSPECTIVE_PROVENANCE,
+        pit_eligible=False,
+    )
+    evidence = {
+        **provenance,
+        "archive_payload_name": archive.payload_name,
+        "archive_status_report_sha256": archive.status_report_sha256,
+        "parsed_m1_rows": stats.rows,
+        "pair_skew_seconds": skew,
+    }
+    return xau, evidence
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="day41_live_evidence.json")
@@ -152,32 +196,35 @@ def main() -> int:
 
     root = Path(__file__).resolve().parents[1]
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
-    now = datetime.now(UTC)
+    observed_at = datetime.now(UTC)
 
     raw_path = Path(args.raw_gc)
     with DatabentoHistoricalClient.from_env() as client:
         entitlement = client.assert_gc_entitlement()
         dataset_range = client.dataset_range()
-        request_start, request_end = _available_ohlcv_window(dataset_range)
+        target_day = _last_fully_available_utc_day(dataset_range)
+        request_start, request_end = _gc_request_window(target_day)
         request = HistoricalRequest(
             schema="ohlcv-1m",
             start=request_start.isoformat(),
             end=request_end.isoformat(),
         )
         quote = client.estimate_cost(request)
-        if quote.quoted_cost_usd > LIVE_SMOKE_MAX_COST_USD:
+        if quote.quoted_cost_usd > HISTORICAL_SMOKE_MAX_COST_USD:
             raise RuntimeError(
-                "Day 41 live smoke quote exceeds the stricter $0.25 acceptance cap."
+                "Day 41 historical smoke quote exceeds the strict $0.25 acceptance cap."
             )
         receipt = client.download_jsonl(request, quote=quote, output_path=raw_path)
 
-    start_date = request_start.date().isoformat()
+    start_date = target_day.date().isoformat()
+    end_date = (target_day.date() + timedelta(days=1)).isoformat()
     continuous_resolution = _symbology_resolve(
         api_key,
         symbols=GC_CONTINUOUS_SYMBOL,
         stype_in="continuous",
         stype_out="instrument_id",
         start_date=start_date,
+        end_date=end_date,
     )
     instrument_ids = _continuous_instrument_ids(continuous_resolution)
     raw_resolutions: dict[str, dict[str, object]] = {}
@@ -188,6 +235,7 @@ def main() -> int:
             stype_in="instrument_id",
             stype_out="raw_symbol",
             start_date=start_date,
+            end_date=end_date,
         )
     contract_map = resolve_gc_contract_map(continuous_resolution, raw_resolutions)
 
@@ -199,32 +247,38 @@ def main() -> int:
         raise RuntimeError("Databento returned no mapped GC minute observations.")
     gc = max(observations, key=lambda item: item.observed_at)
 
-    xau_payload = _gold_api_payload()
-    xau = xau_observation_from_gold_api(xau_payload)
-    pair = pair_shadow_observations(gc, xau)
+    xau, histdata_evidence = _matching_histdata_xau(
+        gc.observed_at,
+        cache_dir=root / ".day41_histdata_cache",
+    )
+    pair = pair_shadow_observations(gc, xau, max_skew_seconds=PAIR_MAX_SKEW_SECONDS)
     if pair["paired"] is not True:
-        raise RuntimeError(
-            "Genuine Databento GC and Gold-API XAU observations exceeded the acceptance skew limit."
-        )
+        raise RuntimeError("Genuine historical Databento GC and HistData XAU observations did not pair.")
+    if pair["historical_research_pair"] is not True:
+        raise RuntimeError("Day 41 historical acceptance pair lost retrospective provenance.")
 
     symbology_evidence = {
         "continuous": continuous_resolution,
         "raw": raw_resolutions,
     }
     evidence = {
-        "evidence_version": "aidy_day41_genuine_shadow_evidence_v1",
+        "evidence_version": "aidy_day41_genuine_historical_shadow_evidence_v1",
         "candidate_head_sha": head_sha,
-        "observed_at_utc": now.isoformat(),
+        "observed_at_utc": observed_at.isoformat(),
+        "target_historical_utc_day": start_date,
         "genuine_databento_observation_ingested": True,
-        "genuine_gold_api_observation_ingested": True,
+        "genuine_histdata_xau_observation_ingested": True,
+        "historical_research_pair": True,
+        "formal_forward_evidence_created": False,
+        "pit_eligible": False,
         "databento_entitlement": entitlement,
-        "databento_ohlcv_available_end_utc": request_end.isoformat(),
         "databento_request": request.payload(),
         "databento_quote_usd": str(quote.quoted_cost_usd),
-        "databento_live_smoke_max_cost_usd": str(LIVE_SMOKE_MAX_COST_USD),
+        "databento_historical_smoke_max_cost_usd": str(HISTORICAL_SMOKE_MAX_COST_USD),
         "databento_download_receipt": receipt,
         "databento_contract_map": {str(key): value for key, value in sorted(contract_map.items())},
         "databento_symbology_resolution_digest": digest(symbology_evidence),
+        "histdata_xau_evidence": histdata_evidence,
         "shadow_pair": pair,
         "architecture": day41_architecture_manifest(),
         "paid_subscription_activated": False,
@@ -240,10 +294,14 @@ def main() -> int:
             {
                 "ok": True,
                 "candidate_head_sha": head_sha,
+                "target_historical_utc_day": start_date,
                 "provider": pair["gc"]["provider"],
                 "contract_symbol": pair["gc"]["contract_symbol"],
                 "gc_observed_at_utc": pair["gc"]["observed_at_utc"],
                 "xau_observed_at_utc": pair["xau"]["observed_at_utc"],
+                "xau_source": pair["xau"]["source"],
+                "historical_research_pair": pair["historical_research_pair"],
+                "formal_forward_evidence_eligible": pair["formal_forward_evidence_eligible"],
                 "timestamp_skew_seconds": pair["timestamp_skew_seconds"],
                 "basis_usd": pair["basis_usd"],
                 "quoted_cost_usd": str(quote.quoted_cost_usd),
