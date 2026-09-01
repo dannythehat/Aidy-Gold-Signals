@@ -24,7 +24,7 @@ CHAT_ID = "-1001234567890"
 
 
 class Prepared:
-    def __init__(self, db: "LocalD1", sql: str, params=()) -> None:
+    def __init__(self, db: LocalD1, sql: str, params=()) -> None:
         self.db = db
         self.sql = sql
         self.params = params
