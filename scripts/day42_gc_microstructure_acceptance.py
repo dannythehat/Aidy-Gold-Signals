@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import subprocess
 from datetime import UTC, datetime, time, timedelta
@@ -19,8 +18,6 @@ from aidy.databento_gc import (
 )
 from aidy.gc_microstructure import (
     BASELINE_VERSION,
-    J2_VERSION,
-    J3_RICH_VERSION,
     MinuteMicrostructure,
     aggregate_tbbo_minutes,
     build_weekday_clock_baseline,
@@ -63,7 +60,9 @@ def _head_sha() -> str:
 
 
 def _changed_files(head_sha: str) -> list[str]:
-    merge_base = subprocess.check_output(["git", "merge-base", BASE_SHA, head_sha], text=True).strip()
+    merge_base = subprocess.check_output(
+        ["git", "merge-base", BASE_SHA, head_sha], text=True
+    ).strip()
     if merge_base != BASE_SHA:
         raise RuntimeError("Day 42 branch is not based on the exact accepted Day 41 main SHA.")
     changed = subprocess.check_output(
@@ -105,8 +104,7 @@ def _finalize_trials(
     trials: list[dict[str, Any]] = []
     specifications_frozen_at = NOW
     for number, (experiment, result) in enumerate(
-        (("J2", j2_result), ("J3", j3_result)),
-        start=1,
+        (("J2", j2_result), ("J3", j3_result)), start=1
     ):
         hypothesis_key = "j2_hypothesis" if experiment == "J2" else "j3_hypothesis"
         null_key = "j2_null_hypothesis" if experiment == "J2" else "j3_null_hypothesis"
@@ -121,7 +119,9 @@ def _finalize_trials(
                 "experiment": experiment,
                 "experiment_plan_digest": plan["plan_digest"],
                 "normalization": BASELINE_VERSION,
-                "minimum_independent_evaluation_n": plan["minimum_independent_evaluation_n"],
+                "minimum_independent_evaluation_n": plan[
+                    "minimum_independent_evaluation_n"
+                ],
                 "ordinary_session_activity_can_count_as_alpha": False,
                 "single_result_can_promote_gate": False,
                 "specifications_frozen_before_any_day42_result": True,
@@ -163,10 +163,13 @@ def _fixture_minutes() -> list[MinuteMicrostructure]:
     for index in range(20):
         minute = datetime(2026, 1, 5, 15, 0, tzinfo=UTC) + timedelta(weeks=index)
         volume = Decimal(100 + index)
-        spread = Decimal("1") + Decimal(index) / Decimal(100)
+        spread = Decimal(1) + Decimal(index) / Decimal(100)
         signed = Decimal("0.10") + Decimal(index) / Decimal(1000)
-        anchor = Decimal("4500")
-        last = anchor * (Decimal(1) + (Decimal("0.5") + Decimal(index) / Decimal(100)) / 10000)
+        anchor = Decimal(4500)
+        last = anchor * (
+            Decimal(1)
+            + (Decimal("0.5") + Decimal(index) / Decimal(100)) / Decimal(10000)
+        )
         result.append(
             MinuteMicrostructure(
                 minute_utc=minute,
@@ -185,7 +188,9 @@ def _fixture_minutes() -> list[MinuteMicrostructure]:
                 median_spread_bps=spread,
                 session_vwap=anchor,
                 anchored_vwap=anchor,
-                anchor_identity=f"GCG6:{minute.date().isoformat()}:london_new_york_overlap",
+                anchor_identity=(
+                    f"GCG6:{minute.date().isoformat()}:london_new_york_overlap"
+                ),
                 source_trade_digests=(f"{index:064x}",),
             )
         )
@@ -370,7 +375,9 @@ def _genuine_summary(head_sha: str, *, raw_path: Path) -> dict[str, Any]:
         )
     contract_map = resolve_gc_contract_map(continuous, raw_resolutions)
     raw_text = raw_path.read_text(encoding="utf-8")
-    trades = parse_databento_tbbo_jsonl(raw_text, contract_by_instrument_id=contract_map)
+    trades = parse_databento_tbbo_jsonl(
+        raw_text, contract_by_instrument_id=contract_map
+    )
     if not trades:
         raise RuntimeError("Databento genuine TBBO smoke returned no GC trades.")
     minutes = aggregate_tbbo_minutes(trades)
@@ -391,8 +398,7 @@ def _genuine_summary(head_sha: str, *, raw_path: Path) -> dict[str, Any]:
     )
     total_volume = sum((trade.size for trade in trades), Decimal(0))
     unknown_volume = sum(
-        (trade.size for trade in trades if trade.aggressor_side == "N"),
-        Decimal(0),
+        (trade.size for trade in trades if trade.aggressor_side == "N"), Decimal(0)
     )
     known_volume = total_volume - unknown_volume
     summary: dict[str, Any] = {
@@ -417,7 +423,8 @@ def _genuine_summary(head_sha: str, *, raw_path: Path) -> dict[str, Any]:
         "first_trade_utc": min(trade.observed_at for trade in trades).isoformat(),
         "last_trade_utc": max(trade.observed_at for trade in trades).isoformat(),
         "mean_minute_spread_bps": str(
-            sum((minute.mean_spread_bps for minute in minutes), Decimal(0)) / Decimal(len(minutes))
+            sum((minute.mean_spread_bps for minute in minutes), Decimal(0))
+            / Decimal(len(minutes))
         ),
         "last_session_vwap": str(minutes[-1].session_vwap),
         "last_anchored_vwap": str(minutes[-1].anchored_vwap),
@@ -426,9 +433,15 @@ def _genuine_summary(head_sha: str, *, raw_path: Path) -> dict[str, Any]:
         "databento_quote_usd": str(quote.quoted_cost_usd),
         "databento_smoke_cost_cap_usd": str(HISTORICAL_SMOKE_MAX_COST_USD),
         "databento_download_receipt": receipt,
-        "databento_contract_map": {str(key): value for key, value in sorted(contract_map.items())},
-        "databento_symbology_digest": digest({"continuous": continuous, "raw": raw_resolutions}),
-        "microstructure_minute_digests": [minute.as_dict()["minute_digest"] for minute in minutes],
+        "databento_contract_map": {
+            str(key): value for key, value in sorted(contract_map.items())
+        },
+        "databento_symbology_digest": digest(
+            {"continuous": continuous, "raw": raw_resolutions}
+        ),
+        "microstructure_minute_digests": [
+            minute.as_dict()["minute_digest"] for minute in minutes
+        ],
         "baseline_digest": baseline["baseline_digest"],
         "baseline_state": "insufficient_genuine_smoke_sample",
         "normalization_frozen_before_outcome_analysis": True,
