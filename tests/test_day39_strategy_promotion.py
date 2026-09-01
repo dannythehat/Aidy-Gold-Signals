@@ -10,10 +10,12 @@ from aidy.replay_evaluation import HOLDOUT_ACCESS_VERSION
 from aidy.replay_evaluation import digest as replay_digest
 from aidy.research_integrity import (
     IntegrityError,
-    digest as trial_digest,
     finalize_trial,
     preregister_trial,
     verify_trial_registry,
+)
+from aidy.research_integrity import (
+    digest as trial_digest,
 )
 from aidy.strategy_promotion import (
     REQUIRED_COMPONENTS,
@@ -27,7 +29,6 @@ from aidy.strategy_promotion import (
     build_rollback_record,
     build_strategy_version,
     deflated_sharpe_ratio,
-    digest as promotion_digest,
     evaluate_promotion,
     promotion_manifest,
     verify_multiple_testing_control,
@@ -37,6 +38,9 @@ from aidy.strategy_promotion import (
     verify_registry_snapshot,
     verify_rollback_record,
     verify_strategy_version,
+)
+from aidy.strategy_promotion import (
+    digest as promotion_digest,
 )
 
 NOW = datetime(2026, 9, 1, 6, 0, tzinfo=UTC)
