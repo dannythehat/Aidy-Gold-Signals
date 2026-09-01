@@ -130,6 +130,7 @@ _FUTURE_KEYS = frozenset(
     }
 )
 _SECRET_MARKERS = ("sk-", "bearer ", "-----begin private key-----")
+_GATEWAY_EXCEPTIONS = (httpx.HTTPError, OSError, RuntimeError, TypeError, ValueError)
 
 
 class WatcherError(ValueError):
@@ -185,23 +186,28 @@ def _assert_safe(value: Any, *, path: str) -> None:
                 raise WatcherError("watch_secret_field_forbidden", f"Secret field at {path}.{key}.")
             if normalized in _RUNTIME_KEYS:
                 raise WatcherError(
-                    "watch_execution_state_forbidden", f"Execution/account field at {path}.{key}."
+                    "watch_execution_state_forbidden",
+                    f"Execution/account field at {path}.{key}.",
                 )
             if normalized in _HIDDEN_REASONING_KEYS:
                 raise WatcherError(
-                    "watch_hidden_reasoning_forbidden", f"Hidden reasoning field at {path}.{key}."
+                    "watch_hidden_reasoning_forbidden",
+                    f"Hidden reasoning field at {path}.{key}.",
                 )
             if normalized in _FUTURE_KEYS:
                 raise WatcherError(
-                    "watch_future_evidence_forbidden", f"Future/outcome field at {path}.{key}."
+                    "watch_future_evidence_forbidden",
+                    f"Future/outcome field at {path}.{key}.",
                 )
             if normalized == "future_derived" and item is not False:
                 raise WatcherError(
-                    "watch_future_evidence_forbidden", f"Future-derived evidence at {path}.{key}."
+                    "watch_future_evidence_forbidden",
+                    f"Future-derived evidence at {path}.{key}.",
                 )
             if normalized == "evaluation_only" and item is not False:
                 raise WatcherError(
-                    "watch_evaluation_evidence_forbidden", f"Evaluation-only evidence at {path}.{key}."
+                    "watch_evaluation_evidence_forbidden",
+                    f"Evaluation-only evidence at {path}.{key}.",
                 )
             _assert_safe(item, path=f"{path}.{key}")
     elif isinstance(value, (list, tuple)):
@@ -222,7 +228,7 @@ def _safe_digest(value: Any, *, name: str) -> str:
 
 def _context_snapshot(
     context: Mapping[str, Any], *, now: datetime
-) -> tuple[dict[str, Any], datetime, int]:
+) -> tuple[dict[str, Any], datetime]:
     if not isinstance(context, Mapping):
         raise WatcherError("watch_context_missing", "Fresh context is required.")
     snapshot = copy.deepcopy(dict(context))
@@ -232,9 +238,15 @@ def _context_snapshot(
     if snapshot.get("objective_only") is not True:
         raise WatcherError("watch_context_boundary_invalid", "Watcher context must be objective-only.")
     if snapshot.get("retrospective_history_included") is not False:
-        raise WatcherError("watch_context_boundary_invalid", "Retrospective history cannot enter current context.")
+        raise WatcherError(
+            "watch_context_boundary_invalid",
+            "Retrospective history cannot enter current context.",
+        )
     if snapshot.get("broker_follower_state_included") is not False:
-        raise WatcherError("watch_context_boundary_invalid", "Broker/follower state cannot enter context.")
+        raise WatcherError(
+            "watch_context_boundary_invalid",
+            "Broker/follower state cannot enter context.",
+        )
     supplied_hash = _safe_digest(snapshot.get("context_hash"), name="context_hash")
     if supplied_hash != compute_context_hash(snapshot):
         raise WatcherError("watch_context_hash_invalid", "Fresh context hash does not verify.")
@@ -246,39 +258,73 @@ def _context_snapshot(
         raise WatcherError("watch_context_stale", "Fresh context exceeded watcher age limit.")
     quality = snapshot.get("data_quality")
     if not isinstance(quality, Mapping):
-        raise WatcherError("watch_context_quality_missing", "Fresh context data_quality is required.")
+        raise WatcherError(
+            "watch_context_quality_missing",
+            "Fresh context data_quality is required.",
+        )
     if quality.get("quote_freshness") != "fresh":
-        raise WatcherError("watch_quote_stale_or_unknown", "Gold quote freshness must be fresh.")
-    return snapshot, as_of, age
+        raise WatcherError(
+            "watch_quote_stale_or_unknown",
+            "Gold quote freshness must be fresh.",
+        )
+    gold = snapshot.get("gold")
+    quote = gold.get("quote_context") if isinstance(gold, Mapping) else None
+    if not isinstance(quote, Mapping) or quote.get("mid") is None:
+        raise WatcherError("watch_quote_missing", "Fresh Gold mid is required.")
+    return snapshot, as_of
 
 
 def _original_binding(
     *, ex_ante_record: Mapping[str, Any], paper_state: Mapping[str, Any]
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str]:
     if not isinstance(ex_ante_record, Mapping) or not verify_ex_ante_record(ex_ante_record):
-        raise WatcherError("watch_ex_ante_invalid", "A valid immutable ex-ante record is required.")
+        raise WatcherError(
+            "watch_ex_ante_invalid",
+            "A valid immutable ex-ante record is required.",
+        )
     if ex_ante_record.get("cycle_disposition") != "decision_admitted":
-        raise WatcherError("watch_decision_not_admitted", "Only admitted AIDY decisions can be watched.")
+        raise WatcherError(
+            "watch_decision_not_admitted",
+            "Only admitted AIDY decisions can be watched.",
+        )
     raw_decision = ex_ante_record.get("decision")
     if not isinstance(raw_decision, Mapping):
         raise WatcherError("watch_decision_missing", "Ex-ante record has no decision snapshot.")
     decision = validate_master_trader_decision_versioned(raw_decision)
     if decision["contract_version"] != MASTER_TRADER_CONTRACT_VERSION_V2:
-        raise WatcherError("watch_v2_required", "Watcher requires falsifiable Master Trader V2.")
+        raise WatcherError(
+            "watch_v2_required",
+            "Watcher requires falsifiable Master Trader V2.",
+        )
     if decision["action"] != "new_trade":
-        raise WatcherError("watch_new_trade_required", "Watcher follows originating new_trade decisions only.")
+        raise WatcherError(
+            "watch_new_trade_required",
+            "Watcher follows originating new_trade decisions only.",
+        )
 
     if not isinstance(paper_state, Mapping) or not verify_paper_state(paper_state):
-        raise WatcherError("watch_paper_state_invalid", "A verified Day 46 paper state is required.")
+        raise WatcherError(
+            "watch_paper_state_invalid",
+            "A verified Day 46 paper state is required.",
+        )
     state = copy.deepcopy(dict(paper_state))
     if state.get("position_state") not in ACTIVE_PAPER_STATES:
         raise WatcherError("watch_position_inactive", "Closed paper positions are not watched.")
     if state.get("decision_id") != ex_ante_record.get("decision_id"):
-        raise WatcherError("watch_decision_binding_mismatch", "Paper state decision identity mismatch.")
+        raise WatcherError(
+            "watch_decision_binding_mismatch",
+            "Paper state decision identity mismatch.",
+        )
     if state.get("ex_ante_digest") != ex_ante_record.get("ex_ante_digest"):
-        raise WatcherError("watch_ex_ante_binding_mismatch", "Paper state ex-ante digest mismatch.")
+        raise WatcherError(
+            "watch_ex_ante_binding_mismatch",
+            "Paper state ex-ante digest mismatch.",
+        )
     if state.get("model_decision_digest") != ex_ante_record.get("model_decision_digest"):
-        raise WatcherError("watch_model_binding_mismatch", "Paper state model-decision digest mismatch.")
+        raise WatcherError(
+            "watch_model_binding_mismatch",
+            "Paper state model-decision digest mismatch.",
+        )
 
     thesis = {
         "thesis": decision["thesis"],
@@ -287,13 +333,22 @@ def _original_binding(
         "invalidation_condition": copy.deepcopy(decision["invalidation_condition"]),
     }
     if canonical_json(state.get("thesis_snapshot")) != canonical_json(thesis):
-        raise WatcherError("watch_original_thesis_mutated", "Original thesis/invalidation binding changed.")
+        raise WatcherError(
+            "watch_original_thesis_mutated",
+            "Original thesis/invalidation binding changed.",
+        )
     if state.get("direction") != decision.get("direction"):
-        raise WatcherError("watch_direction_binding_mismatch", "Paper direction differs from origin decision.")
-    if state.get("entry_price") != f"{Decimal(str(decision['market_reference_price'])):.6f}":
-        raise WatcherError("watch_geometry_binding_mismatch", "Paper entry differs from origin decision.")
-    thesis_digest = digest(thesis)
-    return copy.deepcopy(dict(ex_ante_record)), decision, state, thesis_digest
+        raise WatcherError(
+            "watch_direction_binding_mismatch",
+            "Paper direction differs from origin decision.",
+        )
+    expected_entry = f"{Decimal(str(decision['market_reference_price'])):.6f}"
+    if state.get("entry_price") != expected_entry:
+        raise WatcherError(
+            "watch_geometry_binding_mismatch",
+            "Paper entry differs from origin decision.",
+        )
+    return copy.deepcopy(dict(ex_ante_record)), decision, state, digest(thesis)
 
 
 def _dossier_snapshot(
@@ -305,36 +360,74 @@ def _dossier_snapshot(
     state: Mapping[str, Any],
 ) -> dict[str, Any]:
     if not isinstance(dossier, Mapping) or not verify_context_dossier_v2(dossier):
-        raise WatcherError("watch_historical_dossier_invalid", "Verified Day 35 dossier is required.")
+        raise WatcherError(
+            "watch_historical_dossier_invalid",
+            "Verified Day 35 dossier is required.",
+        )
     snapshot = copy.deepcopy(dict(dossier))
     _assert_safe(snapshot, path="historical_dossier")
     if snapshot.get("composer_version") != CONTEXT_COMPOSER_VERSION_V2:
-        raise WatcherError("watch_historical_dossier_invalid", "Unexpected composer version.")
+        raise WatcherError(
+            "watch_historical_dossier_invalid",
+            "Unexpected composer version.",
+        )
     if snapshot.get("dossier_version") != CONTEXT_DOSSIER_VERSION_V2:
-        raise WatcherError("watch_historical_dossier_invalid", "Unexpected dossier version.")
+        raise WatcherError(
+            "watch_historical_dossier_invalid",
+            "Unexpected dossier version.",
+        )
     if snapshot.get("symbol") != "XAUUSD":
-        raise WatcherError("watch_historical_dossier_invalid", "Historical dossier symbol mismatch.")
+        raise WatcherError(
+            "watch_historical_dossier_invalid",
+            "Historical dossier symbol mismatch.",
+        )
     dossier_as_of = _utc(snapshot.get("as_of_utc"), name="historical_dossier.as_of_utc")
     if dossier_as_of != context_as_of:
-        raise WatcherError("watch_dossier_context_time_mismatch", "Dossier and fresh context must share T.")
+        raise WatcherError(
+            "watch_dossier_context_time_mismatch",
+            "Dossier and fresh context must share T.",
+        )
     identity = snapshot.get("current_context_identity")
     if not isinstance(identity, Mapping):
-        raise WatcherError("watch_dossier_context_missing", "Dossier context identity is missing.")
+        raise WatcherError(
+            "watch_dossier_context_missing",
+            "Dossier context identity is missing.",
+        )
     if identity.get("context_hash") != current_context.get("context_hash"):
-        raise WatcherError("watch_dossier_context_hash_mismatch", "Dossier context hash mismatch.")
+        raise WatcherError(
+            "watch_dossier_context_hash_mismatch",
+            "Dossier context hash mismatch.",
+        )
     hypothesis = snapshot.get("hypothesis")
-    if not isinstance(hypothesis, Mapping) or hypothesis.get("direction") != decision.get("direction"):
-        raise WatcherError("watch_dossier_direction_mismatch", "Dossier hypothesis direction mismatch.")
+    if not isinstance(hypothesis, Mapping) or hypothesis.get("direction") != decision.get(
+        "direction"
+    ):
+        raise WatcherError(
+            "watch_dossier_direction_mismatch",
+            "Dossier hypothesis direction mismatch.",
+        )
     current_state = snapshot.get("current_aidy_state")
     if not isinstance(current_state, Mapping):
-        raise WatcherError("watch_dossier_state_missing", "Dossier AIDY state binding is missing.")
+        raise WatcherError(
+            "watch_dossier_state_missing",
+            "Dossier AIDY state binding is missing.",
+        )
     if current_state.get("paper_position_id") != state.get("position_id"):
-        raise WatcherError("watch_dossier_state_mismatch", "Dossier position identity mismatch.")
+        raise WatcherError(
+            "watch_dossier_state_mismatch",
+            "Dossier position identity mismatch.",
+        )
     if current_state.get("paper_state_digest") != state.get("state_digest"):
-        raise WatcherError("watch_dossier_state_mismatch", "Dossier paper-state digest mismatch.")
+        raise WatcherError(
+            "watch_dossier_state_mismatch",
+            "Dossier paper-state digest mismatch.",
+        )
     for field in ("history_state", "counter_evidence", "support_evidence", "uncertainty"):
         if not isinstance(snapshot.get(field), Mapping):
-            raise WatcherError("watch_historical_evidence_missing", f"Dossier {field} is required.")
+            raise WatcherError(
+                "watch_historical_evidence_missing",
+                f"Dossier {field} is required.",
+            )
     return snapshot
 
 
@@ -373,12 +466,16 @@ def build_watcher_evidence_bundle(
 ) -> dict[str, Any]:
     now = _utc(now_utc, name="now_utc")
     record, decision, state, thesis_digest = _original_binding(
-        ex_ante_record=ex_ante_record, paper_state=paper_state
+        ex_ante_record=ex_ante_record,
+        paper_state=paper_state,
     )
-    context, context_as_of, context_age = _context_snapshot(current_context, now=now)
+    context, context_as_of = _context_snapshot(current_context, now=now)
     last_state_at = state.get("last_observation_at_utc") or state.get("opened_at_utc")
     if context_as_of < _utc(last_state_at, name="paper_state.last_observation_at_utc"):
-        raise WatcherError("watch_context_predates_state", "Fresh context predates current paper state.")
+        raise WatcherError(
+            "watch_context_predates_state",
+            "Fresh context predates current paper state.",
+        )
     dossier = _dossier_snapshot(
         historical_dossier,
         current_context=context,
@@ -406,8 +503,6 @@ def build_watcher_evidence_bundle(
         "bundle_version": WATCHER_BUNDLE_VERSION,
         "watcher_version": WATCHER_VERSION,
         "instruction_type": "active_signal_management_observation",
-        "watch_checked_at_utc": now.isoformat(),
-        "context_age_seconds": context_age,
         "original_decision": original,
         "current_paper_position": _position_snapshot(state),
         "fresh_pit_context": context,
@@ -473,29 +568,33 @@ def verify_watcher_evidence_bundle(bundle: Mapping[str, Any]) -> bool:
 
 
 def watcher_json_schema() -> dict[str, Any]:
+    required = [
+        "observation_version",
+        "position_id",
+        "originating_decision_id",
+        "observed_at_utc",
+        "context_hash",
+        "paper_state_digest",
+        "original_thesis_digest",
+        "assessment",
+        "thesis_assessment",
+        "reason_codes",
+        "observation_summary",
+        "evidence_change_summary",
+        "confidence",
+        "management_action_emitted",
+        "publication_requested",
+        "execution_requested",
+    ]
     return {
         "type": "object",
         "additionalProperties": False,
-        "required": [
-            "observation_version",
-            "position_id",
-            "originating_decision_id",
-            "observed_at_utc",
-            "context_hash",
-            "paper_state_digest",
-            "original_thesis_digest",
-            "assessment",
-            "thesis_assessment",
-            "reason_codes",
-            "observation_summary",
-            "evidence_change_summary",
-            "confidence",
-            "management_action_emitted",
-            "publication_requested",
-            "execution_requested",
-        ],
+        "required": required,
         "properties": {
-            "observation_version": {"type": "string", "enum": [WATCHER_OBSERVATION_VERSION]},
+            "observation_version": {
+                "type": "string",
+                "enum": [WATCHER_OBSERVATION_VERSION],
+            },
             "position_id": {"type": "string"},
             "originating_decision_id": {"type": "string"},
             "observed_at_utc": {"type": "string"},
@@ -536,50 +635,92 @@ def validate_watcher_observation(
     value: Mapping[str, Any], *, expected_bundle: Mapping[str, Any] | None = None
 ) -> dict[str, Any]:
     if not isinstance(value, Mapping):
-        raise WatcherError("watch_observation_invalid", "Watcher observation must be an object.")
-    schema_fields = set(watcher_json_schema()["required"])
-    if set(value) != schema_fields:
-        raise WatcherError("watch_observation_invalid", "Watcher observation fields mismatch.")
+        raise WatcherError(
+            "watch_observation_invalid",
+            "Watcher observation must be an object.",
+        )
+    expected_fields = set(watcher_json_schema()["required"])
+    if set(value) != expected_fields:
+        raise WatcherError(
+            "watch_observation_invalid",
+            "Watcher observation fields mismatch.",
+        )
     if value["observation_version"] != WATCHER_OBSERVATION_VERSION:
-        raise WatcherError("watch_observation_invalid", "Unsupported watcher observation version.")
+        raise WatcherError(
+            "watch_observation_invalid",
+            "Unsupported watcher observation version.",
+        )
     assessment = value["assessment"]
     thesis_assessment = value["thesis_assessment"]
-    if assessment not in WATCHER_ASSESSMENTS or thesis_assessment not in WATCHER_THESIS_ASSESSMENTS:
+    if assessment not in WATCHER_ASSESSMENTS:
         raise WatcherError("watch_observation_invalid", "Unsupported watcher assessment.")
+    if thesis_assessment not in WATCHER_THESIS_ASSESSMENTS:
+        raise WatcherError("watch_observation_invalid", "Unsupported thesis assessment.")
     codes = value["reason_codes"]
     if not isinstance(codes, list) or not 1 <= len(codes) <= 8:
-        raise WatcherError("watch_observation_invalid", "Watcher reason_codes must contain 1-8 items.")
+        raise WatcherError(
+            "watch_observation_invalid",
+            "Watcher reason_codes must contain 1-8 items.",
+        )
     normalized_codes: list[str] = []
     for raw in codes:
         if not isinstance(raw, str) or not _SAFE_CODE.fullmatch(raw.strip()):
-            raise WatcherError("watch_observation_invalid", "Watcher reason code is invalid.")
+            raise WatcherError(
+                "watch_observation_invalid",
+                "Watcher reason code is invalid.",
+            )
         normalized_codes.append(raw.strip())
     if len(normalized_codes) != len(set(normalized_codes)):
-        raise WatcherError("watch_observation_invalid", "Watcher reason codes cannot duplicate.")
+        raise WatcherError(
+            "watch_observation_invalid",
+            "Watcher reason codes cannot duplicate.",
+        )
     confidence = value["confidence"]
-    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= float(confidence) <= 1:
-        raise WatcherError("watch_observation_invalid", "Watcher confidence must be 0-1.")
+    if (
+        isinstance(confidence, bool)
+        or not isinstance(confidence, (int, float))
+        or not 0 <= float(confidence) <= 1
+    ):
+        raise WatcherError(
+            "watch_observation_invalid",
+            "Watcher confidence must be 0-1.",
+        )
     if value["management_action_emitted"] is not False:
-        raise WatcherError("watch_action_emitted_forbidden", "Day 47 cannot emit management actions.")
+        raise WatcherError(
+            "watch_action_emitted_forbidden",
+            "Day 47 cannot emit management actions.",
+        )
     if value["publication_requested"] is not False or value["execution_requested"] is not False:
-        raise WatcherError("watch_side_effect_requested", "Watcher cannot publish or execute.")
+        raise WatcherError(
+            "watch_side_effect_requested",
+            "Watcher cannot publish or execute.",
+        )
     normalized = {
         "observation_version": WATCHER_OBSERVATION_VERSION,
         "position_id": _text(value["position_id"], name="position_id", maximum=256),
         "originating_decision_id": _text(
-            value["originating_decision_id"], name="originating_decision_id", maximum=256
+            value["originating_decision_id"],
+            name="originating_decision_id",
+            maximum=256,
         ),
         "observed_at_utc": _utc(value["observed_at_utc"], name="observed_at_utc").isoformat(),
         "context_hash": _safe_digest(value["context_hash"], name="context_hash"),
-        "paper_state_digest": _safe_digest(value["paper_state_digest"], name="paper_state_digest"),
+        "paper_state_digest": _safe_digest(
+            value["paper_state_digest"],
+            name="paper_state_digest",
+        ),
         "original_thesis_digest": _safe_digest(
-            value["original_thesis_digest"], name="original_thesis_digest"
+            value["original_thesis_digest"],
+            name="original_thesis_digest",
         ),
         "assessment": assessment,
         "thesis_assessment": thesis_assessment,
         "reason_codes": normalized_codes,
         "observation_summary": _text(
-            value["observation_summary"], name="observation_summary", minimum=12, maximum=400
+            value["observation_summary"],
+            name="observation_summary",
+            minimum=12,
+            maximum=400,
         ),
         "evidence_change_summary": _text(
             value["evidence_change_summary"],
@@ -599,7 +740,7 @@ def validate_watcher_observation(
         position = expected_bundle["current_paper_position"]
         original = expected_bundle["original_decision"]
         context = expected_bundle["fresh_pit_context"]
-        expected = {
+        identities = {
             "position_id": position["position_id"],
             "originating_decision_id": original["originating_decision_id"],
             "observed_at_utc": context["as_of_utc"],
@@ -607,17 +748,17 @@ def validate_watcher_observation(
             "paper_state_digest": position["paper_state_digest"],
             "original_thesis_digest": original["original_thesis_digest"],
         }
-        for field, wanted in expected.items():
+        for field, wanted in identities.items():
             if normalized[field] != wanted:
                 raise WatcherError(
-                    "watch_observation_identity_mismatch", f"Watcher observation {field} mismatch."
+                    "watch_observation_identity_mismatch",
+                    f"Watcher observation {field} mismatch.",
                 )
     return normalized
 
 
 def watcher_observation_digest(observation: Mapping[str, Any]) -> str:
-    normalized = validate_watcher_observation(observation)
-    return digest(normalized)
+    return digest(validate_watcher_observation(observation))
 
 
 def _prompt_digest() -> str:
@@ -626,7 +767,10 @@ def _prompt_digest() -> str:
 
 def build_watcher_request(evidence_bundle: Mapping[str, Any]) -> dict[str, Any]:
     if not verify_watcher_evidence_bundle(evidence_bundle):
-        raise WatcherError("watch_bundle_invalid", "Watcher request requires a verified evidence bundle.")
+        raise WatcherError(
+            "watch_bundle_invalid",
+            "Watcher request requires a verified evidence bundle.",
+        )
     _assert_safe(evidence_bundle, path="watcher_request")
     return {
         "model": WATCHER_MODEL_ID,
@@ -673,7 +817,9 @@ def _usage(response: Mapping[str, Any]) -> dict[str, int]:
     output_details = usage.get("output_tokens_details")
     cached = int(input_details.get("cached_tokens", 0)) if isinstance(input_details, Mapping) else 0
     reasoning = (
-        int(output_details.get("reasoning_tokens", 0)) if isinstance(output_details, Mapping) else 0
+        int(output_details.get("reasoning_tokens", 0))
+        if isinstance(output_details, Mapping)
+        else 0
     )
     return {
         "input_tokens": int(usage.get("input_tokens", 0)),
@@ -807,7 +953,11 @@ class OpenAIMasterWatcherGateway:
             while attempts < WATCHER_MAX_ATTEMPTS:
                 attempts += 1
                 try:
-                    http_response = await client.post(WATCHER_API_URL, headers=headers, json=payload)
+                    http_response = await client.post(
+                        WATCHER_API_URL,
+                        headers=headers,
+                        json=payload,
+                    )
                 except httpx.RequestError:
                     if attempts < WATCHER_MAX_ATTEMPTS:
                         await self._sleep(WATCHER_RETRY_BACKOFF_SECONDS)
@@ -890,7 +1040,10 @@ class OpenAIMasterWatcherGateway:
                 response=response,
             )
         try:
-            observation = validate_watcher_observation(parsed, expected_bundle=evidence_bundle)
+            observation = validate_watcher_observation(
+                parsed,
+                expected_bundle=evidence_bundle,
+            )
         except (TypeError, ValueError):
             return _safe_gateway_failure(
                 reason="semantic_validator_rejection",
@@ -944,7 +1097,9 @@ def verify_watcher_receipt(receipt: Mapping[str, Any]) -> bool:
             return False
         if receipt.get("status") not in WATCHER_RECEIPT_STATUSES:
             return False
-        if receipt.get("publication_allowed") is not False or receipt.get("execution_allowed") is not False:
+        if receipt.get("publication_allowed") is not False:
+            return False
+        if receipt.get("execution_allowed") is not False:
             return False
         call_count = receipt.get("model_call_count")
         attempted = receipt.get("call_attempted")
@@ -959,7 +1114,8 @@ def verify_watcher_receipt(receipt: Mapping[str, Any]) -> bool:
                 return False
         elif observation is not None or receipt.get("observation_digest") is not None:
             return False
-        _decimal(receipt.get("estimated_cost_usd"), name="estimated_cost_usd")
+        if _decimal(receipt.get("estimated_cost_usd"), name="estimated_cost_usd") < 0:
+            return False
     except (TypeError, ValueError):
         return False
     return True
@@ -969,7 +1125,10 @@ def _history(receipts: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for raw in receipts:
         if not isinstance(raw, Mapping) or not verify_watcher_receipt(raw):
-            raise WatcherError("watch_history_invalid", "Watcher history contains an invalid receipt.")
+            raise WatcherError(
+                "watch_history_invalid",
+                "Watcher history contains an invalid receipt.",
+            )
         result.append(copy.deepcopy(dict(raw)))
     return result
 
@@ -1016,7 +1175,21 @@ def prepare_watch_cycle(
     previous_receipts: Iterable[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     now = _utc(now_utc, name="now_utc")
-    history = _history(previous_receipts)
+    try:
+        history = _history(previous_receipts)
+    except WatcherError as exc:
+        return _preparation(
+            status="blocked",
+            reason_code=exc.code,
+            checked_at=now,
+            cycle_index=0,
+            position_id=None,
+            context_hash=None,
+            paper_state_digest=None,
+            thesis_digest=None,
+            watch_input_digest=None,
+            evidence_bundle=None,
+        )
     cycle_index = len(history)
     try:
         bundle = build_watcher_evidence_bundle(
@@ -1074,7 +1247,10 @@ def prepare_watch_cycle(
         )
     call_receipts = [row for row in same_position if row.get("call_attempted") is True]
     if call_receipts:
-        last = max(_utc(row["checked_at_utc"], name="receipt.checked_at_utc") for row in call_receipts)
+        last = max(
+            _utc(row["checked_at_utc"], name="receipt.checked_at_utc")
+            for row in call_receipts
+        )
         elapsed = int((now - last).total_seconds())
         if elapsed < 0:
             return _preparation(
@@ -1158,9 +1334,7 @@ def _build_receipt(
         "usage": None if gateway_result is None else copy.deepcopy(gateway_result.get("usage")),
         "estimated_cost_usd": str(estimated_cost_usd),
         "observation": None if observation is None else copy.deepcopy(dict(observation)),
-        "observation_digest": (
-            None if observation is None else watcher_observation_digest(observation)
-        ),
+        "observation_digest": None if observation is None else watcher_observation_digest(observation),
         "publication_allowed": False,
         "execution_allowed": False,
         "management_action_contract_emitted": False,
@@ -1225,7 +1399,7 @@ async def run_watch_cycle(
         )
     try:
         result = await gateway.evaluate(bundle)
-    except Exception:
+    except _GATEWAY_EXCEPTIONS:
         result = _safe_gateway_failure(
             reason="gateway_exception",
             attempts=1,
@@ -1265,7 +1439,10 @@ async def run_watch_cycle(
         )
     raw_observation = result.get("structured_observation")
     try:
-        observation = validate_watcher_observation(raw_observation, expected_bundle=bundle)
+        observation = validate_watcher_observation(
+            raw_observation,
+            expected_bundle=bundle,
+        )
     except (TypeError, ValueError):
         return _build_receipt(
             preparation=preparation,
@@ -1304,17 +1481,26 @@ def reconcile_watcher_receipt(
     existing: Mapping[str, Any], incoming: Mapping[str, Any]
 ) -> dict[str, Any]:
     if not verify_watcher_receipt(existing) or not verify_watcher_receipt(incoming):
-        raise WatcherError("watch_receipt_invalid", "Cannot reconcile invalid watcher receipts.")
+        raise WatcherError(
+            "watch_receipt_invalid",
+            "Cannot reconcile invalid watcher receipts.",
+        )
     if existing["receipt_id"] != incoming["receipt_id"]:
-        raise WatcherError("watch_receipt_identity_mismatch", "Watcher receipt IDs differ.")
+        raise WatcherError(
+            "watch_receipt_identity_mismatch",
+            "Watcher receipt IDs differ.",
+        )
     if existing["receipt_digest"] != incoming["receipt_digest"]:
-        raise WatcherError("watch_receipt_conflict", "Watcher receipt identity has conflicting payloads.")
+        raise WatcherError(
+            "watch_receipt_conflict",
+            "Watcher receipt identity has conflicting payloads.",
+        )
     return copy.deepcopy(dict(existing))
 
 
 def watcher_history_summary(receipts: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     history = _history(receipts)
-    cost = Decimal("0")
+    cost = Decimal(0)
     for row in history:
         cost += _decimal(row["estimated_cost_usd"], name="estimated_cost_usd")
     result: dict[str, Any] = {
@@ -1327,7 +1513,9 @@ def watcher_history_summary(receipts: Iterable[Mapping[str, Any]]) -> dict[str, 
         "blocked_count": sum(row["status"] == "blocked" for row in history),
         "suppressed_count": sum(row["status"] == "suppressed" for row in history),
         "model_failed_count": sum(row["status"] == "model_failed" for row in history),
-        "estimated_cost_usd": str(cost.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)),
+        "estimated_cost_usd": str(
+            cost.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+        ),
         "publication_count": 0,
         "execution_count": 0,
     }
