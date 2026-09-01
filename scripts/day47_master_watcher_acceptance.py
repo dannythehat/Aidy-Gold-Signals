@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import copy
 import subprocess
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,9 +11,9 @@ from aidy.context_composer_v2 import (
     CONTEXT_COMPOSER_VERSION_V2,
     CONTEXT_DOSSIER_VERSION_V2,
     MANDATORY_PROMPT_SECTION_ORDER,
-    digest as composer_digest,
     verify_context_dossier_v2,
 )
+from aidy.context_composer_v2 import digest as composer_digest
 from aidy.context_packet import compute_context_hash
 from aidy.decision_ledger import build_ex_ante_evaluation_record, build_reproducibility_bundle
 from aidy.master_trader_contract_v2 import (
@@ -35,7 +34,11 @@ from aidy.master_watcher import (
     watcher_history_summary,
     watcher_observation_digest,
 )
-from aidy.paper_simulator import PAPER_OBSERVATION_VERSION, apply_paper_observation, start_paper_position
+from aidy.paper_simulator import (
+    PAPER_OBSERVATION_VERSION,
+    apply_paper_observation,
+    start_paper_position,
+)
 from aidy.safety_gates import SAFETY_GATES_VERSION, compute_safety_gate_digest
 from aidy.setup_detector import SETUP_TAXONOMY_VERSION
 
@@ -76,7 +79,9 @@ def _decision() -> dict[str, Any]:
         "setup_taxonomy_version": SETUP_TAXONOMY_VERSION,
         "setup_codes": ["trend_pullback_long"],
         "reason_codes": ["day47_acceptance_fixture"],
-        "decision_summary": "Bounded fixture opens one paper signal for deterministic watcher acceptance.",
+        "decision_summary": (
+            "Bounded fixture opens one paper signal for deterministic watcher acceptance."
+        ),
         "target_decision_id": None,
         "direction": "long",
         "entry_type": "market",
@@ -89,7 +94,9 @@ def _decision() -> dict[str, Any]:
         "close_scope": None,
         "thesis": "Directional continuation should persist while the reference structure remains intact.",
         "expected_horizon_minutes": 240,
-        "counter_argument": "A decisive break through the invalidation level would show the claimed mechanism failed.",
+        "counter_argument": (
+            "A decisive break through the invalidation level would show the claimed mechanism failed."
+        ),
         "invalidation_condition": {
             "condition_version": MACHINE_CONDITION_VERSION,
             "field_path": "$.gold.quote_context.mid",
@@ -224,7 +231,10 @@ def _current_context(stamp: datetime, mid: float) -> dict[str, Any]:
         },
         "data_quality": {"state": "known", "quote_freshness": "fresh"},
         "gold": {"quote_context": {"mid": str(mid)}},
-        "event_risk": {"evidence_state": "known", "timing_state": "clear_current_window"},
+        "event_risk": {
+            "evidence_state": "known",
+            "timing_state": "clear_current_window",
+        },
     }
     value["context_hash"] = compute_context_hash(value)
     return value
@@ -263,7 +273,9 @@ def _dossier(state: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
         "temporal_dispersion": {},
         "unclassified_aggregate_counts": [],
     }
-    invalidation_inputs = {"gold": {"quote_context": {"mid": context["gold"]["quote_context"]["mid"]}}}
+    invalidation_inputs = {
+        "gold": {"quote_context": {"mid": context["gold"]["quote_context"]["mid"]}}
+    }
     value: dict[str, Any] = {
         "dossier_version": CONTEXT_DOSSIER_VERSION_V2,
         "composer_version": CONTEXT_COMPOSER_VERSION_V2,
@@ -357,7 +369,9 @@ class DeterministicGateway:
                 if invalidated
                 else "Fresh evidence does not yet justify a later management-action conversion."
             ),
-            "evidence_change_summary": "Counter and support evidence were reviewed without rewriting the entry thesis.",
+            "evidence_change_summary": (
+                "Counter and support evidence were reviewed without rewriting the entry thesis."
+            ),
             "confidence": 0.60,
             "management_action_emitted": False,
             "publication_requested": False,
@@ -374,7 +388,11 @@ class DeterministicGateway:
             "request_digest": "4" * 64,
             "attempts": 1,
             "latency_ms": 2,
-            "usage": {"input_tokens": 100, "cached_input_tokens": 0, "output_tokens": 50},
+            "usage": {
+                "input_tokens": 100,
+                "cached_input_tokens": 0,
+                "output_tokens": 50,
+            },
             "estimated_cost_usd": "0.002000",
             "pricing_version": "day47_fixture_pricing",
             "prompt_version": "aidy_master_watcher_prompt_v1",
@@ -436,13 +454,14 @@ async def _build_acceptance() -> dict[str, Any]:
         previous_receipts=[first, duplicate, cadence],
     )
 
+    close_stamp = FIXTURE_TIME + timedelta(minutes=5)
     closed_observation = {
         "observation_version": PAPER_OBSERVATION_VERSION,
-        "as_of_utc": (FIXTURE_TIME + timedelta(minutes=5)).isoformat(),
+        "as_of_utc": close_stamp.isoformat(),
         "symbol": "XAUUSD",
         "mid": 2479.0,
         "context": {
-            "as_of_utc": (FIXTURE_TIME + timedelta(minutes=5)).isoformat(),
+            "as_of_utc": close_stamp.isoformat(),
             "symbol": "XAUUSD",
             "gold": {"quote_context": {"mid": 2479.0}},
         },
@@ -473,10 +492,9 @@ async def _build_acceptance() -> dict[str, Any]:
     receipts = [first, duplicate, cadence, second, closed, stale]
     if not all(verify_watcher_receipt(item) for item in receipts):
         raise RuntimeError("Day 47 watcher receipt verification failed")
-    history_summary = watcher_history_summary(receipts)
     return {
         "receipts": receipts,
-        "history_summary": history_summary,
+        "history_summary": watcher_history_summary(receipts),
         "gateway_calls": gateway.calls,
     }
 
@@ -484,10 +502,7 @@ async def _build_acceptance() -> dict[str, Any]:
 def build_artifacts(head_sha: str) -> dict[str, Any]:
     built = asyncio.run(_build_acceptance())
     receipts = built["receipts"]
-    by_reason = {
-        tuple(row["reason_codes"]): row
-        for row in receipts
-    }
+    reasons = {tuple(row["reason_codes"]) for row in receipts}
     observed = [row for row in receipts if row["status"] == "observed"]
     manifest = master_watcher_manifest()
     summary: dict[str, Any] = {
@@ -501,11 +516,11 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
         "model_call_count": built["history_summary"]["model_call_count"],
         "provider_attempt_count": built["history_summary"]["provider_attempt_count"],
         "estimated_cost_usd": built["history_summary"]["estimated_cost_usd"],
-        "duplicate_context_suppressed": ("watch_duplicate_input",) in by_reason,
-        "cadence_suppressed": ("watch_cadence_not_due",) in by_reason,
-        "closed_position_blocked": ("watch_position_inactive",) in by_reason,
-        "stale_context_blocked": ("watch_context_stale",) in by_reason,
-        "only_active_positions_called": True,
+        "duplicate_context_suppressed": ("watch_duplicate_input",) in reasons,
+        "cadence_suppressed": ("watch_cadence_not_due",) in reasons,
+        "closed_position_blocked": ("watch_position_inactive",) in reasons,
+        "stale_context_blocked": ("watch_context_stale",) in reasons,
+        "only_active_positions_called": built["gateway_calls"] == 2,
         "original_thesis_immutable": True,
         "original_invalidation_immutable": True,
         "fresh_context_hash_bound": all(bool(row.get("context_hash")) for row in observed),
