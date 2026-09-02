@@ -57,11 +57,19 @@ known-first-party = ["aidy"]
 # launch adapter adds one guarded import seam without reformatting that frozen
 # file wholesale; behavior and full-regression coverage remain authoritative.
 "src/aidy/end_to_end.py" = ["I001"]
+# math.ceil already returns int on CPython; the explicit cast documents the
+# persisted conservative-age type and is intentionally harmless.
+"src/aidy/private_forward_context.py" = ["RUF046"]
 # The private-forward observer must convert any decision-context construction
 # defect into an immutable fail-closed observation after capture. Restricting
 # this catch to today’s exception classes would permit a new adapter failure to
 # escape without that audit record.
 "src/aidy/forward_live_observer.py" = ["BLE001"]
+# Test-only administrative probes make a best-effort attempt to finish quota or
+# bootstrap bookkeeping before returning the original diagnostic. Cleanup
+# failure must not hide that primary error, so these two broad cleanup catches
+# are intentionally swallowed while production queue failures remain recorded.
+"src/entry.py" = ["BLE001", "S110"]
 # Day-26 price-structure tests intentionally construct Decimal values from
 # explicit strings so fixture values remain visibly decimal and exact.
 "tests/test_day26_price_structure.py" = ["FURB157"]
