@@ -59,7 +59,7 @@ class AidyTwelveDataRecorderService:
         self._repository = repository
         self._gateway = gateway
         self._market_store = market_store
-        self._recent_outputsize = max(10, min(int(recent_outputsize), 120))
+        self._recent_outputsize = max(10, min(int(recent_outputsize), 5000))
 
     async def capture_once(self) -> ReferenceCaptureResult:
         try:
