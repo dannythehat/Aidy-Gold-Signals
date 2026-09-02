@@ -28,20 +28,25 @@ jobs:
           cat > /tmp/wrangler-diagnostic.jsonc <<'JSON'
           {"name":"aidy-signals-test","main":"src/entry.py","compatibility_date":"2026-08-16","compatibility_flags":["python_workers"],"d1_databases":[{"binding":"AIDY_OPS","database_name":"aidy-ops-test","database_id":"3588d82a-d686-4430-872d-d4c0e62c3d5d"}]}
           JSON
-      - name: Query failed-bootstrap state without vendor calls
+      - name: Query live state without vendor calls or writes
         shell: bash
         run: |
           set -euo pipefail
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT fetched_at_utc,raw_bar_count,admitted_closed_bar_count,off_session_bar_count,observed_lag_seconds,freshness_state,credit_headers_json,response_digest FROM twelve_data_feed_observations ORDER BY fetched_at_utc DESC LIMIT 12" > /tmp/feed.json
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT id,captured_at,capture_status,data_availability_json FROM market_snapshots ORDER BY captured_at DESC LIMIT 20" > /tmp/all-snapshots.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT id,captured_at,capture_status,data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots ORDER BY captured_at DESC LIMIT 30" > /tmp/all-snapshots.json
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT first_observed_at,source,timeframe,COUNT(*) AS n,MIN(open_time_utc) AS min_open,MAX(open_time_utc) AS max_open FROM market_candles WHERE source IN ('twelve_data_vendor_m1_v1','twelve_data_session_aggregate_v1') GROUP BY first_observed_at,source,timeframe ORDER BY first_observed_at DESC,source,timeframe" > /tmp/candle-groups.json
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT source,timeframe,COUNT(*) AS n FROM market_candles WHERE source IN ('twelve_data_vendor_m1_v1','twelve_data_session_aggregate_v1') GROUP BY source,timeframe ORDER BY source,timeframe" > /tmp/candle-total.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT id,requested_at_utc,completed_at_utc,status,request_kind,outputsize FROM twelve_data_request_ledger ORDER BY requested_at_utc DESC LIMIT 30" > /tmp/request-ledger.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT cohort_id,accepted_code_head,activated_at_utc,state,closed_at_utc,replacement_cohort_id FROM aidy_forward_cohorts ORDER BY activated_at_utc DESC LIMIT 10" > /tmp/forward-cohorts.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT record_id,cohort_id,cycle_id,evaluated_at_utc,context_hash,disposition,data_quality_state,data_quality_reason_code,decision_id,ex_ante_digest,self_consistency_digest,retrieval_effective_n FROM aidy_forward_evaluations ORDER BY evaluated_at_utc DESC LIMIT 50" > /tmp/forward-evaluations.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT cycle_id,context_hash,instruction_type,source_state,cycle_state,last_error_code,publication_id,paper_state_digest,self_consistency_json,ex_ante_json FROM aidy_end_to_end_cycles ORDER BY rowid DESC LIMIT 50" > /tmp/end-to-end-cycles.json
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT status,COUNT(*) AS n FROM archive_outbox GROUP BY status ORDER BY status" > /tmp/outbox.json
-      - name: Summarize ingest boundary
+      - name: Summarize ingest and private-forward boundary
         shell: bash
         run: |
           python - <<'PY'
           import json
+          from collections import Counter
           def rows(path):
               p=json.load(open(path,encoding='utf-8')); out=[]
               for b in p: out.extend(b.get('results') or [])
@@ -50,14 +55,28 @@ jobs:
           snaps=rows('/tmp/all-snapshots.json')
           groups=rows('/tmp/candle-groups.json')
           totals=rows('/tmp/candle-total.json')
+          requests=rows('/tmp/request-ledger.json')
+          cohorts=rows('/tmp/forward-cohorts.json')
+          evaluations=rows('/tmp/forward-evaluations.json')
+          cycles=rows('/tmp/end-to-end-cycles.json')
           outbox=rows('/tmp/outbox.json')
           td_snaps=[r for r in snaps if 'twelve_data' in str(r.get('data_availability_json') or '')]
           print('feeds',feeds)
           print('twelve_data_snapshot_count',len(td_snaps))
+          print('latest_twelve_snapshots',td_snaps[:5])
           print('candle_groups',groups)
           print('candle_totals',totals)
+          print('recent_requests',requests[:10])
+          print('forward_cohorts',cohorts)
+          print('forward_evaluation_count_returned',len(evaluations))
+          print('forward_dispositions',Counter(r.get('disposition') for r in evaluations))
+          print('forward_quality_reasons',Counter(r.get('data_quality_reason_code') for r in evaluations))
+          print('recent_forward_evaluations',evaluations[:15])
+          print('end_to_end_cycle_count_returned',len(cycles))
+          print('end_to_end_states',Counter(r.get('cycle_state') for r in cycles))
+          print('end_to_end_errors',Counter(r.get('last_error_code') for r in cycles))
+          print('recent_end_to_end_cycles',cycles[:15])
           print('archive_outbox',outbox)
-          print('bootstrap_ingest_reached_snapshot_boundary',bool(td_snaps))
           print('vendor_calls_from_diagnostic',0)
           PY
       - uses: actions/upload-artifact@v4
@@ -68,5 +87,9 @@ jobs:
             /tmp/all-snapshots.json
             /tmp/candle-groups.json
             /tmp/candle-total.json
+            /tmp/request-ledger.json
+            /tmp/forward-cohorts.json
+            /tmp/forward-evaluations.json
+            /tmp/end-to-end-cycles.json
             /tmp/outbox.json
           retention-days: 30
