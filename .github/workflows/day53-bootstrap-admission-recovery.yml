@@ -1,0 +1,287 @@
+name: AIDY Day 53 Bootstrap Admission Recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "migrations/d1/0010_twelve_data_bootstrap_reattestation.sql"
+      - "src/aidy/twelve_data_bootstrap.py"
+      - "tests/test_day53_bootstrap_admission_recovery.py"
+      - ".github/workflows/day53-bootstrap-admission-recovery.yml"
+  push:
+    branches: [main]
+    paths:
+      - "migrations/d1/0010_twelve_data_bootstrap_reattestation.sql"
+      - "src/aidy/twelve_data_bootstrap.py"
+      - "tests/test_day53_bootstrap_admission_recovery.py"
+      - ".github/workflows/day53-bootstrap-admission-recovery.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: aidy-day53-live-forward-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  acceptance:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Require protected-main ancestry
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$PR_BASE_SHA" HEAD)" = "$PR_BASE_SHA"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install and test recovery boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check src/aidy/twelve_data_bootstrap.py tests/test_day53_bootstrap_admission_recovery.py
+          uv run pytest -q tests/test_day53_bootstrap_admission_recovery.py tests/test_day53_twelve_data_launch_cleanup.py
+          uv run pytest -q
+
+      - name: Assert recovery remains fail-closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F "r.request_kind='scheduled_capture'" migrations/d1/0010_twelve_data_bootstrap_reattestation.sql
+          grep -F "r.request_kind='bootstrap'" migrations/d1/0010_twelve_data_bootstrap_reattestation.sql
+          grep -F "b.state='succeeded'" migrations/d1/0010_twelve_data_bootstrap_reattestation.sql
+          ! grep -F "manual_probe" migrations/d1/0010_twelve_data_bootstrap_reattestation.sql
+          grep -F "BOOTSTRAP_MIN_REQUEST_SPACING_SECONDS = 9.0" src/aidy/twelve_data_bootstrap.py
+          ! grep -Ein 'metaapi|mt5|vantage|super_signals' migrations/d1/0010_twelve_data_bootstrap_reattestation.sql src/aidy/twelve_data_bootstrap.py
+
+  recover-and-dispatch-proof:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout exact protected-main head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require exact main and recovery credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+          test -n "${GH_TOKEN:-}"
+
+      - name: Build bootstrap and restored Worker configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          base['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          base['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          base['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          base['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          restored=json.loads(json.dumps(base))
+          restored['vars']['AIDY_CAPTURE_ENABLED']='true'
+          restored['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          restored['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          bootstrap=json.loads(json.dumps(base))
+          bootstrap['vars']['AIDY_CAPTURE_ENABLED']='false'
+          bootstrap['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          bootstrap['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='true'
+          for cfg in (bootstrap, restored):
+              text=json.dumps(cfg).lower()
+              for forbidden in ('metaapi','vantage','mt5','super_signals'):
+                  assert forbidden not in text
+              settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+              assert settings.market_data_source=='twelve_data'
+              assert settings.market_data_ownership=='public_independent'
+              assert settings.market_poll_seconds>=300.0
+          json.dump(bootstrap, open('wrangler.day53.bootstrap.jsonc','w',encoding='utf-8'), indent=2)
+          json.dump(restored, open('wrangler.day53.restored.jsonc','w',encoding='utf-8'), indent=2)
+          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched, open('wrangler.day53.scheduler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply bootstrap admission migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day53.restored.jsonc | tee /tmp/bootstrap-migrations.txt
+
+      - name: Install Twelve secret and run bounded bootstrap
+        id: bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$AIDY_TWELVE_DATA_API_KEY" | npx --yes wrangler@4 secret put AIDY_TWELVE_DATA_API_KEY --config wrangler.day53.bootstrap.jsonc >/tmp/twelve-secret.txt
+          ! grep -Fq "$AIDY_TWELVE_DATA_API_KEY" /tmp/twelve-secret.txt
+          ADMIN_TOKEN="$(python - <<'PY'
+          import secrets
+          print(secrets.token_urlsafe(48))
+          PY
+          )"
+          echo "::add-mask::$ADMIN_TOKEN"
+          printf '%s' "$ADMIN_TOKEN" | npx --yes wrangler@4 secret put AIDY_DAY53_ADMIN_TOKEN --config wrangler.day53.bootstrap.jsonc >/tmp/admin-secret.txt
+          ! grep -Fq "$ADMIN_TOKEN" /tmp/admin-secret.txt
+          cp wrangler.day53.bootstrap.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/bootstrap-worker-deploy.txt
+          curl --fail --silent --show-error --max-time 600 \
+            -X POST \
+            -H "X-AIDY-Admin-Token: ${ADMIN_TOKEN}" \
+            "$AIDY_TEST_WORKER_URL/day53/twelve-data-bootstrap" \
+            > /tmp/bootstrap-result.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/bootstrap-result.json', encoding='utf-8'))
+          assert payload.get('ok') is True, payload
+          assert payload.get('state')=='complete', payload
+          assert payload.get('decision_snapshot_created') is False, payload
+          assert payload.get('decision_ready') is False, payload
+          assert payload.get('next_step')=='wait_for_fresh_scheduled_capture', payload
+          assert int(payload.get('planned_windows') or 0)>0, payload
+          assert int(payload.get('required_m1_minutes') or 0)>=1380, payload
+          assert all(row.get('state')=='succeeded' for row in payload.get('window_results') or []), payload
+          print('bootstrap_complete=true')
+          print('planned_windows='+str(payload['planned_windows']))
+          print('required_m1_minutes='+str(payload['required_m1_minutes']))
+          PY
+
+      - name: Remove ephemeral admin secret and restore capture-only Worker
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/admin-delete.json -w '%{http_code}' -X DELETE \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets/AIDY_DAY53_ADMIN_TOKEN")"
+          test "$status" = "200" || test "$status" = "404"
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets" \
+            > /tmp/worker-secrets-after.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/worker-secrets-after.json', encoding='utf-8'))
+          names={str(item.get('name')) for item in (payload.get('result') or [])}
+          assert 'AIDY_DAY53_ADMIN_TOKEN' not in names, names
+          print('ephemeral_admin_secret_absent=true')
+          PY
+          cp wrangler.day53.restored.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/restored-worker-deploy.txt
+          npx --yes wrangler@4 deploy --config wrangler.day53.scheduler.jsonc 2>&1 | tee /tmp/restored-scheduler-deploy.txt
+
+      - name: Require fresh complete scheduled Twelve snapshot
+        if: steps.bootstrap.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESTORED_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "RESTORED_AT=$RESTORED_AT" >> "$GITHUB_ENV"
+          found=0
+          for attempt in $(seq 1 10); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.restored.jsonc --command "SELECT id,captured_at,capture_status,data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots WHERE captured_at>='${RESTORED_AT}' AND capture_status='complete' ORDER BY captured_at DESC LIMIT 1" > /tmp/complete-snapshot.json
+            if python - <<'PY'
+          import json
+          rows=[]
+          for batch in json.load(open('/tmp/complete-snapshot.json', encoding='utf-8')):
+              rows.extend(batch.get('results') or [])
+          if len(rows)!=1:
+              raise SystemExit(1)
+          row=rows[0]
+          availability=json.loads(row['data_availability_json'])
+          assert availability.get('market_data_source')=='twelve_data', availability
+          assert availability.get('request_kind')=='scheduled_capture', availability
+          assert availability.get('request_ledger_status')=='succeeded', availability
+          assert availability.get('all_timeframes_ready') is True, availability
+          for key in ('latest_m1_id','latest_m5_id','latest_m15_id','latest_h1_id','latest_h4_id','latest_d1_id'):
+              assert row.get(key), (key,row)
+          print(row['id'])
+          PY
+            then
+              found=1
+              break
+            fi
+            sleep 60
+          done
+          test "$found" -eq 1 || { echo 'Bootstrap completed but no fresh complete scheduled snapshot appeared'; exit 1; }
+
+      - name: Dispatch exact protected-main production proof
+        if: steps.bootstrap.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/day53-live-forward-activation.yml/dispatches" \
+            -d '{"ref":"main"}'
+          echo "production_proof_dispatched_for=${GITHUB_SHA}"
+
+      - name: Preserve bootstrap recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-bootstrap-recovery-${{ github.sha }}
+          path: |
+            /tmp/bootstrap-migrations.txt
+            /tmp/bootstrap-worker-deploy.txt
+            /tmp/bootstrap-result.json
+            /tmp/admin-delete.json
+            /tmp/worker-secrets-after.json
+            /tmp/restored-worker-deploy.txt
+            /tmp/restored-scheduler-deploy.txt
+            /tmp/complete-snapshot.json
+          if-no-files-found: warn
+          retention-days: 90

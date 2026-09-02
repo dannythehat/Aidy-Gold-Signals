@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from aidy.twelve_data_bootstrap import (
+    BOOTSTRAP_MIN_REQUEST_SPACING_SECONDS,
+    AidyTwelveDataBootstrapService,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_bootstrap_reattestation_admits_existing_immutable_candle_without_timestamp_rewrite() -> None:
+    migration = (
+        ROOT / "migrations" / "d1" / "0010_twelve_data_bootstrap_reattestation.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "DROP VIEW IF EXISTS twelve_data_decision_admitted_m1_v1" in migration
+    assert "r.completed_at_utc=c.first_observed_at" in migration
+    assert "r.request_kind='scheduled_capture'" in migration
+    assert "r.outputsize BETWEEN 1 AND 30" in migration
+
+    bootstrap_clause = migration.split("OR\n    EXISTS (", maxsplit=1)[1]
+    assert "r.request_kind='bootstrap'" in bootstrap_clause
+    assert "b.state='succeeded'" in bootstrap_clause
+    assert "c.open_time_utc>=b.window_start_utc" in bootstrap_clause
+    assert "c.open_time_utc<b.window_end_utc" in bootstrap_clause
+    assert "c.first_observed_at" not in bootstrap_clause
+    assert "manual_probe" not in migration
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_vendor_calls_are_paced_below_short_window_credit_burst() -> None:
+    now = [0.0]
+    sleeps: list[float] = []
+
+    async def sleeper(seconds: float) -> None:
+        sleeps.append(seconds)
+        now[0] += seconds
+
+    service = AidyTwelveDataBootstrapService(
+        repository=object(),  # type: ignore[arg-type]
+        gateway=object(),  # type: ignore[arg-type]
+        store=object(),  # type: ignore[arg-type]
+        sleeper=sleeper,
+        monotonic=lambda: now[0],
+    )
+
+    await service._pace_vendor_request()
+    assert sleeps == []
+
+    now[0] += 1.0
+    await service._pace_vendor_request()
+
+    assert BOOTSTRAP_MIN_REQUEST_SPACING_SECONDS == 9.0
+    assert sleeps == [8.0]
+
+
+def test_recovery_uses_ephemeral_masked_admin_secret_and_restores_bootstrap_off() -> None:
+    workflow = (
+        ROOT / ".github" / "workflows" / "day53-bootstrap-admission-recovery.yml"
+    ).read_text(encoding="utf-8")
+
+    mask = workflow.index('echo "::add-mask::$ADMIN_TOKEN"')
+    install = workflow.index("secret put AIDY_DAY53_ADMIN_TOKEN")
+    delete = workflow.index("secrets/AIDY_DAY53_ADMIN_TOKEN")
+    dispatch = workflow.index("day53-live-forward-activation.yml/dispatches")
+
+    assert mask < install < delete < dispatch
+    assert "AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='true'" in workflow
+    assert "AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'" in workflow
+    assert "AIDY_CAPTURE_ENABLED']='false'" in workflow
+    assert "AIDY_FORMAL_FORWARD_ENABLED']='false'" in workflow
+    assert "capture_status='complete'" in workflow
+    assert "all_timeframes_ready" in workflow
+    assert '"ref":"main"' in workflow
