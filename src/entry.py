@@ -253,56 +253,84 @@ class Default(WorkerEntrypoint):
                 assert isinstance(market_store, D1TwelveDataMarketStore)
                 as_of = datetime.now(UTC)
                 latest_m1_open, _ = latest_completed_bucket(as_of, "1m")
-                windows = plan_bootstrap_windows(
-                    as_of,
-                    latest_m1_open_utc=latest_m1_open,
-                )
+                windows = plan_bootstrap_windows(as_of, latest_m1_open_utc=latest_m1_open)
                 if not windows:
+                    return Response.json({"ok": False, "error": "bootstrap_plan_empty"}, status=503)
+                all_required = frozenset().union(*(window.required_opens for window in windows))
+                admitted_rows = await market_store.latest_m1_bars(
+                    start_utc=windows[0].start_utc,
+                    end_utc=windows[-1].end_utc,
+                )
+                admitted_opens = set()
+                for row in admitted_rows:
+                    raw_open = row.get("open_time_utc")
+                    parsed_open = raw_open if isinstance(raw_open, datetime) else datetime.fromisoformat(str(raw_open))
+                    if parsed_open.tzinfo is None:
+                        raise ValueError("Admitted Twelve M1 timestamp must be timezone-aware.")
+                    admitted_opens.add(parsed_open.astimezone(UTC))
+                missing_required = all_required - admitted_opens
+                if not missing_required:
                     return Response.json(
-                        {"ok": False, "error": "bootstrap_plan_empty"}, status=503
+                        {
+                            "ok": True,
+                            "bootstrap_id": None,
+                            "state": "complete",
+                            "planned_windows": 0,
+                            "required_m1_minutes": len(all_required),
+                            "remaining_m1_minutes": 0,
+                            "window_results": [],
+                            "decision_snapshot_created": False,
+                            "decision_ready": False,
+                            "next_step": "wait_for_fresh_scheduled_capture",
+                        }
                     )
-                required_minutes = sum(len(window.required_opens) for window in windows)
+                target = next(window for window in windows if window.required_opens & missing_required)
                 bootstrap_id = await market_store.start_bootstrap(
                     started_at=as_of,
                     as_of=as_of,
-                    planned_windows=len(windows),
-                    required_m1_minutes=required_minutes,
+                    planned_windows=1,
+                    required_m1_minutes=len(target.required_opens),
                 )
                 service = AidyTwelveDataBootstrapService(
                     repository=repository,
                     gateway=market_gateway,
                     store=market_store,
                 )
-                results = []
-                for window in windows:
-                    result = await service.ingest_window(
-                        bootstrap_id=bootstrap_id,
-                        window=window,
-                    )
-                    results.append(result)
-                    if result.get("state") != "succeeded":
-                        break
+                result = await service.ingest_window(bootstrap_id=bootstrap_id, window=target)
                 complete = await market_store.finalize_bootstrap(
                     bootstrap_id=bootstrap_id,
                     completed_at=datetime.now(UTC),
                 )
-                for _ in range(20):
-                    flushed = await repository.flush_archive_outbox(limit=100)
-                    if flushed.attempted == 0:
-                        break
+                if not complete or result.get("state") != "succeeded":
+                    return Response.json(
+                        {
+                            "ok": False,
+                            "bootstrap_id": str(bootstrap_id),
+                            "state": "failed",
+                            "window_results": [result],
+                            "decision_snapshot_created": False,
+                            "decision_ready": False,
+                        },
+                        status=503,
+                    )
+                remaining = missing_required - target.required_opens
+                state = "complete" if not remaining else "in_progress"
                 return Response.json(
                     {
-                        "ok": complete,
+                        "ok": True,
                         "bootstrap_id": str(bootstrap_id),
-                        "state": "complete" if complete else "failed",
-                        "planned_windows": len(windows),
-                        "required_m1_minutes": required_minutes,
-                        "window_results": results,
+                        "state": state,
+                        "planned_windows": 1,
+                        "processed_window_index": target.index,
+                        "processed_window_start_utc": target.start_utc.isoformat(),
+                        "processed_window_end_utc": target.end_utc.isoformat(),
+                        "required_m1_minutes": len(all_required),
+                        "remaining_m1_minutes": len(remaining),
+                        "window_results": [result],
                         "decision_snapshot_created": False,
                         "decision_ready": False,
-                        "next_step": "wait_for_fresh_scheduled_capture",
-                    },
-                    status=200 if complete else 503,
+                        "next_step": "wait_for_fresh_scheduled_capture" if state == "complete" else "continue_bootstrap",
+                    }
                 )
             except Exception as exc:  # noqa: BLE001 - protected administrative bootstrap diagnosis
                 if bootstrap_id is not None and isinstance(market_store, D1TwelveDataMarketStore):

@@ -14,7 +14,7 @@ from .twelve_data_market import AIDY_SYMBOL, RAW_M1_SOURCE, TwelveDataOhlcGatewa
 from .twelve_data_recorder import bootstrap_required_m1_open_times
 from .twelve_data_storage import D1TwelveDataMarketStore
 
-MAX_BOOTSTRAP_WINDOW_MINUTES = 120
+MAX_BOOTSTRAP_WINDOW_MINUTES = 30
 BOOTSTRAP_MIN_REQUEST_SPACING_SECONDS = 9.0
 
 
