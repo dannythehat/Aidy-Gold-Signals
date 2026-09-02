@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   classify-protected-diff:
+    name: Evidence Semantic Change Gate / classify-protected-diff
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout exact PR head
