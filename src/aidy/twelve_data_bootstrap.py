@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -12,6 +15,7 @@ from .twelve_data_recorder import bootstrap_required_m1_open_times
 from .twelve_data_storage import D1TwelveDataMarketStore
 
 MAX_BOOTSTRAP_WINDOW_MINUTES = 120
+BOOTSTRAP_MIN_REQUEST_SPACING_SECONDS = 9.0
 
 
 def _utc(value: datetime) -> datetime:
@@ -68,7 +72,13 @@ def plan_bootstrap_windows(
 
 
 class AidyTwelveDataBootstrapService:
-    """Ingest exactly one bounded window. Completion is separate from live readiness."""
+    """Ingest exactly one bounded window. Completion is separate from live readiness.
+
+    Bootstrap windows are intentionally small and vendor calls are paced below the
+    observed Basic-plan minute-credit envelope. The quota ledger is still the hard
+    safety boundary; pacing only prevents an otherwise valid bounded bootstrap from
+    bursting into Twelve Data's short-window rate limit.
+    """
 
     def __init__(
         self,
@@ -76,10 +86,26 @@ class AidyTwelveDataBootstrapService:
         repository: AidyMarketRepository,
         gateway: TwelveDataOhlcGateway,
         store: D1TwelveDataMarketStore,
+        min_request_spacing_seconds: float = BOOTSTRAP_MIN_REQUEST_SPACING_SECONDS,
+        sleeper: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         self._repository = repository
         self._gateway = gateway
         self._store = store
+        self._min_request_spacing_seconds = max(0.0, float(min_request_spacing_seconds))
+        self._sleeper = sleeper
+        self._monotonic = monotonic
+        self._last_vendor_request_started: float | None = None
+
+    async def _pace_vendor_request(self) -> None:
+        now = self._monotonic()
+        if self._last_vendor_request_started is not None:
+            elapsed = now - self._last_vendor_request_started
+            remaining = self._min_request_spacing_seconds - elapsed
+            if remaining > 0:
+                await self._sleeper(remaining)
+        self._last_vendor_request_started = self._monotonic()
 
     async def ingest_window(
         self, *, bootstrap_id: UUID, window: BootstrapWindow
@@ -99,6 +125,7 @@ class AidyTwelveDataBootstrapService:
             required_m1_minutes=len(window.required_opens),
         )
         try:
+            await self._pace_vendor_request()
             fetch = await self._gateway.fetch_1m(
                 start_date=window.start_utc,
                 end_date=window.end_utc,
