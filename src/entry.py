@@ -19,6 +19,9 @@ from aidy.live_gold_storage import D1LiveGoldQuoteHistory
 from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
 from aidy.runtime import run_capture_cycle, run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
+from aidy.twelve_data_market import TwelveDataOhlcGateway
+from aidy.twelve_data_recorder import AidyTwelveDataRecorderService
+from aidy.twelve_data_storage import D1TwelveDataMarketStore
 
 
 def _repository(env):
@@ -27,10 +30,13 @@ def _repository(env):
 
 
 def _market_runtime_dependencies(env, settings: AidySettings):
-    if settings.market_data_source != "argentapi":
-        return None, None
-    api_key = str(getattr(env, "AIDY_ARGENT_API_KEY", ""))
-    return ArgentApiGateway(api_key=api_key), D1LiveGoldQuoteHistory(env.AIDY_OPS)
+    if settings.market_data_source == "argentapi":
+        api_key = str(getattr(env, "AIDY_ARGENT_API_KEY", ""))
+        return ArgentApiGateway(api_key=api_key), D1LiveGoldQuoteHistory(env.AIDY_OPS)
+    if settings.market_data_source == "twelve_data":
+        api_key = str(getattr(env, "AIDY_TWELVE_DATA_API_KEY", ""))
+        return TwelveDataOhlcGateway(api_key=api_key), D1TwelveDataMarketStore(env.AIDY_OPS)
+    return None, None
 
 
 def _formal_forward_enabled(env) -> bool:
@@ -40,6 +46,23 @@ def _formal_forward_enabled(env) -> bool:
         "yes",
         "on",
     }
+
+
+def _twelve_data_bootstrap_enabled(env) -> bool:
+    return str(getattr(env, "AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED", "false")).strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _admin_authorized(request, env) -> bool:
+    expected = str(getattr(env, "AIDY_DAY53_ADMIN_TOKEN", "")).strip()
+    if not expected:
+        return False
+    supplied = str(request.headers.get("X-AIDY-Admin-Token") or "").strip()
+    return supplied == expected
 
 
 def _scheduled_at_from_queue_body(body: object) -> datetime:
@@ -122,6 +145,107 @@ class Default(WorkerEntrypoint):
                 )
             status["deployment_enabled"] = _formal_forward_enabled(self.env)
             return Response.json({"ok": True, "forward": status})
+
+        if request.method == "POST" and url.path == "/day53/twelve-data-smoke":
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            if not _admin_authorized(request, self.env):
+                return Response("Forbidden", status=403)
+            settings = AidySettings.from_worker_env(self.env)
+            if settings.market_data_source != "twelve_data":
+                return Response.json(
+                    {"ok": False, "error": "twelve_data_not_configured"}, status=409
+                )
+            bootstrap = parse_qs(url.query).get("bootstrap", ["0"])[0] == "1"
+            if bootstrap and not _twelve_data_bootstrap_enabled(self.env):
+                return Response.json(
+                    {"ok": False, "error": "twelve_data_bootstrap_disabled"}, status=409
+                )
+            _, repository = _repository(self.env)
+            market_gateway, market_store = _market_runtime_dependencies(self.env, settings)
+            try:
+                assert isinstance(market_gateway, TwelveDataOhlcGateway)
+                assert isinstance(market_store, D1TwelveDataMarketStore)
+                recorder = AidyTwelveDataRecorderService(
+                    repository=repository,
+                    gateway=market_gateway,
+                    market_store=market_store,
+                    recent_outputsize=1500 if bootstrap else 30,
+                )
+                result = await recorder.capture_once()
+                for _ in range(20 if bootstrap else 2):
+                    flushed = await repository.flush_archive_outbox(limit=100)
+                    if flushed.attempted == 0:
+                        break
+                if result.snapshot_id is None:
+                    return Response.json({"ok": False, "error": "no_market_snapshot"}, status=503)
+                row = await self.env.AIDY_OPS.prepare(
+                    """
+                    SELECT id,captured_at,capture_status,mid,quote_time,quote_age_seconds,
+                           data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,
+                           latest_h1_id,latest_h4_id,latest_d1_id
+                    FROM market_snapshots WHERE id=? LIMIT 1
+                    """
+                ).bind(str(result.snapshot_id)).first()
+                snapshot = {} if row is None else dict(row)
+                availability = json.loads(str(snapshot.get("data_availability_json") or "{}"))
+                candle_fields = (
+                    "latest_m1_id",
+                    "latest_m5_id",
+                    "latest_m15_id",
+                    "latest_h1_id",
+                    "latest_h4_id",
+                    "latest_d1_id",
+                )
+                candles_ready = all(
+                    snapshot.get(key) not in {None, ""} for key in candle_fields
+                )
+                pending_row = await self.env.AIDY_OPS.prepare(
+                    "SELECT COUNT(*) AS n FROM archive_outbox WHERE status='pending'"
+                ).first()
+                pending = 0 if pending_row is None else int(pending_row["n"])
+                ok = (
+                    snapshot.get("capture_status") == "complete"
+                    and candles_ready
+                    and availability.get("freshness_state") == "fresh"
+                    and pending == 0
+                )
+                return Response.json(
+                    {
+                        "ok": ok,
+                        "bootstrap": bootstrap,
+                        "snapshot": {
+                            "id": snapshot.get("id"),
+                            "captured_at": snapshot.get("captured_at"),
+                            "capture_status": snapshot.get("capture_status"),
+                            "mid": snapshot.get("mid"),
+                            "quote_time": snapshot.get("quote_time"),
+                            "quote_age_seconds": snapshot.get("quote_age_seconds"),
+                            "candles_ready": candles_ready,
+                            "candle_ids": {key: snapshot.get(key) for key in candle_fields},
+                            "market_data_source": availability.get("market_data_source"),
+                            "candle_source": availability.get("candle_source"),
+                            "aggregate_source": availability.get("aggregate_source"),
+                            "freshness_state": availability.get("freshness_state"),
+                            "provider_meta": availability.get("provider_meta"),
+                            "credit_headers": availability.get("credit_headers"),
+                            "forming_bar_count_dropped": availability.get(
+                                "forming_bar_count_dropped"
+                            ),
+                            "off_session_bar_count_dropped": availability.get(
+                                "off_session_bar_count_dropped"
+                            ),
+                        },
+                        "stored_candles": result.stored_candles,
+                        "archive_pending": pending,
+                    },
+                    status=200 if ok else 503,
+                )
+            except Exception as exc:  # noqa: BLE001 - protected test-only smoke diagnosis
+                return Response.json(
+                    {"ok": False, "error": type(exc).__name__, "message": str(exc)[:1000]},
+                    status=500,
+                )
 
         if request.method == "POST" and url.path == "/day53/live-gold-smoke":
             if str(self.env.AIDY_ENV).lower() != "test":
