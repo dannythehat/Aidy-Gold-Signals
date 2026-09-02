@@ -75,3 +75,6 @@ known-first-party = ["aidy"]
 # Day-26 price-structure tests intentionally construct Decimal values from
 # explicit strings so fixture values remain visibly decimal and exact.
 "tests/test_day26_price_structure.py" = ["FURB157"]
+
+# Operational comment only: keeps the required Twelve adapter acceptance in the
+# protected-main PR path for the isolated Day 53 recovery dispatcher.
