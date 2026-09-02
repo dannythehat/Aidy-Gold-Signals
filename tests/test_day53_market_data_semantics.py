@@ -6,6 +6,7 @@ import pytest
 
 from aidy.historical_backfill import DERIVATION_VERSION, HISTDATA_SOURCE
 from aidy.market_data_semantics import (
+    CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE,
     EQUIVALENCE_CONTRACT_RECORD_TYPE,
     QUALIFICATION_RESULT_RECORD_TYPE,
     accepted_market_data_equivalences,
@@ -27,7 +28,7 @@ from aidy.twelve_data_market import RAW_M1_SOURCE
 SHA40 = "a" * 40
 
 
-def _equivalence_chain(*, outcome: str = "pass") -> list[dict]:
+def _equivalence_chain(*, outcome: str = "pass", full_retrieval_scope: bool = True) -> list[dict]:
     hist = histdata_semantic_identity()
     twelve = twelve_data_semantic_identity()
     start = datetime(2026, 9, 2, 8, 0, tzinfo=UTC)
@@ -41,8 +42,8 @@ def _equivalence_chain(*, outcome: str = "pass") -> list[dict]:
         payload=governance_genesis_payload(),
     )
     contract = equivalence_contract_payload(
-        qualification_id="histdata-twelve-regime-v1",
-        affected_surface="regime_classifier.volatility_band",
+        qualification_id="histdata-twelve-active-v2-surface-v1",
+        affected_surface="regime_classifier.volatility_band+analogue_retrieval_v2",
         source_identity_a_digest=hist["semantic_identity_digest"],
         source_identity_b_digest=twelve["semantic_identity_digest"],
         comparison_population_digest="b" * 64,
@@ -54,6 +55,9 @@ def _equivalence_chain(*, outcome: str = "pass") -> list[dict]:
         fail_criteria={"state": "frozen_before_run"},
         insufficient_evidence_criteria={"paired_sample_lt": 100},
     )
+    if full_retrieval_scope:
+        contract["authorization_scope"] = CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE
+        contract["cross_source_retrieval_permission_on_pass"] = True
     contract_record = build_record(
         sequence=1,
         previous_digest=genesis["record_digest"],
@@ -64,7 +68,7 @@ def _equivalence_chain(*, outcome: str = "pass") -> list[dict]:
         payload=contract,
     )
     result = qualification_result_payload(
-        qualification_id="histdata-twelve-regime-v1",
+        qualification_id="histdata-twelve-active-v2-surface-v1",
         contract_digest=research_digest(contract),
         outcome=outcome,
         evidence_digest="c" * 64,
@@ -125,20 +129,28 @@ def test_same_identity_passes_without_equivalence() -> None:
     assert result["qualification_result_record_digest"] is None
 
 
-def test_only_valid_hash_chained_pass_record_unlocks_cross_source_equivalence() -> None:
+def test_only_full_scope_hash_chained_pass_unlocks_cross_source_equivalence() -> None:
     hist = histdata_semantic_identity()
     twelve = twelve_data_semantic_identity()
     accepted = accepted_market_data_equivalences(_equivalence_chain(outcome="pass"))
     key = f'{twelve["semantic_identity_digest"]}:{hist["semantic_identity_digest"]}'
     assert key in accepted
+    assert accepted[key]["authorization_scope"] == CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE
     qualified = assert_semantic_compatible(
         twelve,
         hist,
         accepted_equivalence=accepted[key],
     )
     assert qualified["state"] == "qualified_equivalence_contract"
+    assert qualified["authorization_scope"] == CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE
     assert len(qualified["equivalence_contract_digest"]) == 64
     assert len(qualified["qualification_result_record_digest"]) == 64
+
+
+def test_partial_surface_pass_cannot_unlock_cross_source_retrieval() -> None:
+    assert accepted_market_data_equivalences(
+        _equivalence_chain(outcome="pass", full_retrieval_scope=False)
+    ) == {}
 
 
 def test_fail_result_does_not_unlock_cross_source_equivalence() -> None:
