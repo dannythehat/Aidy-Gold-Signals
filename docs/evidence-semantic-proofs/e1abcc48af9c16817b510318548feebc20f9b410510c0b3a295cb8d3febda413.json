@@ -1,0 +1,26 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "41ed799d1ae006691e6e9427c9ed351df5c7edfb",
+  "base_sha": "8870fc620a6eb06702e282cafb53b7dd38b8fb03",
+  "protected_diff_sha256": "e1abcc48af9c16817b510318548feebc20f9b410510c0b3a295cb8d3febda413",
+  "classification": "transport-only",
+  "cohort_action": "preserve",
+  "preserve_existing_cohort": true,
+  "reason": "The protected-path change only reduces administrative Twelve bootstrap batching from 120-minute windows to 30-minute windows so recovery can resume across Worker requests. It does not change the required M1 evidence set, decision-admission eligibility, semantic identity, context composition, model inputs, safety gates, or analogue permissions.",
+  "deterministic_equivalence_proof": {
+    "invariants": [
+      "bootstrap_required_m1_open_times semantics are unchanged",
+      "Twelve decision-admission view and request-kind eligibility are unchanged",
+      "manual_probe evidence remains excluded",
+      "semantic identity, feature/context composition, analogue permissions, model gateway, and safety gates are unchanged",
+      "only administrative bootstrap batching changes from 120-minute windows to 30-minute resumable windows"
+    ],
+    "test_commands": [
+      "uv run ruff check src/aidy/twelve_data_bootstrap.py src/entry.py tests/test_day53_bootstrap_admission_recovery.py",
+      "uv run pytest -q tests/test_day53_bootstrap_admission_recovery.py tests/test_day53_twelve_data_launch_cleanup.py",
+      "uv run python -m compileall -q src tests"
+    ],
+    "result": "pass",
+    "evidence_digest": "57da6e68ce09e00f2094b7cbca98bd4f44222fe77ed7db35cd537143b3cd8724"
+  }
+}

@@ -76,3 +76,15 @@ def test_recovery_uses_ephemeral_masked_admin_secret_and_restores_bootstrap_off(
     assert "capture_status='complete'" in workflow
     assert "all_timeframes_ready" in workflow
     assert '"ref":"main"' in workflow
+
+
+
+def test_resumable_bootstrap_runtime_is_bounded_and_retry_safe() -> None:
+    bootstrap = (ROOT / "src" / "aidy" / "twelve_data_bootstrap.py").read_text(encoding="utf-8")
+    entry = (ROOT / "src" / "entry.py").read_text(encoding="utf-8")
+    assert "MAX_BOOTSTRAP_WINDOW_MINUTES = 30" in bootstrap
+    assert '"continue_bootstrap"' in entry
+    assert '"remaining_m1_minutes"' in entry
+    assert "planned_windows=1" in entry
+    assert '"decision_snapshot_created": False' in entry
+    assert '"decision_ready": False' in entry
