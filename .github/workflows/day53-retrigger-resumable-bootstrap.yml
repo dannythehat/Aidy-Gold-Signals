@@ -34,3 +34,5 @@ jobs:
             --data "$payload")"
           test "$status" = "204" || { cat /tmp/dispatch-response.txt; exit 1; }
           echo "resumable_recovery_dispatched=true"
+
+# Operational retrigger marker: bind recovery to the current protected-main head.
