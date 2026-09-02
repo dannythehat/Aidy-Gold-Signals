@@ -7,10 +7,8 @@ on:
     paths:
       - "pyproject.toml"
       - "uv.lock"
-      - "src/entry.py"
+      - "src/day53_timezone_proof_entry.py"
       - "src/aidy/twelve_data_market.py"
-      - "src/aidy/twelve_data_recorder.py"
-      - "src/aidy/twelve_data_storage.py"
       - ".github/workflows/day53-twelve-data-package-proof.yml"
 
 permissions:
@@ -23,6 +21,7 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_PACKAGE_PROOF_URL: https://aidy-day53-twelve-package-test.dannythehat2.workers.dev
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,32 +52,58 @@ jobs:
           import json
           cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
           cfg['name']='aidy-day53-twelve-package-test'
-          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
-          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
-          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
-          cfg['vars']['AIDY_CAPTURE_ENABLED']='false'
-          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
-          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
-          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
-          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
-          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          cfg['main']='src/day53_timezone_proof_entry.py'
+          cfg['d1_databases']=[]
+          cfg['r2_buckets']=[]
+          cfg['vars']={}
           cfg['triggers']['crons']=[]
           cfg.pop('queues', None)
           json.dump(cfg, open('wrangler.jsonc','w',encoding='utf-8'), indent=2)
           PY
 
-      - name: Prove Python Worker package resolves and deploys
+      - name: Deploy isolated Python Worker
         shell: bash
         run: |
           set -euo pipefail
-          uv run pywrangler deploy > /tmp/package-proof.txt 2>&1
-          grep -qi 'deployed\|uploaded\|success' /tmp/package-proof.txt || cat /tmp/package-proof.txt
+          uv run pywrangler deploy > /tmp/package-proof-deploy.txt 2>&1
+          grep -qi 'deployed\|uploaded\|success' /tmp/package-proof-deploy.txt || cat /tmp/package-proof-deploy.txt
 
-      - name: Preserve package proof
+      - name: Execute America New York DST boundary inside Cloudflare
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 18); do
+            if curl -fsS "${AIDY_PACKAGE_PROOF_URL}/" > /tmp/package-proof-runtime.json; then
+              if python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/package-proof-runtime.json', encoding='utf-8'))
+          expected={
+              'summer_start_utc':'2026-07-01T22:00:00+00:00',
+              'summer_close_utc':'2026-07-02T21:00:00+00:00',
+              'winter_start_utc':'2026-01-01T23:00:00+00:00',
+              'winter_close_utc':'2026-01-02T22:00:00+00:00',
+          }
+          assert payload.get('ok') is True, payload
+          assert payload.get('zone') == 'America/New_York', payload
+          assert payload.get('fallback_fixed_offset_allowed') is False, payload
+          assert payload.get('expected') == expected, payload
+          assert payload.get('observed') == expected, payload
+          PY
+              then ok=1; break; fi
+            fi
+            sleep 3
+          done
+          test "$ok" = "1"
+          cat /tmp/package-proof-runtime.json
+
+      - name: Preserve package and runtime proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: aidy-day53-twelve-data-package-proof-${{ github.sha }}
-          path: /tmp/package-proof.txt
+          path: |
+            /tmp/package-proof-deploy.txt
+            /tmp/package-proof-runtime.json
           if-no-files-found: error
           retention-days: 90
