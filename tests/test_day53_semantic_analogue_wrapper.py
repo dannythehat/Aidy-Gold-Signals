@@ -67,7 +67,8 @@ def test_twelve_query_blocks_histdata_candidate_before_legacy_retrieval() -> Non
         "market_data_semantic_identity_incompatible": 1
     }
     assert result["base_retrieval"]["candidate_count"] == 0
-    assert result["cross_source_comparison_without_qualified_contract_allowed"] is False
+    assert result["accepted_equivalence_ledger_record_digests"] == []
+    assert result["cross_source_comparison_without_ledger_proven_pass_allowed"] is False
 
 
 def test_candidate_without_identity_is_blocked_before_legacy_retrieval() -> None:
