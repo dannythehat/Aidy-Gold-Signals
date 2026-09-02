@@ -5,7 +5,7 @@ import sqlite3
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from uuid import UUID, NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import httpx
 import pytest
@@ -108,7 +108,7 @@ class FakeHistory:
         rows = []
         for index in range(count):
             quote_time = start_utc + timedelta(minutes=index)
-            price = Decimal("3400") + Decimal(index) / Decimal("100")
+            price = Decimal(3400) + Decimal(index) / Decimal(100)
             rows.append(
                 {
                     "id": str(uuid5(NAMESPACE_URL, f"quote-{start_utc}-{index}")),
