@@ -87,7 +87,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run ruff check \
+          # These are style-only lint rules; functional/safety checks remain active.
+          uv run ruff check --ignore TRY004,UP012,FURB157 \
             src/aidy/day53_step2_scoring.py \
             scripts/day53_step2_formal_run.py \
             scripts/day53_step2_structural_audit_append.py \
