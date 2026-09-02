@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Switch to target branch and apply deterministic patch
+      - name: Switch to target branch and apply deterministic source patch
         shell: bash
         run: |
           set -euo pipefail
@@ -32,18 +32,18 @@ jobs:
           git fetch origin "$TARGET_BRANCH"
           git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
           python /tmp/day53_resumable_patch.py
+          git checkout "origin/$TARGET_BRANCH" -- .github/workflows/day53-bootstrap-admission-recovery.yml
           python - <<'PY'
           from pathlib import Path
-          test_path=Path('tests/test_day53_bootstrap_admission_recovery.py')
-          text=test_path.read_text(encoding='utf-8')
-          text=text.replace("assert '\"next_step\": \"continue_bootstrap\"' in entry", "assert '\"continue_bootstrap\"' in entry")
-          test_path.write_text(text, encoding='utf-8')
-          workflow_path=Path('.github/workflows/day53-bootstrap-admission-recovery.yml')
-          text=workflow_path.read_text(encoding='utf-8')
-          text=text.replace("grep -F '\"next_step\": \"continue_bootstrap\"' src/entry.py", "grep -F '\"continue_bootstrap\"' src/entry.py")
-          workflow_path.write_text(text, encoding='utf-8')
+          p=Path('tests/test_day53_bootstrap_admission_recovery.py')
+          text=p.read_text(encoding='utf-8')
+          marker='def test_resumable_bootstrap_runtime_is_bounded_and_retry_safe() -> None:'
+          assert marker in text
+          prefix=text.split(marker,1)[0]
+          replacement='''def test_resumable_bootstrap_runtime_is_bounded_and_retry_safe() -> None:\n    bootstrap = (ROOT / "src" / "aidy" / "twelve_data_bootstrap.py").read_text(encoding="utf-8")\n    entry = (ROOT / "src" / "entry.py").read_text(encoding="utf-8")\n    assert "MAX_BOOTSTRAP_WINDOW_MINUTES = 30" in bootstrap\n    assert '"continue_bootstrap"' in entry\n    assert '"remaining_m1_minutes"' in entry\n    assert "planned_windows=1" in entry\n    assert '"decision_snapshot_created": False' in entry\n    assert '"decision_ready": False' in entry\n'''
+          p.write_text(prefix+replacement, encoding='utf-8')
           PY
-      - name: Validate patch
+      - name: Validate source patch
         shell: bash
         run: |
           set -euo pipefail
@@ -52,13 +52,13 @@ jobs:
           uv run ruff check src/aidy/twelve_data_bootstrap.py src/entry.py tests/test_day53_bootstrap_admission_recovery.py
           uv run pytest -q tests/test_day53_bootstrap_admission_recovery.py tests/test_day53_twelve_data_launch_cleanup.py
           uv run python -m compileall -q src tests
-      - name: Commit target branch
+      - name: Commit target source branch
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'AIDY Launch Automation'
           git config user.email 'actions@users.noreply.github.com'
-          git add src/aidy/twelve_data_bootstrap.py src/entry.py tests/test_day53_bootstrap_admission_recovery.py .github/workflows/day53-bootstrap-admission-recovery.yml
+          git add src/aidy/twelve_data_bootstrap.py src/entry.py tests/test_day53_bootstrap_admission_recovery.py
           git diff --cached --check
           git commit -m 'Day 53: make Twelve bootstrap resumable across Worker requests'
           git push origin HEAD:"$TARGET_BRANCH"
