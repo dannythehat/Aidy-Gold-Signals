@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 ValueGetter = Callable[[str, str], str]
+_ALLOWED_MARKET_DATA_SOURCES = {"gold_api", "argentapi"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,10 +59,10 @@ class AidySettings:
         market_data_source = optional("AIDY_MARKET_DATA_SOURCE").lower() or "gold_api"
 
         if enabled:
-            if market_data_source != "gold_api":
+            if market_data_source not in _ALLOWED_MARKET_DATA_SOURCES:
                 raise RuntimeError(
                     "AIDY capture is enabled but the configured market-data source "
-                    "does not match the installed broker-free adapter."
+                    "does not match an installed broker-free adapter."
                 )
             if market_data_ownership != "public_independent":
                 raise RuntimeError(

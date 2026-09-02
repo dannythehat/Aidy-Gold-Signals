@@ -1,0 +1,102 @@
+name: AIDY Day 53 Genuine Live Gold Feed
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/argentapi_gateway.py"
+      - "src/aidy/live_gold_storage.py"
+      - "src/aidy/live_gold_recorder.py"
+      - "src/aidy/config.py"
+      - "src/aidy/runtime.py"
+      - "src/entry.py"
+      - "tests/test_day53_genuine_live_gold_feed.py"
+      - "scripts/day53_genuine_live_gold_feed_acceptance.py"
+      - "docs/day53-genuine-live-gold-feed.md"
+      - ".github/workflows/day53-genuine-live-gold-feed.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REPAIR_BASE_SHA: 18a610d7fe83fcca338d939b0d788a5e351cb26e
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact base and bounded repair surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$REPAIR_BASE_SHA" HEAD)" = "$REPAIR_BASE_SHA"
+          allowed='^(src/aidy/argentapi_gateway.py|src/aidy/live_gold_storage.py|src/aidy/live_gold_recorder.py|src/aidy/config.py|src/aidy/runtime.py|src/entry.py|tests/test_day53_genuine_live_gold_feed.py|scripts/day53_genuine_live_gold_feed_acceptance.py|docs/day53-genuine-live-gold-feed.md|.github/workflows/day53-genuine-live-gold-feed.yml)$'
+          unexpected="$(git diff --name-only "$REPAIR_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
+          test -z "$unexpected" || { echo "Unexpected Day 53 feed changes:"; echo "$unexpected"; exit 1; }
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check src/aidy/argentapi_gateway.py src/aidy/live_gold_storage.py src/aidy/live_gold_recorder.py src/aidy/config.py src/aidy/runtime.py src/entry.py tests/test_day53_genuine_live_gold_feed.py scripts/day53_genuine_live_gold_feed_acceptance.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Enforce standalone provider boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          files='src/aidy/argentapi_gateway.py src/aidy/live_gold_storage.py src/aidy/live_gold_recorder.py src/aidy/runtime.py src/entry.py'
+          if grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|super_signals)' $files; then
+            echo "Live Gold repair imported a forbidden downstream/execution dependency"
+            exit 1
+          fi
+          if grep -Ein 'api[_-]?key.*(print|log)|X-API-Key.*(print|log)' $files; then
+            echo "Potential API-key logging surface detected"
+            exit 1
+          fi
+
+      - name: Focused genuine-live feed tests
+        shell: bash
+        run: uv run pytest -q tests/test_day53_genuine_live_gold_feed.py tests/test_day53_live_forward_observer.py
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
+
+      - name: Deterministic feed acceptance A
+        shell: bash
+        run: uv run python scripts/day53_genuine_live_gold_feed_acceptance.py --output-dir day53_feed_a
+
+      - name: Deterministic feed acceptance B
+        shell: bash
+        run: uv run python scripts/day53_genuine_live_gold_feed_acceptance.py --output-dir day53_feed_b
+
+      - name: Require byte-identical feed evidence
+        shell: bash
+        run: diff -ru day53_feed_a day53_feed_b
+
+      - name: Preserve genuine-live feed acceptance evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-genuine-live-gold-${{ github.event.pull_request.head.sha || github.sha }}
+          path: day53_feed_a/
+          if-no-files-found: error
+          retention-days: 90
