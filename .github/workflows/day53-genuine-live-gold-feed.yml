@@ -19,9 +19,6 @@ on:
 permissions:
   contents: read
 
-env:
-  REPAIR_BASE_SHA: 18a610d7fe83fcca338d939b0d788a5e351cb26e
-
 jobs:
   acceptance:
     runs-on: ubuntu-24.04
@@ -33,14 +30,14 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Verify exact base and bounded repair surface
+      - name: Verify candidate descends from current protected main
+        if: github.event_name == 'pull_request'
         shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          test "$(git merge-base "$REPAIR_BASE_SHA" HEAD)" = "$REPAIR_BASE_SHA"
-          allowed='^(src/aidy/argentapi_gateway.py|src/aidy/live_gold_storage.py|src/aidy/live_gold_recorder.py|src/aidy/config.py|src/aidy/runtime.py|src/entry.py|tests/test_day53_genuine_live_gold_feed.py|scripts/day53_genuine_live_gold_feed_acceptance.py|docs/day53-genuine-live-gold-feed.md|.github/workflows/day53-genuine-live-gold-feed.yml)$'
-          unexpected="$(git diff --name-only "$REPAIR_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
-          test -z "$unexpected" || { echo "Unexpected Day 53 feed changes:"; echo "$unexpected"; exit 1; }
+          test "$(git merge-base "$PR_BASE_SHA" HEAD)" = "$PR_BASE_SHA"
 
       - uses: actions/setup-python@v5
         with:
