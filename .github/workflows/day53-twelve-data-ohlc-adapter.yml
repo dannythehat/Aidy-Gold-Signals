@@ -73,6 +73,7 @@ jobs:
         run: uv run pytest -q
 
       - name: First real adapter run - capture meta credits and freshness
+        id: live_adapter
         if: github.event_name == 'push'
         shell: bash
         run: |
@@ -109,6 +110,9 @@ jobs:
                   'observed_open_session_lag_seconds': result.open_session_lag_seconds,
                   'freshness_state': result.freshness_state,
               }
+              with open('day53_twelve_data_adapter_live.json','w',encoding='utf-8') as fh:
+                  json.dump(evidence, fh, sort_keys=True)
+              print(json.dumps(evidence, sort_keys=True))
               if result.session_open_at_fetch:
                   assert result.freshness_state == 'fresh', evidence
                   assert result.open_session_lag_seconds is not None, evidence
@@ -117,14 +121,12 @@ jobs:
               assert result.meta.get('interval') == '1min', evidence
               assert 'api-credits-used' in result.credit_headers, evidence
               assert 'api-credits-left' in result.credit_headers, evidence
-              json.dump(evidence, open('day53_twelve_data_adapter_live.json','w',encoding='utf-8'), sort_keys=True)
-              print(json.dumps(evidence, sort_keys=True))
 
           asyncio.run(main())
           PY
 
       - name: Preserve first adapter-run evidence
-        if: github.event_name == 'push' && always()
+        if: github.event_name == 'push' && always() && steps.live_adapter.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: aidy-day53-twelve-data-adapter-${{ github.sha }}
