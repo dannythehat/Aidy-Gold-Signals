@@ -1,0 +1,84 @@
+name: AIDY Day 53 Twelve Data Cloudflare Package Proof
+
+on:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "src/entry.py"
+      - "src/aidy/twelve_data_market.py"
+      - "src/aidy/twelve_data_recorder.py"
+      - "src/aidy/twelve_data_storage.py"
+      - ".github/workflows/day53-twelve-data-package-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare-package-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Build isolated package-proof config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['name']='aidy-day53-twelve-package-test'
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='false'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          cfg['triggers']['crons']=[]
+          cfg.pop('queues', None)
+          json.dump(cfg, open('wrangler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Prove Python Worker package resolves and deploys
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pywrangler deploy > /tmp/package-proof.txt 2>&1
+          grep -qi 'deployed\|uploaded\|success' /tmp/package-proof.txt || cat /tmp/package-proof.txt
+
+      - name: Preserve package proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-twelve-data-package-proof-${{ github.sha }}
+          path: /tmp/package-proof.txt
+          if-no-files-found: error
+          retention-days: 90
