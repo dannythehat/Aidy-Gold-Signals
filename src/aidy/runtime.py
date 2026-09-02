@@ -1,8 +1,7 @@
 """Portable AIDY recorder orchestration.
 
 Cloudflare Workers own production scheduling. Live market capture is broker-free:
-AIDY reads an indicative XAU/USD reference price and never reads account state.
-Genuine OHLC research data is ingested through a separate historical pipeline.
+AIDY reads public-independent XAU/USD evidence and never reads account state.
 """
 
 from __future__ import annotations
@@ -10,12 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from .argentapi_gateway import ArgentApiGateway
 from .config import AidySettings
 from .cross_market import CrossMarketGateway
 from .cross_market_recorder import AidyCrossMarketRecorderService, CrossMarketCaptureResult
 from .fed_recorder import AidyFedRssRecorderService
 from .fed_rss import FedRssCaptureResult, FedRssGateway
 from .gold_api_gateway import GoldApiGateway
+from .live_gold_recorder import AidyLiveGoldRecorderService, LiveGoldQuoteHistory
 from .official_macro import OfficialMacroCaptureResult, OfficialMacroGateway
 from .official_macro_recorder import AidyOfficialMacroRecorderService
 from .reference_price_recorder import AidyReferencePriceRecorderService, ReferenceCaptureResult
@@ -49,7 +50,8 @@ async def run_capture_cycle(
     include_fed: bool = True,
     include_macro: bool = True,
     include_cross_market: bool = True,
-    market_gateway: GoldApiGateway | None = None,
+    market_gateway: GoldApiGateway | ArgentApiGateway | None = None,
+    live_gold_history: LiveGoldQuoteHistory | None = None,
     fed_gateway: FedRssGateway | None = None,
     macro_gateway: OfficialMacroGateway | None = None,
     cross_market_gateway: CrossMarketGateway | None = None,
@@ -70,11 +72,25 @@ async def run_capture_cycle(
     cross_market: CrossMarketCaptureResult | None = None
 
     if include_market:
-        market = await AidyReferencePriceRecorderService(
-            repository=repository,
-            gateway=market_gateway or GoldApiGateway(),
-            stale_seconds=settings.market_stale_seconds,
-        ).capture_once()
+        if settings.market_data_source == "gold_api":
+            gateway = market_gateway or GoldApiGateway()
+            market = await AidyReferencePriceRecorderService(
+                repository=repository,
+                gateway=gateway,  # type: ignore[arg-type]
+                stale_seconds=settings.market_stale_seconds,
+            ).capture_once()
+        elif settings.market_data_source == "argentapi":
+            if live_gold_history is None:
+                raise RuntimeError("ArgentAPI live capture requires source-aware D1 quote history.")
+            gateway = market_gateway or ArgentApiGateway(api_key="")
+            market = await AidyLiveGoldRecorderService(
+                repository=repository,
+                gateway=gateway,
+                quote_history=live_gold_history,
+                stale_seconds=settings.market_stale_seconds,
+            ).capture_once()
+        else:
+            raise RuntimeError("Unsupported AIDY market-data source.")
 
     if include_fed:
         fed = await AidyFedRssRecorderService(
@@ -109,6 +125,8 @@ async def run_worker_scheduled_cycle(
     *,
     repository: AidyMarketRepository,
     scheduled_at: datetime,
+    market_gateway: GoldApiGateway | ArgentApiGateway | None = None,
+    live_gold_history: LiveGoldQuoteHistory | None = None,
 ) -> RecorderCycleResult:
     """Run the Cloudflare one-minute plan while always allowing archive retries."""
 
@@ -146,6 +164,8 @@ async def run_worker_scheduled_cycle(
         include_fed=fed_due,
         include_macro=macro_due,
         include_cross_market=cross_market_due,
+        market_gateway=market_gateway,
+        live_gold_history=live_gold_history,
     )
     assert result is not None
     return result
