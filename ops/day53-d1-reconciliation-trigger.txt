@@ -1,0 +1,3 @@
+trigger=2026-09-02T05:26Z
+purpose=bounded common-minute Day5 HistData versus Twelve Data reconciliation
+vendor_calls=1
