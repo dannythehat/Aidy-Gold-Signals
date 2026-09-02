@@ -16,7 +16,6 @@ from aidy.twelve_data_market import (
     aggregate_m1,
     day53_twelve_data_market_manifest,
     expected_market_minute_opens,
-    gold_session_is_open,
     latest_completed_d1_bucket,
 )
 
@@ -65,8 +64,8 @@ async def test_live_adapter_drops_forming_bar_and_records_real_freshness_and_cre
         return _response(
             [
                 _bar(datetime(2026, 9, 2, 4, 44, tzinfo=UTC)),
-                _bar(datetime(2026, 9, 2, 4, 43, tzinfo=UTC), value=Decimal("4328")),
-                _bar(datetime(2026, 9, 2, 4, 42, tzinfo=UTC), value=Decimal("4327")),
+                _bar(datetime(2026, 9, 2, 4, 43, tzinfo=UTC), value=Decimal(4328)),
+                _bar(datetime(2026, 9, 2, 4, 42, tzinfo=UTC), value=Decimal(4327)),
             ],
             headers={
                 "Api-Credits-Request": "1",
@@ -151,7 +150,7 @@ def test_session_calendar_not_arithmetic_denominator_for_h4_spanning_daily_break
 def _stored_rows(start: datetime, end: datetime) -> list[dict[str, object]]:
     rows = []
     for index, opened in enumerate(expected_market_minute_opens(start, end)):
-        value = Decimal("4300") + Decimal(index) / Decimal("100")
+        value = Decimal(4300) + Decimal(index) / Decimal(100)
         rows.append(
             {
                 "id": f"m1-{index}",
