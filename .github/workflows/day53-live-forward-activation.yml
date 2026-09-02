@@ -33,6 +33,10 @@ on:
       - ".github/workflows/day53-live-forward-activation.yml"
   workflow_dispatch:
 
+concurrency:
+  group: aidy-day53-live-forward-deployment
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -220,15 +224,31 @@ jobs:
           set -euo pipefail
           cp wrangler.day53.launch.off.jsonc wrangler.jsonc
           uv run pywrangler deploy 2>&1 | tee /tmp/worker-off-deploy.txt
-          curl -fsS "$AIDY_TEST_WORKER_URL/health" | tee /tmp/health-off.json
-          python - <<'PY'
+          OFF_VERSION_ID="$(sed -n 's/.*Current Version ID: //p' /tmp/worker-off-deploy.txt | tail -1 | tr -d '\r')"
+          test -n "$OFF_VERSION_ID"
+          echo "WORKER_OFF_VERSION_ID=$OFF_VERSION_ID" >> "$GITHUB_ENV"
+          ready=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?launch_probe=${GITHUB_SHA}-${attempt}" > /tmp/health-off.json || true
+            if python - <<'PY'
           import json
-          h=json.load(open('/tmp/health-off.json', encoding='utf-8'))
-          assert h['capture_enabled'] is True, h
-          assert h['formal_forward_enabled'] is False, h
-          assert h['market_data_source']=='twelve_data', h
-          assert h['private_forward_model_gateway_configured'] is True, h
+          try:
+              h=json.load(open('/tmp/health-off.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source')=='twelve_data', h
+          assert h.get('private_forward_model_gateway_configured') is True, h
           PY
+            then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1 || { echo 'Exact Twelve/OpenAI forward-off Worker did not become observable'; cat /tmp/health-off.json || true; exit 1; }
+          cat /tmp/health-off.json
 
       - name: Deploy minute scheduler
         shell: bash
@@ -312,16 +332,44 @@ jobs:
           set -euo pipefail
           cp wrangler.day53.launch.on.jsonc wrangler.jsonc
           uv run pywrangler deploy 2>&1 | tee /tmp/worker-on-deploy.txt
+          ON_VERSION_ID="$(sed -n 's/.*Current Version ID: //p' /tmp/worker-on-deploy.txt | tail -1 | tr -d '\r')"
+          test -n "$ON_VERSION_ID"
+          echo "WORKER_ON_VERSION_ID=$ON_VERSION_ID" >> "$GITHUB_ENV"
+          ready=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?launch_probe=${GITHUB_SHA}-on-${attempt}" > /tmp/health-on.json || true
+            if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/health-on.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is True, h
+          assert h.get('market_data_source')=='twelve_data', h
+          assert h.get('private_forward_model_gateway_configured') is True, h
+          PY
+            then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" -eq 1 || { echo 'Exact Twelve/OpenAI forward-on Worker did not become observable'; cat /tmp/health-on.json || true; exit 1; }
+          cat /tmp/health-on.json
           PROOF_NOT_BEFORE="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
           echo "PROOF_NOT_BEFORE=$PROOF_NOT_BEFORE" >> "$GITHUB_ENV"
-          curl -fsS "$AIDY_TEST_WORKER_URL/health" | tee /tmp/health-on.json
           python - <<'PY'
-          import json
-          h=json.load(open('/tmp/health-on.json', encoding='utf-8'))
-          assert h['capture_enabled'] is True, h
-          assert h['formal_forward_enabled'] is True, h
-          assert h['market_data_source']=='twelve_data', h
-          assert h['private_forward_model_gateway_configured'] is True, h
+          import json, os
+          evidence={
+              'protected_main_sha':os.environ['GITHUB_SHA'],
+              'forward_off_worker_version_id':os.environ['WORKER_OFF_VERSION_ID'],
+              'forward_on_worker_version_id':os.environ['WORKER_ON_VERSION_ID'],
+              'forward_off_health':json.load(open('/tmp/health-off.json', encoding='utf-8')),
+              'forward_on_health':json.load(open('/tmp/health-on.json', encoding='utf-8')),
+              'deployment_propagation_proof':'health signature polled until exact Twelve/OpenAI launch state became observable',
+          }
+          json.dump(evidence, open('/tmp/deployment-identity.json','w',encoding='utf-8'), sort_keys=True)
           PY
 
       - name: Prove one fresh automatic Twelve to k3 immutable cycle
@@ -441,6 +489,7 @@ jobs:
             /tmp/scheduler-deploy.txt
             /tmp/health-off.json
             /tmp/health-on.json
+            /tmp/deployment-identity.json
             /tmp/active-before.json
             /tmp/active-after.json
             /tmp/close-prior.txt
