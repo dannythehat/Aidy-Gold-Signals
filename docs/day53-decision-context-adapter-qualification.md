@@ -141,6 +141,8 @@ A successful feed bootstrap, a healthy HTTP endpoint, a successful model call or
 
 The first scheduler-generated decision packet after qualification must still pass live current-bucket readiness. Qualification authorizes the adapter contract; it does not waive per-tick data-quality gates.
 
+Step 2 must not begin until `docs/day53-market-data-dependency-provenance-map.md` is frozen and its code-binding tests pass. That prerequisite is now satisfied for preregistration, but it does not authorize empirical scoring before the remaining preregistration/ledger requirements are met.
+
 Step 2 is preregistered in `docs/day53-step2-existing-constant-equivalence-preregistration.md` and `src/aidy/day53_step2_preregistration.py`. Its criteria are **informed rather than blind**: the team had already observed reconciliation differences of approximately 10–14 bps median absolute difference, approximately 38–57 bps at p95, and a tail maximum near 97 bps. Those prior observations remain visible as prior knowledge and do not count as the qualification sample.
 
 The Step 2 registered parameter space is a singleton `20 / 50 / 40`; it is not a parameter search. PASS, FAIL and INSUFFICIENT criteria, minimum coverage, hash-based sampling, uncertainty rules and downstream decision-surface statistics are frozen before result computation. FAIL or INSUFFICIENT requires a separate Step 3 preregistered re-derivation family rather than changing Step 2 after inspection.
