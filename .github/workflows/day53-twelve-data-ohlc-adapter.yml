@@ -11,11 +11,16 @@ on:
       - "src/aidy/twelve_data_market.py"
       - "src/aidy/twelve_data_storage.py"
       - "src/aidy/twelve_data_recorder.py"
+      - "src/aidy/day53_step2_preregistration.py"
+      - "src/aidy/day53_step2_qualification_guard.py"
       - "src/aidy/config.py"
       - "src/aidy/runtime.py"
       - "src/aidy/forward_live_observer.py"
       - "src/entry.py"
       - "migrations/d1/0006_twelve_data_feed_observations.sql"
+      - "evidence/research_ledger/day53-step2-equivalence-preregistration.json"
+      - "docs/day53-step2-existing-constant-equivalence-preregistration.md"
+      - "tests/test_day53_step2_preregistration.py"
       - "tests/test_day53_twelve_data_ohlc_adapter.py"
       - "tests/test_day53_live_forward_observer.py"
       - "pyproject.toml"
@@ -54,9 +59,12 @@ jobs:
             src/aidy/twelve_data_market.py \
             src/aidy/twelve_data_storage.py \
             src/aidy/twelve_data_recorder.py \
+            src/aidy/day53_step2_preregistration.py \
+            src/aidy/day53_step2_qualification_guard.py \
             src/aidy/config.py \
             src/aidy/runtime.py \
             src/aidy/forward_live_observer.py \
+            tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_live_forward_observer.py
           uv run python -m compileall -q src scripts tests
@@ -65,6 +73,7 @@ jobs:
         shell: bash
         run: |
           uv run pytest -q \
+            tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_live_forward_observer.py \
             tests/test_day53_genuine_live_gold_feed.py
