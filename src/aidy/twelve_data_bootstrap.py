@@ -82,26 +82,47 @@ class AidyTwelveDataBootstrapService:
         await self._store.record_feed_observation(fetch)
         by_open = {bar.open_time_utc: bar for bar in fetch.closed_bars}
         missing = window.required_opens - set(by_open)
+        if missing:
+            await self._store.finish_bootstrap_window(
+                bootstrap_id=bootstrap_id, window_index=window.index, state="failed",
+                persisted_m1_minutes=0, response_digest=fetch.response_digest,
+                failure_reason="required_vendor_minutes_missing",
+            )
+            return {
+                "bootstrap_id": str(bootstrap_id), "window_index": window.index,
+                "required_m1_minutes": len(window.required_opens), "missing_m1_minutes": len(missing),
+                "persisted_new_m1_minutes": 0, "state": "failed",
+                "decision_snapshot_created": False, "decision_ready": False,
+            }
+
         persisted = 0
-        for opened in sorted(window.required_opens & set(by_open)):
-            bar = by_open[opened]
-            _, _, created = await self._repository.store_candle({
-                "symbol": AIDY_SYMBOL, "timeframe": "1m", "open_time_utc": bar.open_time_utc,
-                "broker_open_time": None, "open": str(bar.open), "high": str(bar.high),
-                "low": str(bar.low), "close": str(bar.close), "tick_volume": None,
-                "spread": None, "volume": None, "source": RAW_M1_SOURCE,
-                "first_observed_at": fetch.fetched_at_utc, "payload_digest": bar.payload_digest,
-            })
-            persisted += int(created)
-        state = "failed" if missing else "succeeded"
+        try:
+            for opened in sorted(window.required_opens):
+                bar = by_open[opened]
+                _, _, created = await self._repository.store_candle({
+                    "symbol": AIDY_SYMBOL, "timeframe": "1m", "open_time_utc": bar.open_time_utc,
+                    "broker_open_time": None, "open": str(bar.open), "high": str(bar.high),
+                    "low": str(bar.low), "close": str(bar.close), "tick_volume": None,
+                    "spread": None, "volume": None, "source": RAW_M1_SOURCE,
+                    "first_observed_at": fetch.fetched_at_utc, "payload_digest": bar.payload_digest,
+                })
+                persisted += int(created)
+        except Exception as exc:
+            await self._store.finish_bootstrap_window(
+                bootstrap_id=bootstrap_id, window_index=window.index, state="failed",
+                persisted_m1_minutes=persisted, response_digest=fetch.response_digest,
+                failure_reason=f"persistence_error:{type(exc).__name__}",
+            )
+            raise
+
         await self._store.finish_bootstrap_window(
-            bootstrap_id=bootstrap_id, window_index=window.index, state=state,
+            bootstrap_id=bootstrap_id, window_index=window.index, state="succeeded",
             persisted_m1_minutes=persisted, response_digest=fetch.response_digest,
-            failure_reason="required_vendor_minutes_missing" if missing else None,
+            failure_reason=None,
         )
         return {
             "bootstrap_id": str(bootstrap_id), "window_index": window.index,
-            "required_m1_minutes": len(window.required_opens), "missing_m1_minutes": len(missing),
-            "persisted_new_m1_minutes": persisted, "state": state,
+            "required_m1_minutes": len(window.required_opens), "missing_m1_minutes": 0,
+            "persisted_new_m1_minutes": persisted, "state": "succeeded",
             "decision_snapshot_created": False, "decision_ready": False,
         }
