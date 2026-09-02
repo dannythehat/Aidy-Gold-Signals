@@ -120,7 +120,11 @@ def _insert_snapshot(
         "session_code": "NY",
         "position_state_json": None,
         "data_availability_json": json.dumps(
-            {"quote": "available", "price_type": "indicative_mid"},
+            {
+                "quote": "available",
+                "price_type": "indicative_mid",
+                "spread_advisory_state": "unavailable",
+            },
             sort_keys=True,
         ),
         "event_observation_ids_json": "[]",
@@ -158,7 +162,7 @@ async def test_live_observer_records_mid_only_feed_as_pre_model_block() -> None:
 
     assert result.status == "recorded"
     assert result.disposition == "pre_model_blocked"
-    assert result.reason_code == "missing_genuine_live_ohlc_and_spread"
+    assert result.reason_code == "missing_genuine_live_ohlc"
     row = d1.connection.execute(
         "SELECT record_json FROM aidy_forward_evaluations WHERE record_id=?",
         (result.record_id,),
@@ -294,7 +298,9 @@ async def test_status_exposes_active_cohort_and_noninflated_progress() -> None:
 def test_live_forward_manifest_preserves_boundaries_and_five_minute_cadence() -> None:
     manifest = day53_live_forward_manifest()
     assert manifest["observation_interval_seconds"] == FORWARD_OBSERVATION_INTERVAL_SECONDS == 300
-    assert manifest["missing_live_ohlc_or_spread_fails_pre_model"] is True
+    assert manifest["missing_live_ohlc_fails_pre_model"] is True
+    assert manifest["missing_spread_is_advisory"] is True
+    assert manifest["observed_out_of_tolerance_spread_fails_pre_model"] is True
     assert manifest["blocked_cycles_count_toward_day54_model_resolved_n"] is False
     assert manifest["decision_adapter_enabled_by_this_change"] is False
     assert manifest["openai_called_for_pre_model_block"] is False
