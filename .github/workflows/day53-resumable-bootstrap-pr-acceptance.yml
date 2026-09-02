@@ -1,0 +1,67 @@
+name: AIDY Day 53 Resumable Bootstrap PR Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/twelve_data_bootstrap.py"
+      - "src/entry.py"
+      - "tests/test_day53_bootstrap_admission_recovery.py"
+      - ".github/workflows/day53-resumable-bootstrap-recovery.yml"
+      - ".github/workflows/day53-resumable-bootstrap-pr-acceptance.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout exact candidate head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Require protected-main ancestry
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$PR_BASE_SHA" HEAD)" = "$PR_BASE_SHA"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Resumable-bootstrap boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check src/aidy/twelve_data_bootstrap.py src/entry.py tests/test_day53_bootstrap_admission_recovery.py
+          uv run python -m compileall -q src scripts tests
+          grep -F "MAX_BOOTSTRAP_WINDOW_MINUTES = 30" src/aidy/twelve_data_bootstrap.py
+          grep -F '"continue_bootstrap"' src/entry.py
+          grep -F '"remaining_m1_minutes"' src/entry.py
+          grep -F "planned_windows=1" src/entry.py
+          grep -F '"decision_snapshot_created": False' src/entry.py
+          grep -F '"decision_ready": False' src/entry.py
+
+      - name: Focused recovery and launch tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_day53_bootstrap_admission_recovery.py tests/test_day53_twelve_data_launch_cleanup.py tests/test_day53_live_forward_observer.py tests/test_day52_end_to_end.py
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
