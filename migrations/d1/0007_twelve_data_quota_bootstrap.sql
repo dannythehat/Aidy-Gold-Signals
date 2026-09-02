@@ -1,4 +1,4 @@
--- Day 53 Twelve Data quota accounting and bootstrap/run separation.
+-- Day 53 Twelve Data quota accounting and bootstrap/live-readiness separation.
 
 CREATE TABLE IF NOT EXISTS twelve_data_request_ledger (
     id TEXT PRIMARY KEY,
@@ -25,17 +25,33 @@ CREATE TABLE IF NOT EXISTS twelve_data_bootstrap_runs (
     id TEXT PRIMARY KEY,
     started_at_utc TEXT NOT NULL,
     completed_at_utc TEXT,
-    request_ledger_id TEXT NOT NULL,
-    response_digest TEXT,
-    vendor_closed_bars INTEGER,
-    required_m1_minutes INTEGER,
-    persisted_m1_minutes INTEGER NOT NULL DEFAULT 0,
+    as_of_utc TEXT NOT NULL,
+    planned_windows INTEGER NOT NULL CHECK (planned_windows > 0),
+    required_m1_minutes INTEGER NOT NULL CHECK (required_m1_minutes > 0),
     state TEXT NOT NULL CHECK (state IN ('started','ingesting','complete','failed')),
     decision_snapshot_created INTEGER NOT NULL DEFAULT 0 CHECK (decision_snapshot_created = 0),
     decision_ready INTEGER NOT NULL DEFAULT 0 CHECK (decision_ready = 0),
-    failure_reason TEXT,
-    FOREIGN KEY(request_ledger_id) REFERENCES twelve_data_request_ledger(id)
+    failure_reason TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_twelve_data_bootstrap_runs_started
 ON twelve_data_bootstrap_runs(started_at_utc);
+
+CREATE TABLE IF NOT EXISTS twelve_data_bootstrap_requests (
+    bootstrap_id TEXT NOT NULL,
+    window_index INTEGER NOT NULL,
+    request_ledger_id TEXT NOT NULL UNIQUE,
+    window_start_utc TEXT NOT NULL,
+    window_end_utc TEXT NOT NULL,
+    required_m1_minutes INTEGER NOT NULL CHECK (required_m1_minutes > 0),
+    persisted_m1_minutes INTEGER NOT NULL DEFAULT 0 CHECK (persisted_m1_minutes >= 0),
+    state TEXT NOT NULL CHECK (state IN ('started','succeeded','failed')),
+    response_digest TEXT,
+    failure_reason TEXT,
+    PRIMARY KEY (bootstrap_id, window_index),
+    FOREIGN KEY(bootstrap_id) REFERENCES twelve_data_bootstrap_runs(id),
+    FOREIGN KEY(request_ledger_id) REFERENCES twelve_data_request_ledger(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_twelve_data_bootstrap_requests_state
+ON twelve_data_bootstrap_requests(bootstrap_id,state);
