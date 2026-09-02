@@ -31,6 +31,7 @@ jobs:
             .github/workflows/day53-step2-formal-qualification.yml
             scripts/day53_step2_d1_preregistration.py
             scripts/day53_step2_formal_run.py
+            scripts/day53_step2_structural_audit_append.py
             src/aidy/twelve_data_market.py
             src/aidy/twelve_data_storage.py
             src/aidy/twelve_data_recorder.py
