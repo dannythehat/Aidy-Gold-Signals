@@ -13,16 +13,21 @@ Passing the first does not imply passing the second. Bootstrap is history popula
 
 ## Authoritative Twelve Data semantic path
 
-For the new Twelve Data evidence epoch, the legacy historical-case and analogue-retrieval APIs are **not sufficient for qualification** even if they remain available for legacy research and regression compatibility.
+For the new Twelve Data evidence epoch, the legacy feature/context, historical-case, analogue-retrieval and dossier APIs are **not sufficient for qualification** even if they remain available for legacy research and regression compatibility.
 
 The qualified path must use all of the following protected contracts:
 
 - `aidy_market_data_semantic_identity_v1`
+- `aidy_semantic_gold_feature_packet_v1`
+- `aidy_semantic_market_context_v1`
 - `aidy_semantic_case_input_wrapper_v1`
 - `aidy_semantic_analogue_query_v1`
 - `aidy_semantic_analogue_retrieval_v1`
+- `aidy_semantic_context_composer_v1`
 
-A Twelve Data PIT case input must carry the deterministic market-data semantic identity derived from the Gold feature packet source links. A historical candidate must carry its own semantic identity. Missing, invalid, mixed or differing semantic identities fail closed **before** the legacy similarity geometry is evaluated.
+A Twelve Data PIT feature packet must derive and embed its deterministic market-data semantic identity before the feature-packet digest is finalized. The semantic context must verify that embedded identity against Gold source-link provenance and bind it into the authenticated context hash. The semantic PIT case must carry the same identity. A historical candidate must carry its own semantic identity. Missing, invalid, mixed or differing semantic identities fail closed **before** the legacy similarity geometry is evaluated.
+
+The model dossier is also a protected boundary. `aidy_semantic_context_composer_v1` requires a verified semantic context and a verified `aidy_semantic_analogue_retrieval_v1` wrapper before delegating the already-gated `base_retrieval` to the legacy Day-35 deterministic composer. The final dossier digest binds the current market-data semantic identity, semantic-retrieval digest, semantic exclusion counts and any accepted ledger equivalence record digests. Direct use of legacy retrieval plus `compose_context_v2` does not qualify a Twelve Data model dossier.
 
 A cross-source candidate may enter the comparison set only when the authoritative append-only research ledger itself proves all of the following:
 
@@ -60,14 +65,18 @@ The adapter may turn on for a formal cohort only when one immutable qualificatio
    - stale prior H4/D1 IDs cannot satisfy current readiness
    - incomplete current buckets fail closed rather than falling back to stale aggregates
 
-4. **Cross-source parameter and analogue boundary**
+4. **Cross-source parameter, analogue and dossier boundary**
    - all source-scale-sensitive thresholds and numeric scales have an accepted provenance disposition
+   - the frozen Step 1.5 dependency/provenance map enumerates every known active consumer before Step 2 begins
+   - Twelve Data PIT features use `aidy_semantic_gold_feature_packet_v1`
+   - Twelve Data decision contexts use `aidy_semantic_market_context_v1`
    - Twelve Data PIT cases use `aidy_semantic_case_input_wrapper_v1`
    - analogue queries use `aidy_semantic_analogue_query_v1`
    - analogue retrieval uses `aidy_semantic_analogue_retrieval_v1`
+   - model dossiers use `aidy_semantic_context_composer_v1`
    - missing semantic identity is an automatic exclusion
    - differing HistData/Twelve Data identities are an automatic exclusion unless the append-only research ledger proves an exact-pair PASS equivalence result
-   - legacy `build_pit_case_input` / `build_analogue_query` / `retrieve_analogues_v2` calls cannot by themselves satisfy the new Twelve Data cohort qualification
+   - legacy `build_feature_packet` / `build_context_packet` / `build_pit_case_input` / `build_analogue_query` / `retrieve_analogues_v2` / `compose_context_v2` calls cannot by themselves satisfy the new Twelve Data cohort qualification
 
 5. **Macro/event context**
    - event rows are selected as-of, not by latest-known-today state
@@ -92,9 +101,10 @@ The adapter may turn on for a formal cohort only when one immutable qualificatio
    - an infrastructure/data-quality failure cannot be recorded as a genuine `no_trade`
    - failed bootstrap or partial persistence cannot become visible canonical decision state
    - an invalid research-ledger chain or repository-anchor inconsistency blocks any ledger-derived equivalence permission
+   - an invalid/tampered semantic retrieval wrapper or a semantic retrieval whose query identity differs from the current Gold context cannot enter the model dossier
 
 10. **Qualification immutability**
-    - qualification record includes accepted code SHA, context contract version, source-semantic digest, parameter-provenance audit digest, fixture-set digest and test-result digest
+    - qualification record includes accepted code SHA, context contract version, source-semantic digest, parameter-provenance audit digest, dependency-map digest, fixture-set digest and test-result digest
     - any evidence-semantic change invalidates the qualification and follows the Day 53 cohort reset/preservation-proof rule
 
 ## Minimum acceptance fixtures
@@ -115,6 +125,9 @@ The qualification suite must include at least these deterministic cases:
 - attempted candidate with missing market-data semantic identity: candidate excluded before similarity scoring
 - invalid/broken research-ledger chain presented as equivalence evidence: equivalence rejected
 - D1 research-ledger state behind the latest committed repository anchor: qualification blocked
+- attempted direct legacy retrieval into the Twelve model-dossier boundary: rejected before model composition
+- tampered semantic-retrieval digest: rejected before model composition
+- semantic-retrieval query identity that does not equal the current Gold context identity: rejected before model composition
 
 ## Turn-on rule
 
@@ -125,3 +138,5 @@ A successful feed bootstrap, a healthy HTTP endpoint, a successful model call or
 The first scheduler-generated decision packet after qualification must still pass live current-bucket readiness. Qualification authorizes the adapter contract; it does not waive per-tick data-quality gates.
 
 For Step 2 equivalence preregistration, the record must explicitly state that criteria are **informed rather than blind**: the team has already observed reconciliation differences of approximately 10–14 bps median absolute difference, approximately 38–57 bps at p95, and a tail maximum near 97 bps. Those prior observations do not determine PASS/FAIL, but they must remain visible as prior knowledge when the acceptance and rejection tolerances are frozen.
+
+Step 2 must not begin until `docs/day53-market-data-dependency-provenance-map.md` is frozen and its code-binding tests pass. No parameter search or inheritance test was authorized by the Step 1/1.5 work itself.
