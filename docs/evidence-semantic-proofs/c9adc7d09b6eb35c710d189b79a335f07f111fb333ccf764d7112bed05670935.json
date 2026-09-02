@@ -1,0 +1,18 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "aa0686631c9e8e5f53d7548e309ee17b0cbf9dba",
+  "base_sha": "d3006dd52670db28f1d19ef0331f6f007d9be0df",
+  "protected_diff_sha256": "c9adc7d09b6eb35c710d189b79a335f07f111fb333ccf764d7112bed05670935",
+  "classification": "evidence-semantic",
+  "cohort_action": "new_epoch",
+  "preserve_existing_cohort": false,
+  "reason": "Twelve Data bootstrap admission now permits a successful bounded bootstrap request to attest an already-immutable identical M1 candle without rewriting or duplicating the historical evidence row. This changes which previously observed Twelve M1 evidence may become decision-admitted and therefore requires a new semantic evidence epoch.",
+  "safety_invariants": [
+    "manual_probe rows remain excluded from decision admission",
+    "scheduled_capture admission remains restricted to successful outputsize 1-30 requests",
+    "bootstrap admission requires a successful bootstrap request and successful bounded bootstrap window",
+    "immutable candle payloads and original first_observed_at values are not rewritten",
+    "public publication remains disabled",
+    "live-money execution remains disabled"
+  ]
+}
