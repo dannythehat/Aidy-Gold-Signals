@@ -28,7 +28,9 @@ jobs:
           protected=(
             .github/workflows/evidence-semantic-change-gate.yml
             .github/workflows/day53-step2-d1-preregistration.yml
+            .github/workflows/day53-step2-formal-qualification.yml
             scripts/day53_step2_d1_preregistration.py
+            scripts/day53_step2_formal_run.py
             src/aidy/twelve_data_market.py
             src/aidy/twelve_data_storage.py
             src/aidy/twelve_data_recorder.py
@@ -54,6 +56,7 @@ jobs:
             src/aidy/market_data_semantics.py
             src/aidy/day53_step2_preregistration.py
             src/aidy/day53_step2_qualification_guard.py
+            src/aidy/day53_step2_scoring.py
             migrations/d1/0008_research_evidence_ledger.sql
             evidence/research_ledger
             docs/day53-market-data-parameter-provenance-audit.md

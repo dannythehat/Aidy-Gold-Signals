@@ -1,0 +1,43 @@
+{
+  "run_protocol_version": "aidy_day53_step2_formal_run_v1",
+  "qualification_id": "day53-histdata-twelve-active-scale-sensitive-surface-v1",
+  "research_family_id": "day53-histdata-twelve-20-50-40-equivalence-v1",
+  "equivalence_contract_digest_sha256": "c47b3b2827c90ad1a64e08ae5ea36216d9f0ea7bcd47c16c08ca8ecf1cc67428",
+  "scorer_version": "aidy_day53_step2_equivalence_scorer_v1",
+  "selection_origin": "preregistered_explicit",
+  "pre_result_validation": {
+    "scorer_must_pass_synthetic_and_shuffled_tests_before_formal_run": true,
+    "real_market_values_allowed_during_harness_validation": false,
+    "twelve_data_vendor_calls_allowed_during_harness_validation": false
+  },
+  "interruption_policy": {
+    "policy": "restart_from_zero",
+    "resume_partial_scores_allowed": false,
+    "interrupted_attempt_must_receive_terminal_failed_or_aborted_record": true,
+    "next_attempt_requires_new_trial_id": true,
+    "next_attempt_recomputes_from_first_observation": true,
+    "code_or_configuration_change_requires_new_trial_id_and_new_code_head": true,
+    "same_code_infrastructure_interruption_still_requires_new_trial_id": true
+  },
+  "structural_preflight": {
+    "enumerate_every_utc_hour_in_frozen_population_as_pairable_upper_bound": true,
+    "apply_frozen_qualification_selector": true,
+    "apply_frozen_nested_retrieval_selector": true,
+    "label_query_session_with_existing_aidy_session_code_at_bucket_end": true,
+    "if_any_registered_minimum_is_unreachable_under_upper_bound": "terminal_insufficient_evidence",
+    "market_values_must_not_be_loaded_after_terminal_structural_blocker": true
+  },
+  "formal_data_policy": {
+    "candidate_universe_loaded_only_if_structural_preflight_nonterminal": true,
+    "ohlc_loaded_only_if_structural_preflight_nonterminal": true,
+    "qualification_data_never_enters_forward_evidence_cohort": true,
+    "outcome_pnl_trade_result_fields_forbidden": true
+  },
+  "result_policy": {
+    "pass_fail_insufficient_only": true,
+    "inheritance_only_on_pass": true,
+    "cross_source_retrieval_permission_on_pass": false,
+    "no_discretionary_override": true
+  },
+  "run_protocol_digest": "cc449f28944b828dae15c94690a4b43f1442c1287fa6e41260afa80222342f44"
+}

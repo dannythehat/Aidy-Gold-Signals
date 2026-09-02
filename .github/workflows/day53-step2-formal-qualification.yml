@@ -1,0 +1,205 @@
+name: AIDY Day 53 Step 2 Formal Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - "ops/day53-step2-formal-run-trigger.txt"
+
+permissions:
+  contents: read
+
+env:
+  STEP2_D1_CONFIG: wrangler.step2.formal.jsonc
+  FORMAL_CODE_ANCHOR: evidence/research_ledger/anchors/day53-step2-formal-run-code-anchor.json
+  PREREG_MANIFEST: evidence/research_ledger/day53-step2-equivalence-preregistration.json
+  RUN_PROTOCOL: evidence/research_ledger/day53-step2-formal-run-protocol.json
+  D1_CHECKPOINT: evidence/research_ledger/anchors/day53-step2-preregistration-checkpoint.json
+
+jobs:
+  formal-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact trigger head
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Resolve and verify frozen formal-run code anchor
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$FORMAL_CODE_ANCHOR"
+          python - <<'PY' > /tmp/formal-anchor.env
+          import hashlib, json
+          p=json.load(open('evidence/research_ledger/anchors/day53-step2-formal-run-code-anchor.json', encoding='utf-8'))
+          supplied=p.pop('anchor_digest')
+          body=json.dumps(p, sort_keys=True, separators=(',',':'), ensure_ascii=True)
+          assert hashlib.sha256(body.encode()).hexdigest()==supplied, p
+          assert p['anchor_version']=='aidy_day53_step2_formal_run_code_anchor_v1', p
+          print(f"FORMAL_RUN_HEAD={p['formal_run_code_head_sha']}")
+          print(f"FORMAL_PROTOCOL_DIGEST={p['run_protocol_digest']}")
+          PY
+          source /tmp/formal-anchor.env
+          echo "FORMAL_RUN_HEAD=$FORMAL_RUN_HEAD" >> "$GITHUB_ENV"
+          echo "FORMAL_PROTOCOL_DIGEST=$FORMAL_PROTOCOL_DIGEST" >> "$GITHUB_ENV"
+          git merge-base --is-ancestor "$FORMAL_RUN_HEAD" HEAD
+          git diff --exit-code "$FORMAL_RUN_HEAD" HEAD -- \
+            src/aidy/day53_step2_scoring.py \
+            scripts/day53_step2_formal_run.py \
+            .github/workflows/day53-step2-formal-qualification.yml \
+            evidence/research_ledger/day53-step2-formal-run-protocol.json \
+            src/aidy/day53_step2_preregistration.py \
+            src/aidy/day53_step2_qualification_guard.py \
+            evidence/research_ledger/day53-step2-equivalence-preregistration.json
+          python - <<'PY'
+          import json, os
+          p=json.load(open(os.environ['RUN_PROTOCOL'], encoding='utf-8'))
+          assert p['run_protocol_digest']==os.environ['FORMAL_PROTOCOL_DIGEST'], p
+          PY
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Install bounded project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Re-run blind synthetic scorer suite before D1 trial start
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/day53_step2_scoring.py \
+            scripts/day53_step2_formal_run.py \
+            tests/test_day53_step2_scoring.py
+          uv run pytest -q \
+            tests/test_day53_step2_scoring.py \
+            tests/test_day53_step2_preregistration.py
+
+      - name: Build minimal D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg={
+              'name':'aidy-signals-test',
+              'main':'src/entry.py',
+              'compatibility_date':'2026-08-16',
+              'compatibility_flags':['python_workers'],
+              'd1_databases':[{
+                  'binding':'AIDY_OPS',
+                  'database_name':'aidy-ops-test',
+                  'database_id':'3588d82a-d686-4430-872d-d4c0e62c3d5d',
+                  'migrations_dir':'migrations/d1',
+              }],
+          }
+          json.dump(cfg, open('wrangler.step2.formal.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config "$STEP2_D1_CONFIG"
+
+      - name: Read live ledger before trial start
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config "$STEP2_D1_CONFIG" \
+            --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
+            > /tmp/ledger-before-start.json
+
+      - name: Prepare restart-safe formal trial start
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day53_step2_formal_run.py prepare-start \
+            --ledger /tmp/ledger-before-start.json \
+            --manifest "$PREREG_MANIFEST" \
+            --protocol "$RUN_PROTOCOL" \
+            --anchor "$D1_CHECKPOINT" \
+            --accepted-head "$FORMAL_RUN_HEAD" \
+            --sql /tmp/trial-start.sql \
+            --audit day53_step2_trial_start.json
+
+      - name: Append trial start before formal result evaluation
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q '^INSERT INTO research_evidence_ledger' /tmp/trial-start.sql; then
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+              --config "$STEP2_D1_CONFIG" --file /tmp/trial-start.sql
+          else
+            echo "No trial-start append required."
+          fi
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config "$STEP2_D1_CONFIG" \
+            --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
+            > /tmp/ledger-after-start.json
+
+      - name: Evaluate frozen structural preflight and prepare terminal result
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day53_step2_formal_run.py prepare-result \
+            --ledger /tmp/ledger-after-start.json \
+            --manifest "$PREREG_MANIFEST" \
+            --protocol "$RUN_PROTOCOL" \
+            --anchor "$D1_CHECKPOINT" \
+            --accepted-head "$FORMAL_RUN_HEAD" \
+            --sql /tmp/formal-result.sql \
+            --result day53_step2_formal_result_preappend.json
+
+      - name: Append terminal result and qualification record
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q '^INSERT INTO research_evidence_ledger' /tmp/formal-result.sql; then
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+              --config "$STEP2_D1_CONFIG" --file /tmp/formal-result.sql
+          else
+            echo "No terminal-result append required."
+          fi
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config "$STEP2_D1_CONFIG" \
+            --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
+            > /tmp/ledger-final.json
+
+      - name: Verify final D1 chain and frozen outcome
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day53_step2_formal_run.py verify-final \
+            --ledger /tmp/ledger-final.json \
+            --manifest "$PREREG_MANIFEST" \
+            --protocol "$RUN_PROTOCOL" \
+            --anchor "$D1_CHECKPOINT" \
+            --accepted-head "$FORMAL_RUN_HEAD" \
+            --output day53_step2_formal_result.json
+
+      - name: Preserve formal result evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-step2-formal-result-${{ github.sha }}
+          path: |
+            day53_step2_trial_start.json
+            day53_step2_formal_result_preappend.json
+            day53_step2_formal_result.json
+          if-no-files-found: error
+          retention-days: 90
