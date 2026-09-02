@@ -1,0 +1,87 @@
+name: AIDY Day 53 Twelve Data D1 Diagnosis
+
+on:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - "ops/day53-twelve-data-d1-diagnosis-trigger.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets']=[]
+          cfg['queues']={}
+          json.dump(cfg, open('wrangler.day53.diagnosis.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Read failed bootstrap evidence only
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.diagnosis.jsonc \
+            --command "SELECT id,captured_at,capture_status,mid,quote_time,quote_age_seconds,data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots WHERE json_extract(data_availability_json,'$.market_data_source')='twelve_data' ORDER BY captured_at DESC LIMIT 3" \
+            > /tmp/twelve-snapshots.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.diagnosis.jsonc \
+            --command "SELECT fetched_at_utc,meta_json,credit_headers_json,raw_bar_count,admitted_closed_bar_count,forming_bar_count,off_session_bar_count,latest_closed_bar_open_utc,latest_closed_bar_close_utc,observed_lag_seconds,session_open_at_fetch,freshness_state,response_digest FROM twelve_data_feed_observations ORDER BY fetched_at_utc DESC LIMIT 3" \
+            > /tmp/twelve-feed.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.diagnosis.jsonc \
+            --command "SELECT status,COUNT(*) AS n FROM archive_outbox GROUP BY status ORDER BY status" \
+            > /tmp/archive-counts.json
+          python - <<'PY'
+          import json
+          def rows(path):
+              payload=json.load(open(path, encoding='utf-8'))
+              out=[]
+              for batch in payload:
+                  out.extend(batch.get('results') or [])
+              return out
+          snaps=rows('/tmp/twelve-snapshots.json')
+          feeds=rows('/tmp/twelve-feed.json')
+          archive=rows('/tmp/archive-counts.json')
+          assert snaps, 'No Twelve Data snapshot persisted from failed bootstrap.'
+          assert feeds, 'No Twelve Data feed observation persisted from failed bootstrap.'
+          latest=snaps[0]
+          availability=json.loads(latest['data_availability_json'])
+          evidence={
+              'latest_snapshot':{k:v for k,v in latest.items() if k!='data_availability_json'},
+              'availability':availability,
+              'latest_feed':feeds[0],
+              'archive_counts':archive,
+          }
+          print(json.dumps(evidence, sort_keys=True))
+          json.dump(evidence, open('/tmp/diagnosis.json','w',encoding='utf-8'), sort_keys=True)
+          PY
+
+      - name: Preserve diagnosis
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-twelve-data-d1-diagnosis-${{ github.sha }}
+          path: /tmp/diagnosis.json
+          if-no-files-found: error
+          retention-days: 90
