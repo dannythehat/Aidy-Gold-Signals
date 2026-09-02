@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import UTC, datetime
 
@@ -148,30 +149,26 @@ def test_only_affirmative_pass_allows_inheritance() -> None:
     )["inheritance_allowed"] is False
 
 
-def test_d1_migration_vetoes_update_and_delete() -> None:
+def test_d1_migration_seeds_genesis_and_vetoes_update_and_delete() -> None:
     from pathlib import Path
 
     migration = Path("migrations/d1/0008_research_evidence_ledger.sql").read_text()
     db = sqlite3.connect(":memory:")
     db.executescript(migration)
-    db.execute(
+
+    row = db.execute(
         """
-        INSERT INTO research_evidence_ledger (
-          sequence,record_digest,previous_digest,ledger_version,record_type,
-          recorded_at_utc,code_head_sha,initiated_by,payload_json
-        ) VALUES (0,?,?,?,?,?,?,?,?)
-        """,
-        (
-            "e" * 64,
-            None,
-            "aidy_research_ledger_v1",
-            "governance_genesis",
-            "2026-09-02T08:00:00+00:00",
-            SHA40,
-            "human",
-            "{}",
-        ),
-    )
+        SELECT sequence,record_digest,code_head_sha,record_type,payload_json
+        FROM research_evidence_ledger WHERE sequence=0
+        """
+    ).fetchone()
+    assert row is not None
+    assert row[0] == 0
+    assert row[1] == "daa8478ee4932bb5fabd83396abc29cdc38fca2e5b913fb78a0e4e2c80458406"
+    assert row[2] == "ede6e5cbfd9c7a1b449cb1c8314449d1fd0ec5d3"
+    assert row[3] == "governance_genesis"
+    assert json.loads(row[4])["no_edge_rule"] == NO_EDGE_RULE
+
     with pytest.raises(sqlite3.DatabaseError, match="UPDATE forbidden"):
         db.execute("UPDATE research_evidence_ledger SET record_type='changed' WHERE sequence=0")
     with pytest.raises(sqlite3.DatabaseError, match="DELETE forbidden"):
