@@ -12,6 +12,8 @@ from aidy.historical_backfill import (
     HISTDATA_SOURCE,
     HISTDATA_SOURCE_TIMEZONE,
 )
+from aidy.research_trials import digest as research_digest
+from aidy.research_trials import verify_chain
 from aidy.twelve_data_market import (
     ADAPTER_VERSION,
     AGGREGATE_SOURCE,
@@ -24,6 +26,8 @@ from aidy.twelve_data_market import (
 
 SEMANTIC_IDENTITY_VERSION = "aidy_market_data_semantic_identity_v1"
 COMPATIBILITY_VERSION = "aidy_market_data_semantic_compatibility_v1"
+EQUIVALENCE_CONTRACT_RECORD_TYPE = "market_data_equivalence_contract_registered"
+QUALIFICATION_RESULT_RECORD_TYPE = "qualification_result"
 
 
 def _canonical_json(value: object) -> str:
@@ -39,6 +43,11 @@ def _finish(body: dict[str, Any]) -> dict[str, Any]:
     body["semantic_identity_version"] = SEMANTIC_IDENTITY_VERSION
     body["semantic_identity_digest"] = digest(body)
     return body
+
+
+def _hex64(value: object) -> bool:
+    text = str(value or "").lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def histdata_semantic_identity() -> dict[str, Any]:
@@ -132,11 +141,85 @@ def identity_from_feature_packet(feature_packet: Mapping[str, Any]) -> dict[str,
     return identity_from_source_links(source_links)
 
 
+def _normalize_ledger_record(value: Mapping[str, Any]) -> dict[str, Any]:
+    record = dict(value)
+    if "payload" not in record:
+        payload_json = record.pop("payload_json", None)
+        if isinstance(payload_json, str):
+            decoded = json.loads(payload_json)
+            if not isinstance(decoded, Mapping):
+                raise ValueError("research ledger payload_json must decode to an object")
+            record["payload"] = dict(decoded)
+    return record
+
+
+def accepted_market_data_equivalences(
+    research_ledger_records: Iterable[Mapping[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Resolve only PASS equivalence results from a valid append-only research ledger chain."""
+
+    records = [_normalize_ledger_record(value) for value in research_ledger_records]
+    records.sort(key=lambda item: int(item.get("sequence", -1)))
+    if not records:
+        return {}
+    if not verify_chain(records):
+        raise ValueError("research ledger chain is invalid; equivalence cannot be accepted")
+
+    contracts: dict[str, tuple[dict[str, Any], str]] = {}
+    for record in records:
+        if record.get("record_type") != EQUIVALENCE_CONTRACT_RECORD_TYPE:
+            continue
+        payload = record.get("payload")
+        if not isinstance(payload, Mapping):
+            raise ValueError("equivalence contract ledger record requires an object payload")
+        qualification_id = str(payload.get("qualification_id") or "").strip()
+        left = str(payload.get("source_identity_a_digest") or "")
+        right = str(payload.get("source_identity_b_digest") or "")
+        if not qualification_id or not _hex64(left) or not _hex64(right):
+            raise ValueError("equivalence contract ledger record is missing semantic identity binding")
+        contract_payload = dict(payload)
+        contract_digest = research_digest(contract_payload)
+        contracts[qualification_id] = (contract_payload, contract_digest)
+
+    accepted: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if record.get("record_type") != QUALIFICATION_RESULT_RECORD_TYPE:
+            continue
+        payload = record.get("payload")
+        if not isinstance(payload, Mapping):
+            continue
+        if payload.get("outcome") != "pass" or payload.get("inheritance_allowed") is not True:
+            continue
+        qualification_id = str(payload.get("qualification_id") or "")
+        contract = contracts.get(qualification_id)
+        if contract is None:
+            continue
+        contract_payload, expected_contract_digest = contract
+        if str(payload.get("contract_digest") or "") != expected_contract_digest:
+            continue
+        evidence_digest = str(payload.get("evidence_digest") or "")
+        if not _hex64(evidence_digest):
+            continue
+        left = str(contract_payload["source_identity_a_digest"])
+        right = str(contract_payload["source_identity_b_digest"])
+        acceptance = {
+            "qualification_id": qualification_id,
+            "contract_digest": expected_contract_digest,
+            "evidence_digest": evidence_digest,
+            "qualification_result_record_digest": record["record_digest"],
+            "outcome": "pass",
+            "inheritance_allowed": True,
+        }
+        accepted[f"{left}:{right}"] = acceptance
+        accepted[f"{right}:{left}"] = acceptance
+    return accepted
+
+
 def assert_semantic_compatible(
     query_identity: Mapping[str, Any],
     candidate_identity: Mapping[str, Any],
     *,
-    accepted_equivalence_contract_digest: str | None = None,
+    accepted_equivalence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not verify_semantic_identity(query_identity):
         raise ValueError("query market-data semantic identity is invalid")
@@ -151,15 +234,26 @@ def assert_semantic_compatible(
             "query_identity_digest": query_digest,
             "candidate_identity_digest": candidate_digest,
             "equivalence_contract_digest": None,
+            "qualification_result_record_digest": None,
         }
-    if accepted_equivalence_contract_digest:
-        if len(accepted_equivalence_contract_digest) != 64:
-            raise ValueError("equivalence contract digest must be a SHA-256 hex digest")
+    if accepted_equivalence is not None:
+        contract_digest = str(accepted_equivalence.get("contract_digest") or "")
+        result_record_digest = str(
+            accepted_equivalence.get("qualification_result_record_digest") or ""
+        )
+        if (
+            accepted_equivalence.get("outcome") != "pass"
+            or accepted_equivalence.get("inheritance_allowed") is not True
+            or not _hex64(contract_digest)
+            or not _hex64(result_record_digest)
+        ):
+            raise ValueError("market-data equivalence acceptance record is invalid")
         return {
             "compatibility_version": COMPATIBILITY_VERSION,
             "state": "qualified_equivalence_contract",
             "query_identity_digest": query_digest,
             "candidate_identity_digest": candidate_digest,
-            "equivalence_contract_digest": accepted_equivalence_contract_digest,
+            "equivalence_contract_digest": contract_digest,
+            "qualification_result_record_digest": result_record_digest,
         }
     raise ValueError("cross-source analogue comparison blocked: market-data semantic identities differ")
