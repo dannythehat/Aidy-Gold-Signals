@@ -1,0 +1,106 @@
+name: Evidence Semantic Change Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  classify-protected-diff:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Require contemporaneous semantic classification
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          base="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
+          protected=(
+            src/aidy/twelve_data_market.py
+            src/aidy/twelve_data_storage.py
+            src/aidy/twelve_data_recorder.py
+            src/aidy/twelve_data_bootstrap.py
+            src/aidy/market_sessions.py
+            src/aidy/feature_engine.py
+            src/aidy/context_packet.py
+            src/aidy/historical_cases.py
+            src/aidy/regime_classifier.py
+            src/aidy/setup_detector.py
+            src/aidy/analogue_retrieval.py
+            src/aidy/analogue_retrieval_v2.py
+          )
+
+          mapfile -t changed < <(git diff --name-only "$base"..."$PR_HEAD_SHA" -- "${protected[@]}")
+          if [ "${#changed[@]}" -eq 0 ]; then
+            echo "protected_evidence_semantic_change=false"
+            exit 0
+          fi
+
+          printf 'Protected evidence-semantic paths changed:\n'
+          printf '  %s\n' "${changed[@]}"
+
+          current_diff_sha="$(git diff --binary "$base"..."$PR_HEAD_SHA" -- "${protected[@]}" | sha256sum | awk '{print $1}')"
+          proof="docs/evidence-semantic-proofs/${current_diff_sha}.json"
+          test -f "$proof" || {
+            echo "Missing contemporaneous proof record: $proof"
+            echo "Protected changes are presumed evidence-semantic until that record exists."
+            exit 1
+          }
+
+          export BASE_SHA="$base"
+          export CURRENT_DIFF_SHA="$current_diff_sha"
+          export PROOF_PATH="$proof"
+          recorded_head="$(python - <<'PY'
+          import json, os, re
+          payload=json.load(open(os.environ['PROOF_PATH'], encoding='utf-8'))
+          required={'record_version','recorded_head_sha','base_sha','protected_diff_sha256','classification','cohort_action'}
+          missing=sorted(required-set(payload))
+          assert not missing, f'missing fields: {missing}'
+          assert payload['record_version']=='aidy_evidence_semantic_change_v1', payload
+          assert re.fullmatch(r'[0-9a-f]{40}', str(payload['recorded_head_sha'])), payload
+          assert payload['base_sha']==os.environ['BASE_SHA'], payload
+          assert payload['protected_diff_sha256']==os.environ['CURRENT_DIFF_SHA'], payload
+          classification=payload['classification']
+          assert classification in {'evidence-semantic','transport-only'}, payload
+          if classification=='evidence-semantic':
+              assert payload['cohort_action']=='new_epoch', payload
+              assert payload.get('preserve_existing_cohort') is False, payload
+          else:
+              assert payload['cohort_action']=='preserve', payload
+              assert payload.get('preserve_existing_cohort') is True, payload
+              proof=payload.get('deterministic_equivalence_proof')
+              assert isinstance(proof, dict), payload
+              assert isinstance(proof.get('invariants'), list) and proof['invariants'], proof
+              assert isinstance(proof.get('test_commands'), list) and proof['test_commands'], proof
+              assert proof.get('result')=='pass', proof
+              digest=str(proof.get('evidence_digest') or '')
+              assert re.fullmatch(r'[0-9a-f]{64}', digest), proof
+          print(payload['recorded_head_sha'])
+          PY
+          )"
+
+          git merge-base --is-ancestor "$recorded_head" "$PR_HEAD_SHA" || {
+            echo "Proof was not recorded on an ancestor of the current PR head."
+            exit 1
+          }
+
+          recorded_diff_sha="$(git diff --binary "$base"..."$recorded_head" -- "${protected[@]}" | sha256sum | awk '{print $1}')"
+          test "$recorded_diff_sha" = "$current_diff_sha" || {
+            echo "Protected diff changed after the proof record was made."
+            echo "Create a new proof record for the new protected diff hash."
+            exit 1
+          }
+
+          echo "protected_evidence_semantic_change=true"
+          echo "protected_diff_sha256=$current_diff_sha"
+          echo "proof_record=$proof"
