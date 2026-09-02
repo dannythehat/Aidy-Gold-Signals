@@ -94,7 +94,7 @@ def evaluate_twelve_pre_model_safety(
         seen_context_hashes=seen_context_hashes,
     )
     checks = [dict(item) for item in result["checks"]]
-    spread = next((item for item in checks if item.get("name") == "spread_availability"), None)
+    spread = next((item for item in checks if item.get("gate") == "spread_availability"), None)
     if spread is None:
         raise RuntimeError("Day-22 safety receipt lacks spread availability check")
 
