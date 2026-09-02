@@ -170,7 +170,8 @@ class Default(WorkerEntrypoint):
                     repository=repository,
                     gateway=market_gateway,
                     market_store=market_store,
-                    recent_outputsize=1500 if bootstrap else 30,
+                    recent_outputsize=5000 if bootstrap else 30,
+                    bootstrap_required_windows_only=bootstrap,
                 )
                 result = await recorder.capture_once()
                 for _ in range(20 if bootstrap else 2):
@@ -204,10 +205,15 @@ class Default(WorkerEntrypoint):
                     "SELECT COUNT(*) AS n FROM archive_outbox WHERE status='pending'"
                 ).first()
                 pending = 0 if pending_row is None else int(pending_row["n"])
+                missing_required = availability.get(
+                    "bootstrap_required_m1_minutes_missing_from_vendor_fetch"
+                )
+                bootstrap_complete = not bootstrap or missing_required == 0
                 ok = (
                     snapshot.get("capture_status") == "complete"
                     and candles_ready
                     and availability.get("freshness_state") == "fresh"
+                    and bootstrap_complete
                     and pending == 0
                 )
                 return Response.json(
@@ -234,6 +240,24 @@ class Default(WorkerEntrypoint):
                             ),
                             "off_session_bar_count_dropped": availability.get(
                                 "off_session_bar_count_dropped"
+                            ),
+                            "snapshot_candle_identity_policy": availability.get(
+                                "snapshot_candle_identity_policy"
+                            ),
+                            "bootstrap_required_windows_only": availability.get(
+                                "bootstrap_required_windows_only"
+                            ),
+                            "bootstrap_required_m1_minutes": availability.get(
+                                "bootstrap_required_m1_minutes"
+                            ),
+                            "bootstrap_required_m1_minutes_missing_from_vendor_fetch": (
+                                missing_required
+                            ),
+                            "bootstrap_vendor_closed_bars_returned": availability.get(
+                                "bootstrap_vendor_closed_bars_returned"
+                            ),
+                            "bootstrap_vendor_m1_bars_persisted": availability.get(
+                                "bootstrap_vendor_m1_bars_persisted"
                             ),
                         },
                         "stored_candles": result.stored_candles,
