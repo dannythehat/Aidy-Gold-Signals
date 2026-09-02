@@ -50,11 +50,13 @@ jobs:
             src/aidy/research_trials.py
             src/aidy/research_ledger_anchor.py
             src/aidy/market_data_semantics.py
+            src/aidy/day53_step2_preregistration.py
             migrations/d1/0008_research_evidence_ledger.sql
             evidence/research_ledger
             docs/day53-market-data-parameter-provenance-audit.md
             docs/day53-market-data-dependency-provenance-map.md
             docs/day53-decision-context-adapter-qualification.md
+            docs/day53-step2-existing-constant-equivalence-preregistration.md
           )
 
           mapfile -t changed < <(git diff --name-only "$base"..."$PR_HEAD_SHA" -- "${protected[@]}")
