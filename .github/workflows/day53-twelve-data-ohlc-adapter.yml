@@ -1,6 +1,7 @@
 name: AIDY Day 53 Twelve Data OHLC Adapter
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - day53/twelve-data-ohlc-adapter
@@ -72,9 +73,9 @@ jobs:
         shell: bash
         run: uv run pytest -q
 
-      - name: First real adapter run - capture meta credits and freshness
+      - name: Manual real adapter run - capture meta credits and freshness
         id: live_adapter
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         run: |
           set -euo pipefail
@@ -119,14 +120,15 @@ jobs:
                   assert result.open_session_lag_seconds <= 180.0, evidence
               assert result.meta.get('symbol') == 'XAU/USD', evidence
               assert result.meta.get('interval') == '1min', evidence
+              assert result.credit_headers.get('api-credits-request') == '1', evidence
               assert 'api-credits-used' in result.credit_headers, evidence
               assert 'api-credits-left' in result.credit_headers, evidence
 
           asyncio.run(main())
           PY
 
-      - name: Preserve first adapter-run evidence
-        if: github.event_name == 'push' && always() && steps.live_adapter.outcome != 'skipped'
+      - name: Preserve manual adapter-run evidence
+        if: github.event_name == 'workflow_dispatch' && always() && steps.live_adapter.outcome != 'skipped'
         uses: actions/upload-artifact@v4
         with:
           name: aidy-day53-twelve-data-adapter-${{ github.sha }}
