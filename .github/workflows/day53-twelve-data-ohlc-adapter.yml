@@ -29,6 +29,7 @@ on:
       - "tests/test_day53_twelve_data_launch_cleanup.py"
       - "tests/test_day53_live_forward_observer.py"
       - "pyproject.toml"
+      - ".github/workflows/day53-live-forward-activation.yml"
       - ".github/workflows/day53-twelve-data-ohlc-adapter.yml"
 
 permissions:
