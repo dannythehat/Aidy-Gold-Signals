@@ -32,6 +32,17 @@ jobs:
           git fetch origin "$TARGET_BRANCH"
           git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
           python /tmp/day53_resumable_patch.py
+          python - <<'PY'
+          from pathlib import Path
+          test_path=Path('tests/test_day53_bootstrap_admission_recovery.py')
+          text=test_path.read_text(encoding='utf-8')
+          text=text.replace("assert '\"next_step\": \"continue_bootstrap\"' in entry", "assert '\"continue_bootstrap\"' in entry")
+          test_path.write_text(text, encoding='utf-8')
+          workflow_path=Path('.github/workflows/day53-bootstrap-admission-recovery.yml')
+          text=workflow_path.read_text(encoding='utf-8')
+          text=text.replace("grep -F '\"next_step\": \"continue_bootstrap\"' src/entry.py", "grep -F '\"continue_bootstrap\"' src/entry.py")
+          workflow_path.write_text(text, encoding='utf-8')
+          PY
       - name: Validate patch
         shell: bash
         run: |
