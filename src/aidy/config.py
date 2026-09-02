@@ -5,7 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 ValueGetter = Callable[[str, str], str]
-_ALLOWED_MARKET_DATA_SOURCES = {"gold_api", "argentapi"}
+_ALLOWED_MARKET_DATA_SOURCES = {"gold_api", "argentapi", "twelve_data"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +57,8 @@ class AidySettings:
             optional("AIDY_MARKET_DATA_OWNERSHIP").lower() or "public_independent"
         )
         market_data_source = optional("AIDY_MARKET_DATA_SOURCE").lower() or "gold_api"
+        default_market_poll = 300.0 if market_data_source == "twelve_data" else 60.0
+        market_poll_seconds = positive_float("AIDY_MARKET_POLL_SECONDS", default_market_poll)
 
         if enabled:
             if market_data_source not in _ALLOWED_MARKET_DATA_SOURCES:
@@ -70,12 +72,17 @@ class AidySettings:
                     "public_independent. Broker, MT5, MetaAPI and Super Signals credentials "
                     "are not valid AIDY market-data sources."
                 )
+            if market_data_source == "twelve_data" and market_poll_seconds < 300.0:
+                raise RuntimeError(
+                    "Twelve Data Basic capture requires AIDY_MARKET_POLL_SECONDS >= 300 "
+                    "to stay within the 800-request daily quota."
+                )
 
         return cls(
             market_data_ownership=market_data_ownership,
             market_data_source=market_data_source,
             capture_enabled=enabled,
-            market_poll_seconds=positive_float("AIDY_MARKET_POLL_SECONDS", 60.0),
+            market_poll_seconds=market_poll_seconds,
             slow_poll_seconds=positive_float("AIDY_SLOW_POLL_SECONDS", 300.0),
             market_closed_backoff_seconds=positive_float(
                 "AIDY_MARKET_CLOSED_BACKOFF_SECONDS", 900.0
