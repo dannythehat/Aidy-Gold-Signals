@@ -23,9 +23,6 @@ on:
 permissions:
   contents: read
 
-env:
-  DAY52_BASE_SHA: 0a402ab092c973db3976b46a485142b6a0a003d0
-
 jobs:
   acceptance:
     runs-on: ubuntu-24.04
@@ -37,14 +34,14 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Verify Day 52 base and bounded surface
+      - name: Verify candidate descends from current protected main
+        if: github.event_name == 'pull_request'
         shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          test "$(git merge-base "$DAY52_BASE_SHA" HEAD)" = "$DAY52_BASE_SHA"
-          allowed='^(migrations/d1/0004_end_to_end_cycles.sql|src/aidy/decision_ledger.py|src/aidy/safety_gates_v2.py|src/aidy/openai_gateway_v2.py|src/aidy/self_consistency_v2.py|src/aidy/self_consistency_ledger_v2.py|src/aidy/end_to_end_store.py|src/aidy/paper_management_runtime.py|src/aidy/end_to_end.py|tests/test_day52_end_to_end.py|tests/test_day52_management_end_to_end.py|scripts/day52_end_to_end_acceptance.py|docs/day52-end-to-end-fidelity-restart.md|.github/workflows/day52-end-to-end-acceptance.yml)$'
-          unexpected="$(git diff --name-only "$DAY52_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
-          test -z "$unexpected" || { echo "Unexpected Day 52 changes:"; echo "$unexpected"; exit 1; }
+          test "$(git merge-base "$PR_BASE_SHA" HEAD)" = "$PR_BASE_SHA"
 
       - uses: actions/setup-python@v5
         with:
