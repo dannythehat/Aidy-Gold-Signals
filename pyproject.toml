@@ -65,11 +65,13 @@ known-first-party = ["aidy"]
 # this catch to today’s exception classes would permit a new adapter failure to
 # escape without that audit record.
 "src/aidy/forward_live_observer.py" = ["BLE001"]
-# Test-only administrative probes make a best-effort attempt to finish quota or
-# bootstrap bookkeeping before returning the original diagnostic. Cleanup
-# failure must not hide that primary error, so these two broad cleanup catches
-# are intentionally swallowed while production queue failures remain recorded.
-"src/entry.py" = ["BLE001", "S110"]
+# Worker test/admin endpoints and the queue boundary deliberately use broad
+# fail-safe catches: probe cleanup must not hide the primary diagnostic, capture
+# failures must retry, and a post-capture observer failure must never duplicate
+# an already-successful market capture. Inline comments document each boundary;
+# RUF100 is ignored so those safety annotations remain visible even when the
+# corresponding optional lint family is not selected by a historical workflow.
+"src/entry.py" = ["BLE001", "S110", "RUF100"]
 # Day-26 price-structure tests intentionally construct Decimal values from
 # explicit strings so fixture values remain visibly decimal and exact.
 "tests/test_day26_price_structure.py" = ["FURB157"]
