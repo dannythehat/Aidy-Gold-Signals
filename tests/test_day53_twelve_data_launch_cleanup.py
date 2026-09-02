@@ -6,6 +6,8 @@ from uuid import UUID
 
 import pytest
 
+import aidy.twelve_launch_policy as launch_policy
+from aidy.market_data_semantics import twelve_data_semantic_identity
 from aidy.twelve_data_market import TwelveDataFetch
 from aidy.twelve_data_recorder import AidyTwelveDataRecorderService
 
@@ -93,6 +95,42 @@ async def test_canonical_recorder_reserves_quota_before_vendor_call() -> None:
     assert repository.snapshot is not None
     assert "scheduled_capture" in repository.snapshot["data_availability_json"]
     assert str(REQUEST_ID) in repository.snapshot["data_availability_json"]
+    assert '"quote":"known"' in repository.snapshot["data_availability_json"]
+
+
+def test_twelve_missing_spread_advisory_selects_actual_gate_key(monkeypatch) -> None:
+    identity = twelve_data_semantic_identity()
+    context = {
+        "market_data_semantic_identity_digest": identity["semantic_identity_digest"],
+        "provenance": {"gold_market_data_semantic_identity": identity},
+        "gold": {"quote_context": {"spread": None}},
+        "data_quality": {"spread_state": "unknown"},
+    }
+    receipt = {
+        "status": "blocked",
+        "model_call_allowed": False,
+        "reason_codes": ["pre_spread_unknown"],
+        "checks": [
+            {
+                "gate": "spread_availability",
+                "passed": False,
+                "reason_code": "pre_spread_unknown",
+                "detail": None,
+            }
+        ],
+        "gate_digest": "old",
+    }
+    monkeypatch.setattr(launch_policy, "evaluate_pre_model_safety", lambda *args, **kwargs: receipt)
+    result = launch_policy.evaluate_twelve_pre_model_safety(
+        context,
+        now_utc=FETCHED_AT,
+        instruction_type="market_evaluation",
+    )
+    assert result["status"] == "passed"
+    assert result["model_call_allowed"] is True
+    assert result["reason_codes"] == ["pre_model_allowed"]
+    assert result["checks"][0]["reason_code"] == "pre_spread_advisory_twelve_data"
+    assert result["missing_spread_advisory_applied"] is True
 
 
 def test_decision_admission_view_quarantines_unledgered_and_manual_probe_rows() -> None:
