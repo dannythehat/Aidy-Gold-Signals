@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 from workers import Response, WorkerEntrypoint
 
+from aidy.argentapi_gateway import ArgentApiGateway
 from aidy.cloudflare_storage import R2ArchiveStore
 from aidy.config import AidySettings
 from aidy.continuity_auditor import audit_window
@@ -14,14 +15,22 @@ from aidy.cross_market import CrossMarketGateway
 from aidy.cross_market_recorder import AidyCrossMarketRecorderService
 from aidy.cross_market_storage import D1CrossMarketOperationalEvidenceStore
 from aidy.forward_live_observer import live_forward_status, observe_private_forward_snapshot
+from aidy.live_gold_storage import D1LiveGoldQuoteHistory
 from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
-from aidy.runtime import run_worker_scheduled_cycle
+from aidy.runtime import run_capture_cycle, run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
 
 
 def _repository(env):
     operational = D1CrossMarketOperationalEvidenceStore(env.AIDY_OPS)
     return operational, AidyMarketRepository(operational, R2ArchiveStore(env.AIDY_MEMORY))
+
+
+def _market_runtime_dependencies(env, settings: AidySettings):
+    if settings.market_data_source != "argentapi":
+        return None, None
+    api_key = str(getattr(env, "AIDY_ARGENT_API_KEY", ""))
+    return ArgentApiGateway(api_key=api_key), D1LiveGoldQuoteHistory(env.AIDY_OPS)
 
 
 def _formal_forward_enabled(env) -> bool:
@@ -113,6 +122,82 @@ class Default(WorkerEntrypoint):
                 )
             status["deployment_enabled"] = _formal_forward_enabled(self.env)
             return Response.json({"ok": True, "forward": status})
+
+        if request.method == "POST" and url.path == "/day53/live-gold-smoke":
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            settings = AidySettings.from_worker_env(self.env)
+            if settings.market_data_source != "argentapi":
+                return Response.json(
+                    {"ok": False, "error": "argentapi_not_configured"}, status=409
+                )
+            _, repository = _repository(self.env)
+            market_gateway, live_gold_history = _market_runtime_dependencies(self.env, settings)
+            try:
+                result = await run_capture_cycle(
+                    settings,
+                    repository=repository,
+                    include_market=True,
+                    include_fed=False,
+                    include_macro=False,
+                    include_cross_market=False,
+                    market_gateway=market_gateway,
+                    live_gold_history=live_gold_history,
+                )
+                if result is None or result.market is None or result.market.snapshot_id is None:
+                    return Response.json({"ok": False, "error": "no_market_snapshot"}, status=503)
+                row = await self.env.AIDY_OPS.prepare(
+                    """
+                    SELECT id,captured_at,capture_status,bid,ask,mid,spread,quote_time,
+                           quote_age_seconds,data_availability_json,latest_m1_id,latest_m5_id,
+                           latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id
+                    FROM market_snapshots WHERE id=? LIMIT 1
+                    """
+                ).bind(str(result.market.snapshot_id)).first()
+                snapshot = {} if row is None else dict(row)
+                availability = json.loads(str(snapshot.get("data_availability_json") or "{}"))
+                candle_fields = (
+                    "latest_m1_id",
+                    "latest_m5_id",
+                    "latest_m15_id",
+                    "latest_h1_id",
+                    "latest_h4_id",
+                    "latest_d1_id",
+                )
+                quote_ready = all(
+                    snapshot.get(key) not in {None, ""} for key in ("bid", "ask", "spread")
+                )
+                candles_ready = all(
+                    snapshot.get(key) not in {None, ""} for key in candle_fields
+                )
+                ok = snapshot.get("capture_status") == "complete" and quote_ready
+                return Response.json(
+                    {
+                        "ok": ok,
+                        "snapshot": {
+                            "id": snapshot.get("id"),
+                            "captured_at": snapshot.get("captured_at"),
+                            "capture_status": snapshot.get("capture_status"),
+                            "bid": snapshot.get("bid"),
+                            "ask": snapshot.get("ask"),
+                            "mid": snapshot.get("mid"),
+                            "spread": snapshot.get("spread"),
+                            "quote_time": snapshot.get("quote_time"),
+                            "quote_age_seconds": snapshot.get("quote_age_seconds"),
+                            "candles_ready": candles_ready,
+                            "candle_ids": {key: snapshot.get(key) for key in candle_fields},
+                            "market_data_source": availability.get("market_data_source"),
+                            "candle_source": availability.get("candle_source"),
+                        },
+                        "stored_candles": result.market.stored_candles,
+                    },
+                    status=200 if ok else 503,
+                )
+            except Exception as exc:  # noqa: BLE001 - test-only smoke exposes safe diagnosis
+                return Response.json(
+                    {"ok": False, "error": type(exc).__name__, "message": str(exc)[:1000]},
+                    status=500,
+                )
 
         if request.method == "POST" and url.path == "/day1/storage-smoke":
             if str(self.env.AIDY_ENV).lower() != "test":
@@ -251,10 +336,15 @@ class Default(WorkerEntrypoint):
                 settings = AidySettings.from_worker_env(worker_env)
                 _, repository = _repository(worker_env)
                 scheduled_at = _scheduled_at_from_queue_body(message.body)
+                market_gateway, live_gold_history = _market_runtime_dependencies(
+                    worker_env, settings
+                )
                 result = await run_worker_scheduled_cycle(
                     settings,
                     repository=repository,
                     scheduled_at=scheduled_at,
+                    market_gateway=market_gateway,
+                    live_gold_history=live_gold_history,
                 )
             except Exception as exc:  # noqa: BLE001 - capture failures must retry safely
                 await _write_test_queue_error(worker_env, settings, exc)
