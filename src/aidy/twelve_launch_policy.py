@@ -11,7 +11,7 @@ from aidy.regime_classifier import (
     verify_regime_digest,
 )
 from aidy.safety_gates import compute_safety_gate_digest, evaluate_pre_model_safety
-from aidy.twelve_data_market import twelve_data_market_manifest
+from aidy.twelve_data_market import day53_twelve_data_market_manifest
 
 TWELVE_LAUNCH_POLICY_VERSION = "aidy_twelve_private_forward_launch_policy_v1"
 STEP2_OUTCOME = "insufficient_evidence"
@@ -83,7 +83,7 @@ def evaluate_twelve_pre_model_safety(
 
     if not _is_twelve_context(context):
         raise ValueError("Twelve safety policy requires Twelve semantic context")
-    manifest = twelve_data_market_manifest()
+    manifest = day53_twelve_data_market_manifest()
     if manifest.get("spread_missing_blocks") is not False:
         raise RuntimeError("Twelve market manifest no longer permits advisory missing spread")
 
