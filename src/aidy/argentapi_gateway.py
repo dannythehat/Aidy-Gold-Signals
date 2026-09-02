@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -37,7 +38,7 @@ def _nonnegative_number(value: object, *, code: str) -> float:
         parsed = float(value)
     except (TypeError, ValueError) as exc:
         raise ArgentApiReadError(code) from exc
-    if parsed < 0 or parsed != parsed or parsed == float("inf"):
+    if parsed < 0 or not math.isfinite(parsed):
         raise ArgentApiReadError(code)
     return parsed
 
