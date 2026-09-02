@@ -86,6 +86,7 @@ jobs:
           uv run python -m compileall -q src scripts tests
           ! grep -R "production_decision_context_adapter_not_enabled" src tests
           ! grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|super_signals)' src/aidy/forward_live_observer.py src/aidy/private_forward_context.py src/entry.py
+          grep -F "base['vars']['AIDY_MARKET_POLL_SECONDS']='300'" .github/workflows/day53-live-forward-activation.yml
 
       - name: Focused final-launch tests
         shell: bash
@@ -178,8 +179,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
+          uv run python - <<'PY'
           import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
           base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
           base['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
           base['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
@@ -187,7 +190,7 @@ jobs:
           base['vars']['AIDY_CAPTURE_ENABLED']='true'
           base['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
           base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
-          base['vars']['AIDY_MARKET_POLL_SECONDS']='60'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='300'
           base['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
           off=json.loads(json.dumps(base)); off['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
           on=json.loads(json.dumps(base)); on['vars']['AIDY_FORMAL_FORWARD_ENABLED']='true'
@@ -195,7 +198,11 @@ jobs:
               text=json.dumps(cfg).lower()
               for forbidden in ('metaapi','vantage','mt5','super_signals'):
                   assert forbidden not in text
-              assert cfg['vars']['AIDY_MARKET_DATA_SOURCE']=='twelve_data'
+              settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+              assert settings.capture_enabled is True
+              assert settings.market_data_source=='twelve_data'
+              assert settings.market_data_ownership=='public_independent'
+              assert settings.market_poll_seconds>=300.0
           json.dump(off, open('wrangler.day53.launch.off.jsonc','w',encoding='utf-8'), indent=2)
           json.dump(on, open('wrangler.day53.launch.on.jsonc','w',encoding='utf-8'), indent=2)
           sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
