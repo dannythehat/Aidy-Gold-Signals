@@ -1,0 +1,312 @@
+name: AIDY Day 53 Twelve Data Remote Smoke
+
+on:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - "ops/day53-twelve-data-remote-smoke-trigger.txt"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+jobs:
+  remote-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require credentials and exact branch head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+
+      - name: Install and rerun exact code gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check \
+            src/aidy/twelve_data_market.py \
+            src/aidy/twelve_data_storage.py \
+            src/aidy/twelve_data_recorder.py \
+            src/aidy/config.py src/aidy/runtime.py src/aidy/forward_live_observer.py src/entry.py \
+            tests/test_day53_twelve_data_ohlc_adapter.py \
+            tests/test_day53_twelve_data_current_bucket_binding.py \
+            tests/test_day53_live_forward_observer.py
+          uv run pytest -q \
+            tests/test_day53_twelve_data_ohlc_adapter.py \
+            tests/test_day53_twelve_data_current_bucket_binding.py \
+            tests/test_day53_live_forward_observer.py \
+            tests/test_day53_genuine_live_gold_feed.py
+          uv run pytest -q
+
+      - name: Build capture-off smoke configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          base['d1_databases'][0]['database_name']='aidy-ops-test'
+          base['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          base['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          base['vars']['AIDY_CAPTURE_ENABLED']='false'
+          base['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          base['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          base['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='true'
+          text=json.dumps(base).lower()
+          for forbidden in ('metaapi','vantage','mt5','super_signals'):
+              assert forbidden not in text
+          json.dump(base, open('wrangler.day53.twelve.smoke.on.jsonc','w',encoding='utf-8'), indent=2)
+          off=json.loads(json.dumps(base))
+          off['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          json.dump(off, open('wrangler.day53.twelve.smoke.off.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply D1 migration chain including feed-observation ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.day53.twelve.smoke.on.jsonc > /tmp/migrations.txt 2>&1
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.twelve.smoke.on.jsonc \
+            --command "SELECT name FROM sqlite_master WHERE type='table' AND name='twelve_data_feed_observations'" \
+            > /tmp/feed-table.json
+          grep -q twelve_data_feed_observations /tmp/feed-table.json
+
+      - name: Deploy capture-off bootstrap-enabled Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day53.twelve.smoke.on.jsonc wrangler.jsonc
+          uv run pywrangler deploy > /tmp/deploy-on.txt 2>&1
+          ADMIN_TOKEN="$(python - <<'PY'
+          import secrets
+          print(secrets.token_hex(32))
+          PY
+          )"
+          test -n "$ADMIN_TOKEN"
+          echo "AIDY_SMOKE_ADMIN_TOKEN=$ADMIN_TOKEN" >> "$GITHUB_ENV"
+          printf '%s' "$AIDY_TWELVE_DATA_API_KEY" | \
+            npx --yes wrangler@4 secret put AIDY_TWELVE_DATA_API_KEY --config wrangler.jsonc \
+            > /tmp/secret-market.txt 2>&1
+          printf '%s' "$ADMIN_TOKEN" | \
+            npx --yes wrangler@4 secret put AIDY_DAY53_ADMIN_TOKEN --config wrangler.jsonc \
+            > /tmp/secret-admin.txt 2>&1
+
+      - name: Require deployed state remains capture-off and forward-off
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 18); do
+            if curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health-before.json; then
+              if python - <<'PY'
+          import json
+          p=json.load(open('/tmp/health-before.json', encoding='utf-8'))
+          assert p['capture_enabled'] is False, p
+          assert p['formal_forward_enabled'] is False, p
+          assert p['market_data_source'] == 'twelve_data', p
+          assert p['market_data_ownership'] == 'public_independent', p
+          PY
+              then ok=1; break; fi
+            fi
+            sleep 3
+          done
+          test "$ok" = "1"
+
+      - name: Run exactly one protected wide sparse bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "X-AIDY-Admin-Token: ${AIDY_SMOKE_ADMIN_TOKEN}" \
+            "${AIDY_TEST_WORKER_URL}/day53/twelve-data-smoke?bootstrap=1" \
+            > /tmp/bootstrap.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/bootstrap.json', encoding='utf-8'))
+          assert p['ok'] is True, p
+          assert p['bootstrap'] is True, p
+          s=p['snapshot']
+          assert s['capture_status']=='complete', p
+          assert s['candles_ready'] is True, p
+          assert s['market_data_source']=='twelve_data', p
+          assert s['freshness_state']=='fresh', p
+          assert float(s['quote_age_seconds']) <= 180.0, p
+          assert s['snapshot_candle_identity_policy']=='current_capture_exact_bucket_only', p
+          assert s['bootstrap_required_windows_only'] is True, p
+          assert int(s['bootstrap_required_m1_minutes_missing_from_vendor_fetch']) == 0, p
+          returned=int(s['bootstrap_vendor_closed_bars_returned'])
+          persisted=int(s['bootstrap_vendor_m1_bars_persisted'])
+          required=int(s['bootstrap_required_m1_minutes'])
+          assert returned <= 5000, p
+          assert persisted <= required, p
+          assert persisted < returned, p
+          assert persisted < 2000, p
+          assert p['archive_pending'] == 0, p
+          credits=s.get('credit_headers') or {}
+          assert credits.get('api-credits-request') == '1', p
+          PY
+
+      - name: Prove current candle IDs, feed envelope and append-only storage remotely
+        shell: bash
+        run: |
+          set -euo pipefail
+          SNAPSHOT_ID="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/bootstrap.json', encoding='utf-8'))['snapshot']['id'])
+          PY
+          )"
+          CAPTURED_AT="$(python - <<'PY'
+          import json
+          print(json.load(open('/tmp/bootstrap.json', encoding='utf-8'))['snapshot']['captured_at'])
+          PY
+          )"
+          IDS="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/bootstrap.json', encoding='utf-8'))
+          print(','.join("'"+str(v)+"'" for v in p['snapshot']['candle_ids'].values()))
+          PY
+          )"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.twelve.smoke.on.jsonc \
+            --command "SELECT id,timeframe,open_time_utc,source,revision_index,payload_digest,first_observed_at FROM market_candles WHERE id IN (${IDS}) ORDER BY timeframe" \
+            > /tmp/candle-ids.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.twelve.smoke.on.jsonc \
+            --command "SELECT fetched_at_utc,source,symbol,interval,meta_json,credit_headers_json,observed_lag_seconds,session_open_at_fetch,freshness_state,response_digest FROM twelve_data_feed_observations WHERE fetched_at_utc='${CAPTURED_AT}' LIMIT 1" \
+            > /tmp/feed-row.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.twelve.smoke.on.jsonc \
+            --command "SELECT id,captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots WHERE id='${SNAPSHOT_ID}' LIMIT 1" \
+            > /tmp/snapshot-row.json
+          uv run python - <<'PY'
+          import json
+          from datetime import datetime, timedelta
+          from aidy.twelve_data_market import latest_completed_bucket
+
+          def rows(path):
+              payload=json.load(open(path, encoding='utf-8'))
+              out=[]
+              for batch in payload:
+                  out.extend(batch.get('results') or [])
+              return out
+
+          bootstrap=json.load(open('/tmp/bootstrap.json', encoding='utf-8'))
+          captured=datetime.fromisoformat(bootstrap['snapshot']['captured_at'])
+          quote_time=datetime.fromisoformat(bootstrap['snapshot']['quote_time'])
+          candles=rows('/tmp/candle-ids.json')
+          assert len(candles)==6, candles
+          by_tf={row['timeframe']:row for row in candles}
+          assert set(by_tf)=={'1m','5m','15m','1h','4h','1d'}, by_tf
+          assert by_tf['1m']['source']=='twelve_data_vendor_m1_v1', by_tf
+          for tf in ('5m','15m','1h','4h','1d'):
+              assert by_tf[tf]['source']=='twelve_data_session_aggregate_v1', by_tf
+              start,_=latest_completed_bucket(captured, tf)
+              assert datetime.fromisoformat(by_tf[tf]['open_time_utc']) == start, (tf,by_tf[tf],start)
+          assert datetime.fromisoformat(by_tf['1m']['open_time_utc']) + timedelta(minutes=1) == quote_time
+          assert all(row['first_observed_at']==bootstrap['snapshot']['captured_at'] for row in candles), candles
+          assert all(int(row['revision_index']) >= 1 for row in candles), candles
+          assert all(len(str(row['payload_digest'])) == 64 for row in candles), candles
+
+          feed=rows('/tmp/feed-row.json')
+          assert len(feed)==1, feed
+          assert feed[0]['source']=='twelve_data', feed
+          assert feed[0]['symbol']=='XAU/USD', feed
+          assert feed[0]['interval']=='1min', feed
+          assert feed[0]['freshness_state']=='fresh', feed
+          assert int(feed[0]['session_open_at_fetch'])==1, feed
+          assert float(feed[0]['observed_lag_seconds']) <= 180.0, feed
+          assert len(feed[0]['response_digest'])==64, feed
+          credits=json.loads(feed[0]['credit_headers_json'])
+          assert credits.get('api-credits-request')=='1', credits
+
+          snap=rows('/tmp/snapshot-row.json')
+          assert len(snap)==1 and snap[0]['capture_status']=='complete', snap
+          expected=bootstrap['snapshot']['candle_ids']
+          for key,value in expected.items():
+              assert snap[0][key] == value, (key,snap[0],value)
+          PY
+
+      - name: Disable bootstrap again without activating capture or formal forward
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f wrangler.day53.twelve.smoke.off.jsonc; then
+            cp wrangler.day53.twelve.smoke.off.jsonc wrangler.jsonc
+            uv run pywrangler deploy > /tmp/deploy-off.txt 2>&1
+          fi
+
+      - name: Verify final safe-off state
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f /tmp/bootstrap.json; then
+            for attempt in $(seq 1 18); do
+              curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health-after.json || true
+              if python - <<'PY'
+          import json
+          try:
+              p=json.load(open('/tmp/health-after.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          ok=(p.get('capture_enabled') is False and p.get('formal_forward_enabled') is False and p.get('market_data_source')=='twelve_data')
+          raise SystemExit(0 if ok else 1)
+          PY
+              then break; fi
+              sleep 3
+            done
+            STATUS="$(curl -sS -o /tmp/bootstrap-disabled.json -w '%{http_code}' -X POST \
+              -H "X-AIDY-Admin-Token: ${AIDY_SMOKE_ADMIN_TOKEN}" \
+              "${AIDY_TEST_WORKER_URL}/day53/twelve-data-smoke?bootstrap=1")"
+            test "$STATUS" = "409"
+          fi
+
+      - name: Preserve remote smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-twelve-data-remote-smoke-${{ github.sha }}
+          path: |
+            /tmp/migrations.txt
+            /tmp/health-before.json
+            /tmp/bootstrap.json
+            /tmp/candle-ids.json
+            /tmp/feed-row.json
+            /tmp/snapshot-row.json
+            /tmp/health-after.json
+            /tmp/bootstrap-disabled.json
+            /tmp/deploy-on.txt
+            /tmp/deploy-off.txt
+          if-no-files-found: warn
+          retention-days: 90
