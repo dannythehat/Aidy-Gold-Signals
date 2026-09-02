@@ -1,4 +1,7 @@
-trigger=2026-09-02T05:41Z
+trigger=2026-09-02T05:38Z
 mode=capture-off formal-forward-off
 vendor_calls=exactly-one-protected-bootstrap
-attempt=2
+
+security_followup=2026-09-02T05:49Z
+leaked_ephemeral_admin_token_run=33595397841
+required_actions=delete_cloudflare_admin_secret_then_delete_leaked_run_and_artifact
