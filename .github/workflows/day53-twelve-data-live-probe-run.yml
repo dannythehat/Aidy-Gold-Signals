@@ -1,0 +1,79 @@
+name: AIDY Day 53 Twelve Data Live Probe Run
+
+on:
+  push:
+    branches:
+      - day53/twelve-data-live-probe-run
+    paths:
+      - ".github/workflows/day53-twelve-data-live-probe-run.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  live-basic-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+    steps:
+      - name: Checkout probe branch
+        uses: actions/checkout@v4
+
+      - name: Require configured secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Run read-only XAU/USD Basic entitlement and 1m OHLC probe
+        shell: bash
+        run: |
+          set +e
+          uv run python scripts/day53_probe_twelve_data_basic.py \
+            --output day53_twelve_data_basic_probe.json \
+            --outputsize 30
+          status=$?
+          echo "PROBE_EXIT_CODE=$status" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Preserve redacted probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-twelve-data-live-probe-${{ github.sha }}
+          path: day53_twelve_data_basic_probe.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Require Basic entitlement and real 1-minute OHLC
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${PROBE_EXIT_CODE:-99}" = "0"
+          python - <<'PY'
+          import json
+          result=json.load(open('day53_twelve_data_basic_probe.json', encoding='utf-8'))
+          assert result['basic_plan_confirmed'] is True, result
+          assert result['time_series_1min_confirmed'] is True, result
+          assert result['ohlc_geometry_valid'] is True, result
+          assert int(result['non_degenerate_bar_count']) > 0, result
+          assert result['ready_for_adapter_build'] is True, result
+          print(json.dumps({
+              'basic_plan_confirmed': result['basic_plan_confirmed'],
+              'time_series_1min_confirmed': result['time_series_1min_confirmed'],
+              'ohlc_geometry_valid': result['ohlc_geometry_valid'],
+              'non_degenerate_bar_count': result['non_degenerate_bar_count'],
+              'ready_for_adapter_build': result['ready_for_adapter_build'],
+          }, sort_keys=True))
+          PY
