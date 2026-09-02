@@ -13,6 +13,7 @@ permissions:
 
 env:
   ACCEPTED_STEP2_HEAD: 6689aa954cb5f3dd2f97f980846c9168437aabe4
+  STEP2_D1_CONFIG: wrangler.step2.d1.jsonc
 
 jobs:
   append-preregistration:
@@ -62,29 +63,39 @@ jobs:
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
 
-      - name: Build D1-only Wrangler config
+      - name: Build minimal repo-root D1 config
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import json
-          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
-          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
-          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
-          cfg['r2_buckets']=[]
-          cfg['queues']={}
-          cfg['triggers']={'crons':[]}
-          json.dump(cfg, open('/tmp/wrangler.step2.d1.jsonc','w',encoding='utf-8'), indent=2)
+          cfg={
+              'name':'aidy-signals-test',
+              'main':'src/entry.py',
+              'compatibility_date':'2026-08-16',
+              'compatibility_flags':['python_workers'],
+              'd1_databases':[{ 
+                  'binding':'AIDY_OPS',
+                  'database_name':'aidy-ops-test',
+                  'database_id':'3588d82a-d686-4430-872d-d4c0e62c3d5d',
+                  'migrations_dir':'migrations/d1',
+              }],
+          }
+          json.dump(cfg, open('wrangler.step2.d1.jsonc','w',encoding='utf-8'), indent=2)
           PY
 
-      - name: Apply research-ledger migration only through migration chain
+      - name: Apply migration chain and read ledger
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
-            --config /tmp/wrangler.step2.d1.jsonc > /tmp/step2-migrations.txt 2>&1
+          if ! npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config "$STEP2_D1_CONFIG" > /tmp/step2-migrations.txt 2>&1; then
+            cat /tmp/step2-migrations.txt
+            exit 1
+          fi
+          cat /tmp/step2-migrations.txt
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
-            --config /tmp/wrangler.step2.d1.jsonc \
+            --config "$STEP2_D1_CONFIG" \
             --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
             > /tmp/ledger-before.json
 
@@ -92,201 +103,42 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run python - <<'PY'
-          import json
-          import os
-          from datetime import UTC, datetime, timedelta
-          from pathlib import Path
-
-          from aidy.day53_step2_preregistration import (
-              STEP2_QUALIFICATION_ID,
-              STEP2_RESEARCH_FAMILY_ID,
-              build_step2_equivalence_contract_payload,
-              build_step2_research_family_payload,
-          )
-          from aidy.day53_step2_qualification_guard import (
-              assert_repository_preregistration_manifest,
-              assert_step2_scoring_prerequisites,
-          )
-          from aidy.market_data_semantics import EQUIVALENCE_CONTRACT_RECORD_TYPE
-          from aidy.research_trials import build_record, canonical_json, verify_chain
-
-          FAMILY_TYPE='research_family_registered'
-          accepted_head=os.environ['ACCEPTED_STEP2_HEAD']
-          manifest=json.load(open('evidence/research_ledger/day53-step2-equivalence-preregistration.json', encoding='utf-8'))
-          repository=assert_repository_preregistration_manifest(manifest)
-
-          raw=json.load(open('/tmp/ledger-before.json', encoding='utf-8'))
-          rows=[]
-          for batch in raw:
-              rows.extend(batch.get('results') or [])
-          normalized=[]
-          for row in sorted(rows, key=lambda item:int(item['sequence'])):
-              item=dict(row)
-              item['payload']=json.loads(item.pop('payload_json'))
-              normalized.append(item)
-          if not normalized or not verify_chain(normalized):
-              raise SystemExit('research ledger chain invalid before Step 2 append')
-          if normalized[0]['record_digest'] != 'daa8478ee4932bb5fabd83396abc29cdc38fca2e5b913fb78a0e4e2c80458406':
-              raise SystemExit('research ledger genesis mismatch before Step 2 append')
-
-          family_matches=[r for r in normalized if r['record_type']==FAMILY_TYPE and r['payload'].get('research_family_id')==STEP2_RESEARCH_FAMILY_ID]
-          contract_matches=[r for r in normalized if r['record_type']==EQUIVALENCE_CONTRACT_RECORD_TYPE and r['payload'].get('qualification_id')==STEP2_QUALIFICATION_ID]
-
-          if bool(family_matches) != bool(contract_matches):
-              raise SystemExit('partial Step 2 preregistration exists in D1; refusing repair by guess')
-          if len(family_matches)>1 or len(contract_matches)>1:
-              raise SystemExit('duplicate Step 2 preregistration records exist in D1')
-
-          expected_records=[]
-          if family_matches:
-              for record in (family_matches[0], contract_matches[0]):
-                  if record['code_head_sha'] != accepted_head:
-                      raise SystemExit('existing Step 2 preregistration is bound to the wrong code head')
-              state=assert_step2_scoring_prerequisites(
-                  manifest=manifest,
-                  research_ledger_records=normalized,
-              )
-              Path('/tmp/append.sql').write_text('-- exact Step 2 preregistration already present; no-op\n', encoding='utf-8')
-              action='verified_existing_exact_records'
-          else:
-              latest=normalized[-1]
-              now=datetime.now(UTC)
-              latest_time=datetime.fromisoformat(str(latest['recorded_at_utc']))
-              if now < latest_time:
-                  now=latest_time
-              family=build_record(
-                  sequence=int(latest['sequence'])+1,
-                  previous_digest=str(latest['record_digest']),
-                  record_type=FAMILY_TYPE,
-                  recorded_at=now,
-                  code_head_sha=accepted_head,
-                  initiated_by='human',
-                  payload=build_step2_research_family_payload(),
-              )
-              contract=build_record(
-                  sequence=int(family['sequence'])+1,
-                  previous_digest=str(family['record_digest']),
-                  record_type=EQUIVALENCE_CONTRACT_RECORD_TYPE,
-                  recorded_at=now+timedelta(seconds=1),
-                  code_head_sha=accepted_head,
-                  initiated_by='human',
-                  payload=build_step2_equivalence_contract_payload(),
-              )
-              expected_records=[family,contract]
-
-              def q(value):
-                  if value is None:
-                      return 'NULL'
-                  return "'" + str(value).replace("'", "''") + "'"
-
-              statements=['BEGIN TRANSACTION;']
-              for record in expected_records:
-                  statements.append(
-                      'INSERT INTO research_evidence_ledger '
-                      '(sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json) VALUES ('
-                      + ','.join([
-                          str(record['sequence']),
-                          q(record['record_digest']),
-                          q(record['previous_digest']),
-                          q(record['ledger_version']),
-                          q(record['record_type']),
-                          q(record['recorded_at_utc']),
-                          q(record['code_head_sha']),
-                          q(record['initiated_by']),
-                          q(canonical_json(record['payload'])),
-                      ]) + ');'
-                  )
-              statements.append('COMMIT;')
-              Path('/tmp/append.sql').write_text('\n'.join(statements)+'\n', encoding='utf-8')
-              state={
-                  'state':'prepared_exact_append',
-                  'contract_digest':repository['contract_digest'],
-                  'research_family_digest':repository['research_family_digest'],
-              }
-              action='append_exact_records'
-
-          audit={
-              'action':action,
-              'accepted_step2_head':accepted_head,
-              'repository_contract_digest':repository['contract_digest'],
-              'repository_research_family_digest':repository['research_family_digest'],
-              'ledger_sequence_before':int(normalized[-1]['sequence']),
-              'ledger_head_digest_before':normalized[-1]['record_digest'],
-              'prepared_records':expected_records,
-              'pre_append_guard_state':state,
-              'empirical_scoring_performed':False,
-              'twelve_data_vendor_calls':0,
-          }
-          json.dump(audit, open('/tmp/step2-preappend-audit.json','w',encoding='utf-8'), sort_keys=True, indent=2)
-          print(json.dumps(audit, sort_keys=True))
-          PY
+          uv run python scripts/day53_step2_d1_preregistration.py prepare \
+            --ledger /tmp/ledger-before.json \
+            --manifest evidence/research_ledger/day53-step2-equivalence-preregistration.json \
+            --accepted-head "$ACCEPTED_STEP2_HEAD" \
+            --sql /tmp/append.sql \
+            --audit /tmp/step2-preappend-audit.json
 
       - name: Append exact preregistration records atomically
         shell: bash
         run: |
           set -euo pipefail
           if grep -q '^INSERT INTO research_evidence_ledger' /tmp/append.sql; then
-            npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
-              --config /tmp/wrangler.step2.d1.jsonc --file /tmp/append.sql \
-              > /tmp/step2-append.txt 2>&1
+            if ! npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+              --config "$STEP2_D1_CONFIG" --file /tmp/append.sql \
+              > /tmp/step2-append.txt 2>&1; then
+              cat /tmp/step2-append.txt
+              exit 1
+            fi
           else
             echo 'No-op: exact preregistration already exists.' > /tmp/step2-append.txt
           fi
+          cat /tmp/step2-append.txt
 
-      - name: Verify D1 chain and repository-to-ledger digest equality
+      - name: Verify D1 chain and repository-to-ledger equality
         shell: bash
         run: |
           set -euo pipefail
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
-            --config /tmp/wrangler.step2.d1.jsonc \
+            --config "$STEP2_D1_CONFIG" \
             --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
             > /tmp/ledger-after.json
-          uv run python - <<'PY'
-          import json
-          import os
-          from aidy.day53_step2_preregistration import STEP2_QUALIFICATION_ID, STEP2_RESEARCH_FAMILY_ID
-          from aidy.day53_step2_qualification_guard import assert_step2_scoring_prerequisites
-          from aidy.research_trials import verify_chain
-
-          manifest=json.load(open('evidence/research_ledger/day53-step2-equivalence-preregistration.json', encoding='utf-8'))
-          raw=json.load(open('/tmp/ledger-after.json', encoding='utf-8'))
-          rows=[]
-          for batch in raw:
-              rows.extend(batch.get('results') or [])
-          normalized=[]
-          for row in sorted(rows, key=lambda item:int(item['sequence'])):
-              item=dict(row)
-              item['payload']=json.loads(item.pop('payload_json'))
-              normalized.append(item)
-          assert verify_chain(normalized), 'research ledger chain invalid after Step 2 append'
-          guard=assert_step2_scoring_prerequisites(
-              manifest=manifest,
-              research_ledger_records=normalized,
-          )
-          family=next(r for r in normalized if r['record_type']=='research_family_registered' and r['payload'].get('research_family_id')==STEP2_RESEARCH_FAMILY_ID)
-          contract=next(r for r in normalized if r['record_type']=='market_data_equivalence_contract_registered' and r['payload'].get('qualification_id')==STEP2_QUALIFICATION_ID)
-          assert family['code_head_sha']==os.environ['ACCEPTED_STEP2_HEAD']
-          assert contract['code_head_sha']==os.environ['ACCEPTED_STEP2_HEAD']
-          raw_trials=sum(1 for r in normalized if r['record_type']=='trial_started')
-          result={
-              'state':'step2_d1_preregistration_verified',
-              'accepted_step2_head':os.environ['ACCEPTED_STEP2_HEAD'],
-              'research_family_sequence':family['sequence'],
-              'research_family_record_digest':family['record_digest'],
-              'equivalence_contract_sequence':contract['sequence'],
-              'equivalence_contract_record_digest':contract['record_digest'],
-              'contract_digest':guard['contract_digest'],
-              'research_family_digest':guard['research_family_digest'],
-              'ledger_head_sequence':normalized[-1]['sequence'],
-              'ledger_head_digest':normalized[-1]['record_digest'],
-              'raw_attempted_trials':raw_trials,
-              'empirical_scoring_performed':False,
-              'twelve_data_vendor_calls':0,
-          }
-          json.dump(result, open('day53_step2_d1_preregistration.json','w',encoding='utf-8'), sort_keys=True, indent=2)
-          print(json.dumps(result, sort_keys=True))
-          PY
+          uv run python scripts/day53_step2_d1_preregistration.py verify \
+            --ledger /tmp/ledger-after.json \
+            --manifest evidence/research_ledger/day53-step2-equivalence-preregistration.json \
+            --accepted-head "$ACCEPTED_STEP2_HEAD" \
+            --output day53_step2_d1_preregistration.json
 
       - name: Preserve D1 preregistration audit evidence
         uses: actions/upload-artifact@v4
