@@ -26,80 +26,47 @@ jobs:
         shell: bash
         run: |
           cat > /tmp/wrangler-diagnostic.jsonc <<'JSON'
-          {
-            "name":"aidy-signals-test",
-            "main":"src/entry.py",
-            "compatibility_date":"2026-08-16",
-            "compatibility_flags":["python_workers"],
-            "d1_databases":[{
-              "binding":"AIDY_OPS",
-              "database_name":"aidy-ops-test",
-              "database_id":"3588d82a-d686-4430-872d-d4c0e62c3d5d"
-            }]
-          }
+          {"name":"aidy-signals-test","main":"src/entry.py","compatibility_date":"2026-08-16","compatibility_flags":["python_workers"],"d1_databases":[{"binding":"AIDY_OPS","database_name":"aidy-ops-test","database_id":"3588d82a-d686-4430-872d-d4c0e62c3d5d"}]}
           JSON
       - name: Query failed-bootstrap state without vendor calls
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc \
-            --command "SELECT fetched_at_utc,source,symbol,interval,raw_bar_count,admitted_closed_bar_count,forming_bar_count,off_session_bar_count,latest_closed_bar_open_utc,latest_closed_bar_close_utc,observed_lag_seconds,session_open_at_fetch,freshness_state,credit_headers_json,response_digest FROM twelve_data_feed_observations ORDER BY fetched_at_utc DESC LIMIT 12" \
-            > /tmp/feed.json
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc \
-            --command "SELECT id,captured_at,capture_status,mid,quote_time,quote_age_seconds,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,data_availability_json FROM market_snapshots WHERE data_availability_json LIKE '%twelve_data%' ORDER BY captured_at DESC LIMIT 12" \
-            > /tmp/snapshots.json
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc \
-            --command "SELECT timeframe,open_time_utc,source,revision_index,first_observed_at,payload_digest FROM market_candles WHERE source IN ('twelve_data_vendor_m1_v1','twelve_data_session_aggregate_v1') ORDER BY first_observed_at DESC, timeframe LIMIT 80" \
-            > /tmp/candles.json
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc \
-            --command "SELECT status,COUNT(*) AS n FROM archive_outbox GROUP BY status ORDER BY status" \
-            > /tmp/outbox.json
-      - name: Summarize quarantine/readiness state
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT fetched_at_utc,raw_bar_count,admitted_closed_bar_count,off_session_bar_count,observed_lag_seconds,freshness_state,credit_headers_json,response_digest FROM twelve_data_feed_observations ORDER BY fetched_at_utc DESC LIMIT 12" > /tmp/feed.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT id,captured_at,capture_status,data_availability_json FROM market_snapshots ORDER BY captured_at DESC LIMIT 20" > /tmp/all-snapshots.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT first_observed_at,source,timeframe,COUNT(*) AS n,MIN(open_time_utc) AS min_open,MAX(open_time_utc) AS max_open FROM market_candles WHERE source IN ('twelve_data_vendor_m1_v1','twelve_data_session_aggregate_v1') GROUP BY first_observed_at,source,timeframe ORDER BY first_observed_at DESC,source,timeframe" > /tmp/candle-groups.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT source,timeframe,COUNT(*) AS n FROM market_candles WHERE source IN ('twelve_data_vendor_m1_v1','twelve_data_session_aggregate_v1') GROUP BY source,timeframe ORDER BY source,timeframe" > /tmp/candle-total.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler-diagnostic.jsonc --command "SELECT status,COUNT(*) AS n FROM archive_outbox GROUP BY status ORDER BY status" > /tmp/outbox.json
+      - name: Summarize ingest boundary
         shell: bash
         run: |
           python - <<'PY'
           import json
           def rows(path):
-              payload=json.load(open(path, encoding='utf-8'))
-              out=[]
-              for batch in payload:
-                  out.extend(batch.get('results') or [])
+              p=json.load(open(path,encoding='utf-8')); out=[]
+              for b in p: out.extend(b.get('results') or [])
               return out
           feeds=rows('/tmp/feed.json')
-          snaps=rows('/tmp/snapshots.json')
-          candles=rows('/tmp/candles.json')
+          snaps=rows('/tmp/all-snapshots.json')
+          groups=rows('/tmp/candle-groups.json')
+          totals=rows('/tmp/candle-total.json')
           outbox=rows('/tmp/outbox.json')
-          print('feed_observation_count', len(feeds))
-          for i,row in enumerate(feeds[:6]):
-              print('feed',i,row)
-          print('snapshot_count', len(snaps))
-          for i,row in enumerate(snaps[:6]):
-              availability=json.loads(row.get('data_availability_json') or '{}')
-              print('snapshot',i,{
-                  'id':row.get('id'),'captured_at':row.get('captured_at'),
-                  'capture_status':row.get('capture_status'),'quote_age_seconds':row.get('quote_age_seconds'),
-                  'ids':{k:row.get(k) for k in ('latest_m1_id','latest_m5_id','latest_m15_id','latest_h1_id','latest_h4_id','latest_d1_id')},
-                  'freshness_state':availability.get('freshness_state'),
-                  'bootstrap_required_m1_minutes':availability.get('bootstrap_required_m1_minutes'),
-                  'bootstrap_vendor_closed_bars_returned':availability.get('bootstrap_vendor_closed_bars_returned'),
-                  'bootstrap_vendor_m1_bars_persisted':availability.get('bootstrap_vendor_m1_bars_persisted'),
-                  'bootstrap_required_m1_minutes_missing_from_vendor_fetch':availability.get('bootstrap_required_m1_minutes_missing_from_vendor_fetch'),
-                  'snapshot_candle_identity_policy':availability.get('snapshot_candle_identity_policy'),
-              })
-          print('recent_candles', candles[:20])
-          print('archive_outbox', outbox)
-          partial=[r for r in snaps if r.get('capture_status')!='complete']
-          complete=[r for r in snaps if r.get('capture_status')=='complete']
-          print('twelve_data_partial_snapshots', len(partial))
-          print('twelve_data_complete_snapshots', len(complete))
-          print('vendor_calls_from_diagnostic', 0)
+          td_snaps=[r for r in snaps if 'twelve_data' in str(r.get('data_availability_json') or '')]
+          print('feeds',feeds)
+          print('twelve_data_snapshot_count',len(td_snaps))
+          print('candle_groups',groups)
+          print('candle_totals',totals)
+          print('archive_outbox',outbox)
+          print('bootstrap_ingest_reached_snapshot_boundary',bool(td_snaps))
+          print('vendor_calls_from_diagnostic',0)
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: aidy-day53-twelve-data-d1-diagnostic-${{ github.sha }}
           path: |
             /tmp/feed.json
-            /tmp/snapshots.json
-            /tmp/candles.json
+            /tmp/all-snapshots.json
+            /tmp/candle-groups.json
+            /tmp/candle-total.json
             /tmp/outbox.json
           retention-days: 30
