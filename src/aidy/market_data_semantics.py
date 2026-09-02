@@ -28,6 +28,7 @@ SEMANTIC_IDENTITY_VERSION = "aidy_market_data_semantic_identity_v1"
 COMPATIBILITY_VERSION = "aidy_market_data_semantic_compatibility_v1"
 EQUIVALENCE_CONTRACT_RECORD_TYPE = "market_data_equivalence_contract_registered"
 QUALIFICATION_RESULT_RECORD_TYPE = "qualification_result"
+CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE = "full_authoritative_v2_analogue_retrieval"
 
 
 def _canonical_json(value: object) -> str:
@@ -156,7 +157,7 @@ def _normalize_ledger_record(value: Mapping[str, Any]) -> dict[str, Any]:
 def accepted_market_data_equivalences(
     research_ledger_records: Iterable[Mapping[str, Any]],
 ) -> dict[str, dict[str, Any]]:
-    """Resolve only PASS equivalence results from a valid append-only research ledger chain."""
+    """Resolve only full-surface PASS permissions from a valid append-only ledger chain."""
 
     records = [_normalize_ledger_record(value) for value in research_ledger_records]
     records.sort(key=lambda item: int(item.get("sequence", -1)))
@@ -195,6 +196,12 @@ def accepted_market_data_equivalences(
         if contract is None:
             continue
         contract_payload, expected_contract_digest = contract
+        if (
+            contract_payload.get("authorization_scope")
+            != CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE
+            or contract_payload.get("cross_source_retrieval_permission_on_pass") is not True
+        ):
+            continue
         if str(payload.get("contract_digest") or "") != expected_contract_digest:
             continue
         evidence_digest = str(payload.get("evidence_digest") or "")
@@ -204,6 +211,8 @@ def accepted_market_data_equivalences(
         right = str(contract_payload["source_identity_b_digest"])
         acceptance = {
             "qualification_id": qualification_id,
+            "authorization_scope": CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE,
+            "cross_source_retrieval_permission_on_pass": True,
             "contract_digest": expected_contract_digest,
             "evidence_digest": evidence_digest,
             "qualification_result_record_digest": record["record_digest"],
@@ -244,6 +253,9 @@ def assert_semantic_compatible(
         if (
             accepted_equivalence.get("outcome") != "pass"
             or accepted_equivalence.get("inheritance_allowed") is not True
+            or accepted_equivalence.get("authorization_scope")
+            != CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE
+            or accepted_equivalence.get("cross_source_retrieval_permission_on_pass") is not True
             or not _hex64(contract_digest)
             or not _hex64(result_record_digest)
         ):
@@ -253,6 +265,7 @@ def assert_semantic_compatible(
             "state": "qualified_equivalence_contract",
             "query_identity_digest": query_digest,
             "candidate_identity_digest": candidate_digest,
+            "authorization_scope": CROSS_SOURCE_RETRIEVAL_AUTHORIZATION_SCOPE,
             "equivalence_contract_digest": contract_digest,
             "qualification_result_record_digest": result_record_digest,
         }
