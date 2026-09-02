@@ -1,0 +1,14 @@
+{
+  "anchor_version": "aidy_research_ledger_anchor_v1",
+  "ledger_version": "aidy_research_ledger_v1",
+  "anchor_kind": "repository_checkpoint",
+  "anchored_sequence": 6,
+  "anchored_record_digest": "1513bf91733ec1d0df3f2bf239ccb51508e0a9ed553be75a390b48e3f170c5b2",
+  "genesis_record_digest": "daa8478ee4932bb5fabd83396abc29cdc38fca2e5b913fb78a0e4e2c80458406",
+  "raw_attempted_trials_floor": 1,
+  "ledger_code_head_sha": "da0f20804dc3e5f4643ec911a30aec963f7d7c0f",
+  "anchor_parent_head_sha": "b7739d910e2bb373b602c3a6b9f10b57f1c06596",
+  "recorded_at_utc": "2026-09-02T10:11:16+00:00",
+  "d1_table": "research_evidence_ledger",
+  "anchor_digest": "03a5ddc59891b3120035f158c068b1bf21464683dc722205052ad07abe20bc1c"
+}
