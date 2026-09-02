@@ -27,7 +27,7 @@ from aidy.research_trials import verify_chain
 
 REPOSITORY_MANIFEST_VERSION = "aidy_day53_step2_repository_preregistration_manifest_v2"
 RESEARCH_FAMILY_RECORD_TYPE = "research_family_registered"
-THRESHOLD_REGION_WINDOW_BPS = Decimal("5")
+THRESHOLD_REGION_WINDOW_BPS = Decimal(5)
 
 
 def _normalize_ledger_record(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -44,7 +44,7 @@ def _normalize_ledger_record(value: Mapping[str, Any]) -> dict[str, Any]:
 def _payload(record: Mapping[str, Any], *, label: str) -> dict[str, Any]:
     value = record.get("payload")
     if not isinstance(value, Mapping):
-        raise ValueError(f"{label} ledger record must contain an object payload")
+        raise TypeError(f"{label} ledger record must contain an object payload")
     return dict(value)
 
 
@@ -98,7 +98,7 @@ def in_frozen_threshold_region(
     hist = _decimal(histdata_h1_atr_14_bps, label="histdata_h1_atr_14_bps")
     twelve = _decimal(twelve_data_h1_atr_14_bps, label="twelve_data_h1_atr_14_bps")
     threshold = _decimal(threshold_bps, label="threshold_bps")
-    if threshold not in {Decimal("20"), Decimal("50")}:
+    if threshold not in {Decimal(20), Decimal(50)}:
         raise ValueError("Step 2 threshold region is defined only for 20 bps and 50 bps")
     return bool(
         abs(hist - threshold) <= THRESHOLD_REGION_WINDOW_BPS
