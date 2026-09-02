@@ -34,6 +34,44 @@ The manifest also freezes the Architecture V2 boundaries:
 - no live-money execution
 - Day 54 inference requires at least 300 episode-independent decision episodes
 
+## Preactivation data-semantic gates
+
+A cohort cannot be treated as evidentially ready merely because the feed is reachable. Before a new cohort may accumulate formal evidence, the accepted code head must also carry contemporaneous qualification records for:
+
+- the authoritative market-feed adapter and its source/price-basis identity
+- the session calendar, DST policy and maintenance-gap semantics
+- candle construction, aggregation and current-bucket completeness rules
+- parameter provenance for every threshold, normalization scale, volatility band or tuned constant that can influence a decision
+- the decision-context adapter, including point-in-time/as-of semantics, stale/missing fail-closed behavior and replay/live equivalence
+- the analogue-retrieval source boundary, proving that live query features are not compared against a differently scaled historical instrument unless a deterministic equivalence/normalization contract has been accepted ex ante
+
+Feed qualification and decision-context qualification are separate acceptance questions. Bootstrap/history population does not imply live decision readiness.
+
+## Evidence-semantic change presumption
+
+Changes touching any of the following are **presumed evidence-semantic**:
+
+- feed/provider adapter or vendor symbol mapping
+- price basis or source identity
+- session calendar, timezone, DST or maintenance-gap logic
+- candle construction, aggregation, bucket boundaries or completeness/readiness
+- feature construction or source admission/provenance
+- thresholds, numeric scales, volatility bands or analogue-retrieval geometry
+
+The default consequence of an evidence-semantic change is a new cohort/epoch. Preserving an existing cohort is the exception and requires affirmative deterministic proof recorded **at PR time, before merge and before any post-change outcome is observed**.
+
+A preservation proof must contain:
+
+- base commit SHA
+- proposed head commit SHA
+- the exact protected-path diff
+- a SHA-256 digest of that diff
+- the deterministic invariants/fixtures used to establish semantic equivalence
+- the test/evidence result for each invariant
+- an explicit classification of the change as evidence-semantic or proven transport-only
+
+Missing, late, ambiguous or retrospective proof means the change is evidence-semantic and the cohort resets. Cohort size, accumulated N, reset cost or observed performance cannot be used as evidence that a change was transport-only.
+
 ## Cohort lifecycle
 
 A formal cohort has only three states:
