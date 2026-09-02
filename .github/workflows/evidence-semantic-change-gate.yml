@@ -27,6 +27,7 @@ jobs:
           base="$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")"
           protected=(
             .github/workflows/evidence-semantic-change-gate.yml
+            .github/workflows/day53-step2-d1-preregistration.yml
             src/aidy/twelve_data_market.py
             src/aidy/twelve_data_storage.py
             src/aidy/twelve_data_recorder.py
