@@ -1,0 +1,3 @@
+trigger=2026-09-02T05:38Z
+mode=capture-off formal-forward-off
+vendor_calls=exactly-one-protected-bootstrap
