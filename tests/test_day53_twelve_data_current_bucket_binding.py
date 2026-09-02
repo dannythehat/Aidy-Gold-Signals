@@ -20,8 +20,8 @@ def _bar(opened: datetime, value: str = "4320") -> TwelveDataM1Bar:
     return TwelveDataM1Bar(
         open_time_utc=opened,
         open=base,
-        high=base + Decimal("1"),
-        low=base - Decimal("1"),
+        high=base + Decimal(1),
+        low=base - Decimal(1),
         close=base + Decimal("0.25"),
     )
 
