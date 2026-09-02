@@ -34,10 +34,12 @@ jobs:
             src/aidy/feature_engine.py
             src/aidy/context_packet.py
             src/aidy/historical_cases.py
+            src/aidy/historical_case_semantics.py
             src/aidy/regime_classifier.py
             src/aidy/setup_detector.py
             src/aidy/analogue_retrieval.py
             src/aidy/analogue_retrieval_v2.py
+            src/aidy/semantic_analogue_retrieval.py
             src/aidy/research_trials.py
             src/aidy/research_ledger_anchor.py
             src/aidy/market_data_semantics.py
