@@ -1,0 +1,65 @@
+{
+  "manifest_version": "aidy_day53_step2_repository_preregistration_manifest_v2",
+  "state": "preregistered_no_result",
+  "registered_on_date": "2026-09-02",
+  "pre_preregistration_code_head_sha": "9fe17830c4784d5c81e8fa90ced0d72760e73abd",
+  "prior_repository_preregistration_head_sha": "14d8e9d0e17113dec60586386b04a5538874ba96",
+  "preregistration_version": "aidy_day53_step2_existing_constant_equivalence_v2",
+  "supersedes_preregistration_version": "aidy_day53_step2_existing_constant_equivalence_v1",
+  "revision_is_pre_result": true,
+  "revision_changed_acceptance_threshold_values": false,
+  "revision_changed_minimum_evidence_requirements": false,
+  "revision_changed_timestamp_hash_sampling_rule": false,
+  "revision_changed_singleton_parameter_values": false,
+  "research_family_id": "day53-histdata-twelve-20-50-40-equivalence-v1",
+  "qualification_id": "day53-histdata-twelve-active-scale-sensitive-surface-v1",
+  "authorization_scope": "active_scale_sensitive_20_50_40_inheritance_only",
+  "cross_source_retrieval_permission_on_pass": false,
+  "equivalence_contract_digest_sha256": "c47b3b2827c90ad1a64e08ae5ea36216d9f0ea7bcd47c16c08ca8ecf1cc67428",
+  "research_family_payload_digest_sha256": "b367290f257b722d4b1b899aad0329d9ccf39ea75efdb6edb36fdf7ded466428",
+  "decision_rule": {
+    "combination_method": "logical_conjunction_all_mandatory_criteria",
+    "composite_score_used": false,
+    "chosen_before_result_visibility": true
+  },
+  "threshold_region_definition": {
+    "window_bps": "5",
+    "window_kind": "absolute_inclusive",
+    "membership_trigger": "either_source",
+    "chosen_before_result_visibility": true
+  },
+  "h1_pairing_definition": {
+    "pairing_key": "exact_same_utc_h1_interval_start_and_end",
+    "same_calendar_period_for_both_sources": true,
+    "comparable_but_different_periods_forbidden": true,
+    "source_native_construction_before_pairing": true
+  },
+  "singleton_parameter_values": {
+    "volatility_low_lt_bps": "20",
+    "volatility_high_gte_bps": "50",
+    "h1_atr_similarity_scale_bps": "40"
+  },
+  "legacy_30_bps_v1_scale_in_scope": false,
+  "prior_knowledge_disclosed": {
+    "criteria_are_informed_not_blind": true,
+    "median_absolute_difference_bps_approx_range": [10, 14],
+    "p95_absolute_difference_bps_approx_range": [38, 57],
+    "tail_max_absolute_difference_bps_approx": 97
+  },
+  "frozen_contract_code": "src/aidy/day53_step2_preregistration.py",
+  "frozen_contract_document": "docs/day53-step2-existing-constant-equivalence-preregistration.md",
+  "dependency_map": "docs/day53-market-data-dependency-provenance-map.md",
+  "selection_origin": "preregistered_explicit",
+  "initiated_by": "human",
+  "parameter_search_performed": false,
+  "empirical_result_computed": false,
+  "empirical_scoring_performed": false,
+  "qualification_evidence_digest": null,
+  "twelve_data_vendor_calls_used_by_registration": 0,
+  "twelve_data_vendor_calls_used_by_revision": 0,
+  "d1_ledger_append_required_before_empirical_scoring": true,
+  "repository_manifest_is_not_d1_ledger_chain_record": true,
+  "repository_ledger_contract_digest_must_equal_runtime_ledger_contract_digest": true,
+  "failure_or_insufficient_requires_new_step3_rederivation_family": true,
+  "no_discretionary_override": true
+}

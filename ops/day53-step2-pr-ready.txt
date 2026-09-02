@@ -1,0 +1,6 @@
+formal_result=insufficient_evidence
+ledger_head_sequence=6
+ledger_head_digest=1513bf91733ec1d0df3f2bf239ccb51508e0a9ed553be75a390b48e3f170c5b2
+market_values_inspected=false
+twelve_data_vendor_calls=0
+branch_protection_required_before_merge=true

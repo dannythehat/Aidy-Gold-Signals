@@ -1,0 +1,100 @@
+name: AIDY Day 53 Security Cleanup
+
+on:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - ".github/workflows/day53-security-cleanup.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Require cleanup credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${GH_TOKEN:-}"
+
+      - name: Delete disclosed Cloudflare smoke admin secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/cf-delete.json -w '%{http_code}' -X DELETE \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets/AIDY_DAY53_ADMIN_TOKEN")"
+          test "$status" = "200" || test "$status" = "404"
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets" \
+            > /tmp/cf-secrets.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/cf-secrets.json', encoding='utf-8'))
+          names={str(item.get('name')) for item in (payload.get('result') or [])}
+          assert 'AIDY_DAY53_ADMIN_TOKEN' not in names, names
+          print('cloudflare_admin_secret_absent=true')
+          PY
+
+      - name: Delete affected GitHub Actions runs, logs and artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for run_id in 33595397841 33596308933 33596324985 33596377017 33596390527; do
+            curl -fsS \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" \
+              > "/tmp/artifacts-${run_id}.json" || true
+            python - "$run_id" <<'PY'
+          import json, os, subprocess, sys
+          run_id=sys.argv[1]
+          path=f'/tmp/artifacts-{run_id}.json'
+          try:
+              payload=json.load(open(path, encoding='utf-8'))
+          except Exception:
+              payload={}
+          for item in payload.get('artifacts') or []:
+              artifact_id=str(item['id'])
+              url=f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/artifacts/{artifact_id}"
+              subprocess.run([
+                  'curl','-fsS','-X','DELETE',
+                  '-H',f"Authorization: Bearer {os.environ['GH_TOKEN']}",
+                  '-H','Accept: application/vnd.github+json',url
+              ], check=False, stdout=subprocess.DEVNULL)
+          PY
+            status="$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+            test "$status" = "204" || test "$status" = "404"
+          done
+
+      - name: Verify affected runs are gone
+        shell: bash
+        run: |
+          set -euo pipefail
+          for run_id in 33595397841 33596308933 33596324985 33596377017 33596390527; do
+            status="$(curl -sS -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'Accept: application/vnd.github+json' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}")"
+            test "$status" = "404"
+          done
+          echo "affected_remote_smoke_runs_deleted=true"
+          echo "vendor_calls_from_cleanup=0"
+
+# Triggered after automatic Remote Smoke was disabled on this branch.

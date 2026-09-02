@@ -1,0 +1,15 @@
+name: AIDY Day 53 Twelve Data Remote Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security-hold:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remote smoke disabled pending security cleanup
+        run: |
+          echo "Remote Twelve Data smoke is disabled until leaked-run cleanup, D1 diagnosis, and bootstrap/readiness contract separation are complete."

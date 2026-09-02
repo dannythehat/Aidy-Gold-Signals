@@ -1,0 +1,45 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "6244a17da4d5c9ab38cf3ba7546df8b2eb259165",
+  "base_sha": "eb8114fa2a9696ac24898b4b27d9a70cb5be68dd",
+  "protected_diff_sha256": "49ae752f31eee4bba0f9d091e1d65dc35a0133597ca0dbcc684e70e83c02f648",
+  "classification": "evidence-semantic",
+  "cohort_action": "new_epoch",
+  "preserve_existing_cohort": false,
+  "reason": "The combined protected diff remains evidence-semantic. The final naming-only workflow correction makes the actual GitHub check-run contexts exactly match the already-active, already-ledgered main-branch ruleset without weakening the ruleset, changing scientific criteria, reopening Step 2, or altering the formal INSUFFICIENT result.",
+  "formal_step2_result": {
+    "outcome": "insufficient_evidence",
+    "market_values_inspected": false,
+    "empirical_scoring_performed": false,
+    "twelve_data_vendor_calls": 0,
+    "ledger_result_sequence": 6,
+    "ledger_result_digest": "1513bf91733ec1d0df3f2bf239ccb51508e0a9ed553be75a390b48e3f170c5b2"
+  },
+  "main_branch_protection": {
+    "ruleset_id": 22096458,
+    "ruleset_name": "Protect main",
+    "enforcement": "active",
+    "target": "~DEFAULT_BRANCH",
+    "resolved_default_branch": "main",
+    "required_pull_request": true,
+    "required_approving_review_count": 0,
+    "required_status_checks": [
+      "Evidence Semantic Change Gate / classify-protected-diff",
+      "AIDY Day 53 Twelve Data OHLC Adapter / acceptance"
+    ],
+    "restrict_deletions": true,
+    "block_force_pushes_non_fast_forward": true,
+    "bypass_actors": [],
+    "current_user_can_bypass": "never",
+    "attestation_digest": "cf8a59ed8edbecc5826855200ceed8ae29c1d2c1c7fdfdd0bdcfbc8eb6b04677",
+    "protection_ledger_sequence": 7,
+    "protection_ledger_digest": "fb6ee2b8ec79b4604a2974c9a069bb5725468d901e26ac4245a431b65b163fc3",
+    "observed_before_pr60_merge": true
+  },
+  "required_check_context_binding": {
+    "semantic_gate_context": "Evidence Semantic Change Gate / classify-protected-diff",
+    "ohlc_regression_context": "AIDY Day 53 Twelve Data OHLC Adapter / acceptance",
+    "purpose": "Bind actual GitHub check-run names to the existing active ruleset contexts; no ruleset weakening or ambiguous generic acceptance context is permitted."
+  },
+  "new_epoch_note": "Formal Twelve Data forward accumulation remains zero until remaining qualification gates explicitly open a new evidence epoch. Historical qualification observations are not silently promoted into forward evidence, and neither the protection attestation nor the check-context naming correction changes the Step 2 scientific outcome."
+}

@@ -1,0 +1,5 @@
+triggered_at_utc=2026-09-02T10:27:00+00:00
+intent=append_verified_active_main_branch_protection_before_pr60_merge
+ruleset_id=22096458
+required_checks=Evidence Semantic Change Gate / classify-protected-diff | AIDY Day 53 Twelve Data OHLC Adapter / acceptance
+bypass_actors=none

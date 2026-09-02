@@ -1,0 +1,109 @@
+name: AIDY Day 53 Twelve Data Cloudflare Package Proof
+
+on:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - "pyproject.toml"
+      - "uv.lock"
+      - "src/day53_timezone_proof_entry.py"
+      - "src/aidy/twelve_data_market.py"
+      - ".github/workflows/day53-twelve-data-package-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cloudflare-package-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_PACKAGE_PROOF_URL: https://aidy-day53-twelve-package-test.dannythehat2.workers.dev
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Build isolated package-proof config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['name']='aidy-day53-twelve-package-test'
+          cfg['main']='src/day53_timezone_proof_entry.py'
+          cfg['d1_databases']=[]
+          cfg['r2_buckets']=[]
+          cfg['vars']={}
+          cfg['triggers']['crons']=[]
+          cfg.pop('queues', None)
+          json.dump(cfg, open('wrangler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Deploy isolated Python Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pywrangler deploy > /tmp/package-proof-deploy.txt 2>&1
+          grep -qi 'deployed\|uploaded\|success' /tmp/package-proof-deploy.txt || cat /tmp/package-proof-deploy.txt
+
+      - name: Execute America New York DST boundary inside Cloudflare
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 18); do
+            if curl -fsS "${AIDY_PACKAGE_PROOF_URL}/" > /tmp/package-proof-runtime.json; then
+              if python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/package-proof-runtime.json', encoding='utf-8'))
+          expected={
+              'summer_start_utc':'2026-07-01T22:00:00+00:00',
+              'summer_close_utc':'2026-07-02T21:00:00+00:00',
+              'winter_start_utc':'2026-01-01T23:00:00+00:00',
+              'winter_close_utc':'2026-01-02T22:00:00+00:00',
+          }
+          assert payload.get('ok') is True, payload
+          assert payload.get('zone') == 'America/New_York', payload
+          assert payload.get('fallback_fixed_offset_allowed') is False, payload
+          assert payload.get('expected') == expected, payload
+          assert payload.get('observed') == expected, payload
+          PY
+              then ok=1; break; fi
+            fi
+            sleep 3
+          done
+          test "$ok" = "1"
+          cat /tmp/package-proof-runtime.json
+
+      - name: Preserve package and runtime proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-twelve-data-package-proof-${{ github.sha }}
+          path: |
+            /tmp/package-proof-deploy.txt
+            /tmp/package-proof-runtime.json
+          if-no-files-found: error
+          retention-days: 90

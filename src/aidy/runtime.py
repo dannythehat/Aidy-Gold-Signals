@@ -21,6 +21,9 @@ from .official_macro import OfficialMacroCaptureResult, OfficialMacroGateway
 from .official_macro_recorder import AidyOfficialMacroRecorderService
 from .reference_price_recorder import AidyReferencePriceRecorderService, ReferenceCaptureResult
 from .storage_contracts import AidyMarketRepository, ArchiveFlushResult
+from .twelve_data_market import TwelveDataOhlcGateway
+from .twelve_data_recorder import AidyTwelveDataRecorderService
+from .twelve_data_storage import D1TwelveDataMarketStore
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +44,10 @@ def interval_due(now: datetime, interval_seconds: float, *, tick_seconds: int = 
     return int(now.astimezone(UTC).timestamp()) % interval < tick_seconds
 
 
+MarketGateway = GoldApiGateway | ArgentApiGateway | TwelveDataOhlcGateway
+MarketHistory = LiveGoldQuoteHistory | D1TwelveDataMarketStore
+
+
 async def run_capture_cycle(
     settings: AidySettings,
     *,
@@ -50,8 +57,8 @@ async def run_capture_cycle(
     include_fed: bool = True,
     include_macro: bool = True,
     include_cross_market: bool = True,
-    market_gateway: GoldApiGateway | ArgentApiGateway | None = None,
-    live_gold_history: LiveGoldQuoteHistory | None = None,
+    market_gateway: MarketGateway | None = None,
+    live_gold_history: MarketHistory | None = None,
     fed_gateway: FedRssGateway | None = None,
     macro_gateway: OfficialMacroGateway | None = None,
     cross_market_gateway: CrossMarketGateway | None = None,
@@ -85,9 +92,19 @@ async def run_capture_cycle(
             gateway = market_gateway or ArgentApiGateway(api_key="")
             market = await AidyLiveGoldRecorderService(
                 repository=repository,
-                gateway=gateway,
-                quote_history=live_gold_history,
+                gateway=gateway,  # type: ignore[arg-type]
+                quote_history=live_gold_history,  # type: ignore[arg-type]
                 stale_seconds=settings.market_stale_seconds,
+            ).capture_once()
+        elif settings.market_data_source == "twelve_data":
+            if market_gateway is None or not isinstance(live_gold_history, D1TwelveDataMarketStore):
+                raise RuntimeError(
+                    "Twelve Data capture requires an authenticated gateway and D1 market store."
+                )
+            market = await AidyTwelveDataRecorderService(
+                repository=repository,
+                gateway=market_gateway,  # type: ignore[arg-type]
+                market_store=live_gold_history,
             ).capture_once()
         else:
             raise RuntimeError("Unsupported AIDY market-data source.")
@@ -125,8 +142,8 @@ async def run_worker_scheduled_cycle(
     *,
     repository: AidyMarketRepository,
     scheduled_at: datetime,
-    market_gateway: GoldApiGateway | ArgentApiGateway | None = None,
-    live_gold_history: LiveGoldQuoteHistory | None = None,
+    market_gateway: MarketGateway | None = None,
+    live_gold_history: MarketHistory | None = None,
 ) -> RecorderCycleResult:
     """Run the Cloudflare one-minute plan while always allowing archive retries."""
 

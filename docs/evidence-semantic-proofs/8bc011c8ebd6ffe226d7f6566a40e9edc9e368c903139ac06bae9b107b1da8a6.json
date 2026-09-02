@@ -1,0 +1,40 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "91b75a4cf4f66851870ab7518a0cc7fc4ed0d3d7",
+  "base_sha": "eb8114fa2a9696ac24898b4b27d9a70cb5be68dd",
+  "protected_diff_sha256": "8bc011c8ebd6ffe226d7f6566a40e9edc9e368c903139ac06bae9b107b1da8a6",
+  "classification": "evidence-semantic",
+  "cohort_action": "new_epoch",
+  "preserve_existing_cohort": false,
+  "reason": "The protected diff introduces the Twelve Data market-data semantic family, fail-closed semantic identity propagation, append-only research governance, preregistered equivalence qualification, the formally recorded structural INSUFFICIENT Step 2 outcome, and a repository checkpoint/attestation for the active main-branch protection control. The branch-protection governance records do not reinterpret or reopen Step 2; they make the repository control itself part of the immutable evidence history. The combined protected diff remains evidence-semantic and must not preserve a prior evidence cohort.",
+  "formal_step2_result": {
+    "outcome": "insufficient_evidence",
+    "market_values_inspected": false,
+    "empirical_scoring_performed": false,
+    "twelve_data_vendor_calls": 0,
+    "ledger_result_sequence": 6,
+    "ledger_result_digest": "1513bf91733ec1d0df3f2bf239ccb51508e0a9ed553be75a390b48e3f170c5b2"
+  },
+  "main_branch_protection": {
+    "ruleset_id": 22096458,
+    "ruleset_name": "Protect main",
+    "enforcement": "active",
+    "target": "~DEFAULT_BRANCH",
+    "resolved_default_branch": "main",
+    "required_pull_request": true,
+    "required_approving_review_count": 0,
+    "required_status_checks": [
+      "Evidence Semantic Change Gate / classify-protected-diff",
+      "AIDY Day 53 Twelve Data OHLC Adapter / acceptance"
+    ],
+    "restrict_deletions": true,
+    "block_force_pushes_non_fast_forward": true,
+    "bypass_actors": [],
+    "current_user_can_bypass": "never",
+    "attestation_digest": "cf8a59ed8edbecc5826855200ceed8ae29c1d2c1c7fdfdd0bdcfbc8eb6b04677",
+    "protection_ledger_sequence": 7,
+    "protection_ledger_digest": "fb6ee2b8ec79b4604a2974c9a069bb5725468d901e26ac4245a431b65b163fc3",
+    "observed_before_pr60_merge": true
+  },
+  "new_epoch_note": "Formal Twelve Data forward accumulation remains zero until the remaining qualification gates explicitly open a new evidence epoch. Historical qualification observations are not silently promoted into forward evidence, and the protection attestation does not change the Step 2 scientific outcome."
+}

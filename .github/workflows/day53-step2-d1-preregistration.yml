@@ -1,0 +1,149 @@
+name: AIDY Day 53 Step 2 D1 Preregistration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - "ops/day53-step2-d1-append-trigger.txt"
+
+permissions:
+  contents: read
+
+env:
+  ACCEPTED_STEP2_HEAD: 6689aa954cb5f3dd2f97f980846c9168437aabe4
+  STEP2_D1_CONFIG: wrangler.step2.d1.jsonc
+
+jobs:
+  append-preregistration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact branch candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Prove frozen preregistration bundle is unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor "$ACCEPTED_STEP2_HEAD" HEAD
+          git diff --exit-code "$ACCEPTED_STEP2_HEAD" HEAD -- \
+            src/aidy/research_trials.py \
+            src/aidy/market_data_semantics.py \
+            src/aidy/day53_step2_preregistration.py \
+            src/aidy/day53_step2_qualification_guard.py \
+            src/aidy/regime_classifier.py \
+            src/aidy/analogue_retrieval_v2.py \
+            src/aidy/setup_detector.py \
+            migrations/d1/0008_research_evidence_ledger.sql \
+            evidence/research_ledger/day53-step2-equivalence-preregistration.json \
+            docs/day53-step2-existing-constant-equivalence-preregistration.md \
+            docs/day53-market-data-dependency-provenance-map.md
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Install bounded project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Build minimal repo-root D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg={
+              'name':'aidy-signals-test',
+              'main':'src/entry.py',
+              'compatibility_date':'2026-08-16',
+              'compatibility_flags':['python_workers'],
+              'd1_databases':[{ 
+                  'binding':'AIDY_OPS',
+                  'database_name':'aidy-ops-test',
+                  'database_id':'3588d82a-d686-4430-872d-d4c0e62c3d5d',
+                  'migrations_dir':'migrations/d1',
+              }],
+          }
+          json.dump(cfg, open('wrangler.step2.d1.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply migration chain and read ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config "$STEP2_D1_CONFIG" > /tmp/step2-migrations.txt 2>&1; then
+            cat /tmp/step2-migrations.txt
+            exit 1
+          fi
+          cat /tmp/step2-migrations.txt
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config "$STEP2_D1_CONFIG" \
+            --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
+            > /tmp/ledger-before.json
+
+      - name: Build exact idempotent append transaction
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day53_step2_d1_preregistration.py prepare \
+            --ledger /tmp/ledger-before.json \
+            --manifest evidence/research_ledger/day53-step2-equivalence-preregistration.json \
+            --accepted-head "$ACCEPTED_STEP2_HEAD" \
+            --sql /tmp/append.sql \
+            --audit /tmp/step2-preappend-audit.json
+
+      - name: Append exact preregistration records atomically
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q '^INSERT INTO research_evidence_ledger' /tmp/append.sql; then
+            if ! npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+              --config "$STEP2_D1_CONFIG" --file /tmp/append.sql \
+              > /tmp/step2-append.txt 2>&1; then
+              cat /tmp/step2-append.txt
+              exit 1
+            fi
+          else
+            echo 'No-op: exact preregistration already exists.' > /tmp/step2-append.txt
+          fi
+          cat /tmp/step2-append.txt
+
+      - name: Verify D1 chain and repository-to-ledger equality
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config "$STEP2_D1_CONFIG" \
+            --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
+            > /tmp/ledger-after.json
+          uv run python scripts/day53_step2_d1_preregistration.py verify \
+            --ledger /tmp/ledger-after.json \
+            --manifest evidence/research_ledger/day53-step2-equivalence-preregistration.json \
+            --accepted-head "$ACCEPTED_STEP2_HEAD" \
+            --output day53_step2_d1_preregistration.json
+
+      - name: Preserve D1 preregistration audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-step2-d1-preregistration-${{ github.sha }}
+          path: day53_step2_d1_preregistration.json
+          if-no-files-found: error
+          retention-days: 90

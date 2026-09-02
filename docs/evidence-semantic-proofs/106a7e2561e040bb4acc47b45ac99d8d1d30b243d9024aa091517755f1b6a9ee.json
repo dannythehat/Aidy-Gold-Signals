@@ -1,0 +1,19 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "acfdaf7095017d46a263bc5e2a3827fa0eb3a728",
+  "base_sha": "eb8114fa2a9696ac24898b4b27d9a70cb5be68dd",
+  "protected_diff_sha256": "106a7e2561e040bb4acc47b45ac99d8d1d30b243d9024aa091517755f1b6a9ee",
+  "classification": "evidence-semantic",
+  "cohort_action": "new_epoch",
+  "preserve_existing_cohort": false,
+  "reason": "The protected diff introduces a new market-data semantic family, explicit semantic identities, fail-closed cross-source compatibility controls, append-only research governance, preregistered equivalence qualification, and a formally recorded structural INSUFFICIENT result. These changes are evidence-semantic by construction and must not preserve a prior evidence cohort.",
+  "formal_step2_result": {
+    "outcome": "insufficient_evidence",
+    "market_values_inspected": false,
+    "empirical_scoring_performed": false,
+    "twelve_data_vendor_calls": 0,
+    "ledger_head_sequence": 6,
+    "ledger_head_digest": "1513bf91733ec1d0df3f2bf239ccb51508e0a9ed553be75a390b48e3f170c5b2"
+  },
+  "new_epoch_note": "Formal Twelve Data forward accumulation remains zero until the remaining qualification gates explicitly open a new evidence epoch. Historical qualification observations are not silently promoted into forward evidence."
+}

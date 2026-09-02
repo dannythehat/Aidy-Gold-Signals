@@ -1,0 +1,248 @@
+name: AIDY Day 53 D1 Research Live Reconciliation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+    paths:
+      - "ops/day53-d1-reconciliation-trigger.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install bounded dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Reconcile Day5 session coverage and common-minute prices against Twelve Data
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json
+          import os
+          from datetime import UTC, datetime, timedelta
+          from decimal import Decimal
+          from statistics import median
+
+          import httpx
+          from google.cloud import bigquery
+          from google.oauth2 import service_account
+
+          from aidy.twelve_data_market import expected_market_minute_opens
+
+          API='https://api.twelvedata.com/time_series'
+          SESSIONS=(
+              (datetime(2025,6,9,22,0,tzinfo=UTC), datetime(2025,6,10,21,0,tzinfo=UTC)),
+              (datetime(2025,6,10,22,0,tzinfo=UTC), datetime(2025,6,11,21,0,tzinfo=UTC)),
+              (datetime(2025,6,11,22,0,tzinfo=UTC), datetime(2025,6,12,21,0,tzinfo=UTC)),
+          )
+
+          def iso(value):
+              return value.astimezone(UTC).isoformat()
+
+          def parse_ts(value):
+              parsed=datetime.fromisoformat(str(value))
+              if parsed.tzinfo is None:
+                  parsed=parsed.replace(tzinfo=UTC)
+              return parsed.astimezone(UTC)
+
+          def row_values(row):
+              return {key: Decimal(str(row[key])) for key in ('open','high','low','close')}
+
+          def compress_minutes(minutes):
+              ordered=sorted(minutes)
+              if not ordered:
+                  return []
+              spans=[]
+              start=previous=ordered[0]
+              for value in ordered[1:]:
+                  if value == previous + timedelta(minutes=1):
+                      previous=value
+                      continue
+                  spans.append({
+                      'start_utc':iso(start),
+                      'end_exclusive_utc':iso(previous + timedelta(minutes=1)),
+                      'minutes':int((previous-start).total_seconds()//60)+1,
+                  })
+                  start=previous=value
+              spans.append({
+                  'start_utc':iso(start),
+                  'end_exclusive_utc':iso(previous + timedelta(minutes=1)),
+                  'minutes':int((previous-start).total_seconds()//60)+1,
+              })
+              return spans
+
+          def common_ohlc(mapping, ordered_times):
+              rows=[mapping[t] for t in ordered_times]
+              return {
+                  'open':str(row_values(rows[0])['open']),
+                  'high':str(max(row_values(row)['high'] for row in rows)),
+                  'low':str(min(row_values(row)['low'] for row in rows)),
+                  'close':str(row_values(rows[-1])['close']),
+                  'minutes':len(rows),
+              }
+
+          info=json.loads(os.environ['AIDY_GCP_SERVICE_ACCOUNT_JSON'])
+          creds=service_account.Credentials.from_service_account_info(info)
+          project=info['project_id']
+          dataset=os.environ['AIDY_BIGQUERY_DATASET']
+          client=bigquery.Client(project=project, credentials=creds, location=os.environ['AIDY_BIGQUERY_LOCATION'])
+
+          research_m1=list(client.query(f'''
+              SELECT open_time_utc, open, high, low, close
+              FROM `{project}.{dataset}.research_candles`
+              WHERE source='histdata' AND timeframe='M1'
+                AND open_time_utc >= TIMESTAMP('2025-06-09T21:00:00Z')
+                AND open_time_utc < TIMESTAMP('2025-06-12T22:00:00Z')
+              ORDER BY open_time_utc
+          ''').result())
+          research_d1=list(client.query(f'''
+              SELECT open_time_utc, open, high, low, close, source_file
+              FROM `{project}.{dataset}.research_candles`
+              WHERE source='histdata' AND timeframe='D1'
+                AND open_time_utc >= TIMESTAMP('2025-06-09T00:00:00Z')
+                AND open_time_utc < TIMESTAMP('2025-06-13T00:00:00Z')
+              ORDER BY open_time_utc
+          ''').result())
+          assert research_m1 and research_d1
+          hist={parse_ts(row['open_time_utc']):dict(row.items()) for row in research_m1}
+          native=[dict(row.items()) for row in research_d1]
+          for row in native:
+              row['open_time_utc']=parse_ts(row['open_time_utc'])
+
+          headers={'Authorization': f"apikey {os.environ['AIDY_TWELVE_DATA_API_KEY']}"}
+          params={
+              'symbol':'XAU/USD', 'interval':'1min',
+              'start_date':'2025-06-09 21:55:00', 'end_date':'2025-06-12 21:05:00',
+              'timezone':'UTC', 'order':'ASC',
+          }
+          response=httpx.get(API, headers=headers, params=params, timeout=60.0)
+          response.raise_for_status()
+          payload=response.json()
+          assert payload.get('status') == 'ok', payload
+          twelve={parse_ts(row['datetime']):row for row in (payload.get('values') or [])}
+          assert twelve
+          credits={k.lower():v for k,v in response.headers.items() if k.lower().startswith('api-credits-')}
+
+          comparisons=[]
+          for index,(start,end) in enumerate(SESSIONS, start=1):
+              expected=set(expected_market_minute_opens(start,end))
+              hist_times=expected & set(hist)
+              twelve_times=expected & set(twelve)
+              common=sorted(hist_times & twelve_times)
+              assert common, (start,end)
+              native_rows=[row for row in native if start <= row['open_time_utc'] < end]
+              native_row=native_rows[0] if len(native_rows)==1 else None
+              native_delta=None if native_row is None else (native_row['open_time_utc']-start).total_seconds()
+
+              close_deltas=[]
+              close_abs_bps=[]
+              for minute in common:
+                  h=row_values(hist[minute])['close']
+                  t=row_values(twelve[minute])['close']
+                  delta=t-h
+                  close_deltas.append(delta)
+                  close_abs_bps.append(abs(delta)/h*Decimal(10000))
+              close_abs_bps_sorted=sorted(close_abs_bps)
+              p95_index=min(len(close_abs_bps_sorted)-1, int((len(close_abs_bps_sorted)-1)*0.95))
+
+              hist_common=common_ohlc(hist, common)
+              twelve_common=common_ohlc(twelve, common)
+              field_deltas={}
+              for field in ('open','high','low','close'):
+                  h=Decimal(hist_common[field]); t=Decimal(twelve_common[field])
+                  field_deltas[f'{field}_twelve_minus_histdata']=str(t-h)
+                  field_deltas[f'{field}_abs_bps_vs_histdata']=str((abs(t-h)/h*Decimal(10000)).quantize(Decimal('0.01')))
+
+              comparisons.append({
+                  'session_index':index,
+                  'aidy_session_start_utc':iso(start),
+                  'aidy_session_close_utc':iso(end),
+                  'expected_market_minutes':len(expected),
+                  'histdata_observed_expected_minutes':len(hist_times),
+                  'twelve_observed_expected_minutes':len(twelve_times),
+                  'common_observed_minutes':len(common),
+                  'histdata_missing_expected_spans':compress_minutes(expected-hist_times),
+                  'twelve_missing_expected_spans':compress_minutes(expected-twelve_times),
+                  'native_day5_d1':None if native_row is None else {
+                      'open_time_utc':iso(native_row['open_time_utc']),
+                      'open_time_delta_from_aidy_session_start_seconds':native_delta,
+                      'open':str(native_row['open']), 'high':str(native_row['high']),
+                      'low':str(native_row['low']), 'close':str(native_row['close']),
+                  },
+                  'common_minute_histdata_ohlc':hist_common,
+                  'common_minute_twelve_ohlc':twelve_common,
+                  'common_minute_ohlc_deltas':field_deltas,
+                  'minute_close_basis':{
+                      'median_twelve_minus_histdata':str(median(close_deltas)),
+                      'median_abs_bps':str(median(close_abs_bps).quantize(Decimal('0.01'))),
+                      'p95_abs_bps':str(close_abs_bps_sorted[p95_index].quantize(Decimal('0.01'))),
+                      'max_abs_bps':str(max(close_abs_bps).quantize(Decimal('0.01'))),
+                  },
+              })
+
+          direct_native_mix=all(
+              item['native_day5_d1'] is not None
+              and item['native_day5_d1']['open_time_delta_from_aidy_session_start_seconds'] == 0
+              for item in comparisons
+          )
+          full_session_rederive=all(
+              item['histdata_observed_expected_minutes'] == item['expected_market_minutes']
+              for item in comparisons
+          )
+          result={
+              'ok':True,
+              'twelve_meta':payload.get('meta') or {},
+              'twelve_credit_headers':credits,
+              'comparisons':comparisons,
+              'decision':{
+                  'direct_native_day5_d1_mix_with_live_d1_allowed':direct_native_mix,
+                  'full_live_session_d1_rederivation_from_day5_m1_allowed':full_session_rederive,
+                  'common_minute_vendor_basis_diagnostic_only':True,
+                  'day5_native_d1_and_live_d1_same_feature_semantics':False,
+                  'retrospective_rows_pit_eligible':False,
+                  'recommended_boundary':'do_not_use_native_day5_d1_as_if_equivalent_to_live_17ny_d1',
+              },
+          }
+          with open('day53_d1_reconciliation.json','w',encoding='utf-8') as fh:
+              json.dump(result, fh, sort_keys=True, default=str)
+          print(json.dumps(result, sort_keys=True, default=str))
+          assert direct_native_mix is False
+          assert full_session_rederive is False
+          assert all(item['common_observed_minutes'] >= 1300 for item in comparisons)
+          PY
+
+      - name: Preserve reconciliation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-d1-research-live-reconciliation-${{ github.sha }}
+          path: day53_d1_reconciliation.json
+          if-no-files-found: error
+          retention-days: 90

@@ -1,0 +1,147 @@
+name: AIDY Day 53 Twelve Data OHLC Adapter
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - day53/twelve-data-ohlc-adapter
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/twelve_data_market.py"
+      - "src/aidy/twelve_data_storage.py"
+      - "src/aidy/twelve_data_recorder.py"
+      - "src/aidy/day53_step2_preregistration.py"
+      - "src/aidy/day53_step2_qualification_guard.py"
+      - "src/aidy/config.py"
+      - "src/aidy/runtime.py"
+      - "src/aidy/forward_live_observer.py"
+      - "src/entry.py"
+      - "migrations/d1/0006_twelve_data_feed_observations.sql"
+      - "evidence/research_ledger/day53-step2-equivalence-preregistration.json"
+      - "docs/day53-step2-existing-constant-equivalence-preregistration.md"
+      - "tests/test_day53_step2_preregistration.py"
+      - "tests/test_day53_twelve_data_ohlc_adapter.py"
+      - "tests/test_day53_live_forward_observer.py"
+      - "pyproject.toml"
+      - ".github/workflows/day53-twelve-data-ohlc-adapter.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    name: AIDY Day 53 Twelve Data OHLC Adapter / acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check \
+            src/aidy/twelve_data_market.py \
+            src/aidy/twelve_data_storage.py \
+            src/aidy/twelve_data_recorder.py \
+            src/aidy/day53_step2_preregistration.py \
+            src/aidy/day53_step2_qualification_guard.py \
+            src/aidy/config.py \
+            src/aidy/runtime.py \
+            src/aidy/forward_live_observer.py \
+            tests/test_day53_step2_preregistration.py \
+            tests/test_day53_twelve_data_ohlc_adapter.py \
+            tests/test_day53_live_forward_observer.py
+          uv run python -m compileall -q src scripts tests
+
+      - name: Focused Day53 market-data tests
+        shell: bash
+        run: |
+          uv run pytest -q \
+            tests/test_day53_step2_preregistration.py \
+            tests/test_day53_twelve_data_ohlc_adapter.py \
+            tests/test_day53_live_forward_observer.py \
+            tests/test_day53_genuine_live_gold_feed.py
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
+
+      - name: Manual real adapter run - capture meta credits and freshness
+        id: live_adapter
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+          uv run python - <<'PY'
+          import asyncio
+          import json
+          import os
+          from aidy.twelve_data_market import TwelveDataOhlcGateway
+
+          async def main():
+              result = await TwelveDataOhlcGateway(
+                  api_key=os.environ['AIDY_TWELVE_DATA_API_KEY']
+              ).fetch_1m(outputsize=30)
+              evidence = {
+                  'fetched_at_utc': result.fetched_at_utc.isoformat(),
+                  'meta': result.meta,
+                  'credit_headers': result.credit_headers,
+                  'response_digest': result.response_digest,
+                  'raw_bar_count': result.raw_bar_count,
+                  'closed_bar_count': len(result.closed_bars),
+                  'forming_bar_count': result.forming_bar_count,
+                  'off_session_bar_count': result.off_session_bar_count,
+                  'latest_closed_bar_open_utc': (
+                      result.latest_closed_bar_open_utc.isoformat()
+                      if result.latest_closed_bar_open_utc else None
+                  ),
+                  'latest_closed_bar_close_utc': (
+                      result.latest_closed_bar_close_utc.isoformat()
+                      if result.latest_closed_bar_close_utc else None
+                  ),
+                  'session_open_at_fetch': result.session_open_at_fetch,
+                  'observed_open_session_lag_seconds': result.open_session_lag_seconds,
+                  'freshness_state': result.freshness_state,
+              }
+              with open('day53_twelve_data_adapter_live.json','w',encoding='utf-8') as fh:
+                  json.dump(evidence, fh, sort_keys=True)
+              print(json.dumps(evidence, sort_keys=True))
+              if result.session_open_at_fetch:
+                  assert result.freshness_state == 'fresh', evidence
+                  assert result.open_session_lag_seconds is not None, evidence
+                  assert result.open_session_lag_seconds <= 180.0, evidence
+              assert result.meta.get('symbol') == 'XAU/USD', evidence
+              assert result.meta.get('interval') == '1min', evidence
+              assert result.credit_headers.get('api-credits-request') == '1', evidence
+              assert 'api-credits-used' in result.credit_headers, evidence
+              assert 'api-credits-left' in result.credit_headers, evidence
+
+          asyncio.run(main())
+          PY
+
+      - name: Preserve manual adapter-run evidence
+        if: github.event_name == 'workflow_dispatch' && always() && steps.live_adapter.outcome != 'skipped'
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-twelve-data-adapter-${{ github.sha }}
+          path: day53_twelve_data_adapter_live.json
+          if-no-files-found: error
+          retention-days: 90
