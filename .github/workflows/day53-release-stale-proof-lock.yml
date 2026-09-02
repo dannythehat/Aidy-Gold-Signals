@@ -1,0 +1,43 @@
+name: AIDY Day 53 Release Stale Proof Lock
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/day53-release-stale-proof-lock.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  release-stale-lock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Cancel stale pre-bootstrap proof run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          STALE_RUN_ID: "33661201820"
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/main"
+          status="$(curl --silent --show-error --output /tmp/cancel-response.txt --write-out '%{http_code}' \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${REPO}/actions/runs/${STALE_RUN_ID}/cancel")"
+          if test "$status" = "202"; then
+            echo "stale_proof_cancel_requested=true"
+            exit 0
+          fi
+          if test "$status" = "409"; then
+            echo "stale_proof_already_terminal=true"
+            exit 0
+          fi
+          cat /tmp/cancel-response.txt
+          exit 1
