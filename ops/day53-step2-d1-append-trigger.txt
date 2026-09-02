@@ -1,4 +1,6 @@
-triggered_at_utc=2026-09-02T09:00:00Z
+triggered_at_utc=2026-09-02T09:11:00Z
+attempt=2
 purpose=append_exact_step2_research_family_and_equivalence_contract_only
 accepted_step2_head=6689aa954cb5f3dd2f97f980846c9168437aabe4
 empirical_scoring_allowed_in_this_workflow=false
+previous_attempt_mutated_step2_records=false
