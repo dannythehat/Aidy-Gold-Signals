@@ -16,6 +16,7 @@ from aidy.cross_market_recorder import AidyCrossMarketRecorderService
 from aidy.cross_market_storage import D1CrossMarketOperationalEvidenceStore
 from aidy.forward_live_observer import live_forward_status, observe_private_forward_snapshot
 from aidy.live_gold_storage import D1LiveGoldQuoteHistory
+from aidy.openai_gateway_v2 import OpenAIMasterTraderGatewayV2
 from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
 from aidy.runtime import run_capture_cycle, run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
@@ -37,6 +38,13 @@ def _market_runtime_dependencies(env, settings: AidySettings):
         api_key = str(getattr(env, "AIDY_TWELVE_DATA_API_KEY", ""))
         return TwelveDataOhlcGateway(api_key=api_key), D1TwelveDataMarketStore(env.AIDY_OPS)
     return None, None
+
+
+def _private_forward_gateway(env):
+    api_key = str(getattr(env, "OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return None
+    return OpenAIMasterTraderGatewayV2(api_key)
 
 
 def _formal_forward_enabled(env) -> bool:
@@ -126,6 +134,9 @@ class Default(WorkerEntrypoint):
                     "environment": str(getattr(self.env, "AIDY_ENV", "unknown")),
                     "capture_enabled": settings.capture_enabled,
                     "formal_forward_enabled": _formal_forward_enabled(self.env),
+                    "private_forward_model_gateway_configured": (
+                        bool(str(getattr(self.env, "OPENAI_API_KEY", "")).strip())
+                    ),
                     "market_data_source": settings.market_data_source,
                     "market_data_ownership": settings.market_data_ownership,
                     "cross_market_source": "public_official_daily",
@@ -144,6 +155,9 @@ class Default(WorkerEntrypoint):
                     status=500,
                 )
             status["deployment_enabled"] = _formal_forward_enabled(self.env)
+            status["model_gateway_configured"] = bool(
+                str(getattr(self.env, "OPENAI_API_KEY", "")).strip()
+            )
             return Response.json({"ok": True, "forward": status})
 
         if request.method == "POST" and url.path == "/day53/twelve-data-smoke":
@@ -539,6 +553,7 @@ class Default(WorkerEntrypoint):
                         d1=worker_env.AIDY_OPS,
                         scheduled_at=scheduled_at,
                         snapshot_id=snapshot_id,
+                        gateway=_private_forward_gateway(worker_env),
                     )
                 except Exception as exc:  # noqa: BLE001 - do not duplicate successful capture
                     await _write_test_forward_error(worker_env, exc, scheduled_at=scheduled_at)
