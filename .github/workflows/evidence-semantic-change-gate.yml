@@ -38,6 +38,9 @@ jobs:
             src/aidy/setup_detector.py
             src/aidy/analogue_retrieval.py
             src/aidy/analogue_retrieval_v2.py
+            src/aidy/research_trials.py
+            migrations/d1/0008_research_evidence_ledger.sql
+            evidence/research_ledger
           )
 
           mapfile -t changed < <(git diff --name-only "$base"..."$PR_HEAD_SHA" -- "${protected[@]}")
