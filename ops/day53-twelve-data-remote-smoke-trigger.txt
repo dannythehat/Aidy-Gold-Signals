@@ -6,3 +6,4 @@ security_followup=2026-09-02T05:49Z
 leaked_ephemeral_admin_token_run=33595397841
 required_actions=delete_cloudflare_admin_secret_then_delete_leaked_run_and_artifact
 remote_smoke_retrigger_forbidden=true
+security_cleanup_in_progress=true
