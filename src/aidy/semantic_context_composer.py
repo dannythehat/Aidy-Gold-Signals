@@ -14,6 +14,37 @@ from aidy.semantic_context_packet import SEMANTIC_CONTEXT_PACKET_VERSION
 
 SEMANTIC_CONTEXT_COMPOSER_VERSION = "aidy_semantic_context_composer_v1"
 SEMANTIC_DOSSIER_BINDING_VERSION = "aidy_semantic_dossier_binding_v1"
+CURRENT_OBJECTIVE_CONTEXT_VERSION = "aidy_current_objective_context_projection_v1"
+
+# The model needs objective market facts, not large provenance arrays. The full
+# authenticated context remains bound by context_hash; this projection removes
+# only lineage-heavy fields that do not change the market fact itself.
+_PROJECTION_LINEAGE_KEYS = frozenset(
+    {
+        "source_identities",
+        "source_identity",
+        "source_links",
+        "load_identity",
+        "evidence_id",
+        "archive_key",
+        "raw_payload_json",
+    }
+)
+_OBJECTIVE_CONTEXT_ROOTS = (
+    "gold",
+    "session",
+    "event_risk",
+    "cross_market",
+    "aidy_signal_lifecycle",
+    "data_quality",
+    "structural_context",
+    "price_structure_context",
+    "rates_macro_context",
+    "event_intelligence",
+    "cme_contract_context",
+    "volatility_state",
+    "architecture_v2_extensions",
+)
 
 
 def _semantic_retrieval_body(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -36,6 +67,41 @@ def verify_semantic_retrieval_wrapper(value: Mapping[str, Any]) -> bool:
         return False
     base = value.get("base_retrieval")
     return isinstance(base, Mapping)
+
+
+def _project_objective_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            str(key): _project_objective_value(item)
+            for key, item in value.items()
+            if str(key) not in _PROJECTION_LINEAGE_KEYS
+        }
+    if isinstance(value, (list, tuple)):
+        return [_project_objective_value(item) for item in value]
+    return copy.deepcopy(value)
+
+
+def current_objective_context_projection(context: Mapping[str, Any]) -> dict[str, Any]:
+    """Expose authenticated live facts to Master Trader without raw lineage bulk."""
+
+    projection: dict[str, Any] = {
+        "projection_version": CURRENT_OBJECTIVE_CONTEXT_VERSION,
+        "context_packet_version": context.get("context_packet_version"),
+        "context_hash": context.get("context_hash"),
+        "as_of_utc": context.get("as_of_utc"),
+        "symbol": context.get("symbol"),
+        "market_data_semantic_identity_digest": context.get(
+            "market_data_semantic_identity_digest"
+        ),
+        "source_contract_versions": _project_objective_value(
+            context.get("source_contract_versions") or {}
+        ),
+    }
+    for root in _OBJECTIVE_CONTEXT_ROOTS:
+        if root in context:
+            projection[root] = _project_objective_value(context[root])
+    projection["projection_digest"] = digest(projection)
+    return projection
 
 
 def validate_semantic_decision_inputs(
@@ -83,10 +149,12 @@ def compose_semantic_context_v2(
 ) -> dict[str, Any]:
     """Compose the authoritative Twelve Data dossier through the semantic gate.
 
-    The legacy Day-35 composer remains the deterministic dossier implementation.
-    This wrapper makes semantic compatibility a prerequisite and binds the
-    verified semantic-retrieval identity into the final dossier digest without
-    exposing raw historical outcomes to the model.
+    The accepted Day-35 composer remains the deterministic historical-evidence
+    implementation. This wrapper makes semantic compatibility a prerequisite,
+    then adds the authenticated current objective context so Master Trader sees
+    the same live candle/liquidity facts that deterministic safety and setup
+    recognition see. Raw historical outcomes and provenance-heavy identity lists
+    remain outside the prompt surface.
     """
 
     base_retrieval, identity_digest = validate_semantic_decision_inputs(
@@ -103,12 +171,17 @@ def compose_semantic_context_v2(
         invalidation_inputs=invalidation_inputs,
         max_bundle_bytes=max_bundle_bytes,
     )
+    current_context = current_objective_context_projection(context)
     result = copy.deepcopy(dict(dossier))
     result.pop("dossier_digest", None)
     result["semantic_context_composer_version"] = SEMANTIC_CONTEXT_COMPOSER_VERSION
+    result["current_objective_context"] = current_context
+    result["current_objective_context_digest"] = current_context["projection_digest"]
     result["semantic_dossier_binding"] = {
         "binding_version": SEMANTIC_DOSSIER_BINDING_VERSION,
         "market_data_semantic_identity_digest": identity_digest,
+        "current_context_hash": context.get("context_hash"),
+        "current_objective_context_digest": current_context["projection_digest"],
         "semantic_retrieval_digest": semantic_retrieval["semantic_retrieval_digest"],
         "semantic_query_version": semantic_retrieval["semantic_query_version"],
         "semantic_retrieval_version": semantic_retrieval["semantic_retrieval_version"],
