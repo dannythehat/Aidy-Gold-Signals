@@ -213,6 +213,7 @@ class AidyTwelveDataRecorderService:
         availability: dict[str, object] = {
             "market_data_source": TWELVE_DATA_SOURCE,
             "market_data_ownership": "public_independent",
+            "quote": "known",
             "quote_type": "latest_closed_vendor_m1_close",
             "candle_source": RAW_M1_SOURCE,
             "aggregate_source": AGGREGATE_SOURCE,
