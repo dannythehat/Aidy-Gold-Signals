@@ -39,6 +39,8 @@ jobs:
             src/aidy/analogue_retrieval.py
             src/aidy/analogue_retrieval_v2.py
             src/aidy/research_trials.py
+            src/aidy/research_ledger_anchor.py
+            src/aidy/market_data_semantics.py
             migrations/d1/0008_research_evidence_ledger.sql
             evidence/research_ledger
           )
