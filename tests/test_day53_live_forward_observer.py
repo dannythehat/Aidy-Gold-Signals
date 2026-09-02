@@ -248,7 +248,7 @@ async def test_snapshot_before_activation_never_backfills() -> None:
 
 
 @pytest.mark.asyncio
-async def test_decision_grade_snapshot_still_fails_closed_until_adapter_is_enabled() -> None:
+async def test_decision_grade_snapshot_fails_closed_without_production_model_gateway() -> None:
     store, _ = await _active_store()
     d1 = store._db
     _insert_snapshot(
@@ -268,7 +268,7 @@ async def test_decision_grade_snapshot_still_fails_closed_until_adapter_is_enabl
     )
     assert result.status == "recorded"
     assert result.disposition == "failed_closed"
-    assert result.reason_code == "production_decision_context_adapter_not_enabled"
+    assert result.reason_code == "production_model_gateway_not_configured"
 
 
 @pytest.mark.asyncio
@@ -291,6 +291,9 @@ async def test_status_exposes_active_cohort_and_noninflated_progress() -> None:
     assert status["cohort_id"] == cohort["cohort_id"]
     assert status["progress"]["raw_evaluation_count"] == 1
     assert status["progress"]["model_resolved_episode_independent_n"] == 0
+    assert status["decision_adapter_enabled"] is True
+    assert status["semantic_twelve_context_required"] is True
+    assert status["k3_model_resolution_required"] is True
     assert status["openai_called_for_pre_model_block"] is False
     assert status["telegram_publication_enabled"] is False
 
@@ -302,7 +305,11 @@ def test_live_forward_manifest_preserves_boundaries_and_five_minute_cadence() ->
     assert manifest["missing_spread_is_advisory"] is True
     assert manifest["observed_out_of_tolerance_spread_fails_pre_model"] is True
     assert manifest["blocked_cycles_count_toward_day54_model_resolved_n"] is False
-    assert manifest["decision_adapter_enabled_by_this_change"] is False
+    assert manifest["decision_adapter_enabled_by_this_change"] is True
+    assert manifest["real_day52_architecture_v2_cycle_required"] is True
+    assert manifest["semantic_twelve_context_required"] is True
+    assert manifest["current_objective_context_exposed_to_master_trader"] is True
+    assert manifest["cross_source_analogue_inheritance_allowed"] is False
     assert manifest["openai_called_for_pre_model_block"] is False
     assert manifest["telegram_publication_enabled"] is False
     assert manifest["super_signals_dependency_allowed"] is False
