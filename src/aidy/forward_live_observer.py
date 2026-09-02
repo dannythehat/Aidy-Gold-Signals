@@ -118,7 +118,6 @@ def _blocked_reason(snapshot: dict[str, Any]) -> str | None:
     except (TypeError, ValueError):
         return "market_reference_age_invalid"
 
-    spread_fields = (snapshot.get("bid"), snapshot.get("ask"), snapshot.get("spread"))
     candle_fields = tuple(
         snapshot.get(name)
         for name in (
@@ -130,14 +129,17 @@ def _blocked_reason(snapshot: dict[str, Any]) -> str | None:
             "latest_d1_id",
         )
     )
-    missing_spread = any(value in {None, ""} for value in spread_fields)
-    missing_ohlc = any(value in {None, ""} for value in candle_fields)
-    if missing_spread and missing_ohlc:
-        return "missing_genuine_live_ohlc_and_spread"
-    if missing_spread:
-        return "missing_genuine_live_spread"
-    if missing_ohlc:
+    if any(value in {None, ""} for value in candle_fields):
         return "missing_genuine_live_ohlc"
+
+    availability_raw = str(snapshot.get("data_availability_json") or "{}")
+    try:
+        availability = json.loads(availability_raw)
+    except json.JSONDecodeError:
+        return "market_reference_availability_invalid"
+    spread_state = str(availability.get("spread_advisory_state") or "unavailable").strip().lower()
+    if spread_state == "out_of_tolerance":
+        return "observed_spread_out_of_tolerance"
     return None
 
 
@@ -325,7 +327,9 @@ def day53_live_forward_manifest() -> dict[str, Any]:
         "observation_interval_seconds": FORWARD_OBSERVATION_INTERVAL_SECONDS,
         "requires_active_amended_cohort": True,
         "scheduled_timestamp_may_predate_snapshot_evaluation": False,
-        "missing_live_ohlc_or_spread_fails_pre_model": True,
+        "missing_live_ohlc_fails_pre_model": True,
+        "missing_spread_is_advisory": True,
+        "observed_out_of_tolerance_spread_fails_pre_model": True,
         "blocked_cycles_count_toward_day54_model_resolved_n": False,
         "decision_adapter_enabled_by_this_change": False,
         "openai_called_for_pre_model_block": False,
