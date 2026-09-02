@@ -1,0 +1,125 @@
+name: AIDY Day 53 Emergency Safe Restore
+
+on:
+  push:
+    branches: [ops/day53-safe-restore-8870fc6]
+    paths: [".github/workflows/day53-emergency-safe-restore.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_MAIN_SHA: 8870fc620a6eb06702e282cafb53b7dd38b8fb03
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_MAIN_SHA }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Require exact protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MAIN_SHA"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_SHA"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+      - name: Build safe restored configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+          assert settings.capture_enabled is True
+          assert settings.market_data_source=='twelve_data'
+          assert settings.market_data_ownership=='public_independent'
+          assert settings.market_poll_seconds>=300.0
+          json.dump(cfg,open('wrangler.safe-restore.jsonc','w',encoding='utf-8'),indent=2)
+          sched=json.load(open('wrangler.scheduler.test.jsonc',encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched,open('wrangler.safe-scheduler.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+      - name: Restore Worker with retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.safe-restore.jsonc wrangler.jsonc
+          ok=0
+          for attempt in 1 2 3 4 5; do
+            if uv run pywrangler deploy 2>&1 | tee "/tmp/safe-worker-${attempt}.txt"; then ok=1; break; fi
+            sleep $((attempt*5))
+          done
+          test "$ok" -eq 1
+      - name: Restore scheduler with retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in 1 2 3 4 5; do
+            if npx --yes wrangler@4 deploy --config wrangler.safe-scheduler.jsonc 2>&1 | tee "/tmp/safe-scheduler-${attempt}.txt"; then ok=1; break; fi
+            sleep $((attempt*5))
+          done
+          test "$ok" -eq 1
+      - name: Prove safe runtime state
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=0
+          for attempt in $(seq 1 20); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?safe_restore=${EXPECTED_MAIN_SHA}-${attempt}" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          try: h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          except Exception: raise SystemExit(1)
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source')=='twelve_data', h
+          PY
+            then ready=1; break; fi
+            sleep 3
+          done
+          test "$ready" -eq 1
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets" > /tmp/secrets.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/secrets.json',encoding='utf-8'))
+          names={str(x.get('name')) for x in (p.get('result') or [])}
+          assert 'AIDY_DAY53_ADMIN_TOKEN' not in names, names
+          print('safe_restore_proven=true')
+          print('ephemeral_admin_secret_absent=true')
+          PY
+          cat /tmp/health.json
