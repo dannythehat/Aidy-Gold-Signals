@@ -1,0 +1,35 @@
+{
+  "manifest_version": "aidy_day53_step2_repository_preregistration_manifest_v1",
+  "state": "preregistered_no_result",
+  "registered_on_date": "2026-09-02",
+  "pre_preregistration_code_head_sha": "9fe17830c4784d5c81e8fa90ced0d72760e73abd",
+  "research_family_id": "day53-histdata-twelve-20-50-40-equivalence-v1",
+  "qualification_id": "day53-histdata-twelve-active-scale-sensitive-surface-v1",
+  "authorization_scope": "active_scale_sensitive_20_50_40_inheritance_only",
+  "cross_source_retrieval_permission_on_pass": false,
+  "singleton_parameter_values": {
+    "volatility_low_lt_bps": "20",
+    "volatility_high_gte_bps": "50",
+    "h1_atr_similarity_scale_bps": "40"
+  },
+  "legacy_30_bps_v1_scale_in_scope": false,
+  "prior_knowledge_disclosed": {
+    "criteria_are_informed_not_blind": true,
+    "median_absolute_difference_bps_approx_range": [10, 14],
+    "p95_absolute_difference_bps_approx_range": [38, 57],
+    "tail_max_absolute_difference_bps_approx": 97
+  },
+  "frozen_contract_code": "src/aidy/day53_step2_preregistration.py",
+  "frozen_contract_document": "docs/day53-step2-existing-constant-equivalence-preregistration.md",
+  "dependency_map": "docs/day53-market-data-dependency-provenance-map.md",
+  "selection_origin": "preregistered_explicit",
+  "initiated_by": "human",
+  "parameter_search_performed": false,
+  "empirical_result_computed": false,
+  "qualification_evidence_digest": null,
+  "twelve_data_vendor_calls_used_by_registration": 0,
+  "d1_ledger_append_required_before_empirical_scoring": true,
+  "repository_manifest_is_not_d1_ledger_chain_record": true,
+  "failure_or_insufficient_requires_new_step3_rederivation_family": true,
+  "no_discretionary_override": true
+}
