@@ -342,6 +342,7 @@ jobs:
           ON_VERSION_ID="$(sed -n 's/.*Current Version ID: //p' /tmp/worker-on-deploy.txt | tail -1 | tr -d '\r')"
           test -n "$ON_VERSION_ID"
           echo "WORKER_ON_VERSION_ID=$ON_VERSION_ID" >> "$GITHUB_ENV"
+          export WORKER_ON_VERSION_ID="$ON_VERSION_ID"
           ready=0
           for attempt in $(seq 1 30); do
             curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?launch_probe=${GITHUB_SHA}-on-${attempt}" > /tmp/health-on.json || true
