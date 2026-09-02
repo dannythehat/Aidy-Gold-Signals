@@ -256,11 +256,29 @@ class D1TwelveDataMarketStore:
     async def latest_m1_bars(self, *, start_utc: datetime, end_utc: datetime) -> list[dict[str, Any]]:
         result = await self._d1.prepare(
             """
+            WITH admitted AS (
+              SELECT c.*
+              FROM market_candles c
+              WHERE c.source=? AND c.symbol=? AND c.timeframe='1m'
+                AND c.open_time_utc>=? AND c.open_time_utc<?
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM twelve_data_bootstrap_requests b
+                  JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id
+                  WHERE r.completed_at_utc=c.first_observed_at
+                    AND c.open_time_utc>=b.window_start_utc
+                    AND c.open_time_utc<b.window_end_utc
+                    AND b.state<>'succeeded'
+                )
+            )
             SELECT c.id,c.open_time_utc,c.open,c.high,c.low,c.close,c.revision_index,c.payload_digest,c.first_observed_at
-            FROM market_candles c
-            WHERE c.source=? AND c.symbol=? AND c.timeframe='1m' AND c.open_time_utc>=? AND c.open_time_utc<?
-              AND NOT EXISTS (SELECT 1 FROM market_candles newer WHERE newer.source=c.source AND newer.symbol=c.symbol
-                AND newer.timeframe=c.timeframe AND newer.open_time_utc=c.open_time_utc AND newer.revision_index>c.revision_index)
+            FROM admitted c
+            WHERE NOT EXISTS (
+              SELECT 1 FROM admitted newer
+              WHERE newer.source=c.source AND newer.symbol=c.symbol
+                AND newer.timeframe=c.timeframe AND newer.open_time_utc=c.open_time_utc
+                AND newer.revision_index>c.revision_index
+            )
             ORDER BY c.open_time_utc ASC
             """
         ).bind(RAW_M1_SOURCE, AIDY_SYMBOL, _utc(start_utc).isoformat(), _utc(end_utc).isoformat()).all()
@@ -269,27 +287,60 @@ class D1TwelveDataMarketStore:
     async def latest_candle_ids(self) -> dict[str, UUID]:
         result = await self._d1.prepare(
             """
-            SELECT c.timeframe,c.id FROM market_candles c
-            WHERE c.symbol=? AND ((c.timeframe='1m' AND c.source=?) OR
-              (c.timeframe IN ('5m','15m','1h','4h','1d') AND c.source=?))
-              AND NOT EXISTS (SELECT 1 FROM market_candles newer WHERE newer.source=c.source AND newer.symbol=c.symbol
-                AND newer.timeframe=c.timeframe AND (newer.open_time_utc>c.open_time_utc OR
-                (newer.open_time_utc=c.open_time_utc AND newer.revision_index>c.revision_index)))
-            ORDER BY c.timeframe
+            WITH admitted_m1 AS (
+              SELECT c.*
+              FROM market_candles c
+              WHERE c.symbol=? AND c.timeframe='1m' AND c.source=?
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM twelve_data_bootstrap_requests b
+                  JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id
+                  WHERE r.completed_at_utc=c.first_observed_at
+                    AND c.open_time_utc>=b.window_start_utc
+                    AND c.open_time_utc<b.window_end_utc
+                    AND b.state<>'succeeded'
+                )
+            ), latest_m1 AS (
+              SELECT timeframe,id FROM admitted_m1
+              ORDER BY open_time_utc DESC,revision_index DESC LIMIT 1
+            ), latest_aggregates AS (
+              SELECT c.timeframe,c.id FROM market_candles c
+              WHERE c.symbol=? AND c.timeframe IN ('5m','15m','1h','4h','1d') AND c.source=?
+                AND NOT EXISTS (
+                  SELECT 1 FROM market_candles newer
+                  WHERE newer.source=c.source AND newer.symbol=c.symbol
+                    AND newer.timeframe=c.timeframe AND (newer.open_time_utc>c.open_time_utc OR
+                    (newer.open_time_utc=c.open_time_utc AND newer.revision_index>c.revision_index))
+                )
+            )
+            SELECT timeframe,id FROM latest_m1
+            UNION ALL
+            SELECT timeframe,id FROM latest_aggregates
+            ORDER BY timeframe
             """
-        ).bind(AIDY_SYMBOL, RAW_M1_SOURCE, AGGREGATE_SOURCE).all()
+        ).bind(AIDY_SYMBOL, RAW_M1_SOURCE, AIDY_SYMBOL, AGGREGATE_SOURCE).all()
         return {str(row["timeframe"]): UUID(str(row["id"])) for row in _results(result)}
 
     async def latest_m1_bar(self) -> dict[str, Any] | None:
         value = await self._d1.prepare(
             """
+            WITH admitted AS (
+              SELECT c.*
+              FROM market_candles c
+              WHERE c.source=? AND c.symbol=? AND c.timeframe='1m'
+                AND NOT EXISTS (
+                  SELECT 1
+                  FROM twelve_data_bootstrap_requests b
+                  JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id
+                  WHERE r.completed_at_utc=c.first_observed_at
+                    AND c.open_time_utc>=b.window_start_utc
+                    AND c.open_time_utc<b.window_end_utc
+                    AND b.state<>'succeeded'
+                )
+            )
             SELECT c.id,c.open_time_utc,c.open,c.high,c.low,c.close,c.revision_index,c.payload_digest,c.first_observed_at
-            FROM market_candles c
-            WHERE c.source=? AND c.symbol=? AND c.timeframe='1m'
-              AND NOT EXISTS (SELECT 1 FROM market_candles newer WHERE newer.source=c.source AND newer.symbol=c.symbol
-                AND newer.timeframe=c.timeframe AND (newer.open_time_utc>c.open_time_utc OR
-                (newer.open_time_utc=c.open_time_utc AND newer.revision_index>c.revision_index)))
-            ORDER BY c.open_time_utc DESC LIMIT 1
+            FROM admitted c
+            ORDER BY c.open_time_utc DESC,c.revision_index DESC LIMIT 1
             """
         ).bind(RAW_M1_SOURCE, AIDY_SYMBOL).first()
         return _row(value)
