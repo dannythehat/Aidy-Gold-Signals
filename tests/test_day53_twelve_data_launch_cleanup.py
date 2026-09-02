@@ -89,7 +89,7 @@ async def test_canonical_recorder_reserves_quota_before_vendor_call() -> None:
 
     assert events[:4] == ["reserve", "fetch", "finish", "feed_observation"]
     assert result.snapshot_id == REQUEST_ID
-    assert result.capture_status == "partial"
+    assert result.status == "partial"
     assert repository.snapshot is not None
     assert "scheduled_capture" in repository.snapshot["data_availability_json"]
     assert str(REQUEST_ID) in repository.snapshot["data_availability_json"]
