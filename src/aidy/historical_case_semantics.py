@@ -13,6 +13,8 @@ from aidy.market_data_semantics import (
     identity_from_feature_packet,
     verify_semantic_identity,
 )
+from aidy.semantic_context_packet import SEMANTIC_CONTEXT_PACKET_VERSION
+from aidy.semantic_feature_packet import SEMANTIC_FEATURE_PACKET_VERSION
 
 SEMANTIC_CASE_INPUT_VERSION = "aidy_semantic_case_input_wrapper_v1"
 
@@ -45,13 +47,27 @@ def build_semantic_pit_case_input(
     regime: Mapping[str, Any],
     setup_detection: Mapping[str, Any],
 ) -> dict[str, Any]:
+    if context.get("semantic_context_packet_version") != SEMANTIC_CONTEXT_PACKET_VERSION:
+        raise ValueError("Twelve Data PIT case requires semantic market context v1")
+    gold = context.get("gold")
+    if not isinstance(gold, Mapping):
+        raise TypeError("PIT context.gold must be an object")
+    if gold.get("semantic_feature_packet_version") != SEMANTIC_FEATURE_PACKET_VERSION:
+        raise ValueError("Twelve Data PIT case requires semantic Gold feature packet v1")
+    embedded = gold.get("market_data_semantic_identity")
+    if not isinstance(embedded, Mapping) or not verify_semantic_identity(embedded):
+        raise ValueError("Twelve Data PIT case requires embedded valid market-data semantics")
+    inferred = identity_from_feature_packet(gold)
+    if embedded.get("semantic_identity_digest") != inferred.get("semantic_identity_digest"):
+        raise ValueError("embedded Gold semantic identity does not match source-link provenance")
+    if context.get("market_data_semantic_identity_digest") != embedded.get(
+        "semantic_identity_digest"
+    ):
+        raise ValueError("semantic context identity digest does not match Gold feature identity")
+
     base = build_pit_case_input(
         context=context,
         regime=regime,
         setup_detection=setup_detection,
     )
-    gold = context.get("gold")
-    if not isinstance(gold, Mapping):
-        raise TypeError("PIT context.gold must be an object")
-    identity = identity_from_feature_packet(gold)
-    return _attach(base, identity)
+    return _attach(base, embedded)
