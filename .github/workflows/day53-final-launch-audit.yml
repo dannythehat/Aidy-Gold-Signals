@@ -2,6 +2,11 @@ name: AIDY Day 53 Final Launch Audit
 
 on:
   workflow_dispatch:
+  push:
+    branches: [day53/final-launch-readiness]
+    paths:
+      - ".github/workflows/day53-final-launch-audit.yml"
+      - "evidence/final-launch/**"
 
 permissions:
   contents: read
@@ -56,7 +61,6 @@ jobs:
           print(json.dumps(out,sort_keys=True))
           PY
       - name: Enumerate repository collaborators if token scope permits
-        id: collaborators
         shell: bash
         run: |
           set -euo pipefail
