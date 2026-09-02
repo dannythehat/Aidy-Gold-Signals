@@ -12,10 +12,52 @@ from typing import Any
 from aidy.market_data_semantics import histdata_semantic_identity, twelve_data_semantic_identity
 from aidy.research_trials import digest, equivalence_contract_payload, research_family_payload
 
-STEP2_PREREGISTRATION_VERSION = "aidy_day53_step2_existing_constant_equivalence_v1"
+STEP2_PREREGISTRATION_VERSION = "aidy_day53_step2_existing_constant_equivalence_v2"
 STEP2_RESEARCH_FAMILY_ID = "day53-histdata-twelve-20-50-40-equivalence-v1"
 STEP2_QUALIFICATION_ID = "day53-histdata-twelve-active-scale-sensitive-surface-v1"
 STEP2_AUTHORIZATION_SCOPE = "active_scale_sensitive_20_50_40_inheritance_only"
+
+PREREGISTRATION_REVISION: dict[str, Any] = {
+    "supersedes_version": "aidy_day53_step2_existing_constant_equivalence_v1",
+    "reviewed_after_repository_head_sha": "14d8e9d0e17113dec60586386b04a5538874ba96",
+    "reason": (
+        "Make pre-result design choices explicit: conjunctive-all decision rule, inclusive +/-5 bps "
+        "threshold-region membership, exact same-UTC H1 interval pairing, and repository-manifest/"
+        "ledger digest equality guard."
+    ),
+    "empirical_result_observed_before_revision": False,
+    "empirical_scoring_performed_before_revision": False,
+    "twelve_data_vendor_calls_used_by_revision": 0,
+    "acceptance_threshold_values_changed": False,
+    "minimum_evidence_requirements_changed": False,
+    "timestamp_hash_sampling_rule_changed": False,
+    "singleton_parameter_values_changed": False,
+}
+
+CONJUNCTIVE_DECISION_RULE: dict[str, Any] = {
+    "combination_method": "logical_conjunction_all_mandatory_criteria",
+    "composite_score_used": False,
+    "rationale": (
+        "Inheritance places the burden on retention: every registered mandatory decision-surface "
+        "and coverage criterion must pass, so strength on one metric cannot compensate for failure "
+        "on another."
+    ),
+    "chosen_before_result_visibility": True,
+    "discretionary_override_allowed": False,
+}
+
+THRESHOLD_REGION_DEFINITION: dict[str, Any] = {
+    "thresholds_bps": ["20", "50"],
+    "window_bps": "5",
+    "window_kind": "absolute_inclusive",
+    "membership_rule": (
+        "include if abs(histdata_h1_atr_14_bps - threshold_bps) <= 5 OR "
+        "abs(twelve_data_h1_atr_14_bps - threshold_bps) <= 5"
+    ),
+    "regions_evaluated_independently": True,
+    "observation_may_enter_both_regions_if_different_sources_trigger_different_thresholds": True,
+    "chosen_before_result_visibility": True,
+}
 
 PREREGISTERED_PARAMETER_SPACE: dict[str, Any] = {
     "selection_origin": "preregistered_explicit",
@@ -49,11 +91,32 @@ COMPARISON_POPULATION: dict[str, Any] = {
     "instrument": "XAUUSD",
     "historical_bucket_end_start_utc_inclusive": "2026-01-01T00:00:00+00:00",
     "historical_bucket_end_cutoff_utc_inclusive": "2026-08-31T23:00:00+00:00",
-    "base_unit": "H1 bucket end",
-    "pairing_key": "exact_same_utc_h1_bucket_end",
+    "base_unit": "H1 half-open interval [start_utc,end_utc)",
+    "pairing_key": "exact_same_utc_h1_interval_start_and_end",
+    "calendar_pairing_policy": {
+        "same_calendar_period_for_both_sources": True,
+        "comparable_but_different_periods_forbidden": True,
+        "pair_only_after_each_source_constructs_its_h1_bar_independently": True,
+    },
+    "pairing_rule": {
+        "require_histdata_open_time_utc_equals_twelve_open_time_utc": True,
+        "require_histdata_end_utc_equals_twelve_end_utc": True,
+        "h1_end_definition": "open_time_utc + 60 minutes",
+        "source_session_conventions_are_not_coerced_before_bar_construction": True,
+        "constituent_minute_policy_remains_source_native": True,
+        "h1_alignment_note": (
+            "HistData fixed UTC-05 hourly boundaries and Twelve UTC-epoch hourly boundaries both "
+            "land on UTC hour boundaries; equality is still checked, not assumed."
+        ),
+    },
     "source_construction": {
-        "histdata": "frozen native HistData retrospective construction",
-        "twelve_data": "frozen Twelve Data raw-M1 plus AIDY accepted aggregation construction",
+        "histdata": (
+            "fixed EST source timestamps aggregated by source-hour; no AIDY New York session filter"
+        ),
+        "twelve_data": (
+            "UTC vendor M1 aggregated after AIDY New York gold-session filtering with exact "
+            "expected-minute completeness and UTC-epoch H1 boundaries"
+        ),
     },
     "eligibility": [
         "both sources have complete input required to compute H1 ATR(14)",
@@ -124,6 +187,7 @@ DECISION_SURFACE_METRICS: list[dict[str, Any]] = [
         "metric": "threshold_near_band_disagreement",
         "thresholds_bps": [20, 50],
         "window_bps": 5,
+        "window_membership": "inclusive_either_source",
         "uncertainty": "wilson_score_95_percent",
     },
     {
@@ -190,9 +254,7 @@ PASS_CRITERIA: dict[str, Any] = {
 }
 
 FAIL_CRITERIA: dict[str, Any] = {
-    "when_coverage_is_sufficient": (
-        "fail if any mandatory PASS boundary is not satisfied"
-    ),
+    "when_coverage_is_sufficient": "fail if any mandatory PASS boundary is not satisfied",
     "inheritance_allowed": False,
     "tolerance_relaxation_after_result_allowed": False,
     "automatic_parameter_redefinition_allowed": False,
@@ -242,6 +304,9 @@ def build_step2_research_family_payload() -> dict[str, Any]:
             "selection_origin": "preregistered_explicit",
             "initiated_by": "human",
             "prior_knowledge": PRIOR_KNOWLEDGE,
+            "decision_rule": CONJUNCTIVE_DECISION_RULE,
+            "threshold_region_definition": THRESHOLD_REGION_DEFINITION,
+            "preregistration_revision": PREREGISTRATION_REVISION,
             "no_parameter_search": True,
             "failure_routes_to_new_step3_rederivation_family": True,
         }
@@ -275,6 +340,9 @@ def build_step2_equivalence_contract_payload() -> dict[str, Any]:
             "parameter_space_digest": PARAMETER_SPACE_DIGEST,
             "prior_knowledge": PRIOR_KNOWLEDGE,
             "comparison_population": COMPARISON_POPULATION,
+            "decision_rule": CONJUNCTIVE_DECISION_RULE,
+            "threshold_region_definition": THRESHOLD_REGION_DEFINITION,
+            "preregistration_revision": PREREGISTRATION_REVISION,
             "authorization_scope": STEP2_AUTHORIZATION_SCOPE,
             "cross_source_retrieval_permission_on_pass": False,
             "full_retrieval_permission_requires_later_qualification": True,
