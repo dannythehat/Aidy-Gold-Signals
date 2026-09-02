@@ -7,6 +7,7 @@ from typing import Any
 from aidy import analogue_retrieval as v1
 from aidy import analogue_retrieval_v2 as v2
 from aidy.market_data_semantics import (
+    accepted_market_data_equivalences,
     assert_semantic_compatible,
     digest,
     verify_semantic_identity,
@@ -62,7 +63,7 @@ def retrieve_semantic_analogues_v2(
     *,
     query: Mapping[str, Any],
     candidate_cases: Iterable[Mapping[str, Any]],
-    accepted_equivalence_contracts: Mapping[str, str] | None = None,
+    research_ledger_records: Iterable[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     v1._validate_query(query)
     if query.get("semantic_query_version") != SEMANTIC_ANALOGUE_QUERY_VERSION:
@@ -75,7 +76,7 @@ def retrieve_semantic_analogues_v2(
     ):
         raise ValueError("query semantic identity digest does not match identity contents")
 
-    contracts = dict(accepted_equivalence_contracts or {})
+    accepted = accepted_market_data_equivalences(research_ledger_records)
     raw_candidates = list(candidate_cases)
     compatible: list[Mapping[str, Any]] = []
     exclusions: Counter[str] = Counter()
@@ -91,12 +92,12 @@ def retrieve_semantic_analogues_v2(
             continue
         candidate_digest = str(candidate_identity["semantic_identity_digest"])
         contract_key = f"{query_digest}:{candidate_digest}"
-        contract_digest = contracts.get(contract_key)
+        acceptance = accepted.get(contract_key)
         try:
             evidence = assert_semantic_compatible(
                 query_identity,
                 candidate_identity,
-                accepted_equivalence_contract_digest=contract_digest,
+                accepted_equivalence=acceptance,
             )
         except ValueError:
             exclusions["market_data_semantic_identity_incompatible"] += 1
@@ -119,9 +120,14 @@ def retrieve_semantic_analogues_v2(
         "semantic_compatible_candidate_count": len(compatible),
         "semantic_exclusion_counts": dict(sorted(exclusions.items())),
         "compatibility_evidence": compatibility_evidence,
-        "accepted_equivalence_contracts": dict(sorted(contracts.items())),
+        "accepted_equivalence_ledger_record_digests": sorted(
+            {
+                str(value["qualification_result_record_digest"])
+                for value in accepted.values()
+            }
+        ),
         "base_retrieval": base,
-        "cross_source_comparison_without_qualified_contract_allowed": False,
+        "cross_source_comparison_without_ledger_proven_pass_allowed": False,
     }
     result["semantic_retrieval_digest"] = digest(result)
     return result
