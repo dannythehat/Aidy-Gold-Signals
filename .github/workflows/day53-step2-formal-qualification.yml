@@ -55,12 +55,14 @@ jobs:
           print(f"FORMAL_PROTOCOL_DIGEST={p['run_protocol_digest']}")
           PY
           source /tmp/formal-anchor.env
+          export FORMAL_RUN_HEAD FORMAL_PROTOCOL_DIGEST
           echo "FORMAL_RUN_HEAD=$FORMAL_RUN_HEAD" >> "$GITHUB_ENV"
           echo "FORMAL_PROTOCOL_DIGEST=$FORMAL_PROTOCOL_DIGEST" >> "$GITHUB_ENV"
           git merge-base --is-ancestor "$FORMAL_RUN_HEAD" HEAD
           git diff --exit-code "$FORMAL_RUN_HEAD" HEAD -- \
             src/aidy/day53_step2_scoring.py \
             scripts/day53_step2_formal_run.py \
+            scripts/day53_step2_structural_audit_append.py \
             .github/workflows/day53-step2-formal-qualification.yml \
             evidence/research_ledger/day53-step2-formal-run-protocol.json \
             src/aidy/day53_step2_preregistration.py \
@@ -88,6 +90,7 @@ jobs:
           uv run ruff check \
             src/aidy/day53_step2_scoring.py \
             scripts/day53_step2_formal_run.py \
+            scripts/day53_step2_structural_audit_append.py \
             tests/test_day53_step2_scoring.py
           uv run pytest -q \
             tests/test_day53_step2_scoring.py \
@@ -179,19 +182,53 @@ jobs:
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
             --config "$STEP2_D1_CONFIG" \
             --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
-            > /tmp/ledger-final.json
+            > /tmp/ledger-result.json
 
-      - name: Verify final D1 chain and frozen outcome
+      - name: Verify frozen qualification result
         shell: bash
         run: |
           set -euo pipefail
           uv run python scripts/day53_step2_formal_run.py verify-final \
-            --ledger /tmp/ledger-final.json \
+            --ledger /tmp/ledger-result.json \
             --manifest "$PREREG_MANIFEST" \
             --protocol "$RUN_PROTOCOL" \
             --anchor "$D1_CHECKPOINT" \
             --accepted-head "$FORMAL_RUN_HEAD" \
             --output day53_step2_formal_result.json
+
+      - name: Prepare explicit structural proof and execution-decision audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day53_step2_structural_audit_append.py prepare \
+            --ledger /tmp/ledger-result.json \
+            --accepted-head "$FORMAL_RUN_HEAD" \
+            --sql /tmp/structural-audit.sql \
+            --output day53_step2_structural_audit_preappend.json
+
+      - name: Append structural proof audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q '^INSERT INTO research_evidence_ledger' /tmp/structural-audit.sql; then
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+              --config "$STEP2_D1_CONFIG" --file /tmp/structural-audit.sql
+          else
+            echo "No structural-audit append required."
+          fi
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config "$STEP2_D1_CONFIG" \
+            --command "SELECT sequence,record_digest,previous_digest,ledger_version,record_type,recorded_at_utc,code_head_sha,initiated_by,payload_json FROM research_evidence_ledger ORDER BY sequence" \
+            > /tmp/ledger-final.json
+
+      - name: Verify final D1 chain and explicit structural audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day53_step2_structural_audit_append.py verify \
+            --ledger /tmp/ledger-final.json \
+            --accepted-head "$FORMAL_RUN_HEAD" \
+            --output day53_step2_structural_audit.json
 
       - name: Preserve formal result evidence
         uses: actions/upload-artifact@v4
@@ -201,5 +238,7 @@ jobs:
             day53_step2_trial_start.json
             day53_step2_formal_result_preappend.json
             day53_step2_formal_result.json
+            day53_step2_structural_audit_preappend.json
+            day53_step2_structural_audit.json
           if-no-files-found: error
           retention-days: 90
