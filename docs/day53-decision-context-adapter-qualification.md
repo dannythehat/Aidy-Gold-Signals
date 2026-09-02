@@ -35,9 +35,10 @@ A cross-source candidate may enter the comparison set only when the authoritativ
 2. a `market_data_equivalence_contract_registered` record exists for the exact pair of semantic identity digests;
 3. a later `qualification_result` record references the exact digest of that contract;
 4. the result is `pass` and `inheritance_allowed=true`;
-5. the qualification evidence digest is present and valid.
+5. the contract explicitly carries `authorization_scope=full_authoritative_v2_analogue_retrieval` and `cross_source_retrieval_permission_on_pass=true`; and
+6. the qualification evidence digest is present and valid.
 
-A caller-supplied equivalence string, agent assertion, document note or unverified in-memory flag is not admissible proof.
+A parameter-specific or partial-surface PASS is not a full retrieval permission. A caller-supplied equivalence string, agent assertion, document note or unverified in-memory flag is not admissible proof.
 
 The research ledger must also remain consistent with the latest committed `aidy_research_ledger_anchor_v1` repository checkpoint. A D1 restore, table recreation or schema rewrite that moves the ledger behind the committed anchored sequence, changes the anchored digest/genesis, or drops the raw attempted-trial count below its committed floor is a qualification failure until reconciled by new append-only evidence. The checkpoint is a rollback-detection control, not a replacement research ledger.
 
@@ -75,7 +76,8 @@ The adapter may turn on for a formal cohort only when one immutable qualificatio
    - analogue retrieval uses `aidy_semantic_analogue_retrieval_v1`
    - model dossiers use `aidy_semantic_context_composer_v1`
    - missing semantic identity is an automatic exclusion
-   - differing HistData/Twelve Data identities are an automatic exclusion unless the append-only research ledger proves an exact-pair PASS equivalence result
+   - differing HistData/Twelve Data identities are an automatic exclusion unless the append-only research ledger proves an exact-pair PASS with the explicit full-retrieval authorization scope
+   - the Step 2 `active_scale_sensitive_20_50_40_inheritance_only` scope cannot unlock cross-source retrieval even if Step 2 later passes
    - legacy `build_feature_packet` / `build_context_packet` / `build_pit_case_input` / `build_analogue_query` / `retrieve_analogues_v2` / `compose_context_v2` calls cannot by themselves satisfy the new Twelve Data cohort qualification
 
 5. **Macro/event context**
@@ -102,6 +104,7 @@ The adapter may turn on for a formal cohort only when one immutable qualificatio
    - failed bootstrap or partial persistence cannot become visible canonical decision state
    - an invalid research-ledger chain or repository-anchor inconsistency blocks any ledger-derived equivalence permission
    - an invalid/tampered semantic retrieval wrapper or a semantic retrieval whose query identity differs from the current Gold context cannot enter the model dossier
+   - a PASS whose authorization scope is narrower than full V2 retrieval cannot be promoted into full cross-source retrieval permission
 
 10. **Qualification immutability**
     - qualification record includes accepted code SHA, context contract version, source-semantic digest, parameter-provenance audit digest, dependency-map digest, fixture-set digest and test-result digest
@@ -128,6 +131,7 @@ The qualification suite must include at least these deterministic cases:
 - attempted direct legacy retrieval into the Twelve model-dossier boundary: rejected before model composition
 - tampered semantic-retrieval digest: rejected before model composition
 - semantic-retrieval query identity that does not equal the current Gold context identity: rejected before model composition
+- attempted use of a partial-surface Step 2 PASS as full cross-source retrieval permission: rejected
 
 ## Turn-on rule
 
@@ -137,6 +141,10 @@ A successful feed bootstrap, a healthy HTTP endpoint, a successful model call or
 
 The first scheduler-generated decision packet after qualification must still pass live current-bucket readiness. Qualification authorizes the adapter contract; it does not waive per-tick data-quality gates.
 
-For Step 2 equivalence preregistration, the record must explicitly state that criteria are **informed rather than blind**: the team has already observed reconciliation differences of approximately 10–14 bps median absolute difference, approximately 38–57 bps at p95, and a tail maximum near 97 bps. Those prior observations do not determine PASS/FAIL, but they must remain visible as prior knowledge when the acceptance and rejection tolerances are frozen.
+Step 2 is preregistered in `docs/day53-step2-existing-constant-equivalence-preregistration.md` and `src/aidy/day53_step2_preregistration.py`. Its criteria are **informed rather than blind**: the team had already observed reconciliation differences of approximately 10–14 bps median absolute difference, approximately 38–57 bps at p95, and a tail maximum near 97 bps. Those prior observations remain visible as prior knowledge and do not count as the qualification sample.
 
-Step 2 must not begin until `docs/day53-market-data-dependency-provenance-map.md` is frozen and its code-binding tests pass. No parameter search or inheritance test was authorized by the Step 1/1.5 work itself.
+The Step 2 registered parameter space is a singleton `20 / 50 / 40`; it is not a parameter search. PASS, FAIL and INSUFFICIENT criteria, minimum coverage, hash-based sampling, uncertainty rules and downstream decision-surface statistics are frozen before result computation. FAIL or INSUFFICIENT requires a separate Step 3 preregistered re-derivation family rather than changing Step 2 after inspection.
+
+Before any empirical Step 2 scoring begins, matching research-family and equivalence-contract payloads must be appended to the validated D1 research-ledger chain. The Git preregistration is immutable ex-ante evidence but is not a substitute for that runtime ledger append.
+
+No empirical Step 2 result or parameter inheritance is created by preregistration alone.
