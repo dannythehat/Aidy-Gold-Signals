@@ -1,16 +1,19 @@
 # Day 53 — formal private forward paper evaluation freeze
 
 Decision date: 1 September 2026  
-Architecture V2 earliest formal cohort start: **20 September 2026**  
+Original Architecture V2 planning start: **20 September 2026**  
+Immediate-start amendment effective floor: `2026-09-01T16:07:00+00:00`  
 Accepted Day 52 base: `c2282d4cd6ab3eebc311e62004167a78d5ccee15`
 
 ## Purpose
 
 Day 53 is the boundary between engineering/replay/shadow research and formal unseen forward paper evidence.
 
-This change prepares the machinery now, but it does **not** backdate or start formal evidence before the Architecture V2 earliest date. The formal cohort can activate only at or after `2026-09-20T00:00:00+00:00`.
+Architecture V2 originally planned the formal cohort for 20 September 2026. The accepted Day 53 immediate-start amendment superseded that calendar assumption ex ante on 1 September 2026 and created a new frozen manifest/cohort version rather than rewriting the old planning evidence.
 
-Everything before that boundary remains engineering, replay, shadow or readiness evidence.
+That amendment does **not** make later evidence-semantic market-data changes automatically eligible for the already activated cohort. A new authoritative feed, source identity, session/candle semantic, or differently scaled decision surface follows the evidence-semantic change rule below and normally requires a new cohort/epoch after its own qualification passes.
+
+No pre-activation evidence may be backfilled into any cohort.
 
 ## Frozen version manifest
 
@@ -23,10 +26,13 @@ A cohort is identified by an immutable manifest that binds the exact accepted co
 - Day 45 selective-abstention layer, explicitly shadow-only
 - Day 41 GC/XAU shadow spine
 - Day 29 forward-only macro surprise contract
+- authoritative market-data source identity and data-semantic qualification identity
+- decision-context adapter qualification identity
+- parameter-provenance audit identity
 
 The manifest also freezes the Architecture V2 boundaries:
 
-- no pre-Day53 performance backfill
+- no pre-activation performance backfill
 - no forward-outcome tuning inside an active cohort
 - no selective-layer trading/publication gate
 - GC remains shadow rather than authoritative decision input
@@ -46,6 +52,8 @@ A cohort cannot be treated as evidentially ready merely because the feed is reac
 - the analogue-retrieval source boundary, proving that live query features are not compared against a differently scaled historical instrument unless a deterministic equivalence/normalization contract has been accepted ex ante
 
 Feed qualification and decision-context qualification are separate acceptance questions. Bootstrap/history population does not imply live decision readiness.
+
+For the Twelve Data adapter introduced after the original Gold-API cohort, the reconciled source/session/candle differences are evidence-semantic. The Twelve Data decision surface therefore **must not inherit or continue the existing Gold-API cohort**. It requires a new cohort/epoch, and formal accumulation remains zero until the feed, parameter provenance, analogue boundary and decision-context adapter are all qualified under one accepted code head.
 
 ## Evidence-semantic change presumption
 
@@ -80,7 +88,7 @@ A formal cohort has only three states:
 2. `active`
 3. `closed`
 
-Preparation can occur before 20 September. Activation cannot.
+The historical 20 September planning date no longer blocks activation because the accepted immediate-start amendment superseded it. Activation is instead controlled by the applicable manifest/amendment plus the complete qualification state for that cohort's evidence semantics.
 
 A closed cohort cannot be reopened or patched in place.
 
@@ -139,11 +147,11 @@ The Day 45 selective/conformal layer is logged for later risk-coverage work but 
 
 ## Formal start versus readiness acceptance
 
-The Day 53 CI workflow proves the registry, date gate, immutability, freeze-break rules, J17/J20 logging structure, shadow boundaries and full repository regression.
+The Day 53 CI workflow proves the registry, immutability, freeze-break rules, J17/J20 logging structure, shadow boundaries and full repository regression for the accepted code head.
 
-Passing that workflow means **Day 53 readiness is built**.
+Passing a feed/bootstrap workflow means the adapter/readiness machinery is built. It does **not** activate a new evidence-semantic cohort and it does not make a mid-bucket bootstrap decision-ready.
 
-It does **not** mean the formal cohort has started on 1 September. The cohort starts only when the frozen manifest is activated on or after 20 September 2026.
+For Twelve Data, formal evidence begins only after a new frozen manifest/cohort version is created under the evidence-semantic rule, the required qualifications are accepted, and a scheduler-generated tick independently satisfies live current-bucket readiness. A bootstrap request itself never creates or asserts decision readiness.
 
 ## No downstream execution
 
