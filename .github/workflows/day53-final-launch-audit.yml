@@ -54,13 +54,14 @@ jobs:
           q bootstrap-runs "SELECT id,started_at_utc,completed_at_utc,as_of_utc,planned_windows,required_m1_minutes,state FROM twelve_data_bootstrap_runs ORDER BY started_at_utc"
           q bootstrap-requests "SELECT bootstrap_id,window_index,window_start_utc,window_end_utc,required_m1_minutes,persisted_m1_minutes,state,failure_reason,request_ledger_id FROM twelve_data_bootstrap_requests ORDER BY bootstrap_id,window_index"
           q candle-counts "SELECT source,timeframe,COUNT(*) AS n,MIN(open_time_utc) AS first_open,MAX(open_time_utc) AS last_open FROM market_candles WHERE source LIKE 'twelve_data%' GROUP BY source,timeframe ORDER BY source,timeframe"
+          q legacy-batches "SELECT first_observed_at,COUNT(*) AS n,MIN(open_time_utc) AS first_open,MAX(open_time_utc) AS last_open FROM market_candles WHERE source='twelve_data_vendor_m1_v1' GROUP BY first_observed_at ORDER BY first_observed_at"
           q quarantined-m1 "SELECT COUNT(*) AS n FROM market_candles c WHERE c.source='twelve_data_vendor_m1_v1' AND EXISTS (SELECT 1 FROM twelve_data_bootstrap_requests b JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id WHERE r.completed_at_utc=c.first_observed_at AND c.open_time_utc>=b.window_start_utc AND c.open_time_utc<b.window_end_utc AND b.state<>'succeeded')"
           q admitted-m1 "SELECT COUNT(*) AS n FROM market_candles c WHERE c.source='twelve_data_vendor_m1_v1' AND NOT EXISTS (SELECT 1 FROM twelve_data_bootstrap_requests b JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id WHERE r.completed_at_utc=c.first_observed_at AND c.open_time_utc>=b.window_start_utc AND c.open_time_utc<b.window_end_utc AND b.state<>'succeeded')"
           q forward-cohorts "SELECT cohort_id,cohort_version,accepted_code_head,activated_at_utc,state FROM aidy_forward_cohorts ORDER BY activated_at_utc DESC"
           q forward-evals "SELECT COUNT(*) AS n,MIN(evaluated_at_utc) AS first_eval,MAX(evaluated_at_utc) AS last_eval FROM aidy_forward_evaluations"
           python - <<'PY'
           import json, pathlib
-          names=['research-ledger','bootstrap-runs','bootstrap-requests','candle-counts','quarantined-m1','admitted-m1','forward-cohorts','forward-evals']
+          names=['research-ledger','bootstrap-runs','bootstrap-requests','candle-counts','legacy-batches','quarantined-m1','admitted-m1','forward-cohorts','forward-evals']
           out={name: json.load(open('/tmp/'+name+'.json',encoding='utf-8')) for name in names}
           pathlib.Path('day53-final-launch-audit.json').write_text(json.dumps(out,sort_keys=True,indent=2),encoding='utf-8')
           print(json.dumps(out,sort_keys=True))
