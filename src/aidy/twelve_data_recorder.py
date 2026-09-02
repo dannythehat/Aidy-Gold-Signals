@@ -72,6 +72,13 @@ def bootstrap_required_m1_open_times(
 
 
 class AidyTwelveDataRecorderService:
+    """Canonical scheduled capture.
+
+    Every upstream call is reserved in the D1 quota ledger before the vendor is
+    contacted. Manual probes and administrative bootstrap use separate paths and
+    are never allowed to masquerade as scheduled decision evidence.
+    """
+
     def __init__(
         self,
         *,
@@ -79,19 +86,29 @@ class AidyTwelveDataRecorderService:
         gateway: TwelveDataOhlcGateway | TwelveDataGateway,
         market_store: D1TwelveDataMarketStore,
         recent_outputsize: int = 30,
-        bootstrap_required_windows_only: bool = False,
     ) -> None:
         self._repository = repository
         self._gateway = gateway
         self._market_store = market_store
-        self._recent_outputsize = max(10, min(int(recent_outputsize), 5000))
-        self._bootstrap_required_windows_only = bool(bootstrap_required_windows_only)
+        self._recent_outputsize = max(10, min(int(recent_outputsize), 30))
 
     async def capture_once(self) -> ReferenceCaptureResult:
+        requested_at = datetime.now(UTC)
+        request_id = await self._market_store.reserve_request(
+            requested_at=requested_at,
+            request_kind="scheduled_capture",
+            outputsize=self._recent_outputsize,
+        )
         try:
             fetch = await self._gateway.fetch_1m(outputsize=self._recent_outputsize)
         except TwelveDataMarketError as exc:
             captured_at = datetime.now(UTC)
+            await self._market_store.finish_request(
+                request_id=request_id,
+                completed_at=captured_at,
+                status="failed",
+                error_code=exc.code,
+            )
             snapshot_id = await self._store_snapshot(
                 captured_at=captured_at,
                 status="unavailable",
@@ -104,13 +121,30 @@ class AidyTwelveDataRecorderService:
                     "quote": exc.code,
                     "candle_source": RAW_M1_SOURCE,
                     "aggregate_source": AGGREGATE_SOURCE,
+                    "request_kind": "scheduled_capture",
+                    "request_ledger_id": str(request_id),
+                    "request_ledger_status": "failed",
                     "spread_advisory_state": "unavailable",
                     "spread_missing_blocks": False,
                 },
                 latest_candle_ids={},
             )
             return ReferenceCaptureResult(snapshot_id, "unavailable", False)
+        except Exception as exc:
+            await self._market_store.finish_request(
+                request_id=request_id,
+                completed_at=datetime.now(UTC),
+                status="failed",
+                error_code=type(exc).__name__,
+            )
+            raise
 
+        await self._market_store.finish_request(
+            request_id=request_id,
+            completed_at=fetch.fetched_at_utc,
+            status="succeeded",
+            fetch=fetch,
+        )
         await self._market_store.record_feed_observation(fetch)
         latest_vendor_m1 = (
             max(fetch.closed_bars, key=lambda item: item.open_time_utc)
@@ -124,16 +158,10 @@ class AidyTwelveDataRecorderService:
             ),
         )
         fetched_opens = {bar.open_time_utc for bar in fetch.closed_bars}
-        if self._bootstrap_required_windows_only:
-            bars_to_store = tuple(
-                bar for bar in fetch.closed_bars if bar.open_time_utc in required_opens
-            )
-        else:
-            bars_to_store = fetch.closed_bars
 
         current_ids: dict[str, UUID] = {}
         stored = 0
-        for bar in bars_to_store:
+        for bar in fetch.closed_bars:
             candle = {
                 "symbol": AIDY_SYMBOL,
                 "timeframe": "1m",
@@ -192,6 +220,9 @@ class AidyTwelveDataRecorderService:
             "provider_meta": fetch.meta,
             "credit_headers": fetch.credit_headers,
             "response_digest": fetch.response_digest,
+            "request_kind": "scheduled_capture",
+            "request_ledger_id": str(request_id),
+            "request_ledger_status": "succeeded",
             "freshness_state": fetch.freshness_state,
             "session_open_at_fetch": fetch.session_open_at_fetch,
             "observed_open_session_lag_seconds": fetch.open_session_lag_seconds,
@@ -203,13 +234,10 @@ class AidyTwelveDataRecorderService:
             "candles": candle_states,
             "all_timeframes_ready": all_timeframes_ready,
             "snapshot_candle_identity_policy": "current_capture_exact_bucket_only",
-            "bootstrap_required_windows_only": self._bootstrap_required_windows_only,
             "bootstrap_required_m1_minutes": len(required_opens),
             "bootstrap_required_m1_minutes_missing_from_vendor_fetch": len(
                 required_opens - fetched_opens
             ),
-            "bootstrap_vendor_closed_bars_returned": len(fetch.closed_bars),
-            "bootstrap_vendor_m1_bars_persisted": len(bars_to_store),
             "orders": "not_captured",
         }
         snapshot_id = await self._store_snapshot(
