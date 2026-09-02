@@ -1,0 +1,84 @@
+name: AIDY Day 53 Final Launch Audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          json.dump(cfg, open('wrangler.day53.audit.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+      - name: Query launch state without market-data calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          q() { npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.audit.jsonc --command "$1"; }
+          q "SELECT sequence,record_type,recorded_at_utc,digest FROM research_evidence_ledger ORDER BY sequence DESC LIMIT 5" > /tmp/research-ledger.json
+          q "SELECT id,started_at_utc,completed_at_utc,as_of_utc,planned_windows,required_m1_minutes,state FROM twelve_data_bootstrap_runs ORDER BY started_at_utc" > /tmp/bootstrap-runs.json
+          q "SELECT bootstrap_id,window_index,window_start_utc,window_end_utc,required_m1_minutes,persisted_m1_minutes,state,failure_reason,request_ledger_id FROM twelve_data_bootstrap_requests ORDER BY bootstrap_id,window_index" > /tmp/bootstrap-requests.json
+          q "SELECT source,timeframe,COUNT(*) AS n,MIN(open_time_utc) AS first_open,MAX(open_time_utc) AS last_open FROM market_candles WHERE source LIKE 'twelve_data%' GROUP BY source,timeframe ORDER BY source,timeframe" > /tmp/candle-counts.json
+          q "SELECT COUNT(*) AS n FROM market_candles c WHERE c.source='twelve_data_m1_v1' AND EXISTS (SELECT 1 FROM twelve_data_bootstrap_requests b JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id WHERE r.completed_at_utc=c.first_observed_at AND c.open_time_utc>=b.window_start_utc AND c.open_time_utc<b.window_end_utc AND b.state<>'succeeded')" > /tmp/quarantined-m1.json
+          q "SELECT COUNT(*) AS n FROM market_candles c WHERE c.source='twelve_data_m1_v1' AND NOT EXISTS (SELECT 1 FROM twelve_data_bootstrap_requests b JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id WHERE r.completed_at_utc=c.first_observed_at AND c.open_time_utc>=b.window_start_utc AND c.open_time_utc<b.window_end_utc AND b.state<>'succeeded')" > /tmp/admitted-m1.json
+          q "SELECT cohort_id,cohort_version,accepted_code_head,activated_at_utc,state FROM aidy_forward_cohorts ORDER BY activated_at_utc DESC" > /tmp/forward-cohorts.json
+          q "SELECT COUNT(*) AS n,MIN(evaluated_at_utc) AS first_eval,MAX(evaluated_at_utc) AS last_eval FROM aidy_forward_evaluations" > /tmp/forward-evals.json
+          python - <<'PY'
+          import json, pathlib
+          names=['research-ledger','bootstrap-runs','bootstrap-requests','candle-counts','quarantined-m1','admitted-m1','forward-cohorts','forward-evals']
+          out={}
+          for name in names:
+              out[name]=json.load(open('/tmp/'+name+'.json',encoding='utf-8'))
+          pathlib.Path('day53-final-launch-audit.json').write_text(json.dumps(out,sort_keys=True,indent=2),encoding='utf-8')
+          print(json.dumps(out,sort_keys=True))
+          PY
+      - name: Enumerate repository collaborators if token scope permits
+        id: collaborators
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/collaborators.json -w '%{http_code}' -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/collaborators?affiliation=all&per_page=100")
+          python - "$code" <<'PY'
+          import json, pathlib, sys
+          code=sys.argv[1]
+          raw=pathlib.Path('/tmp/collaborators.json').read_text(encoding='utf-8')
+          try: payload=json.loads(raw)
+          except Exception: payload={'raw':raw[:1000]}
+          if code=='200' and isinstance(payload,list):
+              result={'http_status':200,'enumeration_supported':True,'collaborators':[{'login':x.get('login'),'permissions':x.get('permissions'),'role_name':x.get('role_name')} for x in payload]}
+          else:
+              result={'http_status':int(code),'enumeration_supported':False,'response':payload}
+          pathlib.Path('day53-collaborator-audit.json').write_text(json.dumps(result,sort_keys=True,indent=2),encoding='utf-8')
+          print(json.dumps(result,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-final-launch-audit-${{ github.sha }}
+          path: |
+            day53-final-launch-audit.json
+            day53-collaborator-audit.json
+          if-no-files-found: error
+          retention-days: 90
