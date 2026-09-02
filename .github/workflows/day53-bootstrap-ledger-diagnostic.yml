@@ -1,0 +1,69 @@
+name: AIDY Day 53 Bootstrap Ledger Diagnostic
+
+on:
+  push:
+    branches: [ops/day53-bootstrap-ledger-diagnostic]
+    paths: [".github/workflows/day53-bootstrap-ledger-diagnostic.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 8870fc620a6eb06702e282cafb53b7dd38b8fb03
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          cat > /tmp/wrangler.jsonc <<'JSON'
+          {"name":"aidy-signals-test","main":"src/entry.py","compatibility_date":"2026-08-16","compatibility_flags":["python_workers"],"d1_databases":[{"binding":"AIDY_OPS","database_name":"aidy-ops-test","database_id":"3588d82a-d686-4430-872d-d4c0e62c3d5d"}]}
+          JSON
+      - name: Query authoritative bootstrap ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.jsonc --command "SELECT id,started_at_utc,completed_at_utc,as_of_utc,planned_windows,required_m1_minutes,state,failure_reason FROM twelve_data_bootstrap_runs ORDER BY started_at_utc DESC LIMIT 5" > /tmp/runs.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.jsonc --command "SELECT bootstrap_id,window_index,request_ledger_id,window_start_utc,window_end_utc,required_m1_minutes,persisted_m1_minutes,state,response_digest,failure_reason FROM twelve_data_bootstrap_requests WHERE bootstrap_id=(SELECT id FROM twelve_data_bootstrap_runs ORDER BY started_at_utc DESC LIMIT 1) ORDER BY window_index" > /tmp/windows.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.jsonc --command "SELECT id,requested_at_utc,completed_at_utc,status,request_kind,provider_credits_request,provider_minute_credits_used,provider_minute_credits_left,error_code,response_digest FROM twelve_data_request_ledger WHERE request_kind='bootstrap' ORDER BY requested_at_utc DESC LIMIT 40" > /tmp/requests.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.jsonc --command "SELECT COUNT(*) AS admitted_m1,MIN(open_time_utc) AS min_open,MAX(open_time_utc) AS max_open FROM twelve_data_decision_admitted_m1_v1" > /tmp/admitted.json
+      - name: Summarize
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          def rows(p):
+              out=[]
+              for b in json.load(open(p,encoding='utf-8')): out.extend(b.get('results') or [])
+              return out
+          runs=rows('/tmp/runs.json'); windows=rows('/tmp/windows.json'); requests=rows('/tmp/requests.json'); admitted=rows('/tmp/admitted.json')
+          print('bootstrap_runs=',runs)
+          print('bootstrap_window_count=',len(windows))
+          print('bootstrap_windows=',windows)
+          print('bootstrap_requests=',requests)
+          print('decision_admitted_m1=',admitted)
+          print('failed_windows=',[w for w in windows if w.get('state')!='succeeded'])
+          print('vendor_calls_from_diagnostic=0')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-bootstrap-ledger-diagnostic-${{ github.sha }}
+          path: |
+            /tmp/runs.json
+            /tmp/windows.json
+            /tmp/requests.json
+            /tmp/admitted.json
+          retention-days: 30
