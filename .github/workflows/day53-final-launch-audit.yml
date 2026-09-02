@@ -50,7 +50,7 @@ jobs:
               exit 1
             fi
           }
-          q research-ledger "SELECT sequence,record_type,recorded_at_utc,digest FROM research_evidence_ledger ORDER BY sequence DESC LIMIT 5"
+          q research-ledger "SELECT sequence,record_type,recorded_at_utc,record_digest FROM research_evidence_ledger ORDER BY sequence DESC LIMIT 5"
           q bootstrap-runs "SELECT id,started_at_utc,completed_at_utc,as_of_utc,planned_windows,required_m1_minutes,state FROM twelve_data_bootstrap_runs ORDER BY started_at_utc"
           q bootstrap-requests "SELECT bootstrap_id,window_index,window_start_utc,window_end_utc,required_m1_minutes,persisted_m1_minutes,state,failure_reason,request_ledger_id FROM twelve_data_bootstrap_requests ORDER BY bootstrap_id,window_index"
           q candle-counts "SELECT source,timeframe,COUNT(*) AS n,MIN(open_time_utc) AS first_open,MAX(open_time_utc) AS last_open FROM market_candles WHERE source LIKE 'twelve_data%' GROUP BY source,timeframe ORDER BY source,timeframe"
