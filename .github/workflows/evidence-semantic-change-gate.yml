@@ -51,6 +51,7 @@ jobs:
             src/aidy/research_ledger_anchor.py
             src/aidy/market_data_semantics.py
             src/aidy/day53_step2_preregistration.py
+            src/aidy/day53_step2_qualification_guard.py
             migrations/d1/0008_research_evidence_ledger.sql
             evidence/research_ledger
             docs/day53-market-data-parameter-provenance-audit.md
