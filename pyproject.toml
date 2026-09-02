@@ -53,6 +53,11 @@ known-first-party = ["aidy"]
 # AIDY's explicit DST-aware Eastern-to-UTC converter.
 "src/aidy/official_macro.py" = ["DTZ001", "DTZ007", "SIM117"]
 "src/aidy/fomc_calendar_parser.py" = ["DTZ001"]
+# The private-forward observer must convert any decision-context construction
+# defect into an immutable fail-closed observation after capture. Restricting
+# this catch to today’s exception classes would permit a new adapter failure to
+# escape without that audit record.
+"src/aidy/forward_live_observer.py" = ["BLE001"]
 # Day-26 price-structure tests intentionally construct Decimal values from
 # explicit strings so fixture values remain visibly decimal and exact.
 "tests/test_day26_price_structure.py" = ["FURB157"]
