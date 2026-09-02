@@ -16,11 +16,12 @@ from aidy.cross_market_recorder import AidyCrossMarketRecorderService
 from aidy.cross_market_storage import D1CrossMarketOperationalEvidenceStore
 from aidy.forward_live_observer import live_forward_status, observe_private_forward_snapshot
 from aidy.live_gold_storage import D1LiveGoldQuoteHistory
+from aidy.openai_gateway_v2 import OpenAIMasterTraderGatewayV2
 from aidy.reference_continuity import D1R2ReferenceContinuityReader, ReferenceContinuityPolicy
 from aidy.runtime import run_capture_cycle, run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
-from aidy.twelve_data_market import TwelveDataOhlcGateway
-from aidy.twelve_data_recorder import AidyTwelveDataRecorderService
+from aidy.twelve_data_bootstrap import AidyTwelveDataBootstrapService, plan_bootstrap_windows
+from aidy.twelve_data_market import TwelveDataOhlcGateway, latest_completed_bucket
 from aidy.twelve_data_storage import D1TwelveDataMarketStore
 
 
@@ -37,6 +38,13 @@ def _market_runtime_dependencies(env, settings: AidySettings):
         api_key = str(getattr(env, "AIDY_TWELVE_DATA_API_KEY", ""))
         return TwelveDataOhlcGateway(api_key=api_key), D1TwelveDataMarketStore(env.AIDY_OPS)
     return None, None
+
+
+def _private_forward_gateway(env):
+    api_key = str(getattr(env, "OPENAI_API_KEY", "")).strip()
+    if not api_key:
+        return None
+    return OpenAIMasterTraderGatewayV2(api_key)
 
 
 def _formal_forward_enabled(env) -> bool:
@@ -126,6 +134,9 @@ class Default(WorkerEntrypoint):
                     "environment": str(getattr(self.env, "AIDY_ENV", "unknown")),
                     "capture_enabled": settings.capture_enabled,
                     "formal_forward_enabled": _formal_forward_enabled(self.env),
+                    "private_forward_model_gateway_configured": (
+                        bool(str(getattr(self.env, "OPENAI_API_KEY", "")).strip())
+                    ),
                     "market_data_source": settings.market_data_source,
                     "market_data_ownership": settings.market_data_ownership,
                     "cross_market_source": "public_official_daily",
@@ -144,6 +155,9 @@ class Default(WorkerEntrypoint):
                     status=500,
                 )
             status["deployment_enabled"] = _formal_forward_enabled(self.env)
+            status["model_gateway_configured"] = bool(
+                str(getattr(self.env, "OPENAI_API_KEY", "")).strip()
+            )
             return Response.json({"ok": True, "forward": status})
 
         if request.method == "POST" and url.path == "/day53/twelve-data-smoke":
@@ -156,116 +170,149 @@ class Default(WorkerEntrypoint):
                 return Response.json(
                     {"ok": False, "error": "twelve_data_not_configured"}, status=409
                 )
-            bootstrap = parse_qs(url.query).get("bootstrap", ["0"])[0] == "1"
-            if bootstrap and not _twelve_data_bootstrap_enabled(self.env):
+            if parse_qs(url.query).get("bootstrap", ["0"])[0] == "1":
                 return Response.json(
-                    {"ok": False, "error": "twelve_data_bootstrap_disabled"}, status=409
+                    {
+                        "ok": False,
+                        "error": "legacy_smoke_bootstrap_disabled",
+                        "bootstrap_endpoint": "/day53/twelve-data-bootstrap",
+                    },
+                    status=409,
                 )
-            _, repository = _repository(self.env)
             market_gateway, market_store = _market_runtime_dependencies(self.env, settings)
+            request_id = None
             try:
                 assert isinstance(market_gateway, TwelveDataOhlcGateway)
                 assert isinstance(market_store, D1TwelveDataMarketStore)
-                recorder = AidyTwelveDataRecorderService(
+                request_id = await market_store.reserve_request(
+                    requested_at=datetime.now(UTC),
+                    request_kind="manual_probe",
+                    outputsize=30,
+                )
+                fetch = await market_gateway.fetch_1m(outputsize=30)
+                await market_store.finish_request(
+                    request_id=request_id,
+                    completed_at=fetch.fetched_at_utc,
+                    status="succeeded",
+                    fetch=fetch,
+                )
+                await market_store.record_feed_observation(fetch)
+                return Response.json(
+                    {
+                        "ok": True,
+                        "probe_only": True,
+                        "decision_input_allowed": False,
+                        "canonical_candles_written": 0,
+                        "decision_snapshot_created": False,
+                        "request_ledger_id": str(request_id),
+                        "fetched_at_utc": fetch.fetched_at_utc.isoformat(),
+                        "raw_bar_count": fetch.raw_bar_count,
+                        "closed_bar_count": len(fetch.closed_bars),
+                        "forming_bar_count": fetch.forming_bar_count,
+                        "off_session_bar_count": fetch.off_session_bar_count,
+                        "freshness_state": fetch.freshness_state,
+                        "credit_headers": fetch.credit_headers,
+                        "provider_meta": fetch.meta,
+                    }
+                )
+            except Exception as exc:  # noqa: BLE001 - protected test-only probe diagnosis
+                if request_id is not None and isinstance(market_store, D1TwelveDataMarketStore):
+                    try:
+                        await market_store.finish_request(
+                            request_id=request_id,
+                            completed_at=datetime.now(UTC),
+                            status="failed",
+                            error_code=type(exc).__name__,
+                        )
+                    except Exception:
+                        pass
+                return Response.json(
+                    {"ok": False, "error": type(exc).__name__, "message": str(exc)[:1000]},
+                    status=500,
+                )
+
+        if request.method == "POST" and url.path == "/day53/twelve-data-bootstrap":
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            if not _admin_authorized(request, self.env):
+                return Response("Forbidden", status=403)
+            if not _twelve_data_bootstrap_enabled(self.env):
+                return Response.json(
+                    {"ok": False, "error": "twelve_data_bootstrap_disabled"}, status=409
+                )
+            settings = AidySettings.from_worker_env(self.env)
+            if settings.market_data_source != "twelve_data":
+                return Response.json(
+                    {"ok": False, "error": "twelve_data_not_configured"}, status=409
+                )
+            _, repository = _repository(self.env)
+            market_gateway, market_store = _market_runtime_dependencies(self.env, settings)
+            bootstrap_id = None
+            try:
+                assert isinstance(market_gateway, TwelveDataOhlcGateway)
+                assert isinstance(market_store, D1TwelveDataMarketStore)
+                as_of = datetime.now(UTC)
+                latest_m1_open, _ = latest_completed_bucket(as_of, "1m")
+                windows = plan_bootstrap_windows(
+                    as_of,
+                    latest_m1_open_utc=latest_m1_open,
+                )
+                if not windows:
+                    return Response.json(
+                        {"ok": False, "error": "bootstrap_plan_empty"}, status=503
+                    )
+                required_minutes = sum(len(window.required_opens) for window in windows)
+                bootstrap_id = await market_store.start_bootstrap(
+                    started_at=as_of,
+                    as_of=as_of,
+                    planned_windows=len(windows),
+                    required_m1_minutes=required_minutes,
+                )
+                service = AidyTwelveDataBootstrapService(
                     repository=repository,
                     gateway=market_gateway,
-                    market_store=market_store,
-                    recent_outputsize=5000 if bootstrap else 30,
-                    bootstrap_required_windows_only=bootstrap,
+                    store=market_store,
                 )
-                result = await recorder.capture_once()
-                for _ in range(20 if bootstrap else 2):
+                results = []
+                for window in windows:
+                    result = await service.ingest_window(
+                        bootstrap_id=bootstrap_id,
+                        window=window,
+                    )
+                    results.append(result)
+                    if result.get("state") != "succeeded":
+                        break
+                complete = await market_store.finalize_bootstrap(
+                    bootstrap_id=bootstrap_id,
+                    completed_at=datetime.now(UTC),
+                )
+                for _ in range(20):
                     flushed = await repository.flush_archive_outbox(limit=100)
                     if flushed.attempted == 0:
                         break
-                if result.snapshot_id is None:
-                    return Response.json({"ok": False, "error": "no_market_snapshot"}, status=503)
-                row = await self.env.AIDY_OPS.prepare(
-                    """
-                    SELECT id,captured_at,capture_status,mid,quote_time,quote_age_seconds,
-                           data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,
-                           latest_h1_id,latest_h4_id,latest_d1_id
-                    FROM market_snapshots WHERE id=? LIMIT 1
-                    """
-                ).bind(str(result.snapshot_id)).first()
-                snapshot = {} if row is None else dict(row)
-                availability = json.loads(str(snapshot.get("data_availability_json") or "{}"))
-                candle_fields = (
-                    "latest_m1_id",
-                    "latest_m5_id",
-                    "latest_m15_id",
-                    "latest_h1_id",
-                    "latest_h4_id",
-                    "latest_d1_id",
-                )
-                candles_ready = all(
-                    snapshot.get(key) not in {None, ""} for key in candle_fields
-                )
-                pending_row = await self.env.AIDY_OPS.prepare(
-                    "SELECT COUNT(*) AS n FROM archive_outbox WHERE status='pending'"
-                ).first()
-                pending = 0 if pending_row is None else int(pending_row["n"])
-                missing_required = availability.get(
-                    "bootstrap_required_m1_minutes_missing_from_vendor_fetch"
-                )
-                bootstrap_complete = not bootstrap or missing_required == 0
-                ok = (
-                    snapshot.get("capture_status") == "complete"
-                    and candles_ready
-                    and availability.get("freshness_state") == "fresh"
-                    and bootstrap_complete
-                    and pending == 0
-                )
                 return Response.json(
                     {
-                        "ok": ok,
-                        "bootstrap": bootstrap,
-                        "snapshot": {
-                            "id": snapshot.get("id"),
-                            "captured_at": snapshot.get("captured_at"),
-                            "capture_status": snapshot.get("capture_status"),
-                            "mid": snapshot.get("mid"),
-                            "quote_time": snapshot.get("quote_time"),
-                            "quote_age_seconds": snapshot.get("quote_age_seconds"),
-                            "candles_ready": candles_ready,
-                            "candle_ids": {key: snapshot.get(key) for key in candle_fields},
-                            "market_data_source": availability.get("market_data_source"),
-                            "candle_source": availability.get("candle_source"),
-                            "aggregate_source": availability.get("aggregate_source"),
-                            "freshness_state": availability.get("freshness_state"),
-                            "provider_meta": availability.get("provider_meta"),
-                            "credit_headers": availability.get("credit_headers"),
-                            "forming_bar_count_dropped": availability.get(
-                                "forming_bar_count_dropped"
-                            ),
-                            "off_session_bar_count_dropped": availability.get(
-                                "off_session_bar_count_dropped"
-                            ),
-                            "snapshot_candle_identity_policy": availability.get(
-                                "snapshot_candle_identity_policy"
-                            ),
-                            "bootstrap_required_windows_only": availability.get(
-                                "bootstrap_required_windows_only"
-                            ),
-                            "bootstrap_required_m1_minutes": availability.get(
-                                "bootstrap_required_m1_minutes"
-                            ),
-                            "bootstrap_required_m1_minutes_missing_from_vendor_fetch": (
-                                missing_required
-                            ),
-                            "bootstrap_vendor_closed_bars_returned": availability.get(
-                                "bootstrap_vendor_closed_bars_returned"
-                            ),
-                            "bootstrap_vendor_m1_bars_persisted": availability.get(
-                                "bootstrap_vendor_m1_bars_persisted"
-                            ),
-                        },
-                        "stored_candles": result.stored_candles,
-                        "archive_pending": pending,
+                        "ok": complete,
+                        "bootstrap_id": str(bootstrap_id),
+                        "state": "complete" if complete else "failed",
+                        "planned_windows": len(windows),
+                        "required_m1_minutes": required_minutes,
+                        "window_results": results,
+                        "decision_snapshot_created": False,
+                        "decision_ready": False,
+                        "next_step": "wait_for_fresh_scheduled_capture",
                     },
-                    status=200 if ok else 503,
+                    status=200 if complete else 503,
                 )
-            except Exception as exc:  # noqa: BLE001 - protected test-only smoke diagnosis
+            except Exception as exc:  # noqa: BLE001 - protected administrative bootstrap diagnosis
+                if bootstrap_id is not None and isinstance(market_store, D1TwelveDataMarketStore):
+                    try:
+                        await market_store.finalize_bootstrap(
+                            bootstrap_id=bootstrap_id,
+                            completed_at=datetime.now(UTC),
+                        )
+                    except Exception:
+                        pass
                 return Response.json(
                     {"ok": False, "error": type(exc).__name__, "message": str(exc)[:1000]},
                     status=500,
@@ -506,6 +553,7 @@ class Default(WorkerEntrypoint):
                         d1=worker_env.AIDY_OPS,
                         scheduled_at=scheduled_at,
                         snapshot_id=snapshot_id,
+                        gateway=_private_forward_gateway(worker_env),
                     )
                 except Exception as exc:  # noqa: BLE001 - do not duplicate successful capture
                     await _write_test_forward_error(worker_env, exc, scheduled_at=scheduled_at)

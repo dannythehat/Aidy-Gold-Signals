@@ -11,6 +11,7 @@ from .twelve_data_market import AGGREGATE_SOURCE, AIDY_SYMBOL, RAW_M1_SOURCE, Tw
 
 TWELVE_DATA_DAILY_SAFETY_CEILING = 720
 TWELVE_DATA_ROLLING_24H_SAFETY_CEILING = 720
+DECISION_ADMITTED_M1_VIEW = "twelve_data_decision_admitted_m1_v1"
 
 
 class TwelveDataQuotaExceeded(RuntimeError):
@@ -255,21 +256,11 @@ class D1TwelveDataMarketStore:
 
     async def latest_m1_bars(self, *, start_utc: datetime, end_utc: datetime) -> list[dict[str, Any]]:
         result = await self._d1.prepare(
-            """
+            f"""
             WITH admitted AS (
-              SELECT c.*
-              FROM market_candles c
-              WHERE c.source=? AND c.symbol=? AND c.timeframe='1m'
-                AND c.open_time_utc>=? AND c.open_time_utc<?
-                AND NOT EXISTS (
-                  SELECT 1
-                  FROM twelve_data_bootstrap_requests b
-                  JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id
-                  WHERE r.completed_at_utc=c.first_observed_at
-                    AND c.open_time_utc>=b.window_start_utc
-                    AND c.open_time_utc<b.window_end_utc
-                    AND b.state<>'succeeded'
-                )
+              SELECT *
+              FROM {DECISION_ADMITTED_M1_VIEW}
+              WHERE open_time_utc>=? AND open_time_utc<?
             )
             SELECT c.id,c.open_time_utc,c.open,c.high,c.low,c.close,c.revision_index,c.payload_digest,c.first_observed_at
             FROM admitted c
@@ -281,25 +272,14 @@ class D1TwelveDataMarketStore:
             )
             ORDER BY c.open_time_utc ASC
             """
-        ).bind(RAW_M1_SOURCE, AIDY_SYMBOL, _utc(start_utc).isoformat(), _utc(end_utc).isoformat()).all()
+        ).bind(_utc(start_utc).isoformat(), _utc(end_utc).isoformat()).all()
         return _results(result)
 
     async def latest_candle_ids(self) -> dict[str, UUID]:
         result = await self._d1.prepare(
-            """
+            f"""
             WITH admitted_m1 AS (
-              SELECT c.*
-              FROM market_candles c
-              WHERE c.symbol=? AND c.timeframe='1m' AND c.source=?
-                AND NOT EXISTS (
-                  SELECT 1
-                  FROM twelve_data_bootstrap_requests b
-                  JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id
-                  WHERE r.completed_at_utc=c.first_observed_at
-                    AND c.open_time_utc>=b.window_start_utc
-                    AND c.open_time_utc<b.window_end_utc
-                    AND b.state<>'succeeded'
-                )
+              SELECT * FROM {DECISION_ADMITTED_M1_VIEW}
             ), latest_m1 AS (
               SELECT timeframe,id FROM admitted_m1
               ORDER BY open_time_utc DESC,revision_index DESC LIMIT 1
@@ -318,29 +298,18 @@ class D1TwelveDataMarketStore:
             SELECT timeframe,id FROM latest_aggregates
             ORDER BY timeframe
             """
-        ).bind(AIDY_SYMBOL, RAW_M1_SOURCE, AIDY_SYMBOL, AGGREGATE_SOURCE).all()
+        ).bind(AIDY_SYMBOL, AGGREGATE_SOURCE).all()
         return {str(row["timeframe"]): UUID(str(row["id"])) for row in _results(result)}
 
     async def latest_m1_bar(self) -> dict[str, Any] | None:
         value = await self._d1.prepare(
-            """
+            f"""
             WITH admitted AS (
-              SELECT c.*
-              FROM market_candles c
-              WHERE c.source=? AND c.symbol=? AND c.timeframe='1m'
-                AND NOT EXISTS (
-                  SELECT 1
-                  FROM twelve_data_bootstrap_requests b
-                  JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id
-                  WHERE r.completed_at_utc=c.first_observed_at
-                    AND c.open_time_utc>=b.window_start_utc
-                    AND c.open_time_utc<b.window_end_utc
-                    AND b.state<>'succeeded'
-                )
+              SELECT * FROM {DECISION_ADMITTED_M1_VIEW}
             )
             SELECT c.id,c.open_time_utc,c.open,c.high,c.low,c.close,c.revision_index,c.payload_digest,c.first_observed_at
             FROM admitted c
             ORDER BY c.open_time_utc DESC,c.revision_index DESC LIMIT 1
             """
-        ).bind(RAW_M1_SOURCE, AIDY_SYMBOL).first()
+        ).first()
         return _row(value)

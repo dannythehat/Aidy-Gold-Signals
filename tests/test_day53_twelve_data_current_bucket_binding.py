@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import pytest
 
@@ -13,6 +13,7 @@ from aidy.twelve_data_recorder import (
 )
 
 FETCHED = datetime(2026, 9, 2, 5, 30, 40, tzinfo=UTC)
+REQUEST_ID = UUID("22222222-2222-4222-8222-222222222222")
 
 
 def _bar(opened: datetime, value: str = "4320") -> TwelveDataM1Bar:
@@ -90,10 +91,25 @@ class IncompleteCurrentStore:
 
     def __init__(self) -> None:
         self.feed_observations = 0
+        self.reservations: list[dict[str, object]] = []
+        self.request_finishes: list[dict[str, object]] = []
+
+    async def reserve_request(self, **kwargs):
+        self.reservations.append(dict(kwargs))
+        assert kwargs["request_kind"] == "scheduled_capture"
+        assert kwargs["outputsize"] == 30
+        return REQUEST_ID
+
+    async def finish_request(self, **kwargs):
+        self.request_finishes.append(dict(kwargs))
+        assert kwargs["request_id"] == REQUEST_ID
+        assert kwargs["status"] == "succeeded"
+        assert kwargs["completed_at"] == FETCHED
 
     async def record_feed_observation(self, fetch):
-        del fetch
+        assert fetch.fetched_at_utc == FETCHED
         self.feed_observations += 1
+        return REQUEST_ID
 
     async def latest_m1_bars(self, *, start_utc, end_utc):
         del start_utc, end_utc
@@ -117,10 +133,18 @@ async def test_stale_old_aggregate_ids_cannot_make_current_snapshot_complete() -
     ).capture_once()
 
     assert result.status == "partial"
+    assert len(store.reservations) == 1
+    assert len(store.request_finishes) == 1
     assert store.feed_observations == 1
     snapshot = repository.snapshots[-1]
     assert snapshot["latest_m1_id"] is not None
-    for field in ("latest_m5_id", "latest_m15_id", "latest_h1_id", "latest_h4_id", "latest_d1_id"):
+    for field in (
+        "latest_m5_id",
+        "latest_m15_id",
+        "latest_h1_id",
+        "latest_h4_id",
+        "latest_d1_id",
+    ):
         assert snapshot[field] is None
 
 
@@ -129,11 +153,12 @@ async def test_current_snapshot_m1_id_is_from_current_vendor_fetch_not_prior_sto
     latest = _bar(datetime(2026, 9, 2, 5, 29, tzinfo=UTC), "4330")
     gateway = FakeGateway(_fetch((latest,)))
     repository = FakeRepository()
+    store = IncompleteCurrentStore()
 
     result = await AidyTwelveDataRecorderService(
         repository=repository,
         gateway=gateway,
-        market_store=IncompleteCurrentStore(),
+        market_store=store,
     ).capture_once()
 
     snapshot = repository.snapshots[-1]
@@ -144,6 +169,8 @@ async def test_current_snapshot_m1_id_is_from_current_vendor_fetch_not_prior_sto
     )
     assert snapshot["latest_m1_id"] == expected_id
     assert result.status == "partial"
+    assert len(store.reservations) == 1
+    assert len(store.request_finishes) == 1
 
 
 def test_bootstrap_required_union_reaches_previous_completed_d1_without_storing_5000_rows() -> None:

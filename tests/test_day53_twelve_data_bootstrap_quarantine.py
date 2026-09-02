@@ -146,8 +146,20 @@ async def test_interrupted_persistence_marks_bootstrap_window_failed_for_quarant
     assert store.window_finishes[-1]["failure_reason"] == "persistence_error:RuntimeError"
 
 
-def test_all_m1_read_paths_exclude_started_or_failed_bootstrap_writes() -> None:
-    source = (ROOT / "src" / "aidy" / "twelve_data_storage.py").read_text(encoding="utf-8")
-    assert source.count("JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id") >= 3
-    assert source.count("b.state<>'succeeded'") >= 3
-    assert "r.completed_at_utc=c.first_observed_at" in source
+def test_all_m1_read_paths_use_central_decision_admission_view() -> None:
+    storage = (ROOT / "src" / "aidy" / "twelve_data_storage.py").read_text(encoding="utf-8")
+    migration = (
+        ROOT / "migrations" / "d1" / "0009_twelve_data_decision_admission.sql"
+    ).read_text(encoding="utf-8")
+
+    assert 'DECISION_ADMITTED_M1_VIEW = "twelve_data_decision_admitted_m1_v1"' in storage
+    assert storage.count("FROM {DECISION_ADMITTED_M1_VIEW}") >= 3
+    assert "JOIN twelve_data_request_ledger" not in storage
+
+    assert "CREATE VIEW twelve_data_decision_admitted_m1_v1" in migration
+    assert "FROM twelve_data_request_ledger r" in migration
+    assert "r.completed_at_utc=c.first_observed_at" in migration
+    assert "r.status='succeeded'" in migration
+    assert "r.request_kind='bootstrap'" in migration
+    assert "b.state='succeeded'" in migration
+    assert "r.request_kind='scheduled_capture'" in migration

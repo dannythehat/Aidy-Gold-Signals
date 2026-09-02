@@ -1,0 +1,87 @@
+name: AIDY Day 53 Apply Twelve Decision Admission
+
+on:
+  push:
+    branches: [day53/final-launch-readiness]
+    paths:
+      - ".github/workflows/day53-apply-decision-admission.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  migrate-and-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build test D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg={
+              'name':'aidy-signals-test',
+              'main':'src/entry.py',
+              'compatibility_date':'2026-08-16',
+              'compatibility_flags':['python_workers'],
+              'd1_databases':[{
+                  'binding':'AIDY_OPS',
+                  'database_name':'aidy-ops-test',
+                  'database_id':'3588d82a-d686-4430-872d-d4c0e62c3d5d',
+                  'migrations_dir':'migrations/d1',
+              }],
+          }
+          json.dump(cfg, open('wrangler.day53.admission.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+      - name: Prove pre-migration raw state
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.admission.jsonc \
+            --command "SELECT COUNT(*) AS raw_twelve_m1 FROM market_candles WHERE source='twelve_data_vendor_m1_v1' AND timeframe='1m'" \
+            > pre_migration.json
+          cat pre_migration.json
+      - name: Apply pending D1 migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.day53.admission.jsonc
+      - name: Prove legacy rows are quarantined without deletion
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.day53.admission.jsonc \
+            --command "SELECT (SELECT COUNT(*) FROM market_candles WHERE source='twelve_data_vendor_m1_v1' AND timeframe='1m') AS raw_twelve_m1,(SELECT COUNT(*) FROM twelve_data_decision_admitted_m1_v1) AS admitted_twelve_m1,(SELECT COUNT(*) FROM twelve_data_request_ledger) AS request_ledger_rows,(SELECT COUNT(*) FROM twelve_data_bootstrap_runs) AS bootstrap_runs" \
+            > post_migration.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('post_migration.json',encoding='utf-8'))
+          rows=payload[0]['results']
+          assert len(rows)==1, payload
+          row=rows[0]
+          assert row['raw_twelve_m1']==316, row
+          assert row['admitted_twelve_m1']==0, row
+          assert row['request_ledger_rows']==0, row
+          assert row['bootstrap_runs']==0, row
+          print(json.dumps(row,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-admission-migration-${{ github.sha }}
+          path: |
+            pre_migration.json
+            post_migration.json
+          retention-days: 90

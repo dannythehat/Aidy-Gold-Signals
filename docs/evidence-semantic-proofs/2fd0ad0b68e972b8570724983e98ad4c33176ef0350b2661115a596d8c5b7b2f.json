@@ -1,0 +1,16 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "b302ff74e51e976c819a9e56385d4d48fb5c19f4",
+  "base_sha": "58f8e64ae5980e7e7dcf369264c3c06b6339bef3",
+  "protected_diff_sha256": "2fd0ad0b68e972b8570724983e98ad4c33176ef0350b2661115a596d8c5b7b2f",
+  "classification": "evidence-semantic",
+  "cohort_action": "new_epoch",
+  "preserve_existing_cohort": false,
+  "reason": "Final launch integration changes the decision-admitted Twelve semantic surface and exposes the authenticated current semantic context to the real Architecture V2 model cycle. Existing formal-forward evidence must not be pooled across this boundary.",
+  "step2_outcome_preserved": "insufficient_evidence",
+  "cross_source_analogue_inheritance_allowed": false,
+  "unqualified_source_scale_inheritance_allowed": false,
+  "performance_information_used_to_select_change": false,
+  "public_publication_enabled": false,
+  "live_money_execution_allowed": false
+}

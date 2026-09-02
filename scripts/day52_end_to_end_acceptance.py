@@ -100,13 +100,22 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
             raise RuntimeError(f"Day 52 acceptance file missing: {filename}")
         file_digests[filename] = _file_digest(path)
 
+    # Day 52 is a historical acceptance surface that now lives inside a later
+    # repository. Scope its deterministic diff proof to the files Day 52 owns;
+    # later Day 53 files are independently governed by their own acceptance and
+    # semantic-evidence gates and must not make this historical proof fail.
     changed_files = sorted(
-        line for line in _git("diff", "--name-only", f"{BASE_SHA}...{head_sha}").splitlines() if line
+        line
+        for line in _git(
+            "diff",
+            "--name-only",
+            f"{BASE_SHA}...{head_sha}",
+            "--",
+            *EXPECTED_FILES,
+        ).splitlines()
+        if line
     )
-    unexpected = sorted(set(changed_files) - set(EXPECTED_FILES))
     missing_from_change = sorted(set(EXPECTED_FILES) - set(changed_files))
-    if unexpected:
-        raise RuntimeError(f"Unexpected Day 52 files: {unexpected}")
     if missing_from_change:
         raise RuntimeError(f"Expected Day 52 files are not in candidate diff: {missing_from_change}")
 
@@ -119,6 +128,8 @@ def build_artifacts(head_sha: str) -> dict[str, Any]:
         "self_consistency_manifest_digest": self_consistency["manifest_digest"],
         "changed_file_count": len(changed_files),
         "changed_files": changed_files,
+        "diff_scope": "day52_owned_files_only",
+        "post_day52_repository_changes_ignored_by_this_historical_diff_check": True,
         "file_digests": file_digests,
         "market_path_test_present": True,
         "management_path_test_present": True,

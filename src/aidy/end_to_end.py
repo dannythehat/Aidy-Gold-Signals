@@ -22,6 +22,7 @@ from aidy.paper_simulator import start_paper_position, verify_paper_state
 from aidy.pit_reconstruction import normalize_as_of
 from aidy.publication_ledger import D1PublicationLedgerStore, deliver_with_ledger
 from aidy.safety_gates import DEFAULT_MAX_CONTEXT_AGE_SECONDS, evaluate_pre_model_safety
+from aidy.semantic_context_composer import compose_semantic_context_v2
 from aidy.self_consistency_ledger_v2 import (
     build_self_consistency_selective_layer_state_v2,
 )
@@ -30,6 +31,7 @@ from aidy.self_consistency_v2 import (
     verify_self_consistency_result_v2,
 )
 from aidy.telegram_publisher import build_publication_envelope
+from aidy.twelve_launch_policy import evaluate_twelve_pre_model_safety
 
 DAY52_RESULT_VERSION = "aidy_end_to_end_result_v1"
 DAY52_STRATEGY_VERSION = "aidy_architecture_v2_day52"
@@ -304,7 +306,10 @@ async def run_market_evaluation_cycle(
     source_state: str = "dry_run",
     publish_enabled: bool = False,
     seen_context_hashes: Iterable[str] = (),
+    semantic_retrieval: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    if semantic_retrieval is not None and source_state != "private_forward":
+        raise ValueError("Semantic Twelve launch routing is restricted to private_forward.")
     context_hash = str(context.get("context_hash") or "")
     row = await cycle_store.register(
         instruction_type="market_evaluation",
@@ -369,12 +374,20 @@ async def run_market_evaluation_cycle(
             transport=transport,
         )
 
-    pre = evaluate_pre_model_safety(
-        context,
-        now_utc=now_utc,
-        instruction_type="market_evaluation",
-        seen_context_hashes=seen_context_hashes,
-    )
+    if semantic_retrieval is None:
+        pre = evaluate_pre_model_safety(
+            context,
+            now_utc=now_utc,
+            instruction_type="market_evaluation",
+            seen_context_hashes=seen_context_hashes,
+        )
+    else:
+        pre = evaluate_twelve_pre_model_safety(
+            context,
+            now_utc=now_utc,
+            instruction_type="market_evaluation",
+            seen_context_hashes=seen_context_hashes,
+        )
     if pre["status"] != "passed":
         await cycle_store.mark_state(
             cycle_id,
@@ -390,15 +403,26 @@ async def run_market_evaluation_cycle(
             transport_called=False,
         )
 
-    dossier = compose_context_v2(
-        context=context,
-        aidy_state=aidy_state,
-        retrieval=retrieval,
-        evidence_report=evidence_report,
-        hypothesis_direction=hypothesis_direction,
-        setup_family=setup_family,
-        invalidation_inputs=invalidation_inputs,
-    )
+    if semantic_retrieval is None:
+        dossier = compose_context_v2(
+            context=context,
+            aidy_state=aidy_state,
+            retrieval=retrieval,
+            evidence_report=evidence_report,
+            hypothesis_direction=hypothesis_direction,
+            setup_family=setup_family,
+            invalidation_inputs=invalidation_inputs,
+        )
+    else:
+        dossier = compose_semantic_context_v2(
+            context=context,
+            aidy_state=aidy_state,
+            semantic_retrieval=semantic_retrieval,
+            evidence_report=evidence_report,
+            hypothesis_direction=hypothesis_direction,
+            setup_family=setup_family,
+            invalidation_inputs=invalidation_inputs,
+        )
     if not verify_context_dossier_v2(dossier):
         raise RuntimeError("Day 52 Context Composer V2 dossier failed verification.")
     sc = await run_master_trader_self_consistency_v2(
