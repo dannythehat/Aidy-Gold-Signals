@@ -30,3 +30,18 @@ BEFORE DELETE ON research_evidence_ledger
 BEGIN
   SELECT RAISE(ABORT, 'research_evidence_ledger is append-only: DELETE forbidden');
 END;
+
+INSERT INTO research_evidence_ledger (
+  sequence,record_digest,previous_digest,ledger_version,record_type,
+  recorded_at_utc,code_head_sha,initiated_by,payload_json
+) VALUES (
+  0,
+  'daa8478ee4932bb5fabd83396abc29cdc38fca2e5b913fb78a0e4e2c80458406',
+  NULL,
+  'aidy_research_ledger_v1',
+  'governance_genesis',
+  '2026-09-02T07:22:24+00:00',
+  'ede6e5cbfd9c7a1b449cb1c8314449d1fd0ec5d3',
+  'human',
+  '{"governance_version":"aidy_research_governance_v1","mutation_policy":{"amendment_must_reference_superseded_digest":true,"amendment_requires_new_record":true,"delete_allowed":false,"update_allowed":false},"no_edge_rule":"AIDY is permitted to conclude that no actionable edge exists. No research, qualification, accumulation or promotion rule may be changed solely because the evidence is approaching or has reached an unfavourable conclusion.","permitted_final_states":["positive_edge","no_economically_useful_edge","harm","insufficient_evidence"],"qualification_policy":{"default_state":"insufficient_evidence","fail_allows_inheritance":false,"insufficient_evidence_allows_inheritance":false,"pass_requires_affirmative_preregistered_acceptance":true},"selection_policy":{"agent_self_report_is_not_proof":true,"mechanical_origin_requires_ex_ante_parameter_space_proof":true,"unknown_origin_defaults_to":"post_result_unknown"},"trial_count_policy":{"effective_trial_count_requires_preregistered_versioned_method":true,"raw_attempted_trials_can_decrease":false,"reports_must_expose_raw_and_effective_counts":true}}'
+);
