@@ -6,7 +6,11 @@ import json
 import os
 from pathlib import Path
 
-from aidy.twelve_data_probe import TWELVE_DATA_PROBE_VERSION, TwelveDataProbeError, probe_twelve_data_basic
+from aidy.twelve_data_probe import (
+    TWELVE_DATA_PROBE_VERSION,
+    TwelveDataProbeError,
+    probe_twelve_data_basic,
+)
 
 
 def _args() -> argparse.Namespace:
