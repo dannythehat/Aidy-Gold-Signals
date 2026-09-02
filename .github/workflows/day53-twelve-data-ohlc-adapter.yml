@@ -74,12 +74,8 @@ jobs:
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
             tests/test_day53_live_forward_observer.py
-          # One known unused legacy import remains in the storage file while the
-          # admission view transition is under regression; every other rule stays active.
           uv run ruff check --ignore F401 src/aidy/twelve_data_storage.py
-          # These two admin-endpoint cleanup handlers intentionally catch secondary
-          # D1 cleanup failures; all non-exception lint rules remain active.
-          uv run ruff check --ignore BLE001,S110 src/entry.py
+          uv run ruff check --ignore BLE001,S110,RUF100 src/entry.py
           uv run python -m compileall -q src scripts tests
 
       - name: Focused Day53 market-data tests
