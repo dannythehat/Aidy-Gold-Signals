@@ -7,10 +7,13 @@ from aidy.historical_cases import CASE_INPUT_VERSION, compute_case_input_digest
 from aidy.market_data_semantics import histdata_semantic_identity, twelve_data_semantic_identity
 from aidy.regime_classifier import REGIME_DEFINITION_VERSION
 from aidy.semantic_analogue_retrieval import (
+    SEMANTIC_ANALOGUE_QUERY_VERSION,
+    SEMANTIC_ANALOGUE_RETRIEVAL_VERSION,
     build_semantic_analogue_query,
     retrieve_semantic_analogues_v2,
 )
 from aidy.setup_detector import SETUP_DETECTOR_VERSION, SETUP_TAXONOMY_VERSION
+from aidy.twelve_launch_policy import STEP2_OUTCOME, twelve_launch_policy_manifest
 
 
 def _semantic_pit_input() -> dict:
@@ -82,3 +85,16 @@ def test_candidate_without_identity_is_blocked_before_legacy_retrieval() -> None
         "candidate_semantic_identity_missing_or_invalid": 1
     }
     assert result["base_retrieval"]["candidate_count"] == 0
+
+
+def test_private_forward_launch_keeps_unqualified_cross_source_inheritance_blocked() -> None:
+    manifest = twelve_launch_policy_manifest()
+    assert SEMANTIC_ANALOGUE_QUERY_VERSION == "aidy_semantic_analogue_query_v1"
+    assert SEMANTIC_ANALOGUE_RETRIEVAL_VERSION == "aidy_semantic_analogue_retrieval_v1"
+    assert STEP2_OUTCOME == "insufficient_evidence"
+    assert manifest["step2_outcome"] == "insufficient_evidence"
+    assert manifest["cross_source_analogue_permission"] is False
+    assert manifest["no_comparable_case_allowed"] is True
+    assert manifest["volatility_band_masked_unknown"] is True
+    assert manifest["public_publication_enabled"] is False
+    assert manifest["live_money_execution_allowed"] is False
