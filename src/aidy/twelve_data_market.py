@@ -215,7 +215,7 @@ def completeness(
     expected_set = set(expected)
     actual_times = {_row_time(row) for row in bars}
     in_session = actual_times & expected_set
-    ratio = Decimal(len(in_session)) / Decimal(len(expected)) if expected else Decimal("0")
+    ratio = Decimal(len(in_session)) / Decimal(len(expected)) if expected else Decimal(0)
     threshold = COMPLETENESS_THRESHOLDS[timeframe]
     return {
         "timeframe": timeframe,
