@@ -1,3 +1,4 @@
 trigger=2026-09-02T05:49Z
 mode=read-only-d1-diagnostic
 vendor_calls=zero
+security_cleanup_required_before_any_remote_smoke=true
