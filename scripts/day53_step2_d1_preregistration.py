@@ -62,6 +62,22 @@ def _sql_quote(value: object) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def _value_tuple(record: dict[str, Any]) -> str:
+    return "(" + ",".join(
+        [
+            str(record["sequence"]),
+            _sql_quote(record["record_digest"]),
+            _sql_quote(record["previous_digest"]),
+            _sql_quote(record["ledger_version"]),
+            _sql_quote(record["record_type"]),
+            _sql_quote(record["recorded_at_utc"]),
+            _sql_quote(record["code_head_sha"]),
+            _sql_quote(record["initiated_by"]),
+            _sql_quote(canonical_json(record["payload"])),
+        ]
+    ) + ")"
+
+
 def prepare(*, ledger_path: Path, manifest_path: Path, accepted_head: str, sql_path: Path, audit_path: Path) -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     repository = assert_repository_preregistration_manifest(manifest)
@@ -109,29 +125,14 @@ def prepare(*, ledger_path: Path, manifest_path: Path, accepted_head: str, sql_p
             payload=build_step2_equivalence_contract_payload(),
         )
         prepared_records = [family, contract]
-        statements = ["BEGIN TRANSACTION;"]
-        for record in prepared_records:
-            statements.append(
-                "INSERT INTO research_evidence_ledger "
-                "(sequence,record_digest,previous_digest,ledger_version,record_type,"
-                "recorded_at_utc,code_head_sha,initiated_by,payload_json) VALUES ("
-                + ",".join(
-                    [
-                        str(record["sequence"]),
-                        _sql_quote(record["record_digest"]),
-                        _sql_quote(record["previous_digest"]),
-                        _sql_quote(record["ledger_version"]),
-                        _sql_quote(record["record_type"]),
-                        _sql_quote(record["recorded_at_utc"]),
-                        _sql_quote(record["code_head_sha"]),
-                        _sql_quote(record["initiated_by"]),
-                        _sql_quote(canonical_json(record["payload"])),
-                    ]
-                )
-                + ");"
-            )
-        statements.append("COMMIT;")
-        sql_path.write_text("\n".join(statements) + "\n", encoding="utf-8")
+        sql = (
+            "INSERT INTO research_evidence_ledger "
+            "(sequence,record_digest,previous_digest,ledger_version,record_type,"
+            "recorded_at_utc,code_head_sha,initiated_by,payload_json) VALUES\n"
+            + ",\n".join(_value_tuple(record) for record in prepared_records)
+            + ";\n"
+        )
+        sql_path.write_text(sql, encoding="utf-8")
         guard = {
             "state": "prepared_exact_append",
             "contract_digest": repository["contract_digest"],
