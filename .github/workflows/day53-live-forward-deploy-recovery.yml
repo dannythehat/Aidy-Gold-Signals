@@ -8,423 +8,54 @@ on:
       - "tests/test_worker_dependency_boundary.py"
       - "docs/day53-worker-package-boundary.md"
       - ".github/workflows/day53-live-forward-deploy-recovery.yml"
-  push:
-    branches: [main]
-    paths:
-      - "pyproject.toml"
-      - "tests/test_worker_dependency_boundary.py"
-      - "docs/day53-worker-package-boundary.md"
-      - ".github/workflows/day53-live-forward-deploy-recovery.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-env:
-  RECOVERY_BASE_SHA: b9ebf7ea7fa88841baaca1607b11c934e3d50868
-  FAILED_COHORT_ID: aidy_fwd_v2_7c9ae3fabce2e3137ed8daef020e56c3
-  FAILED_COHORT_ACTIVATED_AT: 2026-09-01T16:48:37+00:00
-  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
-
 jobs:
   acceptance:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+
+      - name: Verify candidate descends from current protected main
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git merge-base "$PR_BASE_SHA" HEAD)" = "$PR_BASE_SHA"
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Verify exact base and bounded recovery surface
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git merge-base "$RECOVERY_BASE_SHA" HEAD)" = "$RECOVERY_BASE_SHA"
-          allowed='^(pyproject.toml|tests/test_worker_dependency_boundary.py|docs/day53-worker-package-boundary.md|.github/workflows/day53-live-forward-deploy-recovery.yml)$'
-          unexpected="$(git diff --name-only "$RECOVERY_BASE_SHA"...HEAD | grep -Ev "$allowed" || true)"
-          test -z "$unexpected" || { echo "Unexpected package-recovery changes:"; echo "$unexpected"; exit 1; }
-          git diff --exit-code "$RECOVERY_BASE_SHA" -- src migrations/d1
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
-
-      - name: Install and run full code gate
+      - name: Install project dependencies
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
+
+      - name: Prove Worker dependency boundary
+        shell: bash
+        run: |
+          set -euo pipefail
           uv run ruff check tests/test_worker_dependency_boundary.py
-          uv run pytest -q tests/test_worker_dependency_boundary.py tests/test_day53_live_forward_observer.py tests/test_day53_immediate_start.py tests/test_day53_formal_forward.py
+          uv run pytest -q tests/test_worker_dependency_boundary.py tests/test_day53_live_forward_observer.py
           uv run pytest -q
 
-      - name: Build forward-off Worker and scheduler configs
+      - name: Prove obsolete recovery cannot deploy after merge
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json
-          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
-          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
-          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
-          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
-          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
-          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
-          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='gold_api'
-          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
-          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='60'
-          text=json.dumps(cfg).lower()
-          for forbidden in ('metaapi','vantage','mt5','super_signals'):
-              assert forbidden not in text
-          json.dump(cfg, open('wrangler.day53.package-test.jsonc','w',encoding='utf-8'), indent=2)
-          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
-          sched['triggers']['crons']=['* * * * *']
-          json.dump(sched, open('wrangler.day53.scheduler-test.jsonc','w',encoding='utf-8'), indent=2)
-          PY
-
-      - name: Prove Cloudflare Python package resolution and Worker deploy
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp wrangler.day53.package-test.jsonc wrangler.jsonc
-          uv run pywrangler deploy 2>&1 | tee /tmp/worker-deploy.txt
-          curl -fsS "${AIDY_TEST_WORKER_URL}/health" | tee /tmp/health.json
-          python - <<'PY'
-          import json
-          h=json.load(open('/tmp/health.json', encoding='utf-8'))
-          assert h['capture_enabled'] is True, h
-          assert h['formal_forward_enabled'] is False, h
-          assert h['market_data_source']=='gold_api', h
-          PY
-
-      - name: Prove scheduler deploy still succeeds
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 deploy --config wrangler.day53.scheduler-test.jsonc 2>&1 | tee /tmp/scheduler-deploy.txt
-
-      - name: Require failed cohort remains exact and evidence-free
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.package-test.jsonc \
-            --command "SELECT cohort_id,accepted_code_head,activated_at_utc,state FROM aidy_forward_cohorts WHERE cohort_id='${FAILED_COHORT_ID}' LIMIT 1" \
-            | tee /tmp/cohort.json
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.package-test.jsonc \
-            --command "SELECT COUNT(*) AS n FROM aidy_forward_evaluations WHERE cohort_id='${FAILED_COHORT_ID}'" \
-            | tee /tmp/count.json
-          python - <<'PY'
-          import json, os
-          rows=[]
-          for batch in json.load(open('/tmp/cohort.json', encoding='utf-8')):
-              rows.extend(batch.get('results') or [])
-          assert len(rows)==1, rows
-          row=rows[0]
-          assert row['accepted_code_head']==os.environ['RECOVERY_BASE_SHA'], row
-          assert row['activated_at_utc']==os.environ['FAILED_COHORT_ACTIVATED_AT'], row
-          assert row['state']=='active', row
-          counts=[]
-          for batch in json.load(open('/tmp/count.json', encoding='utf-8')):
-              counts.extend(batch.get('results') or [])
-          assert len(counts)==1 and int(counts[0]['n'])==0, counts
-          PY
-
-      - name: Preserve PR package-recovery evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: aidy-day53-worker-package-pr-${{ github.event.pull_request.head.sha }}
-          path: |
-            /tmp/worker-deploy.txt
-            /tmp/scheduler-deploy.txt
-            /tmp/health.json
-            /tmp/cohort.json
-            /tmp/count.json
-          if-no-files-found: warn
-          retention-days: 90
-
-  replace-and-activate:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    steps:
-      - name: Checkout exact signed main head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Require final main and rerun full gate
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$(git branch -r --contains HEAD | grep -c 'origin/main')" -ge 1
-          test -n "${CLOUDFLARE_API_TOKEN:-}"
-          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
-          python -m pip install --disable-pip-version-check --quiet uv
-          uv sync
-          uv run pytest -q tests/test_worker_dependency_boundary.py tests/test_day53_live_forward_observer.py tests/test_day53_immediate_start.py tests/test_day53_formal_forward.py
-          uv run pytest -q
-
-      - name: Build live configs
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json
-          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
-          base['d1_databases'][0]['database_name']='aidy-ops-test'
-          base['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
-          base['r2_buckets'][0]['bucket_name']='aidy-memory-test'
-          base['vars']['AIDY_CAPTURE_ENABLED']='true'
-          base['vars']['AIDY_MARKET_DATA_SOURCE']='gold_api'
-          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
-          base['vars']['AIDY_MARKET_POLL_SECONDS']='60'
-          off=json.loads(json.dumps(base)); off['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
-          on=json.loads(json.dumps(base)); on['vars']['AIDY_FORMAL_FORWARD_ENABLED']='true'
-          json.dump(off, open('wrangler.day53.replace.off.jsonc','w',encoding='utf-8'), indent=2)
-          json.dump(on, open('wrangler.day53.replace.on.jsonc','w',encoding='utf-8'), indent=2)
-          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
-          sched['triggers']['crons']=['* * * * *']
-          json.dump(sched, open('wrangler.day53.replace.scheduler.jsonc','w',encoding='utf-8'), indent=2)
-          PY
-
-      - name: Apply D1 migrations and verify old cohort still has zero evidence
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day53.replace.off.jsonc | tee /tmp/migrations.txt
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.replace.off.jsonc \
-            --command "SELECT c.cohort_id,c.accepted_code_head,c.activated_at_utc,c.state,(SELECT COUNT(*) FROM aidy_forward_evaluations e WHERE e.cohort_id=c.cohort_id) AS evaluation_count FROM aidy_forward_cohorts c WHERE c.cohort_id='${FAILED_COHORT_ID}' LIMIT 1" \
-            | tee /tmp/old-cohort.json
-          python - <<'PY'
-          import json, os
-          rows=[]
-          for batch in json.load(open('/tmp/old-cohort.json', encoding='utf-8')):
-              rows.extend(batch.get('results') or [])
-          assert len(rows)==1, rows
-          row=rows[0]
-          assert row['accepted_code_head']==os.environ['RECOVERY_BASE_SHA'], row
-          assert row['state']=='active', row
-          assert int(row['evaluation_count'])==0, row
-          PY
-
-      - name: Prepare replacement cohort bound to final main
-        shell: bash
-        run: |
-          set -euo pipefail
-          ACTIVATED_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
-          echo "ACTIVATED_AT=${ACTIVATED_AT}" >> "$GITHUB_ENV"
-          uv run python scripts/day53_prepare_live_activation.py \
-            --accepted-code-head "$GITHUB_SHA" \
-            --activated-at-utc "$ACTIVATED_AT" \
-            --output-dir day53_replacement
-          echo "NEW_COHORT_ID=$(cat day53_replacement/cohort_id.txt)" >> "$GITHUB_ENV"
-
-      - name: Freeze-break zero-evidence failed cohort and activate replacement
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import hashlib, json, os
-          evidence={
-              'reason':'cloudflare_worker_dependency_packaging_defect',
-              'failed_cohort_id':os.environ['FAILED_COHORT_ID'],
-              'failed_accepted_code_head':os.environ['RECOVERY_BASE_SHA'],
-              'evaluation_count':0,
-              'root_cause':'offline_pdf_research_dependency_was_misclassified_as_worker_runtime_dependency',
-              'performance_information_used':False,
-              'replacement_cohort_id':os.environ['NEW_COHORT_ID'],
-              'replacement_code_head':os.environ['GITHUB_SHA'],
-          }
-          text=json.dumps(evidence,sort_keys=True,separators=(',',':'))
-          digest=hashlib.sha256(text.encode()).hexdigest()
-          esc=lambda value: str(value).replace("'","''")
-          sql=(
-              "UPDATE aidy_forward_cohorts SET state='closed',closed_at_utc='"+esc(os.environ['ACTIVATED_AT'])+"',"
-              "freeze_break_reason_code='material_safety_or_data_integrity_defect',"
-              "freeze_break_evidence_json='"+esc(text)+"',freeze_break_evidence_digest='"+digest+"',"
-              "replacement_cohort_id='"+esc(os.environ['NEW_COHORT_ID'])+"' "
-              "WHERE cohort_id='"+esc(os.environ['FAILED_COHORT_ID'])+"' AND state='active';\n"
-          )
-          open('/tmp/close-old.sql','w',encoding='utf-8').write(sql)
-          open('/tmp/freeze-break-evidence.json','w',encoding='utf-8').write(text+'\n')
-          PY
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config wrangler.day53.replace.off.jsonc --file /tmp/close-old.sql | tee /tmp/close-old.txt
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config wrangler.day53.replace.off.jsonc --file day53_replacement/activation.sql | tee /tmp/activate-new.txt
-
-      - name: Verify one closed failed cohort and one exact active replacement
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.replace.off.jsonc \
-            --command "SELECT cohort_id,accepted_code_head,activated_at_utc,closed_at_utc,state,freeze_break_reason_code,replacement_cohort_id FROM aidy_forward_cohorts WHERE cohort_id IN ('${FAILED_COHORT_ID}','${NEW_COHORT_ID}') ORDER BY cohort_id" \
-            | tee /tmp/cohorts-after.json
-          python - <<'PY'
-          import json, os
-          rows=[]
-          for batch in json.load(open('/tmp/cohorts-after.json', encoding='utf-8')):
-              rows.extend(batch.get('results') or [])
-          by={row['cohort_id']:row for row in rows}
-          old=by[os.environ['FAILED_COHORT_ID']]
-          new=by[os.environ['NEW_COHORT_ID']]
-          assert old['state']=='closed', old
-          assert old['freeze_break_reason_code']=='material_safety_or_data_integrity_defect', old
-          assert old['replacement_cohort_id']==os.environ['NEW_COHORT_ID'], old
-          assert new['state']=='active', new
-          assert new['accepted_code_head']==os.environ['GITHUB_SHA'], new
-          assert new['activated_at_utc']==os.environ['ACTIVATED_AT'], new
-          PY
-
-      - name: Deploy scheduler then forward-enabled Worker
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 deploy --config wrangler.day53.replace.scheduler.jsonc 2>&1 | tee /tmp/scheduler-deploy.txt
-          cp wrangler.day53.replace.on.jsonc wrangler.jsonc
-          uv run pywrangler deploy 2>&1 | tee /tmp/worker-deploy.txt
-          echo PASS > /tmp/forward-worker-enabled
-
-      - name: Verify deployed replacement identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 18); do
-            curl -fsS "${AIDY_TEST_WORKER_URL}/health" > /tmp/health.json || true
-            curl -fsS "${AIDY_TEST_WORKER_URL}/day53/forward-status" > /tmp/status.json || true
-            if python - <<'PY'
-          import json, os
-          try:
-              h=json.load(open('/tmp/health.json', encoding='utf-8'))
-              p=json.load(open('/tmp/status.json', encoding='utf-8'))
-          except Exception:
-              raise SystemExit(1)
-          f=p.get('forward') or {}
-          ok=(h.get('formal_forward_enabled') is True and p.get('ok') is True and f.get('active') is True and f.get('cohort_id')==os.environ['NEW_COHORT_ID'] and f.get('accepted_code_head')==os.environ['GITHUB_SHA'])
-          raise SystemExit(0 if ok else 1)
-          PY
-            then break; fi
-            sleep 5
-          done
-          python - <<'PY'
-          import json, os
-          h=json.load(open('/tmp/health.json', encoding='utf-8'))
-          f=json.load(open('/tmp/status.json', encoding='utf-8'))['forward']
-          assert h['formal_forward_enabled'] is True, h
-          assert f['cohort_id']==os.environ['NEW_COHORT_ID'], f
-          assert f['accepted_code_head']==os.environ['GITHUB_SHA'], f
-          assert f['activated_at_utc']==os.environ['ACTIVATED_AT'], f
-          PY
-
-      - name: Require first genuine scheduled replacement forward row
-        shell: bash
-        run: |
-          set -euo pipefail
-          found=0
-          for attempt in $(seq 1 42); do
-            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.replace.on.jsonc \
-              --command "SELECT record_id,record_json,record_digest,cycle_id,evaluated_at_utc,disposition,data_quality_state,data_quality_reason_code,recorded_at_utc FROM aidy_forward_evaluations WHERE cohort_id='${NEW_COHORT_ID}' AND evaluated_at_utc >= '${ACTIVATED_AT}' ORDER BY evaluated_at_utc ASC LIMIT 1" \
-              > /tmp/first-row.json
-            if python - <<'PY'
-          import json
-          rows=[]
-          for batch in json.load(open('/tmp/first-row.json', encoding='utf-8')):
-              rows.extend(batch.get('results') or [])
-          raise SystemExit(0 if rows else 1)
-          PY
-            then found=1; break; fi
-            sleep 10
-          done
-          test "$found" = "1"
-          python - <<'PY'
-          import json
-          rows=[]
-          for batch in json.load(open('/tmp/first-row.json', encoding='utf-8')):
-              rows.extend(batch.get('results') or [])
-          assert len(rows)==1, rows
-          row=rows[0]
-          record=json.loads(row['record_json'])
-          assert row['disposition']=='pre_model_blocked', row
-          assert row['data_quality_state']=='failure', row
-          assert record['self_consistency_digest'] is None, record
-          assert record['decision_id'] is None, record
-          assert record['broker_or_account_state_used'] is False, record
-          assert record['follower_state_used'] is False, record
-          assert record['super_signals_used'] is False, record
-          assert record['live_money_execution_used'] is False, record
-          PY
-
-      - name: Verify Day 54 sample accounting is unchanged
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsS "${AIDY_TEST_WORKER_URL}/day53/forward-status" | tee /tmp/final-status.json
-          python - <<'PY'
-          import json, os
-          f=json.load(open('/tmp/final-status.json', encoding='utf-8'))['forward']
-          progress=f['progress']
-          assert f['cohort_id']==os.environ['NEW_COHORT_ID'], f
-          assert int(progress['raw_evaluation_count']) >= 1, progress
-          assert int(progress['model_resolved_episode_independent_n']) == 0, progress
-          assert progress['day54_sample_gate_met'] is False, progress
-          assert progress['blocked_or_failed_cycles_can_satisfy_day54_gate'] is False, progress
-          assert f['openai_called_for_pre_model_block'] is False, f
-          assert f['telegram_publication_enabled'] is False, f
-          PY
-
-      - name: Safe-off formal observer if final activation proof fails
-        if: failure()
-        shell: bash
-        run: |
-          set +e
-          if [ -f wrangler.day53.replace.off.jsonc ]; then
-            cp wrangler.day53.replace.off.jsonc wrangler.jsonc
-            uv run pywrangler deploy 2>&1 | tee /tmp/safe-off.txt
-          fi
-
-      - name: Preserve replacement activation evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: aidy-day53-worker-package-replacement-${{ github.sha }}
-          path: |
-            day53_replacement/
-            /tmp/migrations.txt
-            /tmp/old-cohort.json
-            /tmp/freeze-break-evidence.json
-            /tmp/close-old.txt
-            /tmp/activate-new.txt
-            /tmp/cohorts-after.json
-            /tmp/scheduler-deploy.txt
-            /tmp/worker-deploy.txt
-            /tmp/health.json
-            /tmp/status.json
-            /tmp/first-row.json
-            /tmp/final-status.json
-            /tmp/safe-off.txt
-          if-no-files-found: warn
-          retention-days: 90
+          ! grep -q '^  push:' .github/workflows/day53-live-forward-deploy-recovery.yml
+          ! grep -q "AIDY_MARKET_DATA_SOURCE.*gold_api" .github/workflows/day53-live-forward-deploy-recovery.yml
+          echo "Historical package recovery is validation-only; final launch owns deployment."
