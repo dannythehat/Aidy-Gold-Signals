@@ -28,6 +28,7 @@ jobs:
           protected=(
             .github/workflows/evidence-semantic-change-gate.yml
             .github/workflows/day53-step2-d1-preregistration.yml
+            scripts/day53_step2_d1_preregistration.py
             src/aidy/twelve_data_market.py
             src/aidy/twelve_data_storage.py
             src/aidy/twelve_data_recorder.py
