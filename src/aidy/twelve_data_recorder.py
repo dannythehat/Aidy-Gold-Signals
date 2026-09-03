@@ -52,7 +52,7 @@ def _row_open_time(row: dict[str, object]) -> datetime:
     value = row.get("open_time_utc")
     if isinstance(value, datetime):
         return _utc(value)
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00")).astimezone(UTC)
+    return datetime.fromisoformat(str(value)).astimezone(UTC)
 
 
 def bootstrap_required_m1_open_times(
@@ -203,11 +203,7 @@ class AidyTwelveDataRecorderService:
 
         candle_states: dict[str, object] = {}
         for timeframe, (start, end) in timeframe_windows.items():
-            rows = [
-                row
-                for row in admitted_history
-                if start <= _row_open_time(row) < end
-            ]
+            rows = [row for row in admitted_history if start <= _row_open_time(row) < end]
             candle, state = aggregate_m1(
                 rows,
                 timeframe=timeframe,
