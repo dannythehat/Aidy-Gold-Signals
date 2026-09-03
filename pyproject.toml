@@ -80,3 +80,4 @@ known-first-party = ["aidy"]
 # protected-main PR path for the isolated Day 53 recovery dispatcher.
 # Operational comment only: repeats that required acceptance for stale-lock release.
 # Operational comment only: repeats required acceptance for current-main recovery.
+# Operational comment only: triggers required Twelve adapter acceptance for hardened recovery.
