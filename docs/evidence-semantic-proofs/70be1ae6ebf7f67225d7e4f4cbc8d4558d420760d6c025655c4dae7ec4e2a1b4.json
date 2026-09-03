@@ -1,0 +1,14 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "f35453f123cda4cfa9e6cc54f019c1bb4353dc0b",
+  "base_sha": "fa16e1f93eded20e17e62b5b6f66892f486434eb",
+  "protected_diff_sha256": "70be1ae6ebf7f67225d7e4f4cbc8d4558d420760d6c025655c4dae7ec4e2a1b4",
+  "classification": "evidence-semantic",
+  "cohort_action": "new_epoch",
+  "preserve_existing_cohort": false,
+  "reason": "Private-forward D1 read-budget hardening changes the bounded live candle-history selection and must therefore begin a fresh evidence epoch even though feature definitions, Twelve admission rules, k=3 model contract, publication boundary and live-money boundary remain unchanged.",
+  "performance_information_used": false,
+  "cross_source_analogue_inheritance_allowed": false,
+  "telegram_publication_enabled": false,
+  "live_money_execution_allowed": false
+}

@@ -5,29 +5,19 @@ on:
     branches: [main]
     paths:
       - "migrations/d1/0009_twelve_data_decision_admission.sql"
+      - "migrations/d1/0011_d1_read_budget_indexes.sql"
       - "src/aidy/end_to_end.py"
       - "src/aidy/forward_live_observer.py"
       - "src/aidy/private_forward_context.py"
       - "src/aidy/semantic_context_composer.py"
+      - "src/aidy/twelve_data_recorder.py"
+      - "src/aidy/twelve_data_storage.py"
       - "src/aidy/twelve_launch_policy.py"
       - "src/entry.py"
+      - "tests/test_day53_d1_read_budget.py"
       - "tests/test_day53_live_forward_observer.py"
       - "tests/test_day53_semantic_context_composer.py"
-      - "tests/test_day53_twelve_data_launch_cleanup.py"
-      - "scripts/day53_prepare_live_activation.py"
-      - ".github/workflows/day53-live-forward-activation.yml"
-  push:
-    branches: [main]
-    paths:
-      - "migrations/d1/0009_twelve_data_decision_admission.sql"
-      - "src/aidy/end_to_end.py"
-      - "src/aidy/forward_live_observer.py"
-      - "src/aidy/private_forward_context.py"
-      - "src/aidy/semantic_context_composer.py"
-      - "src/aidy/twelve_launch_policy.py"
-      - "src/entry.py"
-      - "tests/test_day53_live_forward_observer.py"
-      - "tests/test_day53_semantic_context_composer.py"
+      - "tests/test_day53_twelve_data_current_bucket_binding.py"
       - "tests/test_day53_twelve_data_launch_cleanup.py"
       - "scripts/day53_prepare_live_activation.py"
       - ".github/workflows/day53-live-forward-activation.yml"
@@ -82,17 +72,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          uv run ruff check src/aidy/forward_live_observer.py src/aidy/private_forward_context.py src/aidy/semantic_context_composer.py src/entry.py tests/test_day53_live_forward_observer.py tests/test_day53_semantic_context_composer.py
+          uv run ruff check src/aidy/forward_live_observer.py src/aidy/private_forward_context.py src/aidy/semantic_context_composer.py src/aidy/twelve_data_recorder.py src/aidy/twelve_data_storage.py src/entry.py tests/test_day53_d1_read_budget.py tests/test_day53_live_forward_observer.py tests/test_day53_semantic_context_composer.py tests/test_day53_twelve_data_current_bucket_binding.py
           uv run python -m compileall -q src scripts tests
           ! grep -R "production_decision_context_adapter_not_enabled" src tests
           ! grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|super_signals)' src/aidy/forward_live_observer.py src/aidy/private_forward_context.py src/entry.py
           grep -F "base['vars']['AIDY_MARKET_POLL_SECONDS']='300'" .github/workflows/day53-live-forward-activation.yml
+          grep -F "SELECT f.record_id,f.cycle_id AS formal_cycle_id" .github/workflows/day53-live-forward-activation.yml
+          ! grep -F "FROM aidy_forward_evaluations f JOIN ""aidy_end_to_end_cycles" .github/workflows/day53-live-forward-activation.yml
 
       - name: Focused final-launch tests
         shell: bash
         run: |
           set -euo pipefail
-          uv run pytest -q tests/test_day53_live_forward_observer.py tests/test_day53_semantic_context_composer.py tests/test_day53_semantic_analogue_wrapper.py tests/test_day53_twelve_data_launch_cleanup.py tests/test_day52_end_to_end.py
+          uv run pytest -q tests/test_day53_d1_read_budget.py tests/test_day53_twelve_data_current_bucket_binding.py tests/test_day53_live_forward_observer.py tests/test_day53_semantic_context_composer.py tests/test_day53_semantic_analogue_wrapper.py tests/test_day53_twelve_data_launch_cleanup.py tests/test_day52_end_to_end.py
 
       - name: Full repository regression
         shell: bash
@@ -130,7 +122,7 @@ jobs:
           retention-days: 90
 
   deploy-and-prove:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -171,8 +163,8 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/forward_live_observer.py src/aidy/private_forward_context.py src/aidy/semantic_context_composer.py src/entry.py tests/test_day53_live_forward_observer.py
-          uv run pytest -q tests/test_day53_live_forward_observer.py tests/test_day53_semantic_context_composer.py tests/test_day53_twelve_data_launch_cleanup.py tests/test_day52_end_to_end.py
+          uv run ruff check src/aidy/forward_live_observer.py src/aidy/private_forward_context.py src/aidy/semantic_context_composer.py src/aidy/twelve_data_recorder.py src/aidy/twelve_data_storage.py src/entry.py tests/test_day53_d1_read_budget.py tests/test_day53_live_forward_observer.py tests/test_day53_twelve_data_current_bucket_binding.py
+          uv run pytest -q tests/test_day53_d1_read_budget.py tests/test_day53_twelve_data_current_bucket_binding.py tests/test_day53_live_forward_observer.py tests/test_day53_semantic_context_composer.py tests/test_day53_twelve_data_launch_cleanup.py tests/test_day52_end_to_end.py
           uv run pytest -q
 
       - name: Build Twelve launch configs
@@ -386,7 +378,7 @@ jobs:
           set -euo pipefail
           found=0
           for attempt in $(seq 1 18); do
-            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.launch.on.jsonc --command "SELECT f.record_id,f.cycle_id AS formal_cycle_id,f.evaluated_at_utc,f.context_hash,f.disposition,f.data_quality_state,f.data_quality_reason_code,f.decision_id,f.ex_ante_digest,f.self_consistency_digest,f.retrieval_effective_n,e.cycle_id AS end_to_end_cycle_id,e.cycle_state,e.last_error_code,e.publication_id,e.paper_state_digest,e.self_consistency_json,e.ex_ante_json FROM aidy_forward_evaluations f JOIN aidy_end_to_end_cycles e ON e.context_hash=f.context_hash AND e.instruction_type='market_evaluation' AND e.source_state='private_forward' WHERE f.cohort_id='${NEW_COHORT_ID}' AND f.evaluated_at_utc>='${PROOF_NOT_BEFORE}' AND f.disposition IN ('no_trade','decision_admitted') AND f.data_quality_state='known_good' AND f.decision_id IS NOT NULL AND f.ex_ante_digest IS NOT NULL AND f.self_consistency_digest IS NOT NULL AND e.publication_id IS NULL ORDER BY f.evaluated_at_utc DESC LIMIT 1" > /tmp/model-proof.json
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.launch.on.jsonc --command "SELECT f.record_id,f.cycle_id AS formal_cycle_id,f.evaluated_at_utc,f.context_hash,f.disposition,f.data_quality_state,f.data_quality_reason_code,f.decision_id,f.ex_ante_digest,f.self_consistency_digest,f.retrieval_effective_n FROM aidy_forward_evaluations f WHERE f.cohort_id='${NEW_COHORT_ID}' AND f.evaluated_at_utc>='${PROOF_NOT_BEFORE}' AND f.disposition IN ('no_trade','decision_admitted') AND f.data_quality_state='known_good' AND f.decision_id IS NOT NULL AND f.ex_ante_digest IS NOT NULL AND f.self_consistency_digest IS NOT NULL ORDER BY f.evaluated_at_utc DESC LIMIT 1" > /tmp/model-proof.json
             if python - <<'PY'
           import json
           rows=[]
@@ -395,21 +387,10 @@ jobs:
           if len(rows)!=1:
               raise SystemExit(1)
           row=rows[0]
-          sc=json.loads(row['self_consistency_json'])
-          receipts=sc.get('sample_receipts') or []
-          assert sc.get('sample_count')==3, sc
-          assert len(receipts)==3, receipts
-          assert sc.get('consensus',{}).get('status')=='consensus', sc
-          assert all(r.get('gateway_status')=='accepted' for r in receipts), receipts
-          assert all(r.get('response_id') for r in receipts), receipts
-          assert all(r.get('post_model_passed') is True for r in receipts), receipts
-          assert all(r.get('vote_eligible') is True for r in receipts), receipts
           assert row['data_quality_reason_code'] is None, row
-          assert row['publication_id'] is None, row
           assert row['decision_id'], row
           assert row['ex_ante_digest'], row
-          assert row['self_consistency_digest']==sc['self_consistency_digest'], row
-          print(row['evaluated_at_utc'])
+          assert row['self_consistency_digest'], row
           PY
             then
               found=1
@@ -418,6 +399,42 @@ jobs:
             sleep 60
           done
           test "$found" -eq 1 || { echo 'No fully model-resolved fresh private-forward cycle appeared'; exit 1; }
+          CONTEXT_HASH="$(python - <<'PY'
+          import json
+          rows=[]
+          for batch in json.load(open('/tmp/model-proof.json', encoding='utf-8')):
+              rows.extend(batch.get('results') or [])
+          print(rows[0]['context_hash'])
+          PY
+          )"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.launch.on.jsonc --command "SELECT cycle_id AS end_to_end_cycle_id,cycle_state,last_error_code,publication_id,paper_state_digest,self_consistency_json,self_consistency_digest,ex_ante_json,ex_ante_digest,decision_id FROM aidy_end_to_end_cycles WHERE context_hash='${CONTEXT_HASH}' AND instruction_type='market_evaluation' AND source_state='private_forward' AND publication_id IS NULL ORDER BY updated_at_utc DESC LIMIT 1" > /tmp/e2e-proof.json
+          python - <<'PY'
+          import json
+          def rows(path):
+              out=[]
+              for batch in json.load(open(path, encoding='utf-8')):
+                  out.extend(batch.get('results') or [])
+              return out
+          forward=rows('/tmp/model-proof.json')
+          e2e=rows('/tmp/e2e-proof.json')
+          assert len(forward)==1, forward
+          assert len(e2e)==1, e2e
+          f=forward[0]
+          e=e2e[0]
+          sc=json.loads(e['self_consistency_json'])
+          receipts=sc.get('sample_receipts') or []
+          assert sc.get('sample_count')==3, sc
+          assert len(receipts)==3, receipts
+          assert sc.get('consensus',{}).get('status')=='consensus', sc
+          assert all(r.get('gateway_status')=='accepted' for r in receipts), receipts
+          assert all(r.get('response_id') for r in receipts), receipts
+          assert all(r.get('post_model_passed') is True for r in receipts), receipts
+          assert all(r.get('vote_eligible') is True for r in receipts), receipts
+          assert e['publication_id'] is None, e
+          assert e['decision_id']==f['decision_id'], (e,f)
+          assert e['ex_ante_digest']==f['ex_ante_digest'], (e,f)
+          assert e['self_consistency_digest']==f['self_consistency_digest']==sc['self_consistency_digest'], (e,f)
+          PY
           EVALUATED_AT="$(python - <<'PY'
           import json
           rows=[]
@@ -433,7 +450,7 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.launch.on.jsonc --command "SELECT id,requested_at_utc,completed_at_utc,status,request_kind,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND status='succeeded' AND completed_at_utc>='${PROOF_NOT_BEFORE}' AND completed_at_utc<='${EVALUATED_AT}' ORDER BY completed_at_utc DESC LIMIT 1" > /tmp/twelve-request.json
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.launch.on.jsonc --command "SELECT id,captured_at,capture_status,data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots WHERE captured_at>='${PROOF_NOT_BEFORE}' AND captured_at<='${EVALUATED_AT}' AND capture_status='complete' ORDER BY captured_at DESC LIMIT 1" > /tmp/snapshot-proof.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.day53.launch.on.jsonc --command "SELECT id,captured_at,capture_status,data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots WHERE symbol='XAUUSD' AND captured_at>='${PROOF_NOT_BEFORE}' AND captured_at<='${EVALUATED_AT}' AND capture_status='complete' ORDER BY captured_at DESC LIMIT 1" > /tmp/snapshot-proof.json
           LATEST_M1_ID="$(python - <<'PY'
           import json
           def rows(path):
@@ -503,6 +520,7 @@ jobs:
             /tmp/close-prior.txt
             /tmp/activate-new.txt
             /tmp/model-proof.json
+            /tmp/e2e-proof.json
             /tmp/twelve-request.json
             /tmp/snapshot-proof.json
             /tmp/admission-proof.json

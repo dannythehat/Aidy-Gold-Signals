@@ -93,6 +93,7 @@ class IncompleteCurrentStore:
         self.feed_observations = 0
         self.reservations: list[dict[str, object]] = []
         self.request_finishes: list[dict[str, object]] = []
+        self.m1_reads: list[tuple[datetime, datetime]] = []
 
     async def reserve_request(self, **kwargs):
         self.reservations.append(dict(kwargs))
@@ -112,7 +113,7 @@ class IncompleteCurrentStore:
         return REQUEST_ID
 
     async def latest_m1_bars(self, *, start_utc, end_utc):
-        del start_utc, end_utc
+        self.m1_reads.append((start_utc, end_utc))
         return []
 
     async def latest_candle_ids(self):
@@ -136,6 +137,11 @@ async def test_stale_old_aggregate_ids_cannot_make_current_snapshot_complete() -
     assert len(store.reservations) == 1
     assert len(store.request_finishes) == 1
     assert store.feed_observations == 1
+    assert len(store.m1_reads) == 1
+    read_start, read_end = store.m1_reads[0]
+    windows = [latest_completed_bucket(FETCHED, tf) for tf in ("5m", "15m", "1h", "4h", "1d")]
+    assert read_start == min(start for start, _ in windows)
+    assert read_end == max(end for _, end in windows)
     snapshot = repository.snapshots[-1]
     assert snapshot["latest_m1_id"] is not None
     for field in (
@@ -171,6 +177,7 @@ async def test_current_snapshot_m1_id_is_from_current_vendor_fetch_not_prior_sto
     assert result.status == "partial"
     assert len(store.reservations) == 1
     assert len(store.request_finishes) == 1
+    assert len(store.m1_reads) == 1
 
 
 def test_bootstrap_required_union_reaches_previous_completed_d1_without_storing_5000_rows() -> None:

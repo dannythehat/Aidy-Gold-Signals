@@ -48,6 +48,13 @@ def _utc(value: datetime) -> datetime:
     return value.astimezone(UTC)
 
 
+def _row_open_time(row: dict[str, object]) -> datetime:
+    value = row.get("open_time_utc")
+    if isinstance(value, datetime):
+        return _utc(value)
+    return datetime.fromisoformat(str(value)).astimezone(UTC)
+
+
 def bootstrap_required_m1_open_times(
     fetched_at_utc: datetime,
     *,
@@ -183,10 +190,20 @@ class AidyTwelveDataRecorderService:
             if latest_vendor_m1 is not None and bar.open_time_utc == latest_vendor_m1.open_time_utc:
                 current_ids["1m"] = candle_id
 
+        timeframe_windows = {
+            timeframe: latest_completed_bucket(fetch.fetched_at_utc, timeframe)
+            for timeframe in ("5m", "15m", "1h", "4h", "1d")
+        }
+        history_start = min(start for start, _ in timeframe_windows.values())
+        history_end = max(end for _, end in timeframe_windows.values())
+        admitted_history = await self._market_store.latest_m1_bars(
+            start_utc=history_start,
+            end_utc=history_end,
+        )
+
         candle_states: dict[str, object] = {}
-        for timeframe in ("5m", "15m", "1h", "4h", "1d"):
-            start, end = latest_completed_bucket(fetch.fetched_at_utc, timeframe)
-            rows = await self._market_store.latest_m1_bars(start_utc=start, end_utc=end)
+        for timeframe, (start, end) in timeframe_windows.items():
+            rows = [row for row in admitted_history if start <= _row_open_time(row) < end]
             candle, state = aggregate_m1(
                 rows,
                 timeframe=timeframe,
@@ -235,6 +252,7 @@ class AidyTwelveDataRecorderService:
             "candles": candle_states,
             "all_timeframes_ready": all_timeframes_ready,
             "snapshot_candle_identity_policy": "current_capture_exact_bucket_only",
+            "admitted_m1_read_policy": "one_bounded_read_reused_across_aggregate_timeframes",
             "bootstrap_required_m1_minutes": len(required_opens),
             "bootstrap_required_m1_minutes_missing_from_vendor_fetch": len(
                 required_opens - fetched_opens
