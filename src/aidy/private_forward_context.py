@@ -60,6 +60,13 @@ _STORAGE_TO_CANONICAL_TIMEFRAME = {
     "4h": "H4",
     "1d": "D1",
 }
+_AGGREGATE_SNAPSHOT_ID_FIELDS = {
+    "5m": "latest_m5_id",
+    "15m": "latest_m15_id",
+    "1h": "latest_h1_id",
+    "4h": "latest_h4_id",
+    "1d": "latest_d1_id",
+}
 
 
 def _utc(value: datetime | str, *, name: str) -> datetime:
@@ -227,9 +234,64 @@ async def _snapshot(d1: Any, snapshot_id: str) -> dict[str, Any] | None:
     return _row(value)
 
 
+async def _admitted_aggregate_rows(
+    d1: Any,
+    *,
+    timeframe: str,
+    as_of: datetime,
+    start_utc: datetime | None,
+    limit: int | None,
+) -> list[dict[str, Any]]:
+    """Read scheduled-snapshot-linked Twelve aggregates through exact ID columns.
+
+    The earlier query tested every aggregate against all five snapshot ID fields.
+    This keeps the same scheduled-capture attestation but lets D1 use a dedicated
+    index for the exact timeframe ID being proven.
+    """
+
+    snapshot_field = _AGGREGATE_SNAPSHOT_ID_FIELDS[timeframe]
+    clauses = [
+        "c.source=?",
+        "c.symbol=?",
+        "c.timeframe=?",
+        "c.first_observed_at<=?",
+    ]
+    binds: list[object] = [AGGREGATE_SOURCE, AIDY_SYMBOL, timeframe, as_of.isoformat()]
+    if start_utc is not None:
+        clauses.append("c.open_time_utc>=?")
+        binds.append(start_utc.isoformat())
+    query = f"""
+        SELECT c.*
+        FROM market_candles c
+        WHERE {' AND '.join(clauses)}
+          AND NOT EXISTS (
+            SELECT 1 FROM market_candles newer
+            WHERE newer.source=c.source AND newer.symbol=c.symbol
+              AND newer.timeframe=c.timeframe AND newer.open_time_utc=c.open_time_utc
+              AND newer.revision_index>c.revision_index
+          )
+          AND EXISTS (
+            SELECT 1 FROM market_snapshots s
+            WHERE s.{snapshot_field}=c.id
+              AND s.captured_at<=?
+              AND json_extract(s.data_availability_json,'$.request_kind')='scheduled_capture'
+              AND json_extract(s.data_availability_json,'$.request_ledger_status')='succeeded'
+          )
+        ORDER BY c.open_time_utc DESC,c.revision_index DESC
+    """
+    binds.append(as_of.isoformat())
+    if limit is not None:
+        query += " LIMIT ?"
+        binds.append(int(limit))
+    result = await d1.prepare(query).bind(*binds).all()
+    return _results(result)
+
+
 async def _decision_candles(d1: Any, *, as_of: datetime) -> list[dict[str, Any]]:
-    m1_start = (as_of - timedelta(days=7)).isoformat()
-    aggregate_start = (as_of - timedelta(days=45)).isoformat()
+    # M1 powers today's session/liquidity features. Two UTC days cover today's
+    # market action plus session windows that can begin on the prior UTC date.
+    m1_start = (as_of - timedelta(days=2)).isoformat()
+    aggregate_start = as_of - timedelta(days=45)
     cutoff = as_of.isoformat()
     m1_result = await d1.prepare(
         """
@@ -238,25 +300,31 @@ async def _decision_candles(d1: Any, *, as_of: datetime) -> list[dict[str, Any]]
         ORDER BY open_time_utc,revision_index
         """
     ).bind(m1_start, cutoff).all()
-    aggregate_result = await d1.prepare(
-        """
-        SELECT c.*
-        FROM market_candles c
-        WHERE c.source=? AND c.symbol=? AND c.timeframe<>'1m'
-          AND c.open_time_utc>=? AND c.first_observed_at<=?
-          AND EXISTS (
-            SELECT 1 FROM market_snapshots s
-            WHERE s.captured_at<=?
-              AND c.id IN (
-                s.latest_m5_id,s.latest_m15_id,s.latest_h1_id,s.latest_h4_id,s.latest_d1_id
-              )
-              AND json_extract(s.data_availability_json,'$.request_kind')='scheduled_capture'
-              AND json_extract(s.data_availability_json,'$.request_ledger_status')='succeeded'
-          )
-        ORDER BY c.timeframe,c.open_time_utc,c.revision_index
-        """
-    ).bind(AGGREGATE_SOURCE, AIDY_SYMBOL, aggregate_start, cutoff, cutoff).all()
-    return _dedupe_candles(_results(m1_result) + _results(aggregate_result))
+
+    aggregate_rows: list[dict[str, Any]] = []
+    # M5 is used only for feed health, whose frozen contract consumes recent[-256:].
+    aggregate_rows.extend(
+        await _admitted_aggregate_rows(
+            d1,
+            timeframe="5m",
+            as_of=as_of,
+            start_utc=None,
+            limit=256,
+        )
+    )
+    # M15/H1/H4/D1 retain the existing 45-day decision horizon so liquidity,
+    # swing, trend, feed-health and prior-period semantics are not shortened.
+    for timeframe in ("15m", "1h", "4h", "1d"):
+        aggregate_rows.extend(
+            await _admitted_aggregate_rows(
+                d1,
+                timeframe=timeframe,
+                as_of=as_of,
+                start_utc=aggregate_start,
+                limit=None,
+            )
+        )
+    return _dedupe_candles(_results(m1_result) + aggregate_rows)
 
 
 async def _event_rows(d1: Any, *, snapshot: Mapping[str, Any]) -> list[dict[str, Any]]:
