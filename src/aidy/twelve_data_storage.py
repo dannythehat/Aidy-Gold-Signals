@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
-from .twelve_data_market import AGGREGATE_SOURCE, AIDY_SYMBOL, RAW_M1_SOURCE, TwelveDataFetch
+from .twelve_data_market import AGGREGATE_SOURCE, AIDY_SYMBOL, TwelveDataFetch
 
 TWELVE_DATA_DAILY_SAFETY_CEILING = 720
 TWELVE_DATA_ROLLING_24H_SAFETY_CEILING = 720
