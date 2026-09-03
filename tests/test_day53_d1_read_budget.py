@@ -11,16 +11,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class _Rows:
-    results: list[dict[str, object]] = []
+    def __init__(self) -> None:
+        self.results: list[dict[str, object]] = []
 
 
 class _Statement:
-    def __init__(self, owner: "_D1", sql: str) -> None:
+    def __init__(self, owner: _D1, sql: str) -> None:
         self.owner = owner
         self.sql = sql
         self.binds: tuple[object, ...] = ()
 
-    def bind(self, *values: object) -> "_Statement":
+    def bind(self, *values: object) -> _Statement:
         self.binds = values
         return self
 
