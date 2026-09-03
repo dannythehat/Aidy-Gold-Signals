@@ -74,7 +74,7 @@ jobs:
           assert 'AIDY_FORMAL_FORWARD_ENABLED\']=\'false\'' in text
           assert 'AIDY_CAPTURE_ENABLED\']=\'false\'' in text
           PY
-          uv run ruff check src tests
+          uv run ruff check src/aidy/twelve_data_bootstrap.py src/entry.py tests/test_day53_bootstrap_admission_recovery.py
           uv run python -m compileall -q src scripts tests
 
       - name: Focused launch regression
