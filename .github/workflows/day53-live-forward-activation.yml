@@ -78,7 +78,7 @@ jobs:
           ! grep -Ein '^(from|import) .*?(metaapi|mt5|vantage|super_signals)' src/aidy/forward_live_observer.py src/aidy/private_forward_context.py src/entry.py
           grep -F "base['vars']['AIDY_MARKET_POLL_SECONDS']='300'" .github/workflows/day53-live-forward-activation.yml
           grep -F "SELECT f.record_id,f.cycle_id AS formal_cycle_id" .github/workflows/day53-live-forward-activation.yml
-          ! grep -F "FROM aidy_forward_evaluations f JOIN aidy_end_to_end_cycles" .github/workflows/day53-live-forward-activation.yml
+          ! grep -F "FROM aidy_forward_evaluations f JOIN ""aidy_end_to_end_cycles" .github/workflows/day53-live-forward-activation.yml
 
       - name: Focused final-launch tests
         shell: bash
