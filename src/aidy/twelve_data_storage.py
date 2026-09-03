@@ -255,22 +255,28 @@ class D1TwelveDataMarketStore:
         return observation_id
 
     async def latest_m1_bars(self, *, start_utc: datetime, end_utc: datetime) -> list[dict[str, Any]]:
+        """Read each admitted M1 revision set once and keep only the newest revision.
+
+        The former self-correlated NOT EXISTS re-evaluated the decision-admission
+        view for each candidate row. ROW_NUMBER keeps the same immutable revision
+        semantics while allowing D1 to execute one bounded pass over the range.
+        """
         result = await self._d1.prepare(
             f"""
-            WITH admitted AS (
-              SELECT *
-              FROM {DECISION_ADMITTED_M1_VIEW}
-              WHERE open_time_utc>=? AND open_time_utc<?
+            WITH ranked AS (
+              SELECT c.id,c.source,c.symbol,c.timeframe,c.open_time_utc,c.open,c.high,c.low,c.close,
+                     c.revision_index,c.payload_digest,c.first_observed_at,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY c.source,c.symbol,c.timeframe,c.open_time_utc
+                       ORDER BY c.revision_index DESC
+                     ) AS revision_rank
+              FROM {DECISION_ADMITTED_M1_VIEW} c
+              WHERE c.open_time_utc>=? AND c.open_time_utc<?
             )
-            SELECT c.id,c.open_time_utc,c.open,c.high,c.low,c.close,c.revision_index,c.payload_digest,c.first_observed_at
-            FROM admitted c
-            WHERE NOT EXISTS (
-              SELECT 1 FROM admitted newer
-              WHERE newer.source=c.source AND newer.symbol=c.symbol
-                AND newer.timeframe=c.timeframe AND newer.open_time_utc=c.open_time_utc
-                AND newer.revision_index>c.revision_index
-            )
-            ORDER BY c.open_time_utc ASC
+            SELECT id,open_time_utc,open,high,low,close,revision_index,payload_digest,first_observed_at
+            FROM ranked
+            WHERE revision_rank=1
+            ORDER BY open_time_utc ASC
             """
         ).bind(_utc(start_utc).isoformat(), _utc(end_utc).isoformat()).all()
         return _results(result)
