@@ -34,21 +34,37 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import os
-          from datetime import datetime
-          from pathlib import Path
-          import sys
-          sys.path.insert(0, str(Path('src').resolve()))
-          from aidy.twelve_data_market import latest_completed_bucket, expected_market_minute_opens
-          as_of=datetime.fromisoformat(os.environ['AS_OF'])
-          start,end=latest_completed_bucket(as_of,'1d')
-          expected=expected_market_minute_opens(start,end)
+          from datetime import UTC, datetime, time, timedelta
+          from zoneinfo import ZoneInfo
+          ny=ZoneInfo('America/New_York')
+          as_of=datetime.fromisoformat(os.environ['AS_OF']).astimezone(UTC)
+          candidate=as_of.astimezone(ny).date()
+          start=end=None
+          for _ in range(10):
+              if candidate.weekday()<5:
+                  close=datetime.combine(candidate,time(17,0),tzinfo=ny).astimezone(UTC)
+                  if close<as_of:
+                      previous=candidate-timedelta(days=1)
+                      start=datetime.combine(previous,time(18,0),tzinfo=ny).astimezone(UTC)
+                      end=close
+                      break
+              candidate-=timedelta(days=1)
+          assert start is not None and end is not None
+          expected=0
+          cursor=start
+          while cursor<end:
+              local=cursor.astimezone(ny)
+              wd=local.weekday(); wall=local.time().replace(tzinfo=None)
+              is_open=(wd!=5 and ((wd==6 and wall>=time(18,0)) or (wd==4 and wall<time(17,0)) or (wd in (0,1,2,3) and (wall<time(17,0) or wall>=time(18,0)))))
+              expected+=int(is_open)
+              cursor+=timedelta(minutes=1)
           print('D1_START='+start.isoformat())
           print('D1_END='+end.isoformat())
-          print('D1_EXPECTED='+str(len(expected)))
+          print('D1_EXPECTED='+str(expected))
           with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as f:
               f.write('D1_START='+start.isoformat()+'\n')
               f.write('D1_END='+end.isoformat()+'\n')
-              f.write('D1_EXPECTED='+str(len(expected))+'\n')
+              f.write('D1_EXPECTED='+str(expected)+'\n')
           PY
       - name: Build D1 config
         shell: bash
