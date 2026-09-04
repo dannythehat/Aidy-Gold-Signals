@@ -1,0 +1,82 @@
+name: Ops Day 53 D1 Rollover Diagnostic 20260904
+
+on:
+  push:
+    branches:
+      - ops/day53-postproof-diagnostic-20260904
+    paths:
+      - .github/workflows/ops-day53-d1-rollover-diagnostic-20260904.yml
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  AS_OF: '2026-09-04T05:10:49.635000+00:00'
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Resolve exact D1 bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from datetime import datetime
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, str(Path('src').resolve()))
+          from aidy.twelve_data_market import latest_completed_bucket, expected_market_minute_opens
+          as_of=datetime.fromisoformat(os.environ['AS_OF'])
+          start,end=latest_completed_bucket(as_of,'1d')
+          expected=expected_market_minute_opens(start,end)
+          print('D1_START='+start.isoformat())
+          print('D1_END='+end.isoformat())
+          print('D1_EXPECTED='+str(len(expected)))
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as f:
+              f.write('D1_START='+start.isoformat()+'\n')
+              f.write('D1_END='+end.isoformat()+'\n')
+              f.write('D1_EXPECTED='+str(len(expected))+'\n')
+          PY
+      - name: Build D1 config
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          json.dump(cfg,open('/tmp/wrangler.diag.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+      - name: Quantify D1 raw and admitted coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Exact D1 bucket: $D1_START -> $D1_END expected=$D1_EXPECTED"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT COUNT(*) AS raw_n,MIN(open_time_utc) AS raw_min,MAX(open_time_utc) AS raw_max FROM market_candles WHERE source='twelve_data_vendor_m1_v1' AND symbol='XAUUSD' AND timeframe='1m' AND open_time_utc>='${D1_START}' AND open_time_utc<'${D1_END}'" | tee /tmp/raw.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT COUNT(*) AS admitted_n,MIN(open_time_utc) AS admitted_min,MAX(open_time_utc) AS admitted_max FROM twelve_data_decision_admitted_m1_v1 WHERE open_time_utc>='${D1_START}' AND open_time_utc<'${D1_END}'" | tee /tmp/admitted.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT substr(open_time_utc,1,13) AS hour_utc,COUNT(*) AS n FROM twelve_data_decision_admitted_m1_v1 WHERE open_time_utc>='${D1_START}' AND open_time_utc<'${D1_END}' GROUP BY substr(open_time_utc,1,13) ORDER BY hour_utc" | tee /tmp/hourly.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT b.window_start_utc,b.window_end_utc,b.required_m1_minutes,b.persisted_m1_minutes,b.state,r.completed_at_utc FROM twelve_data_bootstrap_requests b JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id WHERE b.state='succeeded' AND b.window_end_utc>'${D1_START}' AND b.window_start_utc<'${D1_END}' ORDER BY b.window_start_utc" | tee /tmp/bootstrap-overlap.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: day53-d1-rollover-diagnostic-20260904
+          path: |
+            /tmp/raw.json
+            /tmp/admitted.json
+            /tmp/hourly.json
+            /tmp/bootstrap-overlap.json
+          retention-days: 7
