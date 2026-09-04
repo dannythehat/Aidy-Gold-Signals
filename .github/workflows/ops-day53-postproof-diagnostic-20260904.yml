@@ -1,0 +1,61 @@
+name: Ops Day 53 Post-Proof Diagnostic 20260904
+
+on:
+  push:
+    branches:
+      - ops/day53-postproof-diagnostic-20260904
+    paths:
+      - .github/workflows/ops-day53-postproof-diagnostic-20260904.yml
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  TARGET_COHORT: aidy_fwd_v2_95f500aa7728c9f2f6daf3e384ecaeeb
+  PROOF_NOT_BEFORE: '2026-09-04T04:26:26+00:00'
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          json.dump(cfg, open('/tmp/wrangler.diag.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+      - name: Read observer dispositions and cycle states
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT disposition,data_quality_state,COALESCE(data_quality_reason_code,'') AS reason,COUNT(*) AS n,MAX(evaluated_at_utc) AS latest FROM aidy_forward_evaluations WHERE cohort_id='${TARGET_COHORT}' AND evaluated_at_utc>='${PROOF_NOT_BEFORE}' GROUP BY disposition,data_quality_state,data_quality_reason_code ORDER BY latest DESC" | tee /tmp/forward-summary.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT record_id,cycle_id,evaluated_at_utc,disposition,data_quality_state,data_quality_reason_code,decision_id,self_consistency_digest,context_hash FROM aidy_forward_evaluations WHERE cohort_id='${TARGET_COHORT}' AND evaluated_at_utc>='${PROOF_NOT_BEFORE}' ORDER BY evaluated_at_utc DESC LIMIT 20" | tee /tmp/forward-latest.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT cycle_id,updated_at_utc,cycle_state,last_error_code,context_hash,decision_id,self_consistency_digest,publication_id FROM aidy_end_to_end_cycles WHERE instruction_type='market_evaluation' AND source_state='private_forward' AND updated_at_utc>='${PROOF_NOT_BEFORE}' ORDER BY updated_at_utc DESC LIMIT 20" | tee /tmp/e2e-latest.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT completed_at_utc,status,request_kind,outputsize,error_code FROM twelve_data_request_ledger WHERE requested_at_utc>='${PROOF_NOT_BEFORE}' ORDER BY requested_at_utc DESC LIMIT 20" | tee /tmp/twelve-latest.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/wrangler.diag.jsonc --command "SELECT captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots WHERE symbol='XAUUSD' AND captured_at>='${PROOF_NOT_BEFORE}' ORDER BY captured_at DESC LIMIT 10" | tee /tmp/snapshots-latest.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: day53-postproof-diagnostic-20260904
+          path: |
+            /tmp/forward-summary.json
+            /tmp/forward-latest.json
+            /tmp/e2e-latest.json
+            /tmp/twelve-latest.json
+            /tmp/snapshots-latest.json
+          if-no-files-found: warn
+          retention-days: 7
