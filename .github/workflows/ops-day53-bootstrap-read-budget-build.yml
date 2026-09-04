@@ -1,0 +1,75 @@
+name: Ops Day 53 Build Bootstrap Read Budget Fix
+
+on:
+  push:
+    branches: [day53/bootstrap-read-budget-fix]
+    paths:
+      - ".github/workflows/ops-day53-bootstrap-read-budget-build.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build-fix:
+    if: github.event.head_commit.message != 'Day 53: stop bootstrap admission rescans'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: day53/bootstrap-read-budget-fix
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Patch bootstrap planning reads without changing admission semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          storage_path = Path('src/aidy/twelve_data_storage.py')
+          storage = storage_path.read_text(encoding='utf-8')
+          old_import = 'from .twelve_data_market import AGGREGATE_SOURCE, AIDY_SYMBOL, TwelveDataFetch\n'
+          new_import = 'from .twelve_data_market import AGGREGATE_SOURCE, AIDY_SYMBOL, RAW_M1_SOURCE, TwelveDataFetch\n'
+          assert old_import in storage
+          storage = storage.replace(old_import, new_import, 1)
+
+          marker = '    async def latest_m1_bars(self, *, start_utc: datetime, end_utc: datetime) -> list[dict[str, Any]]:\n'
+          assert marker in storage
+          methods = '''    async def scheduled_admitted_m1_open_times(\n        self, *, start_utc: datetime, end_utc: datetime\n    ) -> set[datetime]:\n        \"\"\"Return scheduled-capture M1 opens using the exact admission predicates.\n\n        Bootstrap planning must not scan the composite decision-admission view for\n        every recovery chunk. This set-based join preserves the scheduled branch of\n        that view exactly while avoiding all bootstrap-window correlation work.\n        \"\"\"\n        result = await self._d1.prepare(\n            \"\"\"\n            SELECT DISTINCT c.open_time_utc\n            FROM market_candles c\n            JOIN twelve_data_request_ledger r\n              ON r.completed_at_utc=c.first_observed_at\n            WHERE c.source=? AND c.symbol=? AND c.timeframe='1m'\n              AND c.open_time_utc>=? AND c.open_time_utc<?\n              AND r.status='succeeded'\n              AND r.request_kind='scheduled_capture'\n              AND r.outputsize IS NOT NULL\n              AND r.outputsize BETWEEN 1 AND 30\n            ORDER BY c.open_time_utc ASC\n            \"\"\"\n        ).bind(\n            RAW_M1_SOURCE,\n            AIDY_SYMBOL,\n            _utc(start_utc).isoformat(),\n            _utc(end_utc).isoformat(),\n        ).all()\n        opens: set[datetime] = set()\n        for row in _results(result):\n            raw = row.get('open_time_utc')\n            parsed = raw if isinstance(raw, datetime) else datetime.fromisoformat(str(raw))\n            if parsed.tzinfo is None:\n                raise ValueError('Scheduled-admitted Twelve M1 timestamp must be timezone-aware.')\n            opens.add(parsed.astimezone(UTC))\n        return opens\n\n    async def successful_bootstrap_windows(\n        self, *, start_utc: datetime, end_utc: datetime\n    ) -> list[tuple[datetime, datetime]]:\n        \"\"\"Return successful bootstrap intervals overlapping a planning range.\n\n        A succeeded bootstrap window is only recorded after every required vendor\n        minute has been persisted. Joining it to its succeeded bootstrap request is\n        therefore equivalent to the bootstrap branch of the admission view for the\n        required opens, without re-checking every candle against every old window.\n        \"\"\"\n        result = await self._d1.prepare(\n            \"\"\"\n            SELECT DISTINCT b.window_start_utc,b.window_end_utc\n            FROM twelve_data_bootstrap_requests b\n            JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id\n            WHERE b.state='succeeded'\n              AND r.status='succeeded'\n              AND r.request_kind='bootstrap'\n              AND b.window_end_utc>?\n              AND b.window_start_utc<?\n            ORDER BY b.window_start_utc ASC,b.window_end_utc ASC\n            \"\"\"\n        ).bind(_utc(start_utc).isoformat(), _utc(end_utc).isoformat()).all()\n        windows: list[tuple[datetime, datetime]] = []\n        for row in _results(result):\n            raw_start = row.get('window_start_utc')\n            raw_end = row.get('window_end_utc')\n            start = (\n                raw_start\n                if isinstance(raw_start, datetime)\n                else datetime.fromisoformat(str(raw_start))\n            )\n            end = raw_end if isinstance(raw_end, datetime) else datetime.fromisoformat(str(raw_end))\n            if start.tzinfo is None or end.tzinfo is None:\n                raise ValueError('Bootstrap admission window timestamps must be timezone-aware.')\n            windows.append((start.astimezone(UTC), end.astimezone(UTC)))\n        return windows\n\n'''
+          storage = storage.replace(marker, methods + marker, 1)
+          storage_path.write_text(storage, encoding='utf-8')
+
+          entry_path = Path('src/entry.py')
+          entry = entry_path.read_text(encoding='utf-8')
+          old = '''                admitted_rows = await market_store.latest_m1_bars(\n                    start_utc=windows[0].start_utc,\n                    end_utc=windows[-1].end_utc,\n                )\n                admitted_opens = set()\n                for row in admitted_rows:\n                    raw_open = row.get(\"open_time_utc\")\n                    parsed_open = raw_open if isinstance(raw_open, datetime) else datetime.fromisoformat(str(raw_open))\n                    if parsed_open.tzinfo is None:\n                        raise ValueError(\"Admitted Twelve M1 timestamp must be timezone-aware.\")\n                    admitted_opens.add(parsed_open.astimezone(UTC))\n                missing_required = all_required - admitted_opens\n'''
+          new = '''                bootstrap_windows = await market_store.successful_bootstrap_windows(\n                    start_utc=windows[0].start_utc,\n                    end_utc=windows[-1].end_utc,\n                )\n                bootstrap_admitted_opens = {\n                    opened\n                    for opened in all_required\n                    if any(start <= opened < end for start, end in bootstrap_windows)\n                }\n                scheduled_admitted_opens = await market_store.scheduled_admitted_m1_open_times(\n                    start_utc=windows[0].start_utc,\n                    end_utc=windows[-1].end_utc,\n                )\n                admitted_opens = bootstrap_admitted_opens | scheduled_admitted_opens\n                missing_required = all_required - admitted_opens\n'''
+          assert old in entry
+          entry = entry.replace(old, new, 1)
+          entry_path.write_text(entry, encoding='utf-8')
+
+          test_path = Path('tests/test_day53_bootstrap_read_budget.py')
+          test_path.write_text('''from pathlib import Path\n\n\nROOT = Path(__file__).resolve().parents[1]\n\n\ndef test_bootstrap_planner_does_not_rescan_composite_admission_view() -> None:\n    entry = (ROOT / \"src\" / \"entry.py\").read_text(encoding=\"utf-8\")\n    start = entry.index('if request.method == \"POST\" and url.path == \"/day53/twelve-data-bootstrap\"')\n    end = entry.index('if request.method == \"POST\" and url.path == \"/day53/live-gold-smoke\"')\n    bootstrap_route = entry[start:end]\n\n    assert \"market_store.latest_m1_bars\" not in bootstrap_route\n    assert \"market_store.successful_bootstrap_windows\" in bootstrap_route\n    assert \"market_store.scheduled_admitted_m1_open_times\" in bootstrap_route\n    assert \"bootstrap_admitted_opens | scheduled_admitted_opens\" in bootstrap_route\n\n\ndef test_bootstrap_planning_queries_preserve_admission_predicates() -> None:\n    storage = (ROOT / \"src\" / \"aidy\" / \"twelve_data_storage.py\").read_text(\n        encoding=\"utf-8\"\n    )\n\n    assert \"JOIN twelve_data_request_ledger r\" in storage\n    assert \"r.completed_at_utc=c.first_observed_at\" in storage\n    assert \"r.status='succeeded'\" in storage\n    assert \"r.request_kind='scheduled_capture'\" in storage\n    assert \"r.outputsize BETWEEN 1 AND 30\" in storage\n    assert \"b.state='succeeded'\" in storage\n    assert \"r.request_kind='bootstrap'\" in storage\n    assert \"b.window_end_utc>?\" in storage\n    assert \"b.window_start_utc<?\" in storage\n    assert \"RAW_M1_SOURCE\" in storage\n''', encoding='utf-8')
+
+          workflow = Path('.github/workflows/ops-day53-bootstrap-read-budget-build.yml')
+          workflow.unlink()
+          PY
+      - name: Validate focused change
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check src/aidy/twelve_data_storage.py src/entry.py tests/test_day53_bootstrap_read_budget.py
+          uv run pytest -q tests/test_day53_bootstrap_read_budget.py tests/test_day53_twelve_data_bootstrap_quarantine.py tests/test_day53_bootstrap_admission_recovery.py tests/test_day53_twelve_data_current_bucket_binding.py tests/test_day53_d1_read_budget.py
+      - name: Commit exact fix branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Day 53: stop bootstrap admission rescans'
+          git push origin HEAD:day53/bootstrap-read-budget-fix
