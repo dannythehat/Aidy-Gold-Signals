@@ -146,10 +146,19 @@ def test_decision_admission_view_quarantines_unledgered_and_manual_probe_rows() 
     assert "manual_probe" not in migration
 
 
-def test_storage_reads_canonical_m1_only_through_admission_view() -> None:
+def test_storage_preserves_canonical_m1_admission_on_every_read_path() -> None:
     storage = (ROOT / "src" / "aidy" / "twelve_data_storage.py").read_text(encoding="utf-8")
     assert 'DECISION_ADMITTED_M1_VIEW = "twelve_data_decision_admitted_m1_v1"' in storage
-    assert storage.count("FROM {DECISION_ADMITTED_M1_VIEW}") >= 3
+    assert storage.count("FROM {DECISION_ADMITTED_M1_VIEW}") >= 2
+    assert "WITH scheduled AS" in storage
+    assert "r.completed_at_utc=c.first_observed_at" in storage
+    assert "r.request_kind='scheduled_capture'" in storage
+    assert "r.outputsize BETWEEN 1 AND 30" in storage
+    assert "FROM twelve_data_bootstrap_requests b" in storage
+    assert "b.state='succeeded'" in storage
+    assert "r.request_kind='bootstrap'" in storage
+    assert "c.open_time_utc>=b.window_start_utc" in storage
+    assert "c.open_time_utc<b.window_end_utc" in storage
 
 
 def test_manual_smoke_cannot_write_canonical_candles_or_run_legacy_bootstrap() -> None:
