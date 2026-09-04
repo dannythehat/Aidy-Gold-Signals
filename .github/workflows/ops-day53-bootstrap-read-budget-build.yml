@@ -2,7 +2,8 @@ name: Ops Day 53 Build Bootstrap Read Budget Fix
 
 on:
   push:
-    branches: [day53/bootstrap-read-budget-fix]
+    branches:
+      - "day53/bootstrap-read-budget-fix"
     paths:
       - ".github/workflows/ops-day53-bootstrap-read-budget-build.yml"
 
@@ -11,7 +12,7 @@ permissions:
 
 jobs:
   build-fix:
-    if: github.event.head_commit.message != 'Day 53: stop bootstrap admission rescans'
+    if: ${{ github.event.head_commit.message != 'Day 53: stop bootstrap admission rescans' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -53,8 +54,7 @@ jobs:
           test_path = Path('tests/test_day53_bootstrap_read_budget.py')
           test_path.write_text('''from pathlib import Path\n\n\nROOT = Path(__file__).resolve().parents[1]\n\n\ndef test_bootstrap_planner_does_not_rescan_composite_admission_view() -> None:\n    entry = (ROOT / \"src\" / \"entry.py\").read_text(encoding=\"utf-8\")\n    start = entry.index('if request.method == \"POST\" and url.path == \"/day53/twelve-data-bootstrap\"')\n    end = entry.index('if request.method == \"POST\" and url.path == \"/day53/live-gold-smoke\"')\n    bootstrap_route = entry[start:end]\n\n    assert \"market_store.latest_m1_bars\" not in bootstrap_route\n    assert \"market_store.successful_bootstrap_windows\" in bootstrap_route\n    assert \"market_store.scheduled_admitted_m1_open_times\" in bootstrap_route\n    assert \"bootstrap_admitted_opens | scheduled_admitted_opens\" in bootstrap_route\n\n\ndef test_bootstrap_planning_queries_preserve_admission_predicates() -> None:\n    storage = (ROOT / \"src\" / \"aidy\" / \"twelve_data_storage.py\").read_text(\n        encoding=\"utf-8\"\n    )\n\n    assert \"JOIN twelve_data_request_ledger r\" in storage\n    assert \"r.completed_at_utc=c.first_observed_at\" in storage\n    assert \"r.status='succeeded'\" in storage\n    assert \"r.request_kind='scheduled_capture'\" in storage\n    assert \"r.outputsize BETWEEN 1 AND 30\" in storage\n    assert \"b.state='succeeded'\" in storage\n    assert \"r.request_kind='bootstrap'\" in storage\n    assert \"b.window_end_utc>?\" in storage\n    assert \"b.window_start_utc<?\" in storage\n    assert \"RAW_M1_SOURCE\" in storage\n''', encoding='utf-8')
 
-          workflow = Path('.github/workflows/ops-day53-bootstrap-read-budget-build.yml')
-          workflow.unlink()
+          Path('.github/workflows/ops-day53-bootstrap-read-budget-build.yml').unlink()
           PY
       - name: Validate focused change
         shell: bash
