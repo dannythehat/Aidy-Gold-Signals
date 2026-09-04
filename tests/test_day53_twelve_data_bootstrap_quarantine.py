@@ -146,18 +146,30 @@ async def test_interrupted_persistence_marks_bootstrap_window_failed_for_quarant
     assert store.window_finishes[-1]["failure_reason"] == "persistence_error:RuntimeError"
 
 
-def test_all_m1_read_paths_use_central_decision_admission_view() -> None:
+def test_m1_read_paths_preserve_decision_admission_semantics() -> None:
     storage = (ROOT / "src" / "aidy" / "twelve_data_storage.py").read_text(encoding="utf-8")
     migration = (
-        ROOT / "migrations" / "d1" / "0009_twelve_data_decision_admission.sql"
+        ROOT / "migrations" / "d1" / "0010_twelve_data_bootstrap_reattestation.sql"
     ).read_text(encoding="utf-8")
 
     assert 'DECISION_ADMITTED_M1_VIEW = "twelve_data_decision_admitted_m1_v1"' in storage
-    assert storage.count("FROM {DECISION_ADMITTED_M1_VIEW}") >= 3
-    assert "JOIN twelve_data_request_ledger" not in storage
+    assert storage.count("FROM {DECISION_ADMITTED_M1_VIEW}") >= 2
+
+    # The bounded history reader expands the exact two view branches set-wise so
+    # bootstrap recovery does not correlate every candle against every old window.
+    assert "WITH scheduled AS" in storage
+    assert "JOIN twelve_data_request_ledger r ON r.completed_at_utc=c.first_observed_at" in storage
+    assert "r.status='succeeded'" in storage
+    assert "r.request_kind='scheduled_capture'" in storage
+    assert "r.outputsize BETWEEN 1 AND 30" in storage
+    assert "FROM twelve_data_bootstrap_requests b" in storage
+    assert "JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id" in storage
+    assert "b.state='succeeded'" in storage
+    assert "r.request_kind='bootstrap'" in storage
+    assert "c.open_time_utc>=b.window_start_utc" in storage
+    assert "c.open_time_utc<b.window_end_utc" in storage
 
     assert "CREATE VIEW twelve_data_decision_admitted_m1_v1" in migration
-    assert "FROM twelve_data_request_ledger r" in migration
     assert "r.completed_at_utc=c.first_observed_at" in migration
     assert "r.status='succeeded'" in migration
     assert "r.request_kind='bootstrap'" in migration
