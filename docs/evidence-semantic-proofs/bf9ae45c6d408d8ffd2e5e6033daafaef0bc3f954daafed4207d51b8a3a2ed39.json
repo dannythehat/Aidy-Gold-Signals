@@ -1,0 +1,28 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "8d874641bc64bec58ddc69f9bcf5689b6643dc39",
+  "base_sha": "7b4dc8eabba147561dcf7072b74b34ae56fb4d66",
+  "protected_diff_sha256": "bf9ae45c6d408d8ffd2e5e6033daafaef0bc3f954daafed4207d51b8a3a2ed39",
+  "classification": "transport-only",
+  "cohort_action": "preserve",
+  "preserve_existing_cohort": true,
+  "reason": "The bounded Twelve M1 history reader now executes the existing scheduled-capture and successful-bootstrap decision-admission predicates as set-based joins instead of invoking the correlated admission view for every candle. The admitted evidence set, revision policy, required M1 opens, timeframe construction, semantic identity, model inputs, safety gates, publication permissions and analogue permissions are unchanged.",
+  "deterministic_equivalence_proof": {
+    "invariants": [
+      "scheduled-capture admission remains bound to completed_at_utc equals first_observed_at, succeeded status, scheduled_capture request kind and outputsize 1 through 30",
+      "bootstrap admission remains bound to succeeded bootstrap request, succeeded bootstrap window and candle open time inside the attested window",
+      "manual_probe evidence remains excluded",
+      "failed bootstrap windows remain excluded even if a partial persistence attempt wrote canonical candles",
+      "required M1 evidence set and newest immutable revision selection are unchanged",
+      "semantic identity, context composition, model gateway, safety gates, publication permissions and analogue permissions are unchanged",
+      "only bounded M1 query execution changes from correlated view evaluation to set-based equivalent provenance joins"
+    ],
+    "test_commands": [
+      "uv run ruff check --ignore F401 src/aidy/twelve_data_storage.py",
+      "uv run pytest -q tests/test_day53_twelve_data_bootstrap_quarantine.py tests/test_day53_twelve_data_launch_cleanup.py tests/test_day53_bootstrap_admission_recovery.py tests/test_day53_d1_read_budget.py",
+      "AIDY Day 53 Twelve Data OHLC Adapter focused tests and full repository regression"
+    ],
+    "result": "pass",
+    "evidence_digest": "8e1f4283520c215baf785397d513fd6b9cb6cc031eed91a0afc9c9a027641d1b"
+  }
+}
