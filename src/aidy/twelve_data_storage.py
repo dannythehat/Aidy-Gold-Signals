@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
-from .twelve_data_market import AGGREGATE_SOURCE, AIDY_SYMBOL, TwelveDataFetch
+from .twelve_data_market import AGGREGATE_SOURCE, AIDY_SYMBOL, RAW_M1_SOURCE, TwelveDataFetch
 
 TWELVE_DATA_DAILY_SAFETY_CEILING = 720
 TWELVE_DATA_ROLLING_24H_SAFETY_CEILING = 720
@@ -255,30 +255,72 @@ class D1TwelveDataMarketStore:
         return observation_id
 
     async def latest_m1_bars(self, *, start_utc: datetime, end_utc: datetime) -> list[dict[str, Any]]:
-        """Read each admitted M1 revision set once and keep only the newest revision.
+        """Read bounded admitted M1 evidence with set-based provenance joins.
 
-        The former self-correlated NOT EXISTS re-evaluated the decision-admission
-        view for each candidate row. ROW_NUMBER keeps the same immutable revision
-        semantics while allowing D1 to execute one bounded pass over the range.
+        The admission view is intentionally fail-closed, but its correlated EXISTS
+        predicates become expensive when an administrative bootstrap repeatedly asks
+        about a full D1-sized range. The two CTE branches below are exactly the two
+        admission branches from the view: successful scheduled captures and successful
+        bounded bootstrap windows. Driving the joins from their indexed provenance
+        tables avoids re-checking every candle against every historical bootstrap row.
         """
+        start = _utc(start_utc).isoformat()
+        end = _utc(end_utc).isoformat()
         result = await self._d1.prepare(
-            f"""
-            WITH ranked AS (
+            """
+            WITH scheduled AS (
               SELECT c.id,c.source,c.symbol,c.timeframe,c.open_time_utc,c.open,c.high,c.low,c.close,
-                     c.revision_index,c.payload_digest,c.first_observed_at,
+                     c.revision_index,c.payload_digest,c.first_observed_at
+              FROM market_candles c
+              JOIN twelve_data_request_ledger r ON r.completed_at_utc=c.first_observed_at
+              WHERE c.source=? AND c.symbol=? AND c.timeframe='1m'
+                AND c.open_time_utc>=? AND c.open_time_utc<?
+                AND r.status='succeeded'
+                AND r.request_kind='scheduled_capture'
+                AND r.outputsize IS NOT NULL
+                AND r.outputsize BETWEEN 1 AND 30
+            ), bootstrapped AS (
+              SELECT c.id,c.source,c.symbol,c.timeframe,c.open_time_utc,c.open,c.high,c.low,c.close,
+                     c.revision_index,c.payload_digest,c.first_observed_at
+              FROM twelve_data_bootstrap_requests b
+              JOIN twelve_data_request_ledger r ON r.id=b.request_ledger_id
+              JOIN market_candles c
+                ON c.open_time_utc>=b.window_start_utc AND c.open_time_utc<b.window_end_utc
+              WHERE b.state='succeeded'
+                AND r.status='succeeded'
+                AND r.request_kind='bootstrap'
+                AND c.source=? AND c.symbol=? AND c.timeframe='1m'
+                AND c.open_time_utc>=? AND c.open_time_utc<?
+                AND b.window_end_utc>? AND b.window_start_utc<?
+            ), admitted AS (
+              SELECT * FROM scheduled
+              UNION
+              SELECT * FROM bootstrapped
+            ), ranked AS (
+              SELECT admitted.*,
                      ROW_NUMBER() OVER (
-                       PARTITION BY c.source,c.symbol,c.timeframe,c.open_time_utc
-                       ORDER BY c.revision_index DESC
+                       PARTITION BY source,symbol,timeframe,open_time_utc
+                       ORDER BY revision_index DESC
                      ) AS revision_rank
-              FROM {DECISION_ADMITTED_M1_VIEW} c
-              WHERE c.open_time_utc>=? AND c.open_time_utc<?
+              FROM admitted
             )
             SELECT id,open_time_utc,open,high,low,close,revision_index,payload_digest,first_observed_at
             FROM ranked
             WHERE revision_rank=1
             ORDER BY open_time_utc ASC
             """
-        ).bind(_utc(start_utc).isoformat(), _utc(end_utc).isoformat()).all()
+        ).bind(
+            RAW_M1_SOURCE,
+            AIDY_SYMBOL,
+            start,
+            end,
+            RAW_M1_SOURCE,
+            AIDY_SYMBOL,
+            start,
+            end,
+            start,
+            end,
+        ).all()
         return _results(result)
 
     async def latest_candle_ids(self) -> dict[str, UUID]:
