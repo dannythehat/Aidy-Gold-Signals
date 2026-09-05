@@ -31,6 +31,7 @@ on:
       - "pyproject.toml"
       - ".github/workflows/day53-live-forward-activation.yml"
       - ".github/workflows/day53-twelve-data-ohlc-adapter.yml"
+      - ".github/workflows/aidy-d1-row-budget-alert.yml"
 
 permissions:
   contents: read
