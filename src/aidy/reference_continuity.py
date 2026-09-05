@@ -6,7 +6,7 @@ import json
 import math
 from collections import Counter
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 
 def _utc(value: datetime) -> datetime:
@@ -34,6 +34,10 @@ def _row_value(row: object, key: str, default: object = None) -> object:
         return row[key]  # type: ignore[index]
     except (KeyError, TypeError, IndexError):
         return getattr(row, key, default)
+
+
+_MAX_CONTINUITY_WINDOW = timedelta(hours=24)
+_MAX_CONTINUITY_SNAPSHOT_ROWS = 1600
 
 
 def _percentile(values: list[float], percentile: float) -> float | None:
@@ -114,6 +118,8 @@ class D1R2ReferenceContinuityReader:
         window_end = _utc(end)
         if window_end <= window_start:
             raise ValueError("AIDY continuity audit end must be after start.")
+        if window_end - window_start > _MAX_CONTINUITY_WINDOW:
+            raise ValueError("AIDY continuity audit window is capped at 24 hours.")
 
         snapshot_rows = await self._rows(
             """
@@ -121,10 +127,14 @@ class D1R2ReferenceContinuityReader:
             FROM market_snapshots
             WHERE captured_at>=? AND captured_at<?
             ORDER BY captured_at
+            LIMIT ?
             """,
             window_start,
             window_end,
+            _MAX_CONTINUITY_SNAPSHOT_ROWS + 1,
         )
+        if len(snapshot_rows) > _MAX_CONTINUITY_SNAPSHOT_ROWS:
+            raise RuntimeError("AIDY continuity snapshot row bound exceeded.")
         archive_count_row = await self._stmt(
             """
             SELECT COUNT(*) AS count FROM archive_outbox

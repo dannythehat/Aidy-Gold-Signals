@@ -43,6 +43,8 @@ class LocalD1:
         self.connection.row_factory = sqlite3.Row
         schema = Path("migrations/d1/0001_aidy_ops.sql").read_text()
         self.connection.executescript(schema)
+        hot_path = Path("migrations/d1/0012_live_gold_free_tier_read_budget.sql").read_text()
+        self.connection.executescript(hot_path)
 
     def prepare(self, sql: str) -> Prepared:
         return Prepared(self, sql)
@@ -140,6 +142,11 @@ async def test_d1_snapshot_discards_broker_position_payload(operational) -> None
         (str(committed.evidence_id),),
     ).fetchone()
     assert row[0] is None
+    source = operational._db.connection.execute(
+        "SELECT market_data_source FROM market_snapshots WHERE id=?",
+        (str(committed.evidence_id),),
+    ).fetchone()[0]
+    assert source == "unknown"
 
 
 @pytest.mark.asyncio

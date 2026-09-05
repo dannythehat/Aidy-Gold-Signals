@@ -55,6 +55,15 @@ class LiveGoldQuoteHistory(Protocol):
 
     async def latest_candle_ids(self, *, symbol: str, source: str) -> dict[str, UUID]: ...
 
+    async def candle_id_for_bucket(
+        self,
+        *,
+        symbol: str,
+        source: str,
+        timeframe: str,
+        open_time_utc: datetime,
+    ) -> UUID | None: ...
+
 
 def _utc(value: datetime) -> datetime:
     if value.tzinfo is None:
@@ -292,6 +301,22 @@ class AidyLiveGoldRecorderService:
             candle_states: dict[str, object] = {}
             for timeframe in _TIMEFRAME_SECONDS:
                 start, end = _closed_bucket(quote_time, timeframe)
+                existing_id = await self._quote_history.candle_id_for_bucket(
+                    symbol=SYMBOL,
+                    source=CANDLE_SOURCE,
+                    timeframe=timeframe,
+                    open_time_utc=start,
+                )
+                if existing_id is not None:
+                    latest_ids[timeframe] = existing_id
+                    candle_states[timeframe] = {
+                        "timeframe": timeframe,
+                        "bucket_start_utc": start.isoformat(),
+                        "bucket_end_utc": end.isoformat(),
+                        "state": "closed_bucket_already_materialized",
+                        "candle_id": str(existing_id),
+                    }
+                    continue
                 rows = await self._quote_history.quote_observations(
                     symbol=SYMBOL,
                     source=ARGENT_API_SOURCE,

@@ -51,6 +51,23 @@ def _stamp(value: datetime) -> str:
     return _utc(value).strftime("%Y%m%dT%H%M%S.%fZ")
 
 
+def _snapshot_market_data_source(snapshot: dict[str, object]) -> str:
+    explicit = snapshot.get("market_data_source")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip().lower()
+    raw = snapshot.get("data_availability_json")
+    if isinstance(raw, str):
+        try:
+            availability = json.loads(raw)
+        except (TypeError, ValueError):
+            availability = None
+        if isinstance(availability, dict):
+            source = availability.get("market_data_source")
+            if isinstance(source, str) and source.strip():
+                return source.strip().lower()
+    return "unknown"
+
+
 def candle_archive_key(candle: dict[str, object]) -> str:
     opened = candle.get("open_time_utc")
     if not isinstance(opened, datetime):
@@ -303,23 +320,25 @@ class D1OperationalEvidenceStore:
         evidence_id = uuid4()
         outbox_id = uuid4()
         archive_key = snapshot_archive_key(snapshot, evidence_id)
+        market_data_source = _snapshot_market_data_source(snapshot)
         # The column is retained for historical Day 2 compatibility only.
         # AIDY is a signal provider and never stores broker/follower positions.
         position_state = None
         insert = self._stmt(
             """
             INSERT INTO market_snapshots (
-                id,captured_at,symbol,capture_status,bid,ask,mid,spread,
+                id,captured_at,symbol,capture_status,market_data_source,bid,ask,mid,spread,
                 quote_time,quote_age_seconds,session_code,position_state_json,
                 data_availability_json,event_observation_ids_json,
                 latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,
                 latest_h4_id,latest_d1_id,snapshot_digest,archive_key
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             evidence_id,
             captured,
             snapshot["symbol"],
             snapshot["capture_status"],
+            market_data_source,
             snapshot.get("bid"),
             snapshot.get("ask"),
             snapshot.get("mid"),
@@ -641,6 +660,81 @@ class D1OperationalEvidenceStore:
                 )
             )
         await self._db.batch(statements)
+
+    async def prune_archived_hot_data(
+        self,
+        *,
+        now: datetime,
+        snapshot_retention_days: int = 7,
+        candle_retention_days: int = 35,
+        snapshot_limit: int = 2000,
+        candle_limit: int = 5000,
+    ) -> None:
+        if snapshot_retention_days < 2:
+            raise ValueError("Snapshot retention must preserve at least two days of hot evidence.")
+        if candle_retention_days < 7:
+            raise ValueError("Candle retention must preserve at least seven days of hot evidence.")
+        if not 1 <= snapshot_limit <= 5000 or not 1 <= candle_limit <= 10000:
+            raise ValueError("Hot-data prune limits are outside the safe bounded range.")
+        prune_stamp = _utc(now).isoformat()
+        snapshot_cutoff = _utc(now) - timedelta(days=snapshot_retention_days)
+        candle_cutoff = _utc(now) - timedelta(days=candle_retention_days)
+        await self._db.batch(
+            [
+                self._stmt(
+                    """
+                    UPDATE archive_outbox
+                    SET hot_pruned_at=?
+                    WHERE id IN (
+                        SELECT id FROM archive_outbox
+                        WHERE record_type='snapshot' AND status='archived'
+                          AND hot_pruned_at IS NULL AND archived_at<?
+                        ORDER BY archived_at,id
+                        LIMIT ?
+                    )
+                    """,
+                    prune_stamp,
+                    snapshot_cutoff,
+                    snapshot_limit,
+                ),
+                self._stmt(
+                    """
+                    DELETE FROM market_snapshots
+                    WHERE id IN (
+                        SELECT evidence_id FROM archive_outbox
+                        WHERE record_type='snapshot' AND hot_pruned_at=?
+                    )
+                    """,
+                    prune_stamp,
+                ),
+                self._stmt(
+                    """
+                    UPDATE archive_outbox
+                    SET hot_pruned_at=?
+                    WHERE id IN (
+                        SELECT id FROM archive_outbox
+                        WHERE record_type='candle' AND status='archived'
+                          AND hot_pruned_at IS NULL AND archived_at<?
+                        ORDER BY archived_at,id
+                        LIMIT ?
+                    )
+                    """,
+                    prune_stamp,
+                    candle_cutoff,
+                    candle_limit,
+                ),
+                self._stmt(
+                    """
+                    DELETE FROM market_candles
+                    WHERE id IN (
+                        SELECT evidence_id FROM archive_outbox
+                        WHERE record_type='candle' AND hot_pruned_at=?
+                    )
+                    """,
+                    prune_stamp,
+                ),
+            ]
+        )
 
     async def mark_archive_failure(self, *, outbox_id: UUID, error_code: str) -> None:
         code = error_code[:160]
