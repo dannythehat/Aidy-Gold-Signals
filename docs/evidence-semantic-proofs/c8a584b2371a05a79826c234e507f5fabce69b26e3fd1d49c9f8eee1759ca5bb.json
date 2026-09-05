@@ -1,0 +1,22 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "3a2afb4ec033bfc73c61379ab6e2df9749d76dd8",
+  "base_sha": "64154b19996e34f4ab23367748539fef4cb93232",
+  "protected_diff_sha256": "c8a584b2371a05a79826c234e507f5fabce69b26e3fd1d49c9f8eee1759ca5bb",
+  "classification": "transport-only",
+  "cohort_action": "preserve",
+  "preserve_existing_cohort": true,
+  "deterministic_equivalence_proof": {
+    "invariants": [
+      "quota_usage returns the same UTC-day and rolling-24h credit sums for the same request-ledger rows",
+      "latest_candle_ids returns the latest admitted M1 candle and latest aggregate candle per timeframe using the same open_time_utc DESC, revision_index DESC ordering",
+      "no evidence-admission predicate, immutable evidence payload, or cohort semantics are changed"
+    ],
+    "test_commands": [
+      "uv run pytest -q tests/test_day53_twelve_free_tier_read_budget.py tests/test_day53_live_forward_observer.py tests/test_day53_twelve_data_current_bucket_binding.py tests/test_day53_d1_read_budget.py",
+      "uv run pytest -q"
+    ],
+    "result": "pass",
+    "evidence_digest": "52da306b9962172f80914503ff47ffc70e40f9b1fd93eafe3e7d476c6fcce745"
+  }
+}
