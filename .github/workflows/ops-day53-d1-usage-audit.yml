@@ -42,7 +42,7 @@ jobs:
           query='''query D1Usage($accountTag: string!, $start: Date, $end: Date, $databaseId: string) {
             viewer { accounts(filter: { accountTag: $accountTag }) {
               d1AnalyticsAdaptiveGroups(limit: 100, filter: { date_geq: $start, date_leq: $end, databaseId: $databaseId }, orderBy: [date_DESC]) {
-                sum { rowsRead rowsWritten readQueries writeQueries queryBatchResponseBytes queryBatchTimeMs }
+                sum { rowsRead rowsWritten readQueries writeQueries }
                 dimensions { date databaseId }
               }
             } }
@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           python - <<'PY' | tee /tmp/d1-usage-summary.txt
-          import json, re
+          import json
           analytics=json.load(open('/tmp/d1-analytics.json',encoding='utf-8'))
           groups=analytics['data']['viewer']['accounts'][0]['d1AnalyticsAdaptiveGroups']
           print('D1_DAILY_ANALYTICS')
