@@ -15,6 +15,10 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from itertools import pairwise
 
+_MAX_CONTINUITY_WINDOW = timedelta(hours=24)
+_MAX_CONTINUITY_SNAPSHOT_ROWS = 1600
+_MAX_CONTINUITY_CANDLE_ROWS = 10000
+
 TIMEFRAME_SECONDS = {
     "1m": 60,
     "5m": 300,
@@ -353,26 +357,38 @@ class D1R2ContinuityReader:
             raise ValueError("AIDY archive reconciliation limit must be between 1 and 40.")
         window_start = _utc(start)
         window_end = _utc(end)
+        if window_end <= window_start:
+            raise ValueError("AIDY continuity audit end must be after start.")
+        if window_end - window_start > _MAX_CONTINUITY_WINDOW:
+            raise ValueError("AIDY continuity audit window is capped at 24 hours.")
         snapshot_rows = await self._rows(
             """
             SELECT captured_at,capture_status,quote_age_seconds,data_availability_json
             FROM market_snapshots
             WHERE captured_at>=? AND captured_at<?
             ORDER BY captured_at
+            LIMIT ?
             """,
             window_start,
             window_end,
+            _MAX_CONTINUITY_SNAPSHOT_ROWS + 1,
         )
+        if len(snapshot_rows) > _MAX_CONTINUITY_SNAPSHOT_ROWS:
+            raise RuntimeError("AIDY continuity snapshot row bound exceeded.")
         candle_rows = await self._rows(
             """
             SELECT source,timeframe,open_time_utc,revision_index
             FROM market_candles
             WHERE open_time_utc>=? AND open_time_utc<?
             ORDER BY timeframe,open_time_utc,revision_index
+            LIMIT ?
             """,
             window_start,
             window_end,
+            _MAX_CONTINUITY_CANDLE_ROWS + 1,
         )
+        if len(candle_rows) > _MAX_CONTINUITY_CANDLE_ROWS:
+            raise RuntimeError("AIDY continuity candle row bound exceeded.")
         archive_count_row = await self._stmt(
             """
             SELECT COUNT(*) AS count

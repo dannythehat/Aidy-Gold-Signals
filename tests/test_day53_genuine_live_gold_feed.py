@@ -100,6 +100,13 @@ class FakeHistory:
         assert source == CANDLE_SOURCE
         return {}
 
+    async def candle_id_for_bucket(
+        self, *, symbol: str, source: str, timeframe: str, open_time_utc
+    ) -> UUID | None:
+        assert symbol == "XAUUSD"
+        assert source == CANDLE_SOURCE
+        return None
+
     async def quote_observations(self, *, symbol: str, source: str, start_utc, end_utc):
         assert symbol == "XAUUSD"
         assert source == "argentapi"
@@ -240,9 +247,13 @@ class LocalD1:
             );
             CREATE TABLE market_snapshots (
                 id TEXT PRIMARY KEY, captured_at TEXT, symbol TEXT, capture_status TEXT,
-                bid TEXT, ask TEXT, mid TEXT, spread TEXT, quote_time TEXT,
+                market_data_source TEXT, bid TEXT, ask TEXT, mid TEXT, spread TEXT, quote_time TEXT,
                 quote_age_seconds REAL, data_availability_json TEXT, snapshot_digest TEXT
             );
+            CREATE INDEX ix_market_snapshots_quote_history
+                ON market_snapshots(symbol,market_data_source,capture_status,quote_time,captured_at,id);
+            CREATE INDEX ix_market_candles_source_symbol_timeframe_latest
+                ON market_candles(source,symbol,timeframe,open_time_utc DESC,revision_index DESC,id);
             """
         )
 
@@ -275,12 +286,13 @@ async def test_quote_history_filters_to_exact_public_source() -> None:
     for source, suffix in (("argentapi", "a"), ("gold_api", "g")):
         availability = json.dumps({"market_data_source": source})
         d1.connection.execute(
-            "INSERT INTO market_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO market_snapshots VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 f"snap-{suffix}",
                 "2026-09-02T11:59:10+00:00",
                 "XAUUSD",
                 "complete",
+                source,
                 "3499",
                 "3501",
                 "3500",

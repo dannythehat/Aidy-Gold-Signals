@@ -557,8 +557,10 @@ class Default(WorkerEntrypoint):
         for message in batch.messages:
             try:
                 settings = AidySettings.from_worker_env(worker_env)
-                _, repository = _repository(worker_env)
+                operational, repository = _repository(worker_env)
                 scheduled_at = _scheduled_at_from_queue_body(message.body)
+                if scheduled_at.minute == 0:
+                    await operational.prune_archived_hot_data(now=scheduled_at)
                 market_gateway, live_gold_history = _market_runtime_dependencies(
                     worker_env, settings
                 )
