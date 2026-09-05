@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from aidy.twelve_data_market import expected_market_minute_opens
 
 PROVIDER_CLIENT = "super-signals-provider-lab"
-PROVIDER_PUBLIC_KEY_B64URL = "itdRZAC8u-1N5NWEwqvMWtRT6WK4PeeyEpzIh4TDQ2w"
+PROVIDER_PUBLIC_KEY_B64URL = "L7ey29IgqbMwaqIS-eKGMoeLVE2Jbs1QRDMEHc1wXvw"
 MAX_AUTH_SKEW_SECONDS = 300
 MAX_WINDOW = timedelta(hours=48)
 MAX_M1_ROWS = 3500
