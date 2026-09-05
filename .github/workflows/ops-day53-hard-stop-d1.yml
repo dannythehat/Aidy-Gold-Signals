@@ -1,0 +1,122 @@
+name: Ops Day 53 Hard Stop D1 Runtime
+
+on:
+  push:
+    branches: [ops/day53-hard-stop-d1-20260905]
+    paths:
+      - ".github/workflows/ops-day53-hard-stop-d1.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day53-live-forward-deployment
+  cancel-in-progress: false
+
+env:
+  EXPECTED_MAIN_SHA: 45cba20a0f4fc532f09625ff98dfa92c55a8a40c
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  hard-stop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout ops branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require exact protected main and credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_SHA"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Build hard-stop configs with no scheduler and no queue consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+
+          worker=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          worker['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          worker['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          worker['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          worker['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          worker['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          worker['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          worker['vars']['AIDY_CAPTURE_ENABLED']='false'
+          worker['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          worker['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          worker['triggers']['crons']=[]
+          worker['queues']['consumers']=[]
+          json.dump(worker, open('wrangler.day53.hard-stop.worker.jsonc','w',encoding='utf-8'), indent=2)
+
+          scheduler=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          scheduler['triggers']['crons']=[]
+          json.dump(scheduler, open('wrangler.day53.hard-stop.scheduler.jsonc','w',encoding='utf-8'), indent=2)
+
+          assert worker['vars']['AIDY_CAPTURE_ENABLED']=='false'
+          assert worker['vars']['AIDY_FORMAL_FORWARD_ENABLED']=='false'
+          assert worker['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']=='false'
+          assert worker['queues']['consumers']==[]
+          assert scheduler['triggers']['crons']==[]
+          PY
+
+      - name: Deploy Worker hard stop without D1 queries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          cp wrangler.day53.hard-stop.worker.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+      - name: Disable minute scheduler cron
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config wrangler.day53.hard-stop.scheduler.jsonc
+
+      - name: Verify hard-stop health without D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?hard_stop=${GITHUB_SHA}-${attempt}" > /tmp/health.json; then
+              if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is False, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source') == 'twelve_data', h
+          PY
+              then
+                cat /tmp/health.json
+                echo 'hard_stop_verified=true'
+                exit 0
+              fi
+            fi
+            sleep 3
+          done
+          echo 'Hard-stop Worker health never converged' >&2
+          exit 1
