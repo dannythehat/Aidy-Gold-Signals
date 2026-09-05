@@ -1,0 +1,95 @@
+name: AIDY D1 Row Budget Alert
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/aidy-d1-row-budget-alert.yml"
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  D1_ROWS_READ_ALERT_THRESHOLD: "3250000"
+  D1_ROWS_READ_FREE_LIMIT: "5000000"
+
+jobs:
+  check-budget:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Query today's D1 rows read
+        id: usage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          from datetime import datetime, timezone
+
+          day = datetime.now(timezone.utc).date().isoformat()
+          query = '''query D1Usage($accountTag: string!, $day: Date, $databaseId: string) {
+            viewer { accounts(filter: { accountTag: $accountTag }) {
+              d1AnalyticsAdaptiveGroups(limit: 10, filter: {
+                date_geq: $day, date_leq: $day, databaseId: $databaseId
+              }) {
+                sum { rowsRead }
+                dimensions { date databaseId }
+              }
+            } }
+          }'''
+          body = json.dumps({'query': query, 'variables': {
+              'accountTag': os.environ['CLOUDFLARE_ACCOUNT_ID'],
+              'day': day,
+              'databaseId': os.environ['AIDY_D1_DATABASE_ID'],
+          }}).encode()
+          req = urllib.request.Request(
+              'https://api.cloudflare.com/client/v4/graphql',
+              data=body,
+              headers={
+                  'Authorization': 'Bearer ' + os.environ['CLOUDFLARE_API_TOKEN'],
+                  'Content-Type': 'application/json',
+              },
+          )
+          with urllib.request.urlopen(req, timeout=30) as response:
+              result = json.load(response)
+          if result.get('errors'):
+              raise SystemExit(result['errors'])
+          groups = result['data']['viewer']['accounts'][0]['d1AnalyticsAdaptiveGroups']
+          rows_read = sum(int(item.get('sum', {}).get('rowsRead') or 0) for item in groups)
+          threshold = int(os.environ['D1_ROWS_READ_ALERT_THRESHOLD'])
+          free_limit = int(os.environ['D1_ROWS_READ_FREE_LIMIT'])
+          alert = rows_read >= threshold
+          print(f"date_utc={day} rows_read={rows_read} threshold={threshold} free_limit={free_limit} alert={str(alert).lower()}")
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
+              fh.write(f"day={day}\n")
+              fh.write(f"rows_read={rows_read}\n")
+              fh.write(f"alert={'true' if alert else 'false'}\n")
+          PY
+
+      - name: Raise one alert issue for the UTC day
+        if: steps.usage.outputs.alert == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROWS_READ: ${{ steps.usage.outputs.rows_read }}
+          DAY: ${{ steps.usage.outputs.day }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="AIDY D1 read budget alert ${DAY}"
+          existing="$(gh issue list --state open --search "${title} in:title" --json number --jq '.[0].number // empty')"
+          if [ -z "$existing" ]; then
+            gh issue create \
+              --title "$title" \
+              --body "Cloudflare D1 rows_read reached ${ROWS_READ} for ${DAY} UTC. Warning threshold: ${D1_ROWS_READ_ALERT_THRESHOLD} (65% of the ${D1_ROWS_READ_FREE_LIMIT}/day free-tier ceiling). Investigate read amplification before capture reaches the hard limit."
+          fi
+          echo "::error::AIDY D1 rows_read=${ROWS_READ} is above the ${D1_ROWS_READ_ALERT_THRESHOLD} warning threshold."
+          exit 1
