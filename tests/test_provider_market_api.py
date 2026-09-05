@@ -125,3 +125,15 @@ def test_worker_routes_provider_endpoint_without_replacing_core_runtime() -> Non
     assert 'urlparse(request.url).path == "/market/ohlc"' in wrapper
     assert "return await super().fetch(request)" in wrapper
     assert '"main": "src/provider_entry.py"' in config
+
+
+def test_provider_rollout_guard_checks_real_formal_forward_env_var() -> None:
+    rollout = (
+        ROOT / ".github" / "workflows" / "ops-provider-market-rollout-20260905.yml"
+    ).read_text(encoding="utf-8")
+    assert "settings.formal_forward_enabled" not in rollout
+    assert "cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'" in rollout
+    assert (
+        "str(cfg['vars'].get('AIDY_FORMAL_FORWARD_ENABLED', '')).strip().lower() == 'false'"
+        in rollout
+    )

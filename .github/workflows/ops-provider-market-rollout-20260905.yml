@@ -69,7 +69,7 @@ jobs:
           cfg['triggers']['crons']=[]
           settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
           assert settings.capture_enabled is True
-          assert settings.formal_forward_enabled is False
+          assert str(cfg['vars'].get('AIDY_FORMAL_FORWARD_ENABLED', '')).strip().lower() == 'false'
           assert settings.market_data_source == 'twelve_data'
           assert settings.market_data_ownership == 'public_independent'
           assert settings.market_poll_seconds >= 300.0
