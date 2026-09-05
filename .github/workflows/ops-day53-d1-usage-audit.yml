@@ -1,0 +1,108 @@
+name: Ops Day 53 D1 Usage Audit
+
+on:
+  push:
+    branches: [ops/day53-d1-usage-audit-20260905]
+    paths:
+      - ".github/workflows/ops-day53-d1-usage-audit.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 64154b19996e34f4ab23367748539fef4cb93232
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Query D1 billing analytics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          from datetime import datetime, timezone, timedelta
+          now=datetime.now(timezone.utc)
+          start=(now.date()-timedelta(days=1)).isoformat()
+          end=now.date().isoformat()
+          query='''query D1Usage($accountTag: string!, $start: Date, $end: Date, $databaseId: string) {
+            viewer { accounts(filter: { accountTag: $accountTag }) {
+              d1AnalyticsAdaptiveGroups(limit: 100, filter: { date_geq: $start, date_leq: $end, databaseId: $databaseId }, orderBy: [date_DESC]) {
+                sum { rowsRead rowsWritten readQueries writeQueries queryBatchResponseBytes queryBatchTimeMs }
+                dimensions { date databaseId }
+              }
+            } }
+          }'''
+          payload=json.dumps({'query':query,'variables':{
+              'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
+              'start':start,'end':end,'databaseId':os.environ['AIDY_D1_DATABASE_ID']
+          }}).encode()
+          req=urllib.request.Request('https://api.cloudflare.com/client/v4/graphql',data=payload,headers={
+              'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],
+              'Content-Type':'application/json'
+          })
+          with urllib.request.urlopen(req,timeout=30) as r:
+              result=json.load(r)
+          open('/tmp/d1-analytics.json','w',encoding='utf-8').write(json.dumps(result,indent=2,sort_keys=True))
+          print(json.dumps(result,indent=2,sort_keys=True))
+          if result.get('errors'):
+              raise SystemExit('Cloudflare GraphQL returned errors')
+          PY
+
+      - name: Query top D1 reads for last day
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 insights "$AIDY_D1_DATABASE_NAME" --sort-type=sum --sort-by=reads --sort-direction=DESC --limit=30 --timePeriod=1d --json 2>&1 | tee /tmp/d1-insights.txt
+
+      - name: Summarize metrics
+        shell: bash
+        run: |
+          python - <<'PY' | tee /tmp/d1-usage-summary.txt
+          import json, re
+          analytics=json.load(open('/tmp/d1-analytics.json',encoding='utf-8'))
+          groups=analytics['data']['viewer']['accounts'][0]['d1AnalyticsAdaptiveGroups']
+          print('D1_DAILY_ANALYTICS')
+          for g in groups:
+              d=g['dimensions']; s=g['sum']
+              print(f"date={d['date']} rowsRead={s.get('rowsRead')} rowsWritten={s.get('rowsWritten')} readQueries={s.get('readQueries')} writeQueries={s.get('writeQueries')}")
+          raw=open('/tmp/d1-insights.txt',encoding='utf-8').read()
+          start=raw.find('['); end=raw.rfind(']')
+          if start>=0 and end>=start:
+              try:
+                  rows=json.loads(raw[start:end+1])
+              except Exception:
+                  rows=[]
+          else:
+              rows=[]
+          print('TOP_READ_QUERIES')
+          for i,row in enumerate(rows[:20],1):
+              q=' '.join(str(row.get('query') or '').split())
+              print(f"{i}. totalRowsRead={row.get('totalRowsRead')} avgRowsRead={row.get('avgRowsRead')} runs={row.get('numberOfTimesRun')} query={q}")
+          PY
+
+      - name: Preserve audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-d1-usage-audit-${{ github.sha }}
+          path: |
+            /tmp/d1-analytics.json
+            /tmp/d1-insights.txt
+            /tmp/d1-usage-summary.txt
+          if-no-files-found: warn
+          retention-days: 30
