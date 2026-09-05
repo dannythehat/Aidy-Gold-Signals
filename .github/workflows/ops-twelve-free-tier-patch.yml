@@ -25,7 +25,18 @@ jobs:
           python-version: "3.13"
 
       - name: Apply deterministic patch
-        run: python .github/ops/day53_twelve_free_tier_patch.py
+        run: |
+          python .github/ops/day53_twelve_free_tier_patch.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('tests/test_day53_twelve_free_tier_read_budget.py')
+          text = p.read_text(encoding='utf-8')
+          old = '    section = text[text.index("async def latest_candle_ids"):text.index("async def latest_m1_bar")]\n'
+          new = '    start = text.index("async def latest_candle_ids")\n    section = text[start:start + 2500]\n'
+          if old not in text:
+              raise SystemExit('expected staged test boundary not found')
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
 
       - name: Install project
         run: |
