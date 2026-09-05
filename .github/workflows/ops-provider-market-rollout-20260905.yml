@@ -1,0 +1,167 @@
+name: Ops Provider Market Rollout 20260905
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ops-provider-market-rollout-20260905.yml"
+
+concurrency:
+  group: aidy-provider-market-production-rollout
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  D1_ROWS_READ_ALERT_THRESHOLD: "3250000"
+  D1_ROWS_READ_FREE_LIMIT: "5000000"
+
+jobs:
+  deploy-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact main head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build capture-only production config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          cfg['triggers']['crons']=[]
+          settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+          assert settings.capture_enabled is True
+          assert settings.formal_forward_enabled is False
+          assert settings.market_data_source == 'twelve_data'
+          assert settings.market_data_ownership == 'public_independent'
+          assert settings.market_poll_seconds >= 300.0
+          assert cfg['queues']['consumers'][0]['queue']=='aidy-capture-test'
+          json.dump(cfg, open('wrangler.provider-market.live.jsonc','w',encoding='utf-8'), indent=2)
+
+          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched, open('wrangler.provider-market.scheduler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply D1 migrations and deploy capture-only Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.provider-market.live.jsonc
+          cp wrangler.provider-market.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+          npx --yes wrangler@4 deploy --config wrangler.provider-market.scheduler.jsonc
+
+      - name: Verify health and provider endpoint route
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "${AIDY_TEST_WORKER_URL}/health?provider_rollout=${GITHUB_SHA}-${attempt}" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source') == 'twelve_data', h
+          assert h.get('market_data_ownership') == 'public_independent', h
+          PY
+            then
+              ok=1
+              break
+            fi
+            sleep 3
+          done
+          test "$ok" -eq 1
+          cat /tmp/health.json
+
+          FROM="2026-09-03T00:00:00+00:00"
+          TO="2026-09-03T00:01:00+00:00"
+          status="$(curl -sS -o /tmp/provider-unauth.json -w '%{http_code}' --get \
+            --data-urlencode 'symbol=XAUUSD' \
+            --data-urlencode 'timeframe=1m' \
+            --data-urlencode "from=${FROM}" \
+            --data-urlencode "to=${TO}" \
+            "${AIDY_TEST_WORKER_URL}/market/ohlc")"
+          echo "provider_endpoint_unauth_status=${status}"
+          cat /tmp/provider-unauth.json || true
+          test "$status" = "401"
+
+      - name: Record current D1 free-tier read usage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          from datetime import datetime, timezone
+          day=datetime.now(timezone.utc).date().isoformat()
+          query='''query D1Usage($accountTag: string!, $day: Date, $databaseId: string) {
+            viewer { accounts(filter: { accountTag: $accountTag }) {
+              d1AnalyticsAdaptiveGroups(limit: 10, filter: {
+                date_geq: $day, date_leq: $day, databaseId: $databaseId
+              }) { sum { rowsRead } dimensions { date databaseId } }
+            } }
+          }'''
+          body=json.dumps({'query':query,'variables':{
+              'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
+              'day':day,
+              'databaseId':os.environ['AIDY_D1_DATABASE_ID'],
+          }}).encode()
+          req=urllib.request.Request('https://api.cloudflare.com/client/v4/graphql',data=body,headers={
+              'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],
+              'Content-Type':'application/json',
+          })
+          with urllib.request.urlopen(req, timeout=30) as r:
+              result=json.load(r)
+          if result.get('errors'):
+              raise SystemExit(result['errors'])
+          groups=result['data']['viewer']['accounts'][0]['d1AnalyticsAdaptiveGroups']
+          rows_read=sum(int(item.get('sum',{}).get('rowsRead') or 0) for item in groups)
+          threshold=int(os.environ['D1_ROWS_READ_ALERT_THRESHOLD'])
+          free_limit=int(os.environ['D1_ROWS_READ_FREE_LIMIT'])
+          print(f'date_utc={day} rows_read={rows_read} threshold={threshold} free_limit={free_limit}')
+          assert rows_read < threshold, (rows_read, threshold)
+          assert rows_read < free_limit, (rows_read, free_limit)
+          PY
