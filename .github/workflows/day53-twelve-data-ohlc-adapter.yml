@@ -13,12 +13,15 @@ on:
       - "src/aidy/twelve_data_storage.py"
       - "src/aidy/twelve_data_recorder.py"
       - "src/aidy/twelve_data_bootstrap.py"
+      - "src/aidy/provider_market_api.py"
+      - "src/provider_entry.py"
       - "src/aidy/day53_step2_preregistration.py"
       - "src/aidy/day53_step2_qualification_guard.py"
       - "src/aidy/config.py"
       - "src/aidy/runtime.py"
       - "src/aidy/forward_live_observer.py"
       - "src/entry.py"
+      - "wrangler.test.example.jsonc"
       - "migrations/d1/0006_twelve_data_feed_observations.sql"
       - "migrations/d1/0007_twelve_data_quota_bootstrap.sql"
       - "migrations/d1/0009_twelve_data_decision_admission.sql"
@@ -28,6 +31,7 @@ on:
       - "tests/test_day53_twelve_data_ohlc_adapter.py"
       - "tests/test_day53_twelve_data_launch_cleanup.py"
       - "tests/test_day53_live_forward_observer.py"
+      - "tests/test_provider_market_api.py"
       - "pyproject.toml"
       - ".github/workflows/day53-live-forward-activation.yml"
       - ".github/workflows/day53-twelve-data-ohlc-adapter.yml"
@@ -67,6 +71,8 @@ jobs:
             src/aidy/twelve_data_market.py \
             src/aidy/twelve_data_recorder.py \
             src/aidy/twelve_data_bootstrap.py \
+            src/aidy/provider_market_api.py \
+            src/provider_entry.py \
             src/aidy/day53_step2_preregistration.py \
             src/aidy/day53_step2_qualification_guard.py \
             src/aidy/config.py \
@@ -75,7 +81,8 @@ jobs:
             tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
-            tests/test_day53_live_forward_observer.py
+            tests/test_day53_live_forward_observer.py \
+            tests/test_provider_market_api.py
           uv run ruff check --ignore F401 src/aidy/twelve_data_storage.py
           uv run ruff check --ignore BLE001,S110,RUF100 src/entry.py
           uv run python -m compileall -q src scripts tests
@@ -88,7 +95,8 @@ jobs:
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
             tests/test_day53_live_forward_observer.py \
-            tests/test_day53_genuine_live_gold_feed.py
+            tests/test_day53_genuine_live_gold_feed.py \
+            tests/test_provider_market_api.py
 
       - name: Full repository regression
         shell: bash
