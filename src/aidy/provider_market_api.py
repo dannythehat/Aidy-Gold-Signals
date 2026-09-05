@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import base64
+import binascii
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+from aidy.twelve_data_market import expected_market_minute_opens
 
 PROVIDER_CLIENT = "super-signals-provider-lab"
 PROVIDER_PUBLIC_KEY_B64URL = "itdRZAC8u-1N5NWEwqvMWtRT6WK4PeeyEpzIh4TDQ2w"
@@ -23,7 +26,7 @@ def _b64url_decode(value: str) -> bytes:
 def _utc_iso(value: str, *, name: str) -> datetime:
     try:
         parsed = datetime.fromisoformat(value)
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a valid ISO-8601 timestamp.") from exc
     if parsed.tzinfo is None:
         raise ValueError(f"{name} must be timezone-aware.")
@@ -74,7 +77,7 @@ def _authorized(request: Any, *, now: datetime | None = None) -> bool:
                 client=client,
             ),
         )
-    except (ValueError, InvalidSignature):
+    except (ValueError, TypeError, OverflowError, binascii.Error, InvalidSignature):
         return False
     return True
 
@@ -82,9 +85,10 @@ def _authorized(request: Any, *, now: datetime | None = None) -> bool:
 def _latest_revisions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     selected: dict[str, dict[str, Any]] = {}
     for row in rows:
-        opened = str(row.get("open_time_utc") or "")
-        if not opened:
-            raise ValueError("Admitted market row lacks open_time_utc.")
+        opened_dt = _utc_iso(str(row.get("open_time_utc") or ""), name="open_time_utc")
+        if opened_dt.second or opened_dt.microsecond:
+            raise ValueError("Admitted M1 open_time_utc must be minute-aligned.")
+        opened = opened_dt.isoformat()
         current = selected.get(opened)
         rank = (int(row.get("revision_index") or 0), str(row.get("first_observed_at") or ""))
         if current is None:
@@ -100,9 +104,7 @@ def _latest_revisions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None = None) -> Any:
-    """Serve only admitted PIT-safe M1 OHLC through a bounded read-only interface."""
-    # workers imports `js`, so keep it inside the Cloudflare request path. This makes
-    # the pure auth/query helpers unit-testable under ordinary CPython.
+    """Serve admitted PIT-safe M1 OHLC plus continuity/provenance, read-only and bounded."""
     from workers import Response
 
     if request.method != "GET":
@@ -126,6 +128,8 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
         return Response.json({"ok": False, "error": "invalid_window", "message": str(exc)}, status=400)
     if start >= end:
         return Response.json({"ok": False, "error": "invalid_window"}, status=400)
+    if start.second or start.microsecond or end.second or end.microsecond:
+        return Response.json({"ok": False, "error": "window_not_minute_aligned"}, status=400)
     if end - start > MAX_WINDOW:
         return Response.json(
             {"ok": False, "error": "window_too_large", "max_window_hours": 48}, status=413
@@ -134,7 +138,7 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
     cutoff = end.isoformat()
     result = await env.AIDY_OPS.prepare(
         """
-        SELECT open_time_utc,open,high,low,close,revision_index,first_observed_at
+        SELECT open_time_utc,open,high,low,close,revision_index,first_observed_at,payload_digest
         FROM twelve_data_decision_admitted_m1_v1
         WHERE open_time_utc>=? AND open_time_utc<? AND first_observed_at<=?
         ORDER BY open_time_utc,revision_index
@@ -148,16 +152,43 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
             status=413,
         )
 
-    bars = [
-        {
-            "open_time_utc": str(row["open_time_utc"]),
-            "open": str(row["open"]),
-            "high": str(row["high"]),
-            "low": str(row["low"]),
-            "close": str(row["close"]),
-        }
-        for row in _latest_revisions(rows)
-    ]
+    selected = _latest_revisions(rows)
+    expected = [value.isoformat() for value in expected_market_minute_opens(start, end)]
+    expected_set = set(expected)
+    bars: list[dict[str, str | int]] = []
+    actual: set[str] = set()
+    try:
+        for row in selected:
+            opened = _utc_iso(str(row["open_time_utc"]), name="open_time_utc").isoformat()
+            if opened not in expected_set:
+                raise ValueError("admitted_off_session_or_unexpected_minute")
+            first_observed = _utc_iso(
+                str(row["first_observed_at"]), name="first_observed_at"
+            ).isoformat()
+            if first_observed > cutoff:
+                raise ValueError("admitted_row_exceeds_pit_cutoff")
+            digest = str(row.get("payload_digest") or "").strip().lower()
+            if len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest):
+                raise ValueError("admitted_row_missing_payload_digest")
+            actual.add(opened)
+            bars.append(
+                {
+                    "open_time_utc": opened,
+                    "open": str(row["open"]),
+                    "high": str(row["high"]),
+                    "low": str(row["low"]),
+                    "close": str(row["close"]),
+                    "revision_index": int(row.get("revision_index") or 0),
+                    "first_observed_at": first_observed,
+                    "payload_digest": digest,
+                }
+            )
+    except (KeyError, TypeError, ValueError) as exc:
+        return Response.json(
+            {"ok": False, "error": "market_evidence_invalid", "message": str(exc)}, status=503
+        )
+
+    missing = [opened for opened in expected if opened not in actual]
     return Response.json(
         {
             "ok": True,
@@ -166,6 +197,10 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
             "from": start.isoformat(),
             "to": end.isoformat(),
             "row_count": len(bars),
+            "expected_row_count": len(expected),
+            "complete": not missing,
+            "expected_open_times": expected,
+            "missing_open_times": missing,
             "bars": bars,
         }
     )
