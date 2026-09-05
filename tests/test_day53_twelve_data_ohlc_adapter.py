@@ -255,3 +255,11 @@ def test_worker_source_does_not_import_broker_execution_for_twelve_data() -> Non
     assert "MetaApi" not in module
     assert "Vantage" not in module
     assert "Super Signals" not in module
+
+
+def test_twelve_admission_plan_is_keyed_by_request_ledger_id() -> None:
+    migration = (ROOT / "migrations" / "d1" / "0014_twelve_admission_plan.sql").read_text(
+        encoding="utf-8"
+    )
+    assert "INDEXED BY idx_twelve_data_request_ledger_completion_success" in migration
+    assert "INDEXED BY idx_twelve_data_bootstrap_requests_by_ledger_window" in migration
