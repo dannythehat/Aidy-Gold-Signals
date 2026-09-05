@@ -10,6 +10,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 import aidy.provider_market_api as api
+from aidy.twelve_data_market import expected_market_minute_opens
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -54,7 +55,20 @@ def test_provider_auth_is_signed_and_replay_bounded(monkeypatch) -> None:
     assert api._authorized(request, now=stale) is False
 
 
-def test_latest_revision_is_selected_without_leaking_internal_identity() -> None:
+def test_malformed_auth_fails_closed_instead_of_raising() -> None:
+    now = datetime(2026, 9, 5, 6, 40, tzinfo=UTC)
+    request = SimpleNamespace(
+        url="https://aidy.test/market/ohlc?symbol=XAUUSD",
+        headers={
+            "X-AIDY-Client": api.PROVIDER_CLIENT,
+            "X-AIDY-Timestamp": "9" * 10000,
+            "X-AIDY-Signature": "%%%not-base64%%%",
+        },
+    )
+    assert api._authorized(request, now=now) is False
+
+
+def test_latest_revision_is_selected_for_each_minute() -> None:
     rows = [
         {
             "open_time_utc": "2026-09-05T06:00:00+00:00",
@@ -80,10 +94,22 @@ def test_latest_revision_is_selected_without_leaking_internal_identity() -> None
     assert selected[0]["revision_index"] == 2
 
 
-def test_provider_query_contract_is_bounded_pit_safe_and_read_only() -> None:
+def test_expected_minutes_distinguish_gold_maintenance_gap() -> None:
+    start = datetime(2026, 9, 3, 21, 58, tzinfo=UTC)
+    end = datetime(2026, 9, 3, 22, 2, tzinfo=UTC)
+    expected = expected_market_minute_opens(start, end)
+    assert datetime(2026, 9, 3, 21, 58, tzinfo=UTC) not in expected
+    assert datetime(2026, 9, 3, 22, 0, tzinfo=UTC) in expected
+
+
+def test_provider_query_contract_is_bounded_pit_safe_read_only_and_continuity_aware() -> None:
     source = (ROOT / "src" / "aidy" / "provider_market_api.py").read_text(encoding="utf-8")
     assert "FROM twelve_data_decision_admitted_m1_v1" in source
     assert "open_time_utc>=? AND open_time_utc<? AND first_observed_at<=?" in source
+    assert "payload_digest" in source
+    assert "expected_market_minute_opens" in source
+    assert '"expected_open_times"' in source
+    assert '"missing_open_times"' in source
     assert "LIMIT ?" in source
     assert "MAX_M1_ROWS + 1" in source
     assert "MAX_WINDOW = timedelta(hours=48)" in source
