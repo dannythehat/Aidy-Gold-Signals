@@ -1,0 +1,101 @@
+name: Ops Day 53 D1 Read-only Proof
+
+on:
+  push:
+    branches: [ops/day53-d1-readonly-proof-20260905]
+    paths:
+      - ".github/workflows/ops-day53-d1-readonly-proof.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 64154b19996e34f4ab23367748539fef4cb93232
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Recreate pre-0012 planner state
+        shell: bash
+        run: |
+          python - <<'PY' | tee /tmp/pre0012-plans.txt
+          import sqlite3
+          from pathlib import Path
+          db=sqlite3.connect(':memory:')
+          db.executescript(Path('migrations/d1/0001_aidy_ops.sql').read_text(encoding='utf-8'))
+          old_quote="""SELECT id,captured_at,bid,ask,mid,spread,quote_time,quote_age_seconds,data_availability_json,snapshot_digest FROM market_snapshots WHERE symbol=? AND capture_status='complete' AND quote_time>=? AND quote_time<? AND bid IS NOT NULL AND ask IS NOT NULL AND mid IS NOT NULL AND spread IS NOT NULL AND json_extract(data_availability_json,'$.market_data_source')=? ORDER BY quote_time ASC,captured_at ASC,id ASC"""
+          old_latest="""SELECT c.timeframe,c.id FROM market_candles c WHERE c.source=? AND c.symbol=? AND NOT EXISTS (SELECT 1 FROM market_candles newer WHERE newer.source=c.source AND newer.symbol=c.symbol AND newer.timeframe=c.timeframe AND (newer.open_time_utc>c.open_time_utc OR (newer.open_time_utc=c.open_time_utc AND newer.revision_index>c.revision_index))) ORDER BY c.timeframe"""
+          def plan(sql, args):
+              return ' | '.join(row[3] for row in db.execute('EXPLAIN QUERY PLAN '+sql,args))
+          print('PRE0012_QUOTE='+plan(old_quote,('XAUUSD','2026-09-02T00:00:00+00:00','2026-09-03T00:00:00+00:00','argentapi')))
+          print('PRE0012_LATEST='+plan(old_latest,('argentapi_quote_rollup_v1','XAUUSD')))
+          PY
+
+      - name: Build live read-only config
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          json.dump(cfg,open('/tmp/read.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Collect current live post-0012 plans
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEW_QUOTE="EXPLAIN QUERY PLAN SELECT id,captured_at,bid,ask,mid,spread,quote_time,quote_age_seconds,data_availability_json,snapshot_digest FROM market_snapshots WHERE symbol='XAUUSD' AND market_data_source='argentapi' AND capture_status='complete' AND quote_time>='2026-09-02T00:00:00+00:00' AND quote_time<'2026-09-03T00:00:00+00:00' AND bid IS NOT NULL AND ask IS NOT NULL AND mid IS NOT NULL AND spread IS NOT NULL ORDER BY quote_time ASC,captured_at ASC,id ASC LIMIT 3001"
+          NEW_LATEST="EXPLAIN QUERY PLAN SELECT id FROM market_candles WHERE source='argentapi_quote_rollup_v1' AND symbol='XAUUSD' AND timeframe='1m' ORDER BY open_time_utc DESC,revision_index DESC LIMIT 1"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/read.jsonc --command "$NEW_QUOTE" | tee /tmp/live-after-quote.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/read.jsonc --command "$NEW_LATEST" | tee /tmp/live-after-latest.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/read.jsonc --command "SELECT COUNT(*) AS snapshots,SUM(CASE WHEN market_data_source IS NULL OR market_data_source='' THEN 1 ELSE 0 END) AS missing_source FROM market_snapshots" | tee /tmp/live-backfill.json
+          python - <<'PY' | tee /tmp/live-after-plans.txt
+          import json
+          def detail(p):
+              return ' | '.join(str(r.get('detail','')) for b in json.load(open(p,encoding='utf-8')) for r in (b.get('results') or []))
+          q=detail('/tmp/live-after-quote.json'); l=detail('/tmp/live-after-latest.json')
+          print('LIVE_AFTER_QUOTE='+q)
+          print('LIVE_AFTER_LATEST='+l)
+          assert 'ix_market_snapshots_quote_history' in q, q
+          assert 'ix_market_candles_source_symbol_timeframe_latest' in l, l
+          assert 'CORRELATED' not in l.upper(), l
+          rows=[r for b in json.load(open('/tmp/live-backfill.json',encoding='utf-8')) for r in (b.get('results') or [])]
+          assert rows and int(rows[0]['missing_source'])==0, rows
+          print('LIVE_BACKFILL='+json.dumps(rows[0],sort_keys=True))
+          PY
+
+      - name: Preserve read-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-d1-readonly-proof-${{ github.sha }}
+          path: |
+            /tmp/pre0012-plans.txt
+            /tmp/live-after-quote.json
+            /tmp/live-after-latest.json
+            /tmp/live-after-plans.txt
+            /tmp/live-backfill.json
+          if-no-files-found: warn
+          retention-days: 30
