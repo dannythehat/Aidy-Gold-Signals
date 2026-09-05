@@ -7,7 +7,6 @@ from urllib.parse import parse_qs, urlparse
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from workers import Response
 
 PROVIDER_CLIENT = "super-signals-provider-lab"
 PROVIDER_PUBLIC_KEY_B64URL = "itdRZAC8u-1N5NWEwqvMWtRT6WK4PeeyEpzIh4TDQ2w"
@@ -100,8 +99,11 @@ def _latest_revisions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [selected[key] for key in sorted(selected)]
 
 
-async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None = None) -> Response:
+async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None = None) -> Any:
     """Serve only admitted PIT-safe M1 OHLC through a bounded read-only interface."""
+    # workers imports `js`, so keep it inside the Cloudflare request path. This makes
+    # the pure auth/query helpers unit-testable under ordinary CPython.
+    from workers import Response
 
     if request.method != "GET":
         return Response("Method not allowed", status=405)
@@ -146,7 +148,6 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
             status=413,
         )
 
-    admitted = _latest_revisions(rows)
     bars = [
         {
             "open_time_utc": str(row["open_time_utc"]),
@@ -155,7 +156,7 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
             "low": str(row["low"]),
             "close": str(row["close"]),
         }
-        for row in admitted
+        for row in _latest_revisions(rows)
     ]
     return Response.json(
         {
