@@ -1,0 +1,13 @@
+from __future__ import annotations
+
+from urllib.parse import urlparse
+
+from aidy.provider_market_api import market_ohlc_response
+from entry import Default as CoreDefault
+
+
+class Default(CoreDefault):
+    async def fetch(self, request):
+        if urlparse(request.url).path == "/market/ohlc":
+            return await market_ohlc_response(request, self.env)
+        return await super().fetch(request)
