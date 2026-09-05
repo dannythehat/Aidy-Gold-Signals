@@ -1,0 +1,149 @@
+name: Ops Day 53 Deploy 0013 Proof V2
+
+on:
+  push:
+    branches: [ops/day53-deploy-0013-proof]
+    paths:
+      - ".github/workflows/ops-day53-deploy-0013-proof-v2.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      MAIN_SHA: 3d79b6d2d7df1ae6a5e7d4cde1be630a32a82f41
+      AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_R2_BUCKET_NAME: aidy-memory-test
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3d79b6d2d7df1ae6a5e7d4cde1be630a32a82f41
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require exact protected main
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$MAIN_SHA"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$MAIN_SHA"
+
+      - name: Build capture-on formal-forward-off configs
+        run: |
+          python - <<'PY'
+          import json, os
+          worker=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          worker['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          worker['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          worker['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          worker['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          worker['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          worker['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          worker['vars']['AIDY_CAPTURE_ENABLED']='true'
+          worker['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          worker['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          json.dump(worker,open('wrangler.ops0013.jsonc','w',encoding='utf-8'),indent=2)
+          scheduler=json.load(open('wrangler.scheduler.test.jsonc',encoding='utf-8'))
+          scheduler['triggers']['crons']=['* * * * *']
+          json.dump(scheduler,open('wrangler.scheduler.ops0013.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Apply migration 0013 remotely
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.ops0013.jsonc | tee /tmp/migrations-0013.txt
+          grep -F '0013_twelve_private_forward_read_budget.sql' /tmp/migrations-0013.txt
+          grep -F '✅' /tmp/migrations-0013.txt
+
+      - name: Install and deploy exact main Worker
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          cp wrangler.ops0013.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/worker-deploy-0013.txt
+          grep -F 'env.AIDY_CAPTURE_ENABLED ("true")' /tmp/worker-deploy-0013.txt
+          grep -F 'env.AIDY_FORMAL_FORWARD_ENABLED ("false")' /tmp/worker-deploy-0013.txt
+          grep -F 'env.AIDY_MARKET_DATA_SOURCE ("twelve_data")' /tmp/worker-deploy-0013.txt
+          grep -F 'Consumer for aidy-capture-test' /tmp/worker-deploy-0013.txt
+
+      - name: Restore minute scheduler
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config wrangler.scheduler.ops0013.jsonc 2>&1 | tee /tmp/scheduler-deploy-0013.txt
+          grep -F 'schedule: * * * * *' /tmp/scheduler-deploy-0013.txt
+          grep -F 'Producer for aidy-capture-test' /tmp/scheduler-deploy-0013.txt
+
+      - name: Prove live post-0013 M1 and quota query plans
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config wrangler.ops0013.jsonc --command "EXPLAIN QUERY PLAN SELECT * FROM twelve_data_decision_admitted_m1_v1 WHERE open_time_utc>='2026-09-03T00:00:00+00:00' AND open_time_utc<'2026-09-05T23:59:59+00:00' AND first_observed_at<='2026-09-05T23:59:59+00:00' ORDER BY open_time_utc,revision_index LIMIT 3501" | tee /tmp/post-m1-plan.txt
+          grep -F 'SEARCH c USING' /tmp/post-m1-plan.txt
+          grep -F 'idx_twelve_data_bootstrap_requests_by_ledger_window' /tmp/post-m1-plan.txt
+          ! grep -F 'SCAN market_candles' /tmp/post-m1-plan.txt
+          ! grep -F 'SCAN twelve_data_bootstrap_requests' /tmp/post-m1-plan.txt
+          ! grep -F 'SCAN twelve_data_request_ledger' /tmp/post-m1-plan.txt
+
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config wrangler.ops0013.jsonc --command "EXPLAIN QUERY PLAN SELECT (SELECT COALESCE(SUM(internal_accounted_credits),0) FROM twelve_data_request_ledger WHERE requested_at_utc>='2026-09-05T00:00:00+00:00' AND requested_at_utc<='2026-09-05T23:59:59+00:00') AS utc_day, (SELECT COALESCE(SUM(internal_accounted_credits),0) FROM twelve_data_request_ledger WHERE requested_at_utc>='2026-09-04T06:00:00+00:00' AND requested_at_utc<='2026-09-05T23:59:59+00:00') AS rolling_24h" | tee /tmp/post-quota-plan.txt
+          test "$(grep -c 'idx_twelve_data_request_ledger_requested_at_credits' /tmp/post-quota-plan.txt)" -ge 2
+          ! grep -F 'SCAN twelve_data_request_ledger' /tmp/post-quota-plan.txt
+
+      - name: Verify live capture health and running D1 usage
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 20); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?0013=${MAIN_SHA}-${attempt}" > /tmp/health-0013.json || true
+            if python - <<'PY'
+          import json
+          try: h=json.load(open('/tmp/health-0013.json',encoding='utf-8'))
+          except Exception: raise SystemExit(1)
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source') == 'twelve_data', h
+          PY
+            then ok=1; break; fi
+            sleep 3
+          done
+          test "$ok" -eq 1
+          python - <<'PY' | tee /tmp/running-rows-read-0013.txt
+          import json, os, urllib.request
+          from datetime import datetime, timezone
+          day=datetime.now(timezone.utc).date().isoformat()
+          query='''query D1Usage($accountTag: string!, $day: Date, $databaseId: string) { viewer { accounts(filter: { accountTag: $accountTag }) { d1AnalyticsAdaptiveGroups(limit: 10, filter: { date_geq: $day, date_leq: $day, databaseId: $databaseId }) { sum { rowsRead rowsWritten readQueries writeQueries } dimensions { date databaseId } } } } }'''
+          body=json.dumps({'query':query,'variables':{'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],'day':day,'databaseId':os.environ['AIDY_D1_DATABASE_ID']}}).encode()
+          req=urllib.request.Request('https://api.cloudflare.com/client/v4/graphql',data=body,headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json'})
+          with urllib.request.urlopen(req,timeout=30) as r: result=json.load(r)
+          print(json.dumps(result,indent=2,sort_keys=True))
+          PY
+          cat /tmp/health-0013.json
+
+      - name: Preserve deployment proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day53-deploy-0013-proof-v2-${{ github.sha }}
+          path: |
+            /tmp/migrations-0013.txt
+            /tmp/worker-deploy-0013.txt
+            /tmp/scheduler-deploy-0013.txt
+            /tmp/post-m1-plan.txt
+            /tmp/post-quota-plan.txt
+            /tmp/health-0013.json
+            /tmp/running-rows-read-0013.txt
+          if-no-files-found: warn
+          retention-days: 90
