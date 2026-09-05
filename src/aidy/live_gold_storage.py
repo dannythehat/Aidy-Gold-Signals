@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
+
+_TIMEFRAMES = ("1m", "5m", "15m", "1h", "4h", "1d")
+_MAX_QUOTE_WINDOW = timedelta(days=1)
+_MAX_QUOTE_ROWS = 3000
 
 
 def _utc(value: datetime) -> datetime:
@@ -51,40 +55,66 @@ class D1LiveGoldQuoteHistory:
         end = _utc(end_utc)
         if end <= start:
             raise ValueError("Live Gold quote-history end must be after start.")
+        if end - start > _MAX_QUOTE_WINDOW:
+            raise ValueError("Live Gold quote-history reads are capped at one day.")
         result = await self._d1.prepare(
             """
             SELECT id,captured_at,bid,ask,mid,spread,quote_time,quote_age_seconds,
                    data_availability_json,snapshot_digest
             FROM market_snapshots
-            WHERE symbol=? AND capture_status='complete'
+            WHERE symbol=? AND market_data_source=? AND capture_status='complete'
               AND quote_time>=? AND quote_time<?
               AND bid IS NOT NULL AND ask IS NOT NULL AND mid IS NOT NULL AND spread IS NOT NULL
-              AND json_extract(data_availability_json,'$.market_data_source')=?
             ORDER BY quote_time ASC,captured_at ASC,id ASC
+            LIMIT ?
             """
-        ).bind(symbol, start.isoformat(), end.isoformat(), source).all()
-        return _results(result)
+        ).bind(
+            symbol,
+            source,
+            start.isoformat(),
+            end.isoformat(),
+            _MAX_QUOTE_ROWS + 1,
+        ).all()
+        rows = _results(result)
+        if len(rows) > _MAX_QUOTE_ROWS:
+            raise RuntimeError("Live Gold quote-history row bound exceeded.")
+        return rows
 
     async def latest_candle_ids(self, *, symbol: str, source: str) -> dict[str, UUID]:
+        latest: dict[str, UUID] = {}
+        for timeframe in _TIMEFRAMES:
+            result = await self._d1.prepare(
+                """
+                SELECT id
+                FROM market_candles
+                WHERE source=? AND symbol=? AND timeframe=?
+                ORDER BY open_time_utc DESC,revision_index DESC
+                LIMIT 1
+                """
+            ).bind(source, symbol, timeframe).all()
+            rows = _results(result)
+            if rows:
+                latest[timeframe] = UUID(str(rows[0]["id"]))
+        return latest
+
+    async def candle_id_for_bucket(
+        self,
+        *,
+        symbol: str,
+        source: str,
+        timeframe: str,
+        open_time_utc: datetime,
+    ) -> UUID | None:
+        if timeframe not in _TIMEFRAMES:
+            raise ValueError("Unsupported live Gold candle timeframe.")
         result = await self._d1.prepare(
             """
-            SELECT c.timeframe,c.id
-            FROM market_candles c
-            WHERE c.source=? AND c.symbol=?
-              AND NOT EXISTS (
-                SELECT 1 FROM market_candles newer
-                WHERE newer.source=c.source AND newer.symbol=c.symbol
-                  AND newer.timeframe=c.timeframe
-                  AND (
-                    newer.open_time_utc>c.open_time_utc OR
-                    (newer.open_time_utc=c.open_time_utc
-                     AND newer.revision_index>c.revision_index)
-                  )
-              )
-            ORDER BY c.timeframe
+            SELECT id
+            FROM market_candles
+            WHERE source=? AND symbol=? AND timeframe=? AND open_time_utc=?
+            ORDER BY revision_index DESC
+            LIMIT 1
             """
-        ).bind(source, symbol).all()
-        return {
-            str(row["timeframe"]): UUID(str(row["id"]))
-            for row in _results(result)
-        }
+        ).bind(source, symbol, timeframe, _utc(open_time_utc).isoformat()).all()
+        rows = _results(result)
+        return None if not rows else UUID(str(rows[0]["id"]))
