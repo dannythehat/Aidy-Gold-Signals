@@ -36,6 +36,7 @@ on:
       - ".github/workflows/day53-live-forward-activation.yml"
       - ".github/workflows/day53-twelve-data-ohlc-adapter.yml"
       - ".github/workflows/aidy-d1-row-budget-alert.yml"
+      - ".github/workflows/ops-provider-market-rollout-20260905.yml"
 
 permissions:
   contents: read
