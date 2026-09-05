@@ -1,26 +1,15 @@
 from __future__ import annotations
 
-import base64
-import binascii
+import hmac
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-
 from aidy.twelve_data_market import expected_market_minute_opens
 
-PROVIDER_CLIENT = "super-signals-provider-lab"
-PROVIDER_PUBLIC_KEY_B64URL = "L7ey29IgqbMwaqIS-eKGMoeLVE2Jbs1QRDMEHc1wXvw"
-MAX_AUTH_SKEW_SECONDS = 300
 MAX_WINDOW = timedelta(hours=48)
 MAX_M1_ROWS = 3500
-
-
-def _b64url_decode(value: str) -> bytes:
-    padding = "=" * (-len(value) % 4)
-    return base64.urlsafe_b64decode(value + padding)
+_PROVIDER_TOKEN_ENV = "AIDY_PROVIDER_MARKET_TOKEN"
 
 
 def _utc_iso(value: str, *, name: str) -> datetime:
@@ -51,35 +40,20 @@ def _results(value: object) -> list[dict[str, Any]]:
     return [_row(item) for item in rows]
 
 
-def _signing_payload(*, path: str, raw_query: str, timestamp: str, client: str) -> bytes:
-    return f"GET\n{path}\n{raw_query}\n{timestamp}\n{client}".encode()
-
-
-def _authorized(request: Any, *, now: datetime | None = None) -> bool:
-    client = str(request.headers.get("X-AIDY-Client") or "").strip()
-    timestamp = str(request.headers.get("X-AIDY-Timestamp") or "").strip()
-    signature = str(request.headers.get("X-AIDY-Signature") or "").strip()
-    if client != PROVIDER_CLIENT or not timestamp or not signature:
+def _authorized(request: Any, env: Any) -> bool:
+    expected = str(getattr(env, _PROVIDER_TOKEN_ENV, "") or "").strip()
+    if not expected:
+        return False
+    raw = str(request.headers.get("Authorization") or "").strip()
+    if not raw.startswith("Bearer "):
+        return False
+    supplied = raw[7:].strip()
+    if not supplied:
         return False
     try:
-        signed_at = datetime.fromtimestamp(int(timestamp), tz=UTC)
-        observed_at = (now or datetime.now(UTC)).astimezone(UTC)
-        if abs((observed_at - signed_at).total_seconds()) > MAX_AUTH_SKEW_SECONDS:
-            return False
-        url = urlparse(request.url)
-        public_key = Ed25519PublicKey.from_public_bytes(_b64url_decode(PROVIDER_PUBLIC_KEY_B64URL))
-        public_key.verify(
-            _b64url_decode(signature),
-            _signing_payload(
-                path=url.path,
-                raw_query=url.query,
-                timestamp=timestamp,
-                client=client,
-            ),
-        )
-    except (ValueError, TypeError, OverflowError, binascii.Error, InvalidSignature):
+        return hmac.compare_digest(supplied, expected)
+    except (TypeError, ValueError):
         return False
-    return True
 
 
 def _latest_revisions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -107,9 +81,10 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
     """Serve admitted PIT-safe M1 OHLC plus continuity/provenance, read-only and bounded."""
     from workers import Response
 
+    del now
     if request.method != "GET":
         return Response("Method not allowed", status=405)
-    if not _authorized(request, now=now):
+    if not _authorized(request, env):
         return Response("Unauthorized", status=401)
 
     url = urlparse(request.url)
