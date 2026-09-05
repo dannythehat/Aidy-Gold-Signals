@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "aidy-signals-test",
-  "main": "src/entry.py",
+  "main": "src/provider_entry.py",
   "compatibility_date": "2026-08-16",
   "compatibility_flags": ["python_workers"],
   "vars": {
