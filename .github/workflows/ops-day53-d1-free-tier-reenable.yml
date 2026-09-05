@@ -1,0 +1,192 @@
+name: Ops Day 53 D1 Free Tier Re-enable
+
+on:
+  push:
+    branches: [ops/day53-d1-free-tier-reenable-20260905]
+    paths:
+      - ".github/workflows/ops-day53-d1-free-tier-reenable.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-day53-live-forward-deployment
+  cancel-in-progress: false
+
+env:
+  EXPECTED_MAIN_SHA: 64154b19996e34f4ab23367748539fef4cb93232
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  verify-migrate-reenable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/day53-d1-free-tier-reenable-20260905
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require exact protected main and credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN_SHA"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Build safe-off and re-enable configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          base['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          base['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          base['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          base['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          base['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          base['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          off=json.loads(json.dumps(base)); off['vars']['AIDY_CAPTURE_ENABLED']='false'
+          on=json.loads(json.dumps(base)); on['vars']['AIDY_CAPTURE_ENABLED']='true'
+          assert len(on['queues']['consumers']) == 1
+          json.dump(off,open('/tmp/aidy-safe-off.jsonc','w',encoding='utf-8'),indent=2)
+          json.dump(on,open('/tmp/aidy-reenable.jsonc','w',encoding='utf-8'),indent=2)
+          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched,open('/tmp/aidy-scheduler.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Capture live EXPLAIN plans before migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD_QUOTE="EXPLAIN QUERY PLAN SELECT id,captured_at,bid,ask,mid,spread,quote_time,quote_age_seconds,data_availability_json,snapshot_digest FROM market_snapshots WHERE symbol='XAUUSD' AND capture_status='complete' AND quote_time>='2026-09-02T00:00:00+00:00' AND quote_time<'2026-09-03T00:00:00+00:00' AND bid IS NOT NULL AND ask IS NOT NULL AND mid IS NOT NULL AND spread IS NOT NULL AND json_extract(data_availability_json,'$.market_data_source')='argentapi' ORDER BY quote_time ASC,captured_at ASC,id ASC"
+          OLD_LATEST="EXPLAIN QUERY PLAN SELECT c.timeframe,c.id FROM market_candles c WHERE c.source='argentapi_quote_rollup_v1' AND c.symbol='XAUUSD' AND NOT EXISTS (SELECT 1 FROM market_candles newer WHERE newer.source=c.source AND newer.symbol=c.symbol AND newer.timeframe=c.timeframe AND (newer.open_time_utc>c.open_time_utc OR (newer.open_time_utc=c.open_time_utc AND newer.revision_index>c.revision_index))) ORDER BY c.timeframe"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/aidy-safe-off.jsonc --command "$OLD_QUOTE" | tee /tmp/plan-before-quote.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/aidy-safe-off.jsonc --command "$OLD_LATEST" | tee /tmp/plan-before-latest.json
+
+      - name: Apply migration 0012 remotely
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config /tmp/aidy-safe-off.jsonc | tee /tmp/migrations.txt
+          grep -F "0012_live_gold_free_tier_read_budget.sql" /tmp/migrations.txt
+
+      - name: Verify source backfill and live EXPLAIN plans after migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEW_QUOTE="EXPLAIN QUERY PLAN SELECT id,captured_at,bid,ask,mid,spread,quote_time,quote_age_seconds,data_availability_json,snapshot_digest FROM market_snapshots WHERE symbol='XAUUSD' AND market_data_source='argentapi' AND capture_status='complete' AND quote_time>='2026-09-02T00:00:00+00:00' AND quote_time<'2026-09-03T00:00:00+00:00' AND bid IS NOT NULL AND ask IS NOT NULL AND mid IS NOT NULL AND spread IS NOT NULL ORDER BY quote_time ASC,captured_at ASC,id ASC LIMIT 3001"
+          NEW_LATEST="EXPLAIN QUERY PLAN SELECT id FROM market_candles WHERE source='argentapi_quote_rollup_v1' AND symbol='XAUUSD' AND timeframe='1m' ORDER BY open_time_utc DESC,revision_index DESC LIMIT 1"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/aidy-safe-off.jsonc --command "$NEW_QUOTE" | tee /tmp/plan-after-quote.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/aidy-safe-off.jsonc --command "$NEW_LATEST" | tee /tmp/plan-after-latest.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config /tmp/aidy-safe-off.jsonc --command "SELECT COUNT(*) AS total_snapshots,SUM(CASE WHEN market_data_source IS NULL OR market_data_source='' THEN 1 ELSE 0 END) AS missing_source FROM market_snapshots" | tee /tmp/backfill.json
+          python - <<'PY'
+          import json
+          def details(path):
+              batches=json.load(open(path,encoding='utf-8'))
+              return ' | '.join(str(r.get('detail','')) for b in batches for r in (b.get('results') or []))
+          before_q=details('/tmp/plan-before-quote.json')
+          before_l=details('/tmp/plan-before-latest.json')
+          after_q=details('/tmp/plan-after-quote.json')
+          after_l=details('/tmp/plan-after-latest.json')
+          print('PLAN_BEFORE_QUOTE='+before_q)
+          print('PLAN_BEFORE_LATEST='+before_l)
+          print('PLAN_AFTER_QUOTE='+after_q)
+          print('PLAN_AFTER_LATEST='+after_l)
+          assert 'ix_market_snapshots_quote_history' not in before_q
+          assert 'CORRELATED' in before_l.upper(), before_l
+          assert 'ix_market_snapshots_quote_history' in after_q, after_q
+          assert 'ix_market_candles_source_symbol_timeframe_latest' in after_l, after_l
+          assert 'CORRELATED' not in after_l.upper(), after_l
+          batches=json.load(open('/tmp/backfill.json',encoding='utf-8'))
+          rows=[r for b in batches for r in (b.get('results') or [])]
+          assert rows and int(rows[0]['missing_source']) == 0, rows
+          PY
+
+      - name: Install project and rerun focused safety tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pytest -q tests/test_day53_d1_free_tier_hot_paths.py tests/test_day53_genuine_live_gold_feed.py tests/test_day53_d1_read_budget.py
+
+      - name: Deploy exact protected-main Worker with capture enabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$EXPECTED_MAIN_SHA"
+          cp /tmp/aidy-reenable.jsonc wrangler.jsonc
+          uv run pywrangler deploy 2>&1 | tee /tmp/worker-deploy.txt
+          grep -F 'env.AIDY_CAPTURE_ENABLED ("true")' /tmp/worker-deploy.txt
+          grep -F 'Consumer for aidy-capture-test' /tmp/worker-deploy.txt
+
+      - name: Restore minute scheduler
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config /tmp/aidy-scheduler.jsonc 2>&1 | tee /tmp/scheduler-deploy.txt
+          grep -F 'schedule: * * * * *' /tmp/scheduler-deploy.txt
+          grep -F 'Producer for aidy-capture-test' /tmp/scheduler-deploy.txt
+
+      - name: Verify live health after re-enable
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?d1_free_tier=${GITHUB_SHA}-${attempt}" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source') == 'twelve_data', h
+          PY
+            then ready=1; break; fi
+            sleep 2
+          done
+          test "$ready" -eq 1
+          cat /tmp/health.json
+          echo 'FREE_TIER_REENABLE_VERIFIED=true'
+
+      - name: Preserve proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-d1-free-tier-reenable-${{ github.sha }}
+          path: |
+            /tmp/plan-before-quote.json
+            /tmp/plan-before-latest.json
+            /tmp/plan-after-quote.json
+            /tmp/plan-after-latest.json
+            /tmp/backfill.json
+            /tmp/migrations.txt
+            /tmp/worker-deploy.txt
+            /tmp/scheduler-deploy.txt
+            /tmp/health.json
+          if-no-files-found: warn
+          retention-days: 30
