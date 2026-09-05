@@ -1,0 +1,52 @@
+name: Ops D1 Post Backfill Audit 20260905
+
+on:
+  push:
+    branches: [ops/d1-post-backfill-audit-20260905]
+    paths: [.github/workflows/ops-d1-post-backfill-audit-20260905.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+    steps:
+      - name: Query current UTC-day D1 rows read
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          from datetime import datetime, timezone
+          day=datetime.now(timezone.utc).date().isoformat()
+          query='''query D1Usage($accountTag: string!, $day: Date, $databaseId: string) {
+            viewer { accounts(filter: { accountTag: $accountTag }) {
+              d1AnalyticsAdaptiveGroups(limit: 10, filter: {
+                date_geq: $day, date_leq: $day, databaseId: $databaseId
+              }) { sum { rowsRead } dimensions { date databaseId } }
+            } }
+          }'''
+          body=json.dumps({'query':query,'variables':{
+            'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],
+            'day':day,
+            'databaseId':os.environ['AIDY_D1_DATABASE_ID'],
+          }}).encode()
+          req=urllib.request.Request('https://api.cloudflare.com/client/v4/graphql',data=body,headers={
+            'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],
+            'Content-Type':'application/json',
+          })
+          with urllib.request.urlopen(req,timeout=30) as r:
+            result=json.load(r)
+          if result.get('errors'):
+            raise SystemExit(result['errors'])
+          groups=result['data']['viewer']['accounts'][0]['d1AnalyticsAdaptiveGroups']
+          rows=sum(int(x.get('sum',{}).get('rowsRead') or 0) for x in groups)
+          print(f'date_utc={day} rows_read={rows} alert_threshold=3250000 free_limit=5000000')
+          if rows >= 5000000:
+            raise SystemExit('free-tier ceiling reached')
+          PY
