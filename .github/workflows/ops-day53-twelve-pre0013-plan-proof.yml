@@ -1,0 +1,66 @@
+name: Ops Day 53 Twelve Pre-0013 Plan Proof
+
+on:
+  push:
+    branches: [ops/day53-twelve-pre0013-plan-proof]
+    paths:
+      - ".github/workflows/ops-day53-twelve-pre0013-plan-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build read-only D1 config
+        run: |
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          json.dump(cfg,open('/tmp/plan.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Capture live pre-0013 EXPLAIN plans
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config /tmp/plan.jsonc --command "EXPLAIN QUERY PLAN SELECT * FROM twelve_data_decision_admitted_m1_v1 WHERE open_time_utc>='2026-09-03T00:00:00+00:00' AND first_observed_at<='2026-09-05T23:59:59+00:00' ORDER BY open_time_utc,revision_index" | tee /tmp/pre-m1-plan.txt
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config /tmp/plan.jsonc --command "EXPLAIN QUERY PLAN SELECT COALESCE(SUM(CASE WHEN requested_at_utc>='2026-09-05T00:00:00+00:00' THEN internal_accounted_credits ELSE 0 END),0) AS utc_day, COALESCE(SUM(CASE WHEN requested_at_utc>='2026-09-04T06:00:00+00:00' THEN internal_accounted_credits ELSE 0 END),0) AS rolling_24h FROM twelve_data_request_ledger WHERE requested_at_utc<='2026-09-05T23:59:59+00:00'" | tee /tmp/pre-quota-plan.txt
+
+      - name: Capture running D1 rows read
+        run: |
+          python - <<'PY' | tee /tmp/running-rows-read.txt
+          import json, os, urllib.request
+          from datetime import datetime, timezone
+          day=datetime.now(timezone.utc).date().isoformat()
+          query='''query D1Usage($accountTag: string!, $day: Date, $databaseId: string) { viewer { accounts(filter: { accountTag: $accountTag }) { d1AnalyticsAdaptiveGroups(limit: 10, filter: { date_geq: $day, date_leq: $day, databaseId: $databaseId }) { sum { rowsRead rowsWritten readQueries writeQueries } dimensions { date databaseId } } } } }'''
+          body=json.dumps({'query':query,'variables':{'accountTag':os.environ['CLOUDFLARE_ACCOUNT_ID'],'day':day,'databaseId':os.environ['AIDY_D1_DATABASE_ID']}}).encode()
+          req=urllib.request.Request('https://api.cloudflare.com/client/v4/graphql',data=body,headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json'})
+          with urllib.request.urlopen(req,timeout=30) as r: result=json.load(r)
+          print(json.dumps(result,indent=2,sort_keys=True))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aidy-twelve-pre0013-plan-proof
+          path: |
+            /tmp/pre-m1-plan.txt
+            /tmp/pre-quota-plan.txt
+            /tmp/running-rows-read.txt
+          retention-days: 30
