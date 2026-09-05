@@ -66,13 +66,20 @@ class D1TwelveDataMarketStore:
             await self._d1.prepare(
                 """
                 SELECT
-                  COALESCE(SUM(CASE WHEN requested_at_utc>=? THEN internal_accounted_credits ELSE 0 END),0) AS utc_day,
-                  COALESCE(SUM(CASE WHEN requested_at_utc>=? THEN internal_accounted_credits ELSE 0 END),0) AS rolling_24h
-                FROM twelve_data_request_ledger
-                WHERE requested_at_utc<=?
+                  (
+                    SELECT COALESCE(SUM(internal_accounted_credits),0)
+                    FROM twelve_data_request_ledger
+                    WHERE requested_at_utc>=? AND requested_at_utc<=?
+                  ) AS utc_day,
+                  (
+                    SELECT COALESCE(SUM(internal_accounted_credits),0)
+                    FROM twelve_data_request_ledger
+                    WHERE requested_at_utc>=? AND requested_at_utc<=?
+                  ) AS rolling_24h
                 """
             ).bind(
                 utc_day_start.isoformat(),
+                observed.isoformat(),
                 rolling_start.isoformat(),
                 observed.isoformat(),
             ).first()
@@ -324,30 +331,30 @@ class D1TwelveDataMarketStore:
         return _results(result)
 
     async def latest_candle_ids(self) -> dict[str, UUID]:
-        result = await self._d1.prepare(
-            f"""
-            WITH admitted_m1 AS (
-              SELECT * FROM {DECISION_ADMITTED_M1_VIEW}
-            ), latest_m1 AS (
-              SELECT timeframe,id FROM admitted_m1
-              ORDER BY open_time_utc DESC,revision_index DESC LIMIT 1
-            ), latest_aggregates AS (
-              SELECT c.timeframe,c.id FROM market_candles c
-              WHERE c.symbol=? AND c.timeframe IN ('5m','15m','1h','4h','1d') AND c.source=?
-                AND NOT EXISTS (
-                  SELECT 1 FROM market_candles newer
-                  WHERE newer.source=c.source AND newer.symbol=c.symbol
-                    AND newer.timeframe=c.timeframe AND (newer.open_time_utc>c.open_time_utc OR
-                    (newer.open_time_utc=c.open_time_utc AND newer.revision_index>c.revision_index))
-                )
+        latest: dict[str, UUID] = {}
+        m1 = _row(
+            await self._d1.prepare(
+                f"""
+                SELECT timeframe,id FROM {DECISION_ADMITTED_M1_VIEW}
+                ORDER BY open_time_utc DESC,revision_index DESC LIMIT 1
+                """
+            ).first()
+        )
+        if m1 is not None:
+            latest[str(m1["timeframe"])] = UUID(str(m1["id"]))
+        for timeframe in ("5m", "15m", "1h", "4h", "1d"):
+            row = _row(
+                await self._d1.prepare(
+                    """
+                    SELECT timeframe,id FROM market_candles
+                    WHERE source=? AND symbol=? AND timeframe=?
+                    ORDER BY open_time_utc DESC,revision_index DESC LIMIT 1
+                    """
+                ).bind(AGGREGATE_SOURCE, AIDY_SYMBOL, timeframe).first()
             )
-            SELECT timeframe,id FROM latest_m1
-            UNION ALL
-            SELECT timeframe,id FROM latest_aggregates
-            ORDER BY timeframe
-            """
-        ).bind(AIDY_SYMBOL, AGGREGATE_SOURCE).all()
-        return {str(row["timeframe"]): UUID(str(row["id"])) for row in _results(result)}
+            if row is not None:
+                latest[timeframe] = UUID(str(row["id"]))
+        return latest
 
     async def latest_m1_bar(self) -> dict[str, Any] | None:
         value = await self._d1.prepare(

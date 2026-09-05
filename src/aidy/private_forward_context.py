@@ -51,6 +51,7 @@ from aidy.volatility_intelligence import (
 PRIVATE_FORWARD_CONTEXT_ADAPTER_VERSION = "aidy_private_forward_context_adapter_v1"
 ARCHITECTURE_V2_EXTENSION_VERSION = "aidy_private_forward_architecture_v2_extensions_v1"
 PRIVATE_FORWARD_SIGNAL_STATE_VERSION = "aidy_private_forward_signal_state_v1"
+_MAX_PRIVATE_FORWARD_M1_ROWS = 3500
 
 _STORAGE_TO_CANONICAL_TIMEFRAME = {
     "1m": "M1",
@@ -293,13 +294,18 @@ async def _decision_candles(d1: Any, *, as_of: datetime) -> list[dict[str, Any]]
     m1_start = (as_of - timedelta(days=2)).isoformat()
     aggregate_start = as_of - timedelta(days=45)
     cutoff = as_of.isoformat()
-    m1_result = await d1.prepare(
-        """
-        SELECT * FROM twelve_data_decision_admitted_m1_v1
-        WHERE open_time_utc>=? AND first_observed_at<=?
-        ORDER BY open_time_utc,revision_index
-        """
-    ).bind(m1_start, cutoff).all()
+    m1_rows = _results(
+        await d1.prepare(
+            """
+            SELECT * FROM twelve_data_decision_admitted_m1_v1
+            WHERE open_time_utc>=? AND open_time_utc<? AND first_observed_at<=?
+            ORDER BY open_time_utc,revision_index
+            LIMIT ?
+            """
+        ).bind(m1_start, cutoff, cutoff, _MAX_PRIVATE_FORWARD_M1_ROWS + 1).all()
+    )
+    if len(m1_rows) > _MAX_PRIVATE_FORWARD_M1_ROWS:
+        raise RuntimeError("Private-forward M1 row bound exceeded.")
 
     aggregate_rows: list[dict[str, Any]] = []
     # M5 is used only for feed health, whose frozen contract consumes recent[-256:].
@@ -324,7 +330,7 @@ async def _decision_candles(d1: Any, *, as_of: datetime) -> list[dict[str, Any]]
                 limit=None,
             )
         )
-    return _dedupe_candles(_results(m1_result) + aggregate_rows)
+    return _dedupe_candles(m1_rows + aggregate_rows)
 
 
 async def _event_rows(d1: Any, *, snapshot: Mapping[str, Any]) -> list[dict[str, Any]]:
