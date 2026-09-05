@@ -23,7 +23,7 @@ def _b64url_decode(value: str) -> bytes:
 
 def _utc_iso(value: str, *, name: str) -> datetime:
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise ValueError(f"{name} must be a valid ISO-8601 timestamp.") from exc
     if parsed.tzinfo is None:
