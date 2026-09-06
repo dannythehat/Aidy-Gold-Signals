@@ -1,0 +1,156 @@
+name: Day 5 Archive Outbox Acceptance
+
+on:
+  push:
+    branches:
+      - ops/day5-archive-outbox-resilience-20260906
+    paths:
+      - ".github/workflows/day5-archive-outbox-acceptance.yml"
+      - ".github/workflows/aidy-archive-outbox-watchdog.yml"
+      - "scripts/aidy_archive_outbox_watchdog.py"
+      - "tests/test_day5_archive_outbox_watchdog.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  accept-day5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install and run focused tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check scripts/aidy_archive_outbox_watchdog.py tests/test_day5_archive_outbox_watchdog.py
+          uv run pytest -q tests/test_day5_archive_outbox_watchdog.py tests/test_storage_contracts.py
+
+      - name: Prove archive flush isolates poison item from healthy item
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import asyncio
+          from uuid import uuid4
+          from aidy.storage_contracts import AidyMarketRepository, ArchiveItem
+
+          class Operational:
+              def __init__(self):
+                  self.items=[
+                      ArchiveItem(uuid4(),'snapshot',uuid4(),'poison','0'*64,'{}'),
+                      ArchiveItem(uuid4(),'snapshot',uuid4(),'healthy','1'*64,'{}'),
+                  ]
+                  self.failures=[]
+                  self.successes=[]
+              async def pending_archive_items(self, *, limit): return self.items[:limit]
+              async def mark_archive_failure(self, *, outbox_id, error_code): self.failures.append((outbox_id,error_code))
+              async def mark_archive_success(self, *, item, archived_at): self.successes.append(item.object_key)
+
+          class Archive:
+              async def put_immutable(self, item):
+                  if item.object_key=='poison': raise RuntimeError('synthetic poison')
+
+          async def main():
+              op=Operational()
+              result=await AidyMarketRepository(op,Archive()).flush_archive_outbox(limit=10)
+              assert result.attempted==2, result
+              assert result.failed==1, result
+              assert result.archived==1, result
+              assert op.successes==['healthy'], op.successes
+              assert len(op.failures)==1, op.failures
+              print('poison_isolation=PASS attempted=2 failed=1 archived=1 healthy_continued=true')
+          asyncio.run(main())
+          PY
+
+      - name: Query live production outbox sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          python - <<'PY'
+          import json, os, urllib.request
+          from pathlib import Path
+          account=os.environ['CLOUDFLARE_ACCOUNT_ID']; database=os.environ['AIDY_D1_DATABASE_ID']; token=os.environ['CLOUDFLARE_API_TOKEN']
+          endpoint=f'https://api.cloudflare.com/client/v4/accounts/{account}/d1/database/{database}/query'
+          queries=[
+            ("gold", "SELECT 'gold' AS outbox_kind,id,record_type,archive_key,attempts,last_error,created_at FROM archive_outbox INDEXED BY ix_archive_outbox_pending WHERE status='pending' ORDER BY created_at,id LIMIT 25"),
+            ("cross_market", "SELECT 'cross_market' AS outbox_kind,id,'cross_market' AS record_type,archive_key,attempts,last_error,created_at FROM cross_market_archive_outbox INDEXED BY ix_cross_market_archive_outbox_pending WHERE status='pending' ORDER BY created_at,id LIMIT 25"),
+          ]
+          rows=[]; meta=[]
+          for kind,sql in queries:
+              req=urllib.request.Request(endpoint,data=json.dumps({'sql':sql,'params':[]}).encode(),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
+              with urllib.request.urlopen(req,timeout=30) as response: payload=json.load(response)
+              assert payload.get('success') is True, payload
+              result=(payload.get('result') or [])[0]
+              part=result.get('results') or []
+              rows.extend(part)
+              meta.append({'kind':kind,'row_count':len(part),'meta':result.get('meta') or {}})
+          out={'results':rows,'sample_truncated':any(item['row_count']>=25 for item in meta),'query_metadata':meta}
+          Path('/tmp/day5-live-outbox.json').write_text(json.dumps(out,sort_keys=True),encoding='utf-8')
+          print(json.dumps(out,sort_keys=True))
+          PY
+          set +e
+          python scripts/aidy_archive_outbox_watchdog.py --d1-json /tmp/day5-live-outbox.json --diagnostic artifacts/day5-live.json
+          rc=$?
+          set -e
+          test "$rc" -eq 0
+
+      - name: Prove stale, poison and recent-pending classifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/day5-stale.json <<'JSON'
+          [{"outbox_kind":"gold","id":"stale","record_type":"snapshot","archive_key":"stale","attempts":0,"last_error":null,"created_at":"2026-09-06T11:44:00Z"}]
+          JSON
+          set +e
+          python scripts/aidy_archive_outbox_watchdog.py --d1-json /tmp/day5-stale.json --diagnostic artifacts/day5-stale.json --now 2026-09-06T12:00:00Z
+          stale_rc=$?
+          set -e
+          test "$stale_rc" -eq 2
+
+          cat > /tmp/day5-poison.json <<'JSON'
+          [{"outbox_kind":"gold","id":"poison","record_type":"snapshot","archive_key":"poison","attempts":3,"last_error":"archive_error:RuntimeError","created_at":"2026-09-06T11:58:00Z"}]
+          JSON
+          set +e
+          python scripts/aidy_archive_outbox_watchdog.py --d1-json /tmp/day5-poison.json --diagnostic artifacts/day5-poison.json --now 2026-09-06T12:00:00Z
+          poison_rc=$?
+          set -e
+          test "$poison_rc" -eq 2
+
+          cat > /tmp/day5-recent.json <<'JSON'
+          [{"outbox_kind":"cross_market","id":"recent","record_type":"cross_market","archive_key":"recent","attempts":1,"last_error":"archive_error:TimeoutError","created_at":"2026-09-06T11:57:00Z"}]
+          JSON
+          python scripts/aidy_archive_outbox_watchdog.py --d1-json /tmp/day5-recent.json --diagnostic artifacts/day5-recent.json --now 2026-09-06T12:00:00Z
+
+      - name: Prove alert notification channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="[TEST] AIDY Day 5 archive outbox alert ${GITHUB_RUN_ID}"
+          url="$(gh issue create --title "$title" --body "Synthetic Day 5 archive durability alert-path proof only. Closing immediately.")"
+          number="${url##*/}"
+          gh issue close "$number" --comment "Day 5 archive alert-path proof passed; closing test issue."
+          echo "synthetic_alert_issue=${number} status=PASS"
+
+      - name: Preserve Day 5 acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day5-archive-outbox-${{ github.run_id }}
+          path: artifacts/day5-*.json
+          if-no-files-found: warn
+          retention-days: 14
