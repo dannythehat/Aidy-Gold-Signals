@@ -4,7 +4,7 @@
 
 AIDY production hardening only. Day 6 adds bounded retry, backoff and terminal dead-letter semantics to the D1 -> R2 archive outbox while preserving capture independence and the existing legacy `status` contract.
 
-No Super Signals production files are touched. No real-money path is changed. Formal-forward remains OFF.
+No Super Signals production files were touched. No real-money path changed. Formal-forward remains OFF.
 
 ## Runtime contract
 
@@ -28,15 +28,11 @@ Migration `0014_archive_delivery_state.sql` is additive:
 - existing pending rows map to `delivery_state='pending'`;
 - due-selection indexes are added for both outbox tables.
 
-Because old Worker code ignores the new columns, migration-first deployment is rollback-compatible. If the Day 6 Worker fails live acceptance, the rollout redeploys the previous main SHA while leaving the harmless additive schema in place.
+Old Worker code ignores the new columns, so migration-first deployment is rollback-compatible.
 
 ## Pre-merge acceptance
 
-Branch: `ops/day6-archive-dead-letter-20260906`
-
-Acceptance run: `34037789736`
-
-Candidate SHA at successful run: `c99ff4e7be3702c2f20853411a46b9df75ff2638`
+Initial branch acceptance run: `34037789736`
 
 Results:
 
@@ -57,6 +53,57 @@ Adversarial proof includes:
 8. cross-market outbox follows the same lifecycle;
 9. new capture evidence still commits after a poison item reaches dead-letter.
 
-## Production gate
+PR `#92` passed:
 
-Day 6 is not GREEN until protected PR checks pass, the merge-triggered rollback-ready rollout succeeds on exact merged `main`, production D1 shows the new schema, no unexpected dead-letter backlog exists, health remains capture-on / Twelve Data / public-independent / formal-forward OFF, a new scheduled-capture heartbeat advances after deploy, and D1 reads remain below the configured alarm.
+- Evidence Semantic Change Gate: PASS
+- AIDY Day 6 Archive Dead Letter Acceptance: PASS
+- AIDY Day 53 Twelve Data OHLC Adapter / acceptance: PASS
+
+PR `#92` merged Day 6 runtime/schema code to `main`.
+
+## Rollout correction
+
+The first merged-main rollout run `34038088226` stopped before migration/deploy because its config-build step used system Python and could not import the project package (`ModuleNotFoundError: aidy`). Production was not mutated.
+
+PR `#93` changed project-importing rollout/rollback config validation to `uv run python`. All three protected checks passed again, and PR `#93` merged.
+
+## Final production gate — PASS
+
+Final merged `main` SHA deployed:
+
+`ab13ce3b8d7e4a8e53b5e4ccb4162c7126f7833a`
+
+Production rollout:
+
+- workflow run: `34038324207`
+- job: `101500376792`
+- conclusion: **success**
+- focused archive/storage suite on merged main: **15 passed**
+- full repository regression on merged main: **1199 passed**
+- migration `0014_archive_delivery_state.sql`: **applied successfully**
+- migration commands executed: `13`
+- Worker deployed: `aidy-signals-test`
+- Worker version ID: `9b85ac4a-e9b0-49aa-8e36-361fa215bb35`
+- queue consumer binding remained: `aidy-capture-test`
+- capture enabled: `true`
+- market data source: `twelve_data`
+- market data ownership: `public_independent`
+- market poll seconds: `300`
+- formal-forward enabled: `false`
+- Twelve bootstrap enabled: `false`
+- health endpoint: **PASS**
+- production gold pending archive states: `[]`
+- production cross-market pending archive states: `[]`
+- production dead-letter backlog: `0`
+- pre-rollout scheduled-capture heartbeat: `2026-09-06T10:20:49.348999+00:00`, succeeded
+- post-deploy fresh scheduled-capture heartbeat: `2026-09-06T14:11:52.774000+00:00`, succeeded
+- heartbeat proof attempts: `2`
+- D1 rows read at final gate: `881129`
+- D1 alarm threshold: `3250000`
+- rollback step: correctly skipped because all live gates passed
+
+**Day 6: GREEN — merged, migrated, deployed and production-verified.**
+
+## Next
+
+Day 7 starts the intelligence-facing phase: provider identity, style and behavioural profile versioning, while keeping all learning forward-only and shadow-safe until later evidence gates authorize more.
