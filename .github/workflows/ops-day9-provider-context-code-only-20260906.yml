@@ -1,0 +1,138 @@
+name: Ops Day 9 Provider Context Code-Only Rollout 20260906
+
+on:
+  push:
+    branches: [ops/day9-provider-context-code-only-20260906]
+    paths:
+      - ".github/workflows/ops-day9-provider-context-code-only-20260906.yml"
+
+concurrency:
+  group: aidy-day9-provider-context-code-only-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  ROLLBACK_SOURCE_SHA: bf5bd10a9ccb31f007bea9da04ffa077132c5500
+
+jobs:
+  code-only-deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact Day 9 source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build exact capture-only live config without touching secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          cfg['triggers']['crons']=[]
+          settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+          assert settings.capture_enabled is True
+          assert settings.market_data_source == 'twelve_data'
+          assert settings.market_data_ownership == 'public_independent'
+          assert settings.market_poll_seconds >= 300.0
+          assert str(cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']).lower() == 'false'
+          assert cfg['main'] == 'src/provider_entry.py'
+          assert cfg['queues']['consumers'][0]['queue'] == 'aidy-capture-test'
+          assert 'AIDY_PROVIDER_MARKET_TOKEN' not in cfg['vars']
+          json.dump(cfg, open('wrangler.day9.code-only.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          git show "${ROLLBACK_SOURCE_SHA}:src/provider_entry.py" > /tmp/provider_entry.rollback.py
+
+      - name: Deploy Day 9 route with automatic entrypoint rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day9.code-only.live.jsonc wrangler.jsonc
+
+          verify_day9() {
+            local ok=0
+            for attempt in $(seq 1 30); do
+              curl -fsS -H 'Cache-Control: no-cache' \
+                "${AIDY_TEST_WORKER_URL}/health?day9_code_only=${GITHUB_SHA}-${attempt}" \
+                > /tmp/day9-health.json || true
+              if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/day9-health.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source') == 'twelve_data', h
+          assert h.get('market_data_ownership') == 'public_independent', h
+          PY
+              then
+                context_status="$(curl -sS -o /tmp/day9-context-unauth.txt -w '%{http_code}' --get \
+                  --data-urlencode 'as_of=2026-09-03T12:00:00+00:00' \
+                  "${AIDY_TEST_WORKER_URL}/provider/context")"
+                market_status="$(curl -sS -o /tmp/day9-market-unauth.txt -w '%{http_code}' \
+                  "${AIDY_TEST_WORKER_URL}/market/ohlc")"
+                if [ "$context_status" = "401" ] && [ "$market_status" = "401" ]; then
+                  echo "day9_context_unauth_status=${context_status}"
+                  echo "market_ohlc_unauth_status=${market_status}"
+                  ok=1
+                  break
+                fi
+              fi
+              sleep 3
+            done
+            test "$ok" -eq 1
+          }
+
+          if uv run pywrangler deploy && verify_day9; then
+            echo "day9_provider_context_code_only_rollout=verified"
+            exit 0
+          fi
+
+          echo "Day 9 verification failed; restoring prior provider entrypoint" >&2
+          cp /tmp/provider_entry.rollback.py src/provider_entry.py
+          uv run pywrangler deploy
+          rollback_market_status="$(curl -sS -o /tmp/rollback-market.txt -w '%{http_code}' \
+            "${AIDY_TEST_WORKER_URL}/market/ohlc")"
+          test "$rollback_market_status" = "401"
+          curl -fsS "${AIDY_TEST_WORKER_URL}/health?day9_rollback=${GITHUB_SHA}" > /tmp/rollback-health.json
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/rollback-health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          PY
+          echo "day9_provider_context_code_only_rollout=rolled_back" >&2
+          exit 1
