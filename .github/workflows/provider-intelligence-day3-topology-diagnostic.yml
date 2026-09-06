@@ -1,0 +1,114 @@
+name: Provider Intelligence Day 3 Topology Diagnostic
+
+on:
+  push:
+    branches: [research/provider-intelligence-20260906]
+    paths:
+      - ".github/workflows/provider-intelligence-day3-topology-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-topology-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      SCHEDULER_SCRIPT: aidy-signals-scheduler-test
+      CAPTURE_QUEUE: aidy-capture-test
+      CAPTURE_WORKER: aidy-signals-test
+      R2_BUCKET: aidy-memory-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Read Cron, Queue, consumer and backlog topology
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+
+          base=f"https://api.cloudflare.com/client/v4/accounts/{os.environ['CLOUDFLARE_ACCOUNT_ID']}"
+          headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN']}
+          def get(path):
+              req=urllib.request.Request(base+path, headers=headers)
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return json.load(response)
+
+          schedules=get(f"/workers/scripts/{os.environ['SCHEDULER_SCRIPT']}/schedules")
+          crons=[item.get('cron') for item in schedules.get('result',{}).get('schedules',[])]
+          print('scheduler_crons='+json.dumps(crons))
+          assert '* * * * *' in crons, schedules
+
+          queues=get('/queues')
+          qrows=queues.get('result') or []
+          queue=next((q for q in qrows if q.get('queue_name')==os.environ['CAPTURE_QUEUE']), None)
+          assert queue, qrows
+          queue_id=queue['queue_id']
+          print('queue='+json.dumps({k:queue.get(k) for k in ('queue_id','queue_name','consumers_total_count')}, sort_keys=True))
+
+          consumers=get(f'/queues/{queue_id}/consumers')
+          crows=consumers.get('result') or []
+          safe_consumers=[{k:c.get(k) for k in ('consumer_id','queue_name','script_name','settings','dead_letter_queue')} for c in crows]
+          print('consumers='+json.dumps(safe_consumers, sort_keys=True))
+          assert any(c.get('script_name')==os.environ['CAPTURE_WORKER'] for c in crows), crows
+
+          metrics=get(f'/queues/{queue_id}/metrics')
+          m=metrics.get('result') or {}
+          print('queue_metrics='+json.dumps(m, sort_keys=True))
+          PY
+
+      - name: Read queue failure diagnostic if present
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          npx --yes wrangler@4 r2 object get "${R2_BUCKET}/diagnostics/day2-queue-consumer-error.json" --remote --file /tmp/queue-error.json >/tmp/r2-get.log 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ] && [ -s /tmp/queue-error.json ]; then
+            python - <<'PY'
+          import json
+          p=json.load(open('/tmp/queue-error.json', encoding='utf-8'))
+          safe={k:p.get(k) for k in ('observed_at','scheduled_at','exception_type','message')}
+          print('queue_error_diagnostic='+json.dumps(safe, sort_keys=True))
+          PY
+          else
+            echo "queue_error_diagnostic=not_present_or_not_readable"
+            cat /tmp/r2-get.log
+          fi
+
+      - name: Read recent scheduled-capture ledger only
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/day3-diag.jsonc <<JSON
+          {
+            "name": "aidy-day3-readonly-diagnostic",
+            "compatibility_date": "2026-08-16",
+            "d1_databases": [{
+              "binding": "AIDY_OPS",
+              "database_name": "${AIDY_D1_DATABASE_NAME}",
+              "database_id": "${AIDY_D1_DATABASE_ID}"
+            }]
+          }
+          JSON
+          NOW="$(date -u +%Y-%m-%dT%H:%M:00+00:00)"
+          START="$(date -u -d '12 hours ago' +%Y-%m-%dT%H:%M:00+00:00)"
+          SQL="SELECT requested_at_utc,completed_at_utc,status,error_code FROM twelve_data_request_ledger WHERE requested_at_utc>='${START}' AND requested_at_utc<'${NOW}' AND request_kind='scheduled_capture' ORDER BY requested_at_utc DESC LIMIT 30;"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config /tmp/day3-diag.jsonc --json --command "$SQL" > /tmp/ledger.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/ledger.json', encoding='utf-8'))
+          rows=p[0].get('results',[]) if p else []
+          print('recent_capture_ledger='+json.dumps(rows, sort_keys=True))
+          assert rows, 'no scheduled capture rows in bounded 12h window'
+          PY
