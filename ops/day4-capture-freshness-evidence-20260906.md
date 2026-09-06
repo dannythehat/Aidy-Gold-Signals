@@ -119,13 +119,41 @@ The GitHub issue notification channel was exercised with a synthetic Day 4 alert
 - SHA-256: `935fd5ed30c571b6e5de273419dff270d0606ba2ba18812a6e8210f762633394`
 - contains four Day 4 diagnostic JSON files
 
-## Production merge gate
+## Protected merge proof
 
-Day 4 may be called GREEN only after:
+PR `#87` passed both required protected checks:
 
-1. the one-off acceptance workflow is removed from the merge candidate;
-2. protected PR checks pass, including the full repository regression through `AIDY Day 53 Twelve Data OHLC Adapter / acceptance`;
-3. the durable watchdog is merged to `main`;
-4. the merge-triggered production `AIDY Capture Freshness Watchdog` run succeeds;
-5. its diagnostic artifact exists;
-6. no false freshness alert is produced while the canonical Sunday session is closed.
+- `Evidence Semantic Change Gate`: PASS
+- `AIDY Day 53 Twelve Data OHLC Adapter / acceptance`: PASS
+- full repository regression: PASS
+
+PR `#87` merged to `main` at SHA `3cc699561d881203cfea712e8351fb98c19e76b6`.
+
+## Final production gate — PASS
+
+The merge-triggered production `AIDY Capture Freshness Watchdog` completed successfully from the exact merged `main` SHA:
+
+- GitHub Actions run: `34026221990`
+- job: `101467542665`
+- `main` SHA: `3cc699561d881203cfea712e8351fb98c19e76b6`
+- conclusion: `success`
+- D1 query: PASS
+- D1 query attempts: `1`
+- latest scheduled request UTC: `2026-09-06T09:55:13.446000+00:00`
+- latest scheduled request status: `succeeded`
+- latest scheduled success UTC: `2026-09-06T09:55:13.684999+00:00`
+- observed watchdog UTC: `2026-09-06T10:00:48.769903+00:00`
+- success lag: `335` seconds
+- canonical session state: `closed`
+- watchdog status: `session_closed`
+- alert: `false`
+- alert-issue step: correctly skipped
+- recovered-alert close step: correctly skipped because the market is closed rather than freshly recovered
+
+Production diagnostic artifact:
+
+- artifact ID: `9987127663`
+- name: `aidy-capture-freshness-34026221990`
+- SHA-256: `a6e61a5cd39f02a2de88b43b9fe2e1dabaf6de1f5cf6b3ca580592e14398b289`
+
+**Day 4 production-hardening acceptance: GREEN.**
