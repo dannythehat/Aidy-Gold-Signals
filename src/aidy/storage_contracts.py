@@ -5,6 +5,23 @@ from datetime import UTC, date, datetime
 from typing import Protocol
 from uuid import UUID
 
+ARCHIVE_MAX_ATTEMPTS = 3
+ARCHIVE_RETRY_DELAYS_SECONDS = (60, 300)
+
+
+def archive_retry_delay_seconds(attempt_number: int) -> int | None:
+    """Return the delay after a failed archive attempt.
+
+    Attempt numbers are one-based. The third failure is terminal and therefore
+    returns ``None`` rather than another retry delay.
+    """
+
+    if attempt_number <= 0:
+        raise ValueError("Archive attempt number must be positive.")
+    if attempt_number >= ARCHIVE_MAX_ATTEMPTS:
+        return None
+    return ARCHIVE_RETRY_DELAYS_SECONDS[attempt_number - 1]
+
 
 @dataclass(frozen=True, slots=True)
 class EvidenceCommit:
@@ -23,6 +40,8 @@ class ArchiveItem:
     object_key: str
     payload_digest: str
     payload_json: str
+    attempts: int = 0
+    delivery_state: str = "pending"
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +49,7 @@ class ArchiveFlushResult:
     attempted: int
     archived: int
     failed: int
+    dead_lettered: int = 0
 
 
 class OperationalEvidenceStore(Protocol):
@@ -88,9 +108,9 @@ class AidyMarketRepository:
     """Portable async repository used by recorder services.
 
     D1 implementations commit an evidence row and its archive-outbox pointer in
-    one transaction. R2 delivery is deliberately separate: a failed R2 write
-    leaves the outbox pending, so operationally committed evidence cannot vanish
-    silently.
+    one transaction. R2 delivery is deliberately separate. Day 6 adds bounded
+    retry/backoff and dead-letter semantics inside the operational store while
+    retaining per-item fault isolation here.
     """
 
     def __init__(self, operational: OperationalEvidenceStore, archive: ArchiveStore) -> None:
@@ -173,11 +193,14 @@ class AidyMarketRepository:
         items = await self._operational.pending_archive_items(limit=limit)
         archived = 0
         failed = 0
+        dead_lettered = 0
         for item in items:
             try:
                 await self._archive.put_immutable(item)
-            except Exception as exc:  # noqa: BLE001 - provider failures must remain isolated
+            except Exception as exc:  # noqa: BLE001 - archive failures must remain isolated
                 failed += 1
+                if item.attempts + 1 >= ARCHIVE_MAX_ATTEMPTS:
+                    dead_lettered += 1
                 await self._operational.mark_archive_failure(
                     outbox_id=item.outbox_id,
                     error_code=f"archive_error:{type(exc).__name__}",
@@ -188,4 +211,9 @@ class AidyMarketRepository:
                 archived_at=datetime.now(UTC),
             )
             archived += 1
-        return ArchiveFlushResult(attempted=len(items), archived=archived, failed=failed)
+        return ArchiveFlushResult(
+            attempted=len(items),
+            archived=archived,
+            failed=failed,
+            dead_lettered=dead_lettered,
+        )
