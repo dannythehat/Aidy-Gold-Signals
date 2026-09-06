@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid4
 
 from .cloudflare_storage import (
@@ -10,7 +10,7 @@ from .cloudflare_storage import (
     _stamp,
     _utc,
 )
-from .storage_contracts import ArchiveItem, EvidenceCommit
+from .storage_contracts import ARCHIVE_MAX_ATTEMPTS, ArchiveItem, EvidenceCommit
 
 
 def cross_market_archive_key(
@@ -30,7 +30,7 @@ def cross_market_archive_key(
 
 
 class D1CrossMarketOperationalEvidenceStore(D1OperationalEvidenceStore):
-    """Day 9 extension of the proven D1/R2 operational evidence store."""
+    """Cross-market extension plus the production archive delivery state machine."""
 
     async def commit_cross_market_observation(
         self,
@@ -162,18 +162,36 @@ class D1CrossMarketOperationalEvidenceStore(D1OperationalEvidenceStore):
         )
 
     async def pending_archive_items(self, *, limit: int) -> list[ArchiveItem]:
+        now = datetime.now(UTC)
         statement = self._stmt(
             """
-            SELECT id,record_type,evidence_id,archive_key,payload_digest,created_at FROM (
-              SELECT id,record_type,evidence_id,archive_key,payload_digest,created_at
-              FROM archive_outbox WHERE status='pending'
+            SELECT id,record_type,evidence_id,archive_key,payload_digest,attempts,
+                   delivery_state,created_at
+            FROM (
+              SELECT id,record_type,evidence_id,archive_key,payload_digest,attempts,
+                     delivery_state,created_at
+              FROM archive_outbox INDEXED BY ix_archive_outbox_delivery_due
+              WHERE status='pending' AND (
+                    delivery_state='pending'
+                    OR (delivery_state='backoff' AND next_attempt_at IS NOT NULL
+                        AND next_attempt_at<=?)
+              )
               UNION ALL
-              SELECT id,'cross_market' AS record_type,evidence_id,archive_key,payload_digest,created_at
-              FROM cross_market_archive_outbox WHERE status='pending'
+              SELECT id,'cross_market' AS record_type,evidence_id,archive_key,
+                     payload_digest,attempts,delivery_state,created_at
+              FROM cross_market_archive_outbox
+                   INDEXED BY ix_cross_market_archive_outbox_delivery_due
+              WHERE status='pending' AND (
+                    delivery_state='pending'
+                    OR (delivery_state='backoff' AND next_attempt_at IS NOT NULL
+                        AND next_attempt_at<=?)
+              )
             )
             ORDER BY created_at,id
             LIMIT ?
             """,
+            now,
+            now,
             limit,
         )
         result = await statement.all()
@@ -193,6 +211,8 @@ class D1CrossMarketOperationalEvidenceStore(D1OperationalEvidenceStore):
                     object_key=str(_row_value(row, "archive_key")),
                     payload_digest=str(_row_value(row, "payload_digest")),
                     payload_json=payload_json,
+                    attempts=int(_row_value(row, "attempts", 0)),
+                    delivery_state=str(_row_value(row, "delivery_state", "pending")),
                 )
             )
         return items
@@ -229,26 +249,83 @@ class D1CrossMarketOperationalEvidenceStore(D1OperationalEvidenceStore):
     ) -> None:
         if item.record_type != "cross_market":
             await super().mark_archive_success(item=item, archived_at=archived_at)
+            await self._stmt(
+                """
+                UPDATE archive_outbox
+                SET delivery_state='archived',next_attempt_at=NULL,dead_lettered_at=NULL
+                WHERE id=? AND status='archived'
+                """,
+                item.outbox_id,
+            ).run()
             return
         await self._stmt(
             """
             UPDATE cross_market_archive_outbox
-            SET status='archived',archived_at=?,last_error=NULL
+            SET status='archived',delivery_state='archived',archived_at=?,
+                next_attempt_at=NULL,dead_lettered_at=NULL,last_error=NULL
             WHERE id=? AND status='pending'
+              AND delivery_state IN ('pending','backoff')
             """,
             archived_at,
             item.outbox_id,
         ).run()
 
-    async def mark_archive_failure(self, *, outbox_id: UUID, error_code: str) -> None:
+    async def _mark_delivery_failure(
+        self,
+        *,
+        table: str,
+        outbox_id: UUID,
+        error_code: str,
+    ) -> None:
+        if table not in {"archive_outbox", "cross_market_archive_outbox"}:
+            raise ValueError("Unsupported AIDY archive outbox table.")
         code = error_code[:160]
+        failed_at = datetime.now(UTC)
+        retry_after_first = failed_at + timedelta(seconds=60)
+        retry_after_second = failed_at + timedelta(seconds=300)
         await self._stmt(
-            """
-            UPDATE cross_market_archive_outbox
-            SET attempts=attempts+1,last_error=?
+            f"""
+            UPDATE {table}
+            SET attempts=attempts+1,
+                last_error=?,
+                first_failed_at=COALESCE(first_failed_at,?),
+                delivery_state=CASE
+                    WHEN attempts+1>=? THEN 'dead_letter'
+                    ELSE 'backoff'
+                END,
+                next_attempt_at=CASE
+                    WHEN attempts+1>=? THEN NULL
+                    WHEN attempts+1=1 THEN ?
+                    ELSE ?
+                END,
+                dead_lettered_at=CASE
+                    WHEN attempts+1>=? THEN ?
+                    ELSE NULL
+                END
             WHERE id=? AND status='pending'
+              AND delivery_state IN ('pending','backoff')
             """,
             code,
+            failed_at,
+            ARCHIVE_MAX_ATTEMPTS,
+            ARCHIVE_MAX_ATTEMPTS,
+            retry_after_first,
+            retry_after_second,
+            ARCHIVE_MAX_ATTEMPTS,
+            failed_at,
             outbox_id,
         ).run()
-        await super().mark_archive_failure(outbox_id=outbox_id, error_code=error_code)
+
+    async def mark_archive_failure(self, *, outbox_id: UUID, error_code: str) -> None:
+        # IDs are globally generated UUIDs. Updating both tables is deterministic:
+        # exactly one matching row changes and a collision would itself be evidence corruption.
+        await self._mark_delivery_failure(
+            table="cross_market_archive_outbox",
+            outbox_id=outbox_id,
+            error_code=error_code,
+        )
+        await self._mark_delivery_failure(
+            table="archive_outbox",
+            outbox_id=outbox_id,
+            error_code=error_code,
+        )
