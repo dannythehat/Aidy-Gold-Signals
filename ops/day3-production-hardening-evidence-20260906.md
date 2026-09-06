@@ -68,7 +68,7 @@ Acceptance snapshot during the run:
 - free-tier reference ceiling: `5,000,000`
 - alert at production threshold: `false`
 
-Artifact:
+Acceptance artifact:
 
 - artifact ID: `9986046938`
 - name: `day3-operational-hardening-34022768672`
@@ -76,8 +76,25 @@ Artifact:
 
 ## Safety boundary
 
-The one-off exact-window and synthetic acceptance workflows were removed from the merge candidate after successful proof. Only the durable production monitor hardening and this evidence record are intended for `main`.
+The one-off exact-window and synthetic acceptance workflows were removed from the merge candidate after successful proof. Only the durable production monitor hardening and this evidence record were merged to `main`.
 
-## Final production gate
+## Final production gate — PASS
 
-The final Day 3 gate is a successful `main` execution of the hardened `AIDY D1 Row Budget Alert` workflow after merge, including a persisted diagnostic artifact and no false alert when under the configured threshold.
+PR `#83` merged to `main` at SHA `9540a3e24e63af29cffac4b9c7585b2f8e9ec260`.
+
+The merge-triggered production `AIDY D1 Row Budget Alert` workflow completed successfully:
+
+- GitHub Actions run: `34022918687`
+- job: `101458680273`
+- conclusion: `success`
+- UTC day: `2026-09-06`
+- real Cloudflare rows_read at query time: `661,473`
+- configured warning threshold: `3,250,000`
+- alert: `false`
+- attempts: `1`
+- alert-issue step: correctly skipped
+- production diagnostic artifact ID: `9986094184`
+- artifact name: `aidy-d1-budget-diagnostic-34022918687`
+- artifact SHA-256: `3124ebddfee80d3e4a938ea4c48813ef84a196ff3af420a2779556981ab9cc83`
+
+**Day 3 production-hardening acceptance: GREEN.**
