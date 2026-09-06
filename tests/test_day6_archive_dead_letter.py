@@ -3,7 +3,6 @@ from __future__ import annotations
 import sqlite3
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 
@@ -289,6 +288,5 @@ async def test_dead_letter_does_not_prevent_new_capture_evidence_commits(store) 
         "SELECT COUNT(*) FROM market_snapshots WHERE id=?", (str(fresh.evidence_id),)
     ).fetchone()[0]
     assert count == 1
-    # The poison row is terminal, while new capture evidence enters the normal pending queue.
     fresh_state = row(db, "archive_outbox", str(fresh.outbox_id))
     assert fresh_state["delivery_state"] == "pending"
