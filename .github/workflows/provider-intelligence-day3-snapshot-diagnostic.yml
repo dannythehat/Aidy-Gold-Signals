@@ -1,0 +1,72 @@
+name: Provider Intelligence Day 3 Snapshot Diagnostic
+
+on:
+  push:
+    branches: [research/provider-intelligence-20260906]
+    paths:
+      - ".github/workflows/provider-intelligence-day3-snapshot-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      SNAPSHOT_ID: 9b54d6f3-1e15-4b3a-83c2-fcf542302403
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate stuck snapshot fields and exact archive JSON expression
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/day3-snapshot.jsonc <<JSON
+          {
+            "name": "aidy-day3-readonly-snapshot",
+            "compatibility_date": "2026-08-16",
+            "d1_databases": [{
+              "binding": "AIDY_OPS",
+              "database_name": "${AIDY_D1_DATABASE_NAME}",
+              "database_id": "${AIDY_D1_DATABASE_ID}"
+            }]
+          }
+          JSON
+          SQL="SELECT id,capture_status,LENGTH(data_availability_json) AS availability_len,json_valid(data_availability_json) AS availability_valid,LENGTH(event_observation_ids_json) AS event_ids_len,json_valid(event_observation_ids_json) AS event_ids_valid,archive_key,snapshot_digest FROM market_snapshots WHERE id='${SNAPSHOT_ID}' LIMIT 1;"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config /tmp/day3-snapshot.jsonc --json --command "$SQL" > /tmp/validity.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/validity.json', encoding='utf-8'))
+          rows=p[0].get('results',[]) if p else []
+          print('snapshot_validity='+json.dumps(rows, sort_keys=True))
+          assert len(rows)==1, rows
+          PY
+
+          set +e
+          SQL2="SELECT json_object('schema_version',2,'record_type','snapshot','evidence_id',id,'archive_key',archive_key,'payload_digest',snapshot_digest,'payload',json_object('captured_at',captured_at,'symbol',symbol,'capture_status',capture_status,'bid',bid,'ask',ask,'mid',mid,'spread',spread,'quote_time',quote_time,'quote_age_seconds',quote_age_seconds,'session_code',session_code,'data_availability',json(data_availability_json),'event_observation_ids',json(event_observation_ids_json),'latest_m1_id',latest_m1_id,'latest_m5_id',latest_m5_id,'latest_m15_id',latest_m15_id,'latest_h1_id',latest_h1_id,'latest_h4_id',latest_h4_id,'latest_d1_id',latest_d1_id)) AS payload_json FROM market_snapshots WHERE id='${SNAPSHOT_ID}';"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config /tmp/day3-snapshot.jsonc --json --command "$SQL2" > /tmp/reconstruct.json 2>/tmp/reconstruct.err
+          rc=$?
+          set -e
+          echo "reconstruct_exit=${rc}"
+          if [ -s /tmp/reconstruct.json ]; then
+            python - <<'PY'
+          import json
+          p=json.load(open('/tmp/reconstruct.json', encoding='utf-8'))
+          rows=p[0].get('results',[]) if p else []
+          safe=[{'payload_len':len(str(r.get('payload_json') or ''))} for r in rows]
+          print('archive_reconstruction='+json.dumps(safe, sort_keys=True))
+          PY
+          fi
+          if [ "$rc" -ne 0 ]; then
+            echo 'archive_reconstruction_error:'
+            cat /tmp/reconstruct.err
+          fi
+          exit "$rc"
