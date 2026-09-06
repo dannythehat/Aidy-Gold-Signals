@@ -44,7 +44,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run pytest -q tests/test_provider_intelligence_day2_gold_calendar.py tests/test_provider_intelligence_day3_health.py
+          uv run pytest -q tests/test_provider_intelligence_day2_gold_calendar.py tests/test_provider_intelligence_day3_capture_health.py
           python - <<'PY'
           import json, os
           cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
