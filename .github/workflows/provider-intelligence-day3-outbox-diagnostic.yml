@@ -1,0 +1,49 @@
+name: Provider Intelligence Day 3 Outbox Diagnostic
+
+on:
+  push:
+    branches: [research/provider-intelligence-20260906]
+    paths:
+      - ".github/workflows/provider-intelligence-day3-outbox-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  outbox-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read pending archive rows and referenced evidence existence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/day3-outbox.jsonc <<JSON
+          {
+            "name": "aidy-day3-readonly-outbox",
+            "compatibility_date": "2026-08-16",
+            "d1_databases": [{
+              "binding": "AIDY_OPS",
+              "database_name": "${AIDY_D1_DATABASE_NAME}",
+              "database_id": "${AIDY_D1_DATABASE_ID}"
+            }]
+          }
+          JSON
+          SQL="SELECT id,record_type,evidence_id,archive_key,payload_digest,status,created_at,archived_at,attempts,last_error FROM archive_outbox WHERE status='pending' ORDER BY created_at,id LIMIT 20;"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --config /tmp/day3-outbox.jsonc --json --command "$SQL" > /tmp/pending.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/pending.json', encoding='utf-8'))
+          rows=p[0].get('results',[]) if p else []
+          print('pending_outbox='+json.dumps(rows, sort_keys=True))
+          PY
