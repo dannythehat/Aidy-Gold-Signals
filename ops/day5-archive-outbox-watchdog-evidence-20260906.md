@@ -134,13 +134,41 @@ Day 5 deliberately does not alter the live archive schema or retry scheduler bef
 
 Day 6 is the controlled runtime/schema improvement: bounded backoff and explicit dead-letter state so a permanently failing item is not retried forever. That change must preserve evidence truth, continuity-auditor semantics and capture independence.
 
-## Final production gate
+## Protected merge proof
 
-Day 5 is GREEN only after:
+PR `#90` passed both required protected checks:
 
-1. the one-off acceptance workflow is removed from the merge candidate;
-2. protected checks and full repository regression pass;
-3. the durable watchdog is merged to `main`;
-4. the merge-triggered production archive watchdog succeeds from the merged SHA;
-5. its diagnostic artifact exists;
-6. no false issue is raised against the currently healthy outbox.
+- `Evidence Semantic Change Gate`: PASS
+- `AIDY Day 53 Twelve Data OHLC Adapter / acceptance`: PASS
+- full repository regression: PASS
+
+PR `#90` merged to `main` at SHA `3b6f26eee84301e0196527aae522980a534bde56`.
+
+## Final production gate — PASS
+
+The merge-triggered production `AIDY Archive Outbox Watchdog` completed successfully from the exact merged `main` SHA:
+
+- GitHub Actions run: `34030207017`
+- job: `101478204115`
+- `main` SHA: `3b6f26eee84301e0196527aae522980a534bde56`
+- conclusion: `success`
+- Gold pending rows: `0`
+- Gold rows_read: `1`
+- Gold rows_written: `0`
+- cross-market pending rows: `0`
+- cross-market rows_read: `1`
+- cross-market rows_written: `0`
+- query attempts: `1` for each bounded query
+- status: `healthy`
+- alert: `false`
+- retrying count: `0`
+- poison count: `0`
+- false alert issue: none
+
+Production diagnostic artifact:
+
+- artifact ID: `9988337266`
+- name: `aidy-archive-outbox-34030207017`
+- SHA-256: `732457a2cb78ec8332bc7876ffa5e9aebad890ac3b70d133f034ccb464cabb2c`
+
+**Day 5 production-hardening acceptance: GREEN.**
