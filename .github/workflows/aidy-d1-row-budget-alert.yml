@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/aidy-d1-row-budget-alert.yml"
+      - "scripts/aidy_d1_budget_monitor.py"
 
 permissions:
   contents: read
@@ -26,54 +27,27 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Query today's D1 rows read
+      - name: Checkout monitor code
+        uses: actions/checkout@v4
+
+      - name: Query today's D1 rows read with bounded retry
         id: usage
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json, os, urllib.request
-          from datetime import datetime, timezone
+          python scripts/aidy_d1_budget_monitor.py \
+            --max-attempts 3 \
+            --base-backoff-seconds 1 \
+            --diagnostic artifacts/aidy-d1-budget-diagnostic.json
 
-          day = datetime.now(timezone.utc).date().isoformat()
-          query = '''query D1Usage($accountTag: string!, $day: Date, $databaseId: string) {
-            viewer { accounts(filter: { accountTag: $accountTag }) {
-              d1AnalyticsAdaptiveGroups(limit: 10, filter: {
-                date_geq: $day, date_leq: $day, databaseId: $databaseId
-              }) {
-                sum { rowsRead }
-                dimensions { date databaseId }
-              }
-            } }
-          }'''
-          body = json.dumps({'query': query, 'variables': {
-              'accountTag': os.environ['CLOUDFLARE_ACCOUNT_ID'],
-              'day': day,
-              'databaseId': os.environ['AIDY_D1_DATABASE_ID'],
-          }}).encode()
-          req = urllib.request.Request(
-              'https://api.cloudflare.com/client/v4/graphql',
-              data=body,
-              headers={
-                  'Authorization': 'Bearer ' + os.environ['CLOUDFLARE_API_TOKEN'],
-                  'Content-Type': 'application/json',
-              },
-          )
-          with urllib.request.urlopen(req, timeout=30) as response:
-              result = json.load(response)
-          if result.get('errors'):
-              raise SystemExit(result['errors'])
-          groups = result['data']['viewer']['accounts'][0]['d1AnalyticsAdaptiveGroups']
-          rows_read = sum(int(item.get('sum', {}).get('rowsRead') or 0) for item in groups)
-          threshold = int(os.environ['D1_ROWS_READ_ALERT_THRESHOLD'])
-          free_limit = int(os.environ['D1_ROWS_READ_FREE_LIMIT'])
-          alert = rows_read >= threshold
-          print(f"date_utc={day} rows_read={rows_read} threshold={threshold} free_limit={free_limit} alert={str(alert).lower()}")
-          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as fh:
-              fh.write(f"day={day}\n")
-              fh.write(f"rows_read={rows_read}\n")
-              fh.write(f"alert={'true' if alert else 'false'}\n")
-          PY
+      - name: Preserve D1 diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-d1-budget-diagnostic-${{ github.run_id }}
+          path: artifacts/aidy-d1-budget-diagnostic.json
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Raise one alert issue for the UTC day
         if: steps.usage.outputs.alert == 'true'
