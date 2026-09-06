@@ -1,9 +1,19 @@
 from __future__ import annotations
 
+import sys
+import types
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
+
+# Cloudflare's workers package imports the Pyodide-only ``js`` module on CPython.
+# The queue test exercises our Python handler logic only, so supply the tiny ABI surface
+# entry.py needs instead of pretending the full Workers runtime exists in GitHub Actions.
+_workers = types.ModuleType("workers")
+_workers.Response = type("Response", (), {})
+_workers.WorkerEntrypoint = type("WorkerEntrypoint", (), {})
+sys.modules.setdefault("workers", _workers)
 
 import entry as worker_entry
 from aidy.provider_intelligence_health import build_capture_health
