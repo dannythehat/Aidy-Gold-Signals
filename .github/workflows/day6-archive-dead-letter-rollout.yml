@@ -82,7 +82,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
+          uv run python - <<'PY'
           import json, os
           from types import SimpleNamespace
           from aidy.config import AidySettings
@@ -217,7 +217,7 @@ jobs:
           git checkout --force "$PREVIOUS_SHA"
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          python - <<'PY'
+          uv run python - <<'PY'
           import json, os
           cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
           cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']

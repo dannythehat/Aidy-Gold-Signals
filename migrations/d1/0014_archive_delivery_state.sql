@@ -1,4 +1,5 @@
 -- Day 6 production hardening: bounded D1 -> R2 archive retry lifecycle.
+-- Rollout-config follow-up keeps this migration unchanged and retriggers protected checks.
 --
 -- This migration is deliberately additive. The legacy `status` column remains
 -- unchanged (`pending` / `archived`) so the previously deployed Worker can keep
