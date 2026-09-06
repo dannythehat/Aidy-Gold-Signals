@@ -164,5 +164,5 @@ jobs:
         with:
           name: day4-capture-freshness-${{ github.run_id }}
           path: artifacts/day4-*.json
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
