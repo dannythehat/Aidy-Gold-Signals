@@ -102,7 +102,8 @@ def test_provider_auth_path_is_worker_safe_and_constant_time() -> None:
 def test_worker_routes_provider_endpoint_without_replacing_core_runtime() -> None:
     wrapper = (ROOT / "src" / "provider_entry.py").read_text(encoding="utf-8")
     config = (ROOT / "wrangler.test.example.jsonc").read_text(encoding="utf-8")
-    assert 'urlparse(request.url).path == "/market/ohlc"' in wrapper
+    assert 'path == "/market/ohlc"' in wrapper
+    assert 'path == "/provider/context"' in wrapper
     assert "return await super().fetch(request)" in wrapper
     assert '"main": "src/provider_entry.py"' in config
 
