@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """AIDY production capture-freshness watchdog.
 
 Consumes the tiny JSON result from a bounded Cloudflare D1 query and decides whether
@@ -91,12 +90,10 @@ def current_session_open_utc(value: datetime) -> datetime | None:
     local = now.astimezone(NEW_YORK)
     wall = local.time().replace(tzinfo=None)
 
-    # After the daily 18:00 reopen, the current segment starts today at 18:00 NY.
     if wall >= time(18, 0):
         local_open = datetime.combine(local.date(), time(18, 0), tzinfo=NEW_YORK)
         return local_open.astimezone(UTC)
 
-    # Before 17:00 the uninterrupted segment began the prior calendar day at 18:00 NY.
     previous = local.date() - timedelta(days=1)
     local_open = datetime.combine(previous, time(18, 0), tzinfo=NEW_YORK)
     return local_open.astimezone(UTC)
@@ -106,10 +103,8 @@ def _extract_first_result(payload: object) -> dict[str, Any]:
     """Accept Wrangler D1 --json output or a direct object used by tests."""
 
     if isinstance(payload, dict):
-        # Direct fixture form.
         if any(key in payload for key in ("latest_scheduled_success_utc", "latest_success")):
             return dict(payload)
-        # Defensive support for a single Wrangler result object.
         results = payload.get("results")
         if isinstance(results, list) and results:
             row = results[0]
