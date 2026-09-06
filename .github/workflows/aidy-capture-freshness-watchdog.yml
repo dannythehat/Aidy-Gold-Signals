@@ -1,3 +1,4 @@
+# Day 4 final-evidence protection-check trigger; no runtime semantic change.
 name: AIDY Capture Freshness Watchdog
 
 on:
