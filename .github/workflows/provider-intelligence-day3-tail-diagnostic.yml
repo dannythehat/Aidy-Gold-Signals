@@ -1,0 +1,51 @@
+name: Provider Intelligence Day 3 Live Tail Diagnostic
+
+on:
+  push:
+    branches: [research/provider-intelligence-20260906]
+    paths:
+      - ".github/workflows/provider-intelligence-day3-tail-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tail-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Observe scheduler and capture worker for new invocations only
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          timeout 85s npx --yes wrangler@4 tail aidy-signals-scheduler-test --format=json > /tmp/scheduler-tail.log 2>&1 &
+          sched_pid=$!
+          timeout 85s npx --yes wrangler@4 tail aidy-signals-test --format=json > /tmp/worker-tail.log 2>&1 &
+          worker_pid=$!
+          wait "$sched_pid"; sched_rc=$?
+          wait "$worker_pid"; worker_rc=$?
+          set -e
+          echo "scheduler_tail_exit=${sched_rc}"
+          echo "worker_tail_exit=${worker_rc}"
+          echo '--- scheduler tail ---'
+          cat /tmp/scheduler-tail.log
+          echo '--- capture worker tail ---'
+          cat /tmp/worker-tail.log
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('/tmp/scheduler-tail.log').read_text(errors='replace')
+          w=Path('/tmp/worker-tail.log').read_text(errors='replace')
+          print(f'scheduler_tail_bytes={len(s.encode())}')
+          print(f'worker_tail_bytes={len(w.encode())}')
+          assert s.strip(), 'scheduler produced no tail output'
+          assert w.strip(), 'capture worker produced no tail output'
+          PY
