@@ -42,6 +42,7 @@ class LocalD1:
         for migration in (
             "migrations/d1/0001_aidy_ops.sql",
             "migrations/d1/0002_cross_market_evidence.sql",
+            "migrations/d1/0012_live_gold_free_tier_read_budget.sql",
             "migrations/d1/0014_archive_delivery_state.sql",
         ):
             self.connection.executescript(Path(migration).read_text(encoding="utf-8"))
@@ -127,6 +128,9 @@ def force_due(db: LocalD1, table: str, outbox_id: str) -> None:
 def test_migration_maps_legacy_status_without_rewriting_it() -> None:
     db = sqlite3.connect(":memory:")
     db.executescript(Path("migrations/d1/0001_aidy_ops.sql").read_text(encoding="utf-8"))
+    db.executescript(
+        Path("migrations/d1/0002_cross_market_evidence.sql").read_text(encoding="utf-8")
+    )
     db.execute(
         "INSERT INTO archive_outbox(id,record_type,evidence_id,archive_key,payload_digest,status,created_at) "
         "VALUES (?,?,?,?,?,'pending',?)",
