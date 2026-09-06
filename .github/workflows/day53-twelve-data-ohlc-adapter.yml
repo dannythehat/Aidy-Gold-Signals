@@ -1,4 +1,4 @@
-# Day 5 final-evidence protection-check trigger; no runtime semantic change.
+# Day 6 archive-resilience protection-check coverage.
 name: AIDY Day 53 Twelve Data OHLC Adapter
 
 on:
@@ -21,11 +21,14 @@ on:
       - "src/aidy/config.py"
       - "src/aidy/runtime.py"
       - "src/aidy/forward_live_observer.py"
+      - "src/aidy/storage_contracts.py"
+      - "src/aidy/cross_market_storage.py"
       - "src/entry.py"
       - "wrangler.test.example.jsonc"
       - "migrations/d1/0006_twelve_data_feed_observations.sql"
       - "migrations/d1/0007_twelve_data_quota_bootstrap.sql"
       - "migrations/d1/0009_twelve_data_decision_admission.sql"
+      - "migrations/d1/0014_archive_delivery_state.sql"
       - "evidence/research_ledger/day53-step2-equivalence-preregistration.json"
       - "docs/day53-step2-existing-constant-equivalence-preregistration.md"
       - "tests/test_day53_step2_preregistration.py"
@@ -35,11 +38,13 @@ on:
       - "tests/test_provider_market_api.py"
       - "tests/test_day4_capture_freshness_watchdog.py"
       - "tests/test_day5_archive_outbox_watchdog.py"
+      - "tests/test_day6_archive_dead_letter.py"
       - "scripts/aidy_capture_freshness_watchdog.py"
       - "scripts/aidy_archive_outbox_watchdog.py"
       - "pyproject.toml"
       - ".github/workflows/day53-live-forward-activation.yml"
       - ".github/workflows/day53-twelve-data-ohlc-adapter.yml"
+      - ".github/workflows/day6-archive-dead-letter-acceptance.yml"
       - ".github/workflows/aidy-d1-row-budget-alert.yml"
       - ".github/workflows/aidy-capture-freshness-watchdog.yml"
       - ".github/workflows/aidy-archive-outbox-watchdog.yml"
@@ -86,10 +91,13 @@ jobs:
             src/aidy/config.py \
             src/aidy/runtime.py \
             src/aidy/forward_live_observer.py \
+            src/aidy/storage_contracts.py \
+            src/aidy/cross_market_storage.py \
             scripts/aidy_capture_freshness_watchdog.py \
             scripts/aidy_archive_outbox_watchdog.py \
             tests/test_day4_capture_freshness_watchdog.py \
             tests/test_day5_archive_outbox_watchdog.py \
+            tests/test_day6_archive_dead_letter.py \
             tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
@@ -105,6 +113,7 @@ jobs:
           uv run pytest -q \
             tests/test_day4_capture_freshness_watchdog.py \
             tests/test_day5_archive_outbox_watchdog.py \
+            tests/test_day6_archive_dead_letter.py \
             tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
