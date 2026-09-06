@@ -57,9 +57,9 @@ jobs:
 
           consumers=get(f'/queues/{queue_id}/consumers')
           crows=consumers.get('result') or []
-          safe_consumers=[{k:c.get(k) for k in ('consumer_id','queue_name','script_name','settings','dead_letter_queue')} for c in crows]
+          safe_consumers=[{k:c.get(k) for k in ('consumer_id','queue_name','script','settings','dead_letter_queue')} for c in crows]
           print('consumers='+json.dumps(safe_consumers, sort_keys=True))
-          assert any(c.get('script_name')==os.environ['CAPTURE_WORKER'] for c in crows), crows
+          assert any(c.get('script')==os.environ['CAPTURE_WORKER'] for c in crows), crows
 
           metrics=get(f'/queues/{queue_id}/metrics')
           m=metrics.get('result') or {}
