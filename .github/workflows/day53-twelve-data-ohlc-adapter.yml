@@ -33,12 +33,15 @@ on:
       - "tests/test_day53_live_forward_observer.py"
       - "tests/test_provider_market_api.py"
       - "tests/test_day4_capture_freshness_watchdog.py"
+      - "tests/test_day5_archive_outbox_watchdog.py"
       - "scripts/aidy_capture_freshness_watchdog.py"
+      - "scripts/aidy_archive_outbox_watchdog.py"
       - "pyproject.toml"
       - ".github/workflows/day53-live-forward-activation.yml"
       - ".github/workflows/day53-twelve-data-ohlc-adapter.yml"
       - ".github/workflows/aidy-d1-row-budget-alert.yml"
       - ".github/workflows/aidy-capture-freshness-watchdog.yml"
+      - ".github/workflows/aidy-archive-outbox-watchdog.yml"
       - ".github/workflows/ops-provider-market-rollout-20260905.yml"
 
 permissions:
@@ -83,7 +86,9 @@ jobs:
             src/aidy/runtime.py \
             src/aidy/forward_live_observer.py \
             scripts/aidy_capture_freshness_watchdog.py \
+            scripts/aidy_archive_outbox_watchdog.py \
             tests/test_day4_capture_freshness_watchdog.py \
+            tests/test_day5_archive_outbox_watchdog.py \
             tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
@@ -98,6 +103,7 @@ jobs:
         run: |
           uv run pytest -q \
             tests/test_day4_capture_freshness_watchdog.py \
+            tests/test_day5_archive_outbox_watchdog.py \
             tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
