@@ -1,0 +1,176 @@
+name: Day 3 Exact D1 Rows Read Audit
+
+on:
+  push:
+    branches:
+      - ops/day3-exact-d1-audit-20260906
+    paths:
+      - .github/workflows/day3-exact-d1-rows-read-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AUDIT_START_UTC: '2026-09-05T05:59:00Z'
+  AUDIT_END_UTC: '2026-09-06T05:59:00Z'
+
+jobs:
+  exact-d1-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Introspect D1 analytics schema and query exact window
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          endpoint = 'https://api.cloudflare.com/client/v4/graphql'
+          token = os.environ['CLOUDFLARE_API_TOKEN']
+          account = os.environ['CLOUDFLARE_ACCOUNT_ID']
+          database = os.environ['AIDY_D1_DATABASE_ID']
+          start = os.environ['AUDIT_START_UTC']
+          end = os.environ['AUDIT_END_UTC']
+
+          def call(query, variables=None):
+              body = json.dumps({'query': query, 'variables': variables or {}}).encode()
+              req = urllib.request.Request(
+                  endpoint,
+                  data=body,
+                  headers={
+                      'Authorization': 'Bearer ' + token,
+                      'Content-Type': 'application/json',
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=45) as response:
+                  result = json.load(response)
+              if result.get('errors'):
+                  raise RuntimeError(json.dumps(result['errors'], sort_keys=True))
+              return result['data']
+
+          def unwrap(t):
+              while t and t.get('ofType'):
+                  t = t['ofType']
+              return (t or {}).get('name')
+
+          schema_query = r'''
+          query D1Schema {
+            __schema {
+              types {
+                kind
+                name
+                fields(includeDeprecated: true) {
+                  name
+                  type { kind name ofType { kind name ofType { kind name } } }
+                  args {
+                    name
+                    type { kind name ofType { kind name ofType { kind name } } }
+                  }
+                }
+                inputFields {
+                  name
+                  type { kind name ofType { kind name ofType { kind name } } }
+                }
+              }
+            }
+          }
+          '''
+          data = call(schema_query)
+          types = {t['name']: t for t in data['__schema']['types'] if t.get('name')}
+
+          d1_fields = []
+          for parent in types.values():
+              for field in parent.get('fields') or []:
+                  if field['name'].startswith('d1') and field['name'].endswith('Groups'):
+                      d1_fields.append((parent['name'], field))
+
+          print(f'audit_window_start_utc={start}')
+          print(f'audit_window_end_utc={end}')
+          print(f'database_id={database}')
+          print('d1_group_fields=' + ','.join(sorted(f[1]['name'] for f in d1_fields)))
+
+          exact_candidates = []
+          for parent_name, field in sorted(d1_fields, key=lambda x: x[1]['name']):
+              filter_arg = next((a for a in field.get('args') or [] if a['name'] == 'filter'), None)
+              if not filter_arg:
+                  continue
+              filter_type = unwrap(filter_arg['type'])
+              input_fields = {i['name'] for i in (types.get(filter_type, {}).get('inputFields') or [])}
+              time_fields = sorted(n for n in input_fields if 'date' in n.lower() or 'time' in n.lower())
+              print(f"schema field={field['name']} filter_type={filter_type} time_fields={','.join(time_fields)}")
+
+              # An exact 05:59 boundary requires an untruncated datetime filter or minute granularity.
+              pairs = [
+                  ('datetime_geq', 'datetime_lt'),
+                  ('datetime_geq', 'datetime_leq'),
+                  ('datetimeMinute_geq', 'datetimeMinute_lt'),
+                  ('datetimeMinute_geq', 'datetimeMinute_leq'),
+              ]
+              selected = next(((lo, hi) for lo, hi in pairs if lo in input_fields and hi in input_fields), None)
+              if selected and 'databaseId' in input_fields:
+                  exact_candidates.append((field['name'], selected[0], selected[1]))
+
+          # Try exact-capable D1 datasets in deterministic order, preferring the billing analytics dataset.
+          exact_candidates.sort(key=lambda item: (0 if item[0] == 'd1AnalyticsAdaptiveGroups' else 1, item[0]))
+          failures = []
+          for field_name, lo_name, hi_name in exact_candidates:
+              # Ask only for rowsRead. If the dataset does not expose it, Cloudflare will return a schema error
+              # and we continue to the next exact-capable D1 dataset.
+              query = f'''
+              query ExactRowsRead($accountTag: string!) {{
+                viewer {{
+                  accounts(filter: {{ accountTag: $accountTag }}) {{
+                    {field_name}(
+                      limit: 10000
+                      filter: {{
+                        databaseId: "{database}"
+                        {lo_name}: "{start}"
+                        {hi_name}: "{end}"
+                      }}
+                    ) {{
+                      sum {{ rowsRead }}
+                    }}
+                  }}
+                }}
+              }}
+              '''
+              try:
+                  exact = call(query, {'accountTag': account})
+                  groups = exact['viewer']['accounts'][0][field_name]
+                  rows_read = sum(int((g.get('sum') or {}).get('rowsRead') or 0) for g in groups)
+                  print(f'exact_dataset={field_name}')
+                  print(f'exact_start_filter={lo_name}')
+                  print(f'exact_end_filter={hi_name}')
+                  print(f'EXACT_ROWS_READ={rows_read}')
+                  with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as fh:
+                      fh.write('## Day 3 exact Cloudflare D1 rows-read audit\n\n')
+                      fh.write(f'- Window: `{start}` → `{end}`\n')
+                      fh.write(f'- Database: `{database}`\n')
+                      fh.write(f'- Dataset: `{field_name}`\n')
+                      fh.write(f'- Filters: `{lo_name}`, `{hi_name}`\n')
+                      fh.write(f'- **Exact rows_read: `{rows_read}`**\n')
+                  sys.exit(0)
+              except Exception as exc:
+                  failures.append(f'{field_name}: {exc}')
+
+          print('HARD_BLOCKER: Cloudflare D1 GraphQL schema exposed no usable sub-day dataset that both accepts the exact 05:59 boundaries and returns rowsRead.')
+          if exact_candidates:
+              print('candidate_failures=' + ' | '.join(failures))
+          else:
+              print('exact_candidates=none')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as fh:
+              fh.write('## Day 3 exact Cloudflare D1 rows-read audit\n\n')
+              fh.write(f'- Window requested: `{start}` → `{end}`\n')
+              fh.write('- Result: **HARD BLOCKER**\n')
+              fh.write('- Reason: authenticated Cloudflare GraphQL schema provides no usable D1 `rowsRead` dataset with filters capable of representing the exact 05:59-to-05:59 window.\n')
+          sys.exit(2)
+          PY
