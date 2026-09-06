@@ -40,10 +40,12 @@ jobs:
           import importlib.util
           import io
           import json
+          import sys
           import urllib.error
 
-          spec = importlib.util.spec_from_file_location('m', 'scripts/aidy_d1_budget_monitor.py')
+          spec = importlib.util.spec_from_file_location('aidy_d1_budget_monitor', 'scripts/aidy_d1_budget_monitor.py')
           m = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = m
           spec.loader.exec_module(m)
 
           class Response:
