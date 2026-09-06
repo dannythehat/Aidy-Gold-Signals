@@ -1,3 +1,4 @@
+# Day 3 final-evidence protection-check trigger; no runtime semantic change.
 name: AIDY D1 Row Budget Alert
 
 on:
