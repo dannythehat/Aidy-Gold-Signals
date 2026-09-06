@@ -1,0 +1,152 @@
+name: Day 3 Operational Hardening Acceptance
+
+on:
+  push:
+    branches:
+      - ops/day3-exact-d1-audit-20260906
+    paths:
+      - .github/workflows/day3-operational-hardening-acceptance.yml
+      - .github/workflows/aidy-d1-row-budget-alert.yml
+      - scripts/aidy_d1_budget_monitor.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  D1_ROWS_READ_ALERT_THRESHOLD: "3250000"
+  D1_ROWS_READ_FREE_LIMIT: "5000000"
+
+jobs:
+  day3-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile monitor
+        run: python -m py_compile scripts/aidy_d1_budget_monitor.py
+
+      - name: Prove bounded retry and backoff deterministically
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import importlib.util
+          import io
+          import json
+          import urllib.error
+
+          spec = importlib.util.spec_from_file_location('m', 'scripts/aidy_d1_budget_monitor.py')
+          m = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+
+          class Response:
+              def __init__(self, payload):
+                  self.payload = payload
+              def __enter__(self):
+                  return io.BytesIO(json.dumps(self.payload).encode())
+              def __exit__(self, *args):
+                  return False
+
+          calls = {'n': 0}
+          sleeps = []
+          def opener(request, timeout=30):
+              calls['n'] += 1
+              if calls['n'] < 3:
+                  raise urllib.error.URLError('synthetic transient failure')
+              return Response({'data': {'viewer': {'accounts': [{'d1AnalyticsAdaptiveGroups': [{'sum': {'rowsRead': 123}}]}]}}})
+
+          rows, attempts = m.query_rows_read(
+              endpoint='https://example.invalid/graphql',
+              token='x', account_id='a', database_id='d', day='2026-09-06',
+              max_attempts=3, base_backoff_seconds=0.25,
+              opener=opener, sleeper=sleeps.append,
+          )
+          assert rows == 123, rows
+          assert attempts == 3, attempts
+          assert sleeps == [0.25, 0.5], sleeps
+          print('bounded_retry=PASS attempts=3 backoff=0.25,0.5 rows_read=123')
+          PY
+
+      - name: Prove schedule and UTC aggregation boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'cron: "17 * * * *"' .github/workflows/aidy-d1-row-budget-alert.yml
+          grep -F 'datetime.now(timezone.utc).date().isoformat()' scripts/aidy_d1_budget_monitor.py
+          echo 'schedule=PASS cron=17_each_hour timezone=UTC aggregation=UTC_day'
+
+      - name: Query current D1 budget through hardened path
+        id: normal
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/aidy_d1_budget_monitor.py \
+            --max-attempts 3 \
+            --base-backoff-seconds 0.25 \
+            --diagnostic artifacts/day3-normal.json
+
+      - name: Force query failure and prove durable diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          set +e
+          python scripts/aidy_d1_budget_monitor.py \
+            --endpoint http://127.0.0.1:9/graphql \
+            --max-attempts 3 \
+            --base-backoff-seconds 0 \
+            --diagnostic artifacts/day3-forced-failure.json
+          rc=$?
+          set -e
+          test "$rc" -ne 0
+          python - <<'PY'
+          import json
+          p='artifacts/day3-forced-failure.json'
+          d=json.load(open(p, encoding='utf-8'))
+          assert d['status']=='error', d
+          assert d['attempts']==3, d
+          assert d['error'], d
+          print('failure_path=PASS diagnostic_preserved=true attempts=3')
+          PY
+
+      - name: Trigger synthetic alert decision using real Cloudflare analytics
+        id: synthetic_alert
+        env:
+          D1_ROWS_READ_ALERT_THRESHOLD: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/aidy_d1_budget_monitor.py \
+            --max-attempts 3 \
+            --base-backoff-seconds 0.25 \
+            --diagnostic artifacts/day3-synthetic-alert.json
+
+      - name: Prove configured GitHub issue alert path
+        if: steps.synthetic_alert.outputs.alert == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROWS_READ: ${{ steps.synthetic_alert.outputs.rows_read }}
+          DAY: ${{ steps.synthetic_alert.outputs.day }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="[TEST] AIDY Day 3 D1 alert path ${GITHUB_RUN_ID}"
+          url="$(gh issue create --title "$title" --body "Synthetic Day 3 alert-path proof only. rows_read=${ROWS_READ}, day=${DAY}. This issue is immediately closed by the acceptance workflow.")"
+          number="${url##*/}"
+          gh issue close "$number" --comment "Day 3 synthetic alert-path proof passed; closing test issue."
+          echo "synthetic_alert_issue=${number} status=PASS"
+
+      - name: Preserve acceptance diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day3-operational-hardening-${{ github.run_id }}
+          path: artifacts/day3-*.json
+          if-no-files-found: error
+          retention-days: 14
