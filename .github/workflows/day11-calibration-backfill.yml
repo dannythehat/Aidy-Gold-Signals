@@ -1,0 +1,203 @@
+name: AIDY Day 11 Calibration Backfill
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "calibration/day11_reconciliation_windows.json"
+      - "migrations/d1/0015_day11_calibration_backfill.sql"
+      - "scripts/day11_calibration_backfill.py"
+      - "src/aidy/provider_calibration_api.py"
+      - "src/provider_entry.py"
+      - "tests/test_day11_calibration_backfill.py"
+      - ".github/workflows/day11-calibration-backfill.yml"
+  push:
+    branches: [main]
+    paths:
+      - "calibration/day11_reconciliation_windows.json"
+      - "migrations/d1/0015_day11_calibration_backfill.sql"
+      - "scripts/day11_calibration_backfill.py"
+      - "src/aidy/provider_calibration_api.py"
+      - "src/provider_entry.py"
+      - "tests/test_day11_calibration_backfill.py"
+      - ".github/workflows/day11-calibration-backfill.yml"
+
+concurrency:
+  group: aidy-day11-calibration-backfill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  acceptance:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install and verify isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check scripts/day11_calibration_backfill.py src/aidy/provider_calibration_api.py src/provider_entry.py tests/test_day11_calibration_backfill.py
+          uv run python -m compileall -q src scripts tests
+          uv run pytest -q tests/test_day11_calibration_backfill.py tests/test_provider_market_api.py
+          uv run pytest -q
+
+  backfill-and-deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build proven capture-only production config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          cfg['triggers']['crons']=[]
+          settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+          assert settings.capture_enabled is True
+          assert str(cfg['vars'].get('AIDY_FORMAL_FORWARD_ENABLED','')).lower() == 'false'
+          assert settings.market_data_source == 'twelve_data'
+          assert settings.market_data_ownership == 'public_independent'
+          assert settings.market_poll_seconds >= 300.0
+          json.dump(cfg, open('wrangler.day11.calibration.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply isolated calibration schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day11.calibration.live.jsonc
+
+      - name: Fetch exactly 56 Twelve Data windows and build D1 load
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/day11_calibration_backfill.py \
+            --manifest calibration/day11_reconciliation_windows.json \
+            --sql-out /tmp/day11-calibration.sql \
+            --summary-out /tmp/day11-calibration-summary.json
+          python - <<'PY'
+          import json
+          s=json.load(open('/tmp/day11-calibration-summary.json', encoding='utf-8'))
+          assert s['window_count'] == 56, s
+          assert s['source_provider'] == 'twelve_data', s
+          assert s['source_kind'] == 'calibration_backfill', s
+          assert s['pit_eligible'] is False, s
+          assert s['research_only'] is True, s
+          assert s['live_money_execution_allowed'] is False, s
+          # Keep the one-shot load comfortably below the free-tier daily write ceiling.
+          assert int(s['unique_bar_count']) < 50000, s['unique_bar_count']
+          print(json.dumps({k:s[k] for k in ('window_count','complete_windows','incomplete_windows','unique_bar_count')}, sort_keys=True))
+          PY
+
+      - name: Load calibration-only D1 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.day11.calibration.live.jsonc \
+            --file /tmp/day11-calibration.sql
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.day11.calibration.live.jsonc \
+            --command "SELECT COUNT(*) AS windows, SUM(CASE WHEN status='COMPLETE' THEN 1 ELSE 0 END) AS complete_windows, SUM(CASE WHEN status='INCOMPLETE' THEN 1 ELSE 0 END) AS incomplete_windows FROM provider_calibration_backfill_windows;"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.day11.calibration.live.jsonc \
+            --command "SELECT COUNT(*) AS bars, SUM(CASE WHEN source_kind='calibration_backfill' AND source_provider='twelve_data' AND pit_eligible=0 AND research_only=1 AND live_money_execution_allowed=0 THEN 1 ELSE 0 END) AS safely_tagged FROM provider_calibration_m1_backfill;"
+
+      - name: Deploy provider Worker without changing formal-forward authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.day11.calibration.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+      - name: Verify production safety and route isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "${AIDY_TEST_WORKER_URL}/health?day11_calibration=${GITHUB_SHA}-${attempt}" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source') == 'twelve_data', h
+          assert h.get('market_data_ownership') == 'public_independent', h
+          PY
+            then
+              ok=1
+              break
+            fi
+            sleep 3
+          done
+          test "$ok" -eq 1
+
+          unauth_status="$(curl -sS -o /tmp/calibration-unauth.json -w '%{http_code}' --get \
+            --data-urlencode 'window_id=01f17960-2894-4123-b74a-5e1937d80c88' \
+            --data-urlencode 'symbol=XAUUSD' \
+            --data-urlencode 'timeframe=1m' \
+            --data-urlencode 'from=2026-08-20T13:43:00+00:00' \
+            --data-urlencode 'to=2026-08-22T13:43:00+00:00' \
+            "${AIDY_TEST_WORKER_URL}/calibration/market/ohlc")"
+          echo "calibration_endpoint_unauth_status=${unauth_status}"
+          test "$unauth_status" = "401"
+
+      - name: Publish non-secret backfill summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: day11-calibration-backfill-summary-${{ github.sha }}
+          path: /tmp/day11-calibration-summary.json
+          retention-days: 7
