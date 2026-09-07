@@ -52,6 +52,16 @@ def test_backfill_generator_uses_only_twelve_and_never_synthesizes() -> None:
     assert "INSERT INTO market_candles" not in source
 
 
+def test_backfill_loader_is_remote_d1_safe_idempotent_and_widenable() -> None:
+    source = (ROOT / "scripts" / "day11_calibration_backfill.py").read_text(encoding="utf-8")
+    assert "BEGIN TRANSACTION" not in source
+    assert 'lines.append("COMMIT;")' not in source
+    assert "DELETE FROM provider_calibration" not in source
+    assert "INSERT OR REPLACE INTO provider_calibration_m1_backfill" in source
+    assert "INSERT OR REPLACE INTO provider_calibration_backfill_windows" in source
+    assert 'parser.add_argument("--expected-windows"' in source
+
+
 def test_calibration_endpoint_reads_only_calibration_tables_and_flags() -> None:
     source = (ROOT / "src" / "aidy" / "provider_calibration_api.py").read_text(
         encoding="utf-8"
