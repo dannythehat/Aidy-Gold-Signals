@@ -1,4 +1,4 @@
-# Day 11 D1 loader protection-check trigger; no runtime semantic change.
+# Day 11 widened calibration backfill protection-check trigger; no runtime semantic change.
 name: AIDY Day 53 Twelve Data OHLC Adapter
 
 on:
@@ -113,7 +113,7 @@ jobs:
           uv run pytest -q \
             tests/test_day4_capture_freshness_watchdog.py \
             tests/test_day5_archive_outbox_watchdog.py \
-            tests/test_day6_archive_dead_letter.py \
+            tests/test_day6_archive_dead-letter.py \
             tests/test_day53_step2_preregistration.py \
             tests/test_day53_twelve_data_ohlc_adapter.py \
             tests/test_day53_twelve_data_launch_cleanup.py \
