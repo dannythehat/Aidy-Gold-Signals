@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Fetch only the frozen Day 11 reconciliation windows from Twelve Data.
 
 The output SQL writes exclusively to calibration-only D1 tables created by migration 0015.
@@ -25,7 +24,7 @@ REQUEST_PACING_SECONDS = 8.0
 
 
 def _dt(value: str) -> datetime:
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(value)
     if parsed.tzinfo is None:
         raise ValueError("calibration window timestamp must be timezone-aware")
     parsed = parsed.astimezone(UTC)
