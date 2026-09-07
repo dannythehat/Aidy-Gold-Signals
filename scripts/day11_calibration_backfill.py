@@ -21,6 +21,7 @@ from aidy.twelve_data_market import TwelveDataOhlcGateway, expected_market_minut
 SOURCE_KIND = "calibration_backfill"
 SOURCE_PROVIDER = "twelve_data"
 EXPECTED_WINDOWS = 56
+REQUEST_PACING_SECONDS = 8.0
 
 
 def _dt(value: str) -> datetime:
@@ -56,7 +57,9 @@ def _load_manifest(path: Path) -> list[dict[str, str]]:
         if start_dt >= end_dt or (end_dt - start_dt).total_seconds() > 48 * 3600:
             raise ValueError(f"invalid calibration window {window_id}")
         ids.add(window_id)
-        windows.append({"window_id": window_id, "from": start_dt.isoformat(), "to": end_dt.isoformat()})
+        windows.append(
+            {"window_id": window_id, "from": start_dt.isoformat(), "to": end_dt.isoformat()}
+        )
     return windows
 
 
@@ -75,7 +78,11 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
         fetched = await gateway.fetch_1m(start_date=start, end_date=end)
         expected = tuple(expected_market_minute_opens(start, end))
         expected_set = set(expected)
-        actual = {bar.open_time_utc for bar in fetched.closed_bars if bar.open_time_utc in expected_set}
+        actual = {
+            bar.open_time_utc
+            for bar in fetched.closed_bars
+            if bar.open_time_utc in expected_set
+        }
         missing = tuple(value for value in expected if value not in actual)
 
         for bar in fetched.closed_bars:
@@ -92,8 +99,13 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
                 "payload_digest": bar.payload_digest,
             }
             prior = unique_bars.get(opened)
-            if prior is not None and any(prior[key] != row[key] for key in ("open", "high", "low", "close", "payload_digest")):
-                raise RuntimeError(f"Twelve historical revision conflict within calibration run: {opened}")
+            if prior is not None and any(
+                prior[key] != row[key]
+                for key in ("open", "high", "low", "close", "payload_digest")
+            ):
+                raise RuntimeError(
+                    f"Twelve historical revision conflict within calibration run: {opened}"
+                )
             if prior is None or row["first_observed_at"] < prior["first_observed_at"]:
                 unique_bars[opened] = row
 
@@ -112,9 +124,12 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
         window_results.append(result)
         print(
             f"calibration_window={index}/{len(windows)} id={window['window_id']} "
-            f"expected={len(expected)} observed={len(actual)} missing={len(missing)} status={result['status']}",
+            f"expected={len(expected)} observed={len(actual)} missing={len(missing)} "
+            f"status={result['status']}",
             flush=True,
         )
+        if index < len(windows):
+            await asyncio.sleep(REQUEST_PACING_SECONDS)
 
     lines = [
         "BEGIN TRANSACTION;",
@@ -125,8 +140,8 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
         lines.append(
             "INSERT INTO provider_calibration_m1_backfill("
             "open_time_utc,symbol,timeframe,open,high,low,close,source_kind,source_provider,"
-            "pit_eligible,research_only,live_money_execution_allowed,first_observed_at,payload_digest"
-            ") VALUES ("
+            "pit_eligible,research_only,live_money_execution_allowed,first_observed_at,"
+            "payload_digest) VALUES ("
             + ",".join(
                 [
                     _q(row["open_time_utc"]),
@@ -191,12 +206,25 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
         "unique_bar_count": len(unique_bars),
         "windows": window_results,
     }
-    summary_out.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print("DAY11_CALIBRATION_BACKFILL=" + json.dumps({key: summary[key] for key in (
-        "source_kind", "source_provider", "pit_eligible", "research_only",
-        "live_money_execution_allowed", "window_count", "complete_windows",
-        "incomplete_windows", "unique_bar_count"
-    )}, sort_keys=True), flush=True)
+    summary_out.write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    keys = (
+        "source_kind",
+        "source_provider",
+        "pit_eligible",
+        "research_only",
+        "live_money_execution_allowed",
+        "window_count",
+        "complete_windows",
+        "incomplete_windows",
+        "unique_bar_count",
+    )
+    print(
+        "DAY11_CALIBRATION_BACKFILL="
+        + json.dumps({key: summary[key] for key in keys}, sort_keys=True),
+        flush=True,
+    )
 
 
 def main() -> int:
