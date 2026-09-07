@@ -37,10 +37,12 @@ def _q(value: object) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def _load_manifest(path: Path) -> list[dict[str, str]]:
+def _load_manifest(path: Path, *, expected_windows: int) -> list[dict[str, str]]:
     raw = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(raw, list) or len(raw) != EXPECTED_WINDOWS:
-        raise ValueError(f"expected exactly {EXPECTED_WINDOWS} calibration windows")
+    if expected_windows < 1:
+        raise ValueError("expected_windows must be positive")
+    if not isinstance(raw, list) or len(raw) != expected_windows:
+        raise ValueError(f"expected exactly {expected_windows} calibration windows")
     ids: set[str] = set()
     windows: list[dict[str, str]] = []
     for item in raw:
@@ -62,11 +64,17 @@ def _load_manifest(path: Path) -> list[dict[str, str]]:
     return windows
 
 
-async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
+async def _run(
+    manifest: Path,
+    sql_out: Path,
+    summary_out: Path,
+    *,
+    expected_windows: int,
+) -> None:
     api_key = os.getenv("AIDY_TWELVE_DATA_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("AIDY_TWELVE_DATA_API_KEY is required")
-    windows = _load_manifest(manifest)
+    windows = _load_manifest(manifest, expected_windows=expected_windows)
     gateway = TwelveDataOhlcGateway(api_key=api_key)
 
     unique_bars: dict[str, dict[str, str]] = {}
@@ -130,14 +138,14 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
         if index < len(windows):
             await asyncio.sleep(REQUEST_PACING_SECONDS)
 
-    lines = [
-        "BEGIN TRANSACTION;",
-        "DELETE FROM provider_calibration_backfill_windows;",
-        "DELETE FROM provider_calibration_m1_backfill;",
-    ]
+    # Remote Wrangler D1 file execution rejects explicit SQL transactions. Use only
+    # idempotent UPSERT-style statements so a retry is safe even after partial execution.
+    # Deliberately do not DELETE existing calibration evidence: widened Day 11 corpora are
+    # additive and remain isolated by exact window_id plus calibration-only provenance.
+    lines: list[str] = []
     for row in sorted(unique_bars.values(), key=lambda item: item["open_time_utc"]):
         lines.append(
-            "INSERT INTO provider_calibration_m1_backfill("
+            "INSERT OR REPLACE INTO provider_calibration_m1_backfill("
             "open_time_utc,symbol,timeframe,open,high,low,close,source_kind,source_provider,"
             "pit_eligible,research_only,live_money_execution_allowed,first_observed_at,"
             "payload_digest) VALUES ("
@@ -163,7 +171,7 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
         )
     for row in window_results:
         lines.append(
-            "INSERT INTO provider_calibration_backfill_windows("
+            "INSERT OR REPLACE INTO provider_calibration_backfill_windows("
             "window_id,symbol,timeframe,window_from,window_to,source_kind,source_provider,"
             "pit_eligible,research_only,live_money_execution_allowed,expected_row_count,"
             "observed_row_count,missing_row_count,status,fetched_at_utc,response_digest"
@@ -190,7 +198,6 @@ async def _run(manifest: Path, sql_out: Path, summary_out: Path) -> None:
             )
             + ");"
         )
-    lines.append("COMMIT;")
     sql_out.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     summary = {
@@ -231,8 +238,16 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--sql-out", type=Path, required=True)
     parser.add_argument("--summary-out", type=Path, required=True)
+    parser.add_argument("--expected-windows", type=int, default=EXPECTED_WINDOWS)
     args = parser.parse_args()
-    asyncio.run(_run(args.manifest, args.sql_out, args.summary_out))
+    asyncio.run(
+        _run(
+            args.manifest,
+            args.sql_out,
+            args.summary_out,
+            expected_windows=args.expected_windows,
+        )
+    )
     return 0
 
 
