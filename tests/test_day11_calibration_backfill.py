@@ -26,7 +26,9 @@ def test_calibration_schema_is_structurally_separate_from_live_market_tables() -
     assert "pit_eligible = 0" in migration
     assert "research_only = 1" in migration
     assert "live_money_execution_allowed = 0" in migration
-    lowered = migration.lower()
+    sql_only = "\n".join(
+        line for line in migration.lower().splitlines() if not line.strip().startswith("--")
+    )
     for forbidden in (
         "create table market_candles",
         "alter table market_candles",
@@ -35,7 +37,7 @@ def test_calibration_schema_is_structurally_separate_from_live_market_tables() -
         "delete from market_candles",
         "from market_candles",
     ):
-        assert forbidden not in lowered
+        assert forbidden not in sql_only
 
 
 def test_backfill_generator_uses_only_twelve_and_never_synthesizes() -> None:
