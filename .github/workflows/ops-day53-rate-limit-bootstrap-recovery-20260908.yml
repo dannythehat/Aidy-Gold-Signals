@@ -1,0 +1,311 @@
+name: Ops Day53 Rate Limit Bootstrap Recovery 20260908
+
+on:
+  push:
+    branches: [fix/day53-rate-limit-recovery-20260908]
+    paths:
+      - ".github/workflows/ops-day53-rate-limit-bootstrap-recovery-20260908.yml"
+
+concurrency:
+  group: aidy-day53-live-forward-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build isolated bootstrap and safe restored configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          base['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          base['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          base['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          base['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+
+          bootstrap=json.loads(json.dumps(base))
+          bootstrap['vars']['AIDY_CAPTURE_ENABLED']='false'
+          bootstrap['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          bootstrap['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='true'
+          bootstrap['triggers']['crons']=[]
+
+          restored=json.loads(json.dumps(base))
+          restored['vars']['AIDY_CAPTURE_ENABLED']='true'
+          restored['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          restored['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          restored['triggers']['crons']=[]
+
+          for cfg in (bootstrap, restored):
+              text=json.dumps(cfg).lower()
+              for forbidden in ('metaapi','vantage','mt5','super_signals'):
+                  assert forbidden not in text
+              settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+              assert settings.market_data_source=='twelve_data'
+              assert settings.market_data_ownership=='public_independent'
+              assert settings.market_poll_seconds>=300.0
+          assert bootstrap['vars']['AIDY_CAPTURE_ENABLED']=='false'
+          assert bootstrap['vars']['AIDY_FORMAL_FORWARD_ENABLED']=='false'
+          assert restored['vars']['AIDY_CAPTURE_ENABLED']=='true'
+          assert restored['vars']['AIDY_FORMAL_FORWARD_ENABLED']=='false'
+          assert base['main']=='src/provider_entry.py'
+
+          json.dump(bootstrap, open('wrangler.ops.bootstrap.jsonc','w',encoding='utf-8'), indent=2)
+          json.dump(restored, open('wrangler.ops.restored.jsonc','w',encoding='utf-8'), indent=2)
+          sched=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          sched['triggers']['crons']=['* * * * *']
+          json.dump(sched, open('wrangler.ops.scheduler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply D1 migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.ops.restored.jsonc
+
+      - name: Resume PIT-safe bootstrap with bounded rate-limit retries
+        id: bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$AIDY_TWELVE_DATA_API_KEY" | npx --yes wrangler@4 secret put AIDY_TWELVE_DATA_API_KEY --config wrangler.ops.bootstrap.jsonc >/tmp/twelve-secret.txt
+          ! grep -Fq "$AIDY_TWELVE_DATA_API_KEY" /tmp/twelve-secret.txt
+
+          ADMIN_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          echo "::add-mask::$ADMIN_TOKEN"
+          printf '%s' "$ADMIN_TOKEN" | npx --yes wrangler@4 secret put AIDY_DAY53_ADMIN_TOKEN --config wrangler.ops.bootstrap.jsonc >/tmp/admin-secret.txt
+          ! grep -Fq "$ADMIN_TOKEN" /tmp/admin-secret.txt
+
+          cp wrangler.ops.bootstrap.jsonc wrangler.jsonc
+          uv run pywrangler deploy | tee /tmp/bootstrap-deploy.txt
+
+          ready=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?rate_limit_bootstrap=${GITHUB_SHA}-${attempt}" > /tmp/bootstrap-health.json || true
+            if python - <<'PY'
+          import json
+          try:
+              h=json.load(open('/tmp/bootstrap-health.json', encoding='utf-8'))
+          except Exception:
+              raise SystemExit(1)
+          assert h.get('capture_enabled') is False, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source')=='twelve_data', h
+          PY
+            then ready=1; break; fi
+            sleep 3
+          done
+          test "$ready" -eq 1
+
+          complete=0
+          for chunk in $(seq 1 80); do
+            result="/tmp/bootstrap-chunk-${chunk}.json"
+            request_ok=0
+            for request_attempt in $(seq 1 7); do
+              curl_rc=0
+              status="$(curl --silent --show-error --max-time 120 -o "$result" -w '%{http_code}' -X POST -H "X-AIDY-Admin-Token: ${ADMIN_TOKEN}" "$AIDY_TEST_WORKER_URL/day53/twelve-data-bootstrap")" || curl_rc=$?
+
+              if test "$curl_rc" -ne 0; then
+                echo "bootstrap_transient_retry chunk=${chunk} attempt=${request_attempt} curl_rc=${curl_rc}"
+              elif test "$status" = "200"; then
+                request_ok=1
+                break
+              elif test "$status" = "429" || echo "$status" | grep -Eq '^5[0-9][0-9]$'; then
+                if grep -Eq 'twelve_data_time_series_rate_limited|error code: 1102|temporar|rate.limit|timeout|upstream' "$result" 2>/dev/null || test "$status" = "429" || echo "$status" | grep -Eq '^(502|503|504)$'; then
+                  echo "bootstrap_transient_retry chunk=${chunk} attempt=${request_attempt} http_status=${status}"
+                  cat "$result" || true
+                else
+                  echo "bootstrap_hard_5xx chunk=${chunk} attempt=${request_attempt} http_status=${status}"
+                  cat "$result" || true
+                  exit 1
+                fi
+              elif test "$chunk" -eq 1 && test "$status" = "409" && grep -Fq 'twelve_data_bootstrap_disabled' "$result" 2>/dev/null; then
+                echo "bootstrap_transient_retry chunk=1 attempt=${request_attempt} reason=deployment_propagation"
+              else
+                echo "bootstrap_hard_failure chunk=${chunk} attempt=${request_attempt} http_status=${status}"
+                cat "$result" || true
+                exit 1
+              fi
+
+              backoff=$((request_attempt*20))
+              echo "bootstrap_backoff_seconds=${backoff}"
+              sleep "$backoff"
+            done
+            test "$request_ok" -eq 1 || { echo "bootstrap_transient_retries_exhausted chunk=${chunk}"; exit 1; }
+
+            next="$(python - "$result" <<'PY'
+          import json, sys
+          payload=json.load(open(sys.argv[1], encoding='utf-8'))
+          assert payload.get('ok') is True, payload
+          assert payload.get('state') in {'in_progress','complete'}, payload
+          assert payload.get('decision_snapshot_created') is False, payload
+          assert payload.get('decision_ready') is False, payload
+          assert int(payload.get('required_m1_minutes') or 0)>=1380, payload
+          if payload['state']=='complete':
+              assert payload.get('next_step')=='wait_for_fresh_scheduled_capture', payload
+              assert int(payload.get('remaining_m1_minutes') or 0)==0, payload
+              print('complete')
+          else:
+              assert payload.get('next_step')=='continue_bootstrap', payload
+              assert int(payload.get('remaining_m1_minutes') or 0)>0, payload
+              rows=payload.get('window_results') or []
+              assert len(rows)==1 and rows[0].get('state')=='succeeded', payload
+              print('continue')
+          PY
+            )"
+            cp "$result" /tmp/bootstrap-result.json
+            echo "bootstrap_chunk=${chunk} state=${next}"
+            if test "$next" = "complete"; then complete=1; break; fi
+            sleep 20
+          done
+          test "$complete" -eq 1
+          echo 'bootstrap_complete=true'
+
+      - name: Always remove admin secret and restore capture-only runtime
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          admin_deleted=0
+          for attempt in 1 2 3 4 5; do
+            status="$(curl -sS -o /tmp/admin-delete.json -w '%{http_code}' -X DELETE -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets/AIDY_DAY53_ADMIN_TOKEN" || true)"
+            if test "$status" = "200" || test "$status" = "404"; then admin_deleted=1; break; fi
+            sleep $((attempt*5))
+          done
+
+          cp wrangler.ops.restored.jsonc wrangler.jsonc
+          worker_restored=0
+          for attempt in 1 2 3 4 5; do
+            if uv run pywrangler deploy 2>&1 | tee "/tmp/restored-worker-${attempt}.txt"; then worker_restored=1; break; fi
+            sleep $((attempt*5))
+          done
+
+          scheduler_restored=0
+          for attempt in 1 2 3 4 5; do
+            if npx --yes wrangler@4 deploy --config wrangler.ops.scheduler.jsonc 2>&1 | tee "/tmp/restored-scheduler-${attempt}.txt"; then scheduler_restored=1; break; fi
+            sleep $((attempt*5))
+          done
+
+          runtime_safe=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?rate_limit_restore=${GITHUB_SHA}-${attempt}" > /tmp/restored-health.json || true
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/restored-health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source')=='twelve_data', h
+          PY
+            then runtime_safe=1; break; fi
+            sleep 3
+          done
+
+          secret_absent=0
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets" > /tmp/secrets-after.json; then
+              if python - <<'PY'
+          import json
+          p=json.load(open('/tmp/secrets-after.json', encoding='utf-8'))
+          names={str(x.get('name')) for x in (p.get('result') or [])}
+          assert 'AIDY_DAY53_ADMIN_TOKEN' not in names, names
+          PY
+              then secret_absent=1; break; fi
+            fi
+            sleep $((attempt*5))
+          done
+
+          test "$admin_deleted" -eq 1
+          test "$worker_restored" -eq 1
+          test "$scheduler_restored" -eq 1
+          test "$runtime_safe" -eq 1
+          test "$secret_absent" -eq 1
+          echo 'ephemeral_admin_secret_absent=true'
+          echo 'capture_only_runtime_restored=true'
+
+      - name: Require a fresh complete six-timeframe scheduled snapshot
+        if: steps.bootstrap.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESTORED_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          found=0
+          for attempt in $(seq 1 15); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.ops.restored.jsonc --command "SELECT id,captured_at,capture_status,data_availability_json,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id FROM market_snapshots WHERE captured_at>='${RESTORED_AT}' AND capture_status='complete' ORDER BY captured_at DESC LIMIT 1" > /tmp/complete-snapshot.json
+            if python - <<'PY'
+          import json
+          rows=[]
+          for batch in json.load(open('/tmp/complete-snapshot.json', encoding='utf-8')):
+              rows.extend(batch.get('results') or [])
+          assert len(rows)==1, rows
+          row=rows[0]
+          availability=json.loads(row['data_availability_json'])
+          assert availability.get('market_data_source')=='twelve_data', availability
+          assert availability.get('request_kind')=='scheduled_capture', availability
+          assert availability.get('request_ledger_status')=='succeeded', availability
+          assert availability.get('all_timeframes_ready') is True, availability
+          for key in ('latest_m1_id','latest_m5_id','latest_m15_id','latest_h1_id','latest_h4_id','latest_d1_id'):
+              assert row.get(key), (key,row)
+          print('fresh_complete_snapshot='+str(row['id']))
+          print('captured_at='+str(row['captured_at']))
+          PY
+            then found=1; cat /tmp/complete-snapshot.json; break; fi
+            sleep 60
+          done
+          test "$found" -eq 1
+
+      - name: Preserve recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-rate-limit-bootstrap-recovery-${{ github.sha }}
+          path: |
+            /tmp/bootstrap-health.json
+            /tmp/bootstrap-chunk-*.json
+            /tmp/bootstrap-result.json
+            /tmp/bootstrap-deploy.txt
+            /tmp/admin-delete.json
+            /tmp/restored-worker-*.txt
+            /tmp/restored-scheduler-*.txt
+            /tmp/restored-health.json
+            /tmp/complete-snapshot.json
+          if-no-files-found: warn
+          retention-days: 90
