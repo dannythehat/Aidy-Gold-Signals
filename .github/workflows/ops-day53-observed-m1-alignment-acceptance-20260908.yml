@@ -1,0 +1,171 @@
+name: Ops Day53 Observed M1 Alignment Acceptance 20260908
+
+on:
+  push:
+    branches: [fix/day53-rate-limit-recovery-20260908]
+    paths:
+      - ".github/workflows/ops-day53-observed-m1-alignment-acceptance-20260908.yml"
+
+concurrency:
+  group: aidy-day53-live-forward-deployment
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  accept:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run AIDY regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pytest -q
+
+      - name: Build capture-only configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          base['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          base['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          base['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          base['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          base['vars']['AIDY_CAPTURE_ENABLED']='true'
+          base['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          base['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          base['triggers']['crons']=[]
+          text=json.dumps(base).lower()
+          for forbidden in ('metaapi','vantage','mt5','super_signals'):
+              assert forbidden not in text
+          settings=AidySettings.from_worker_env(SimpleNamespace(**base['vars']))
+          assert settings.capture_enabled is True
+          assert settings.formal_forward_enabled is False
+          assert settings.market_data_source=='twelve_data'
+          assert settings.market_data_ownership=='public_independent'
+          assert settings.market_poll_seconds>=300
+          json.dump(base, open('wrangler.ops.acceptance.jsonc','w',encoding='utf-8'), indent=2)
+
+          scheduler=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          scheduler['triggers']['crons']=['* * * * *']
+          json.dump(scheduler, open('wrangler.ops.scheduler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Deploy corrected capture-only worker and scheduler
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYED_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "DEPLOYED_AT=$DEPLOYED_AT" >> "$GITHUB_ENV"
+          cp wrangler.ops.acceptance.jsonc wrangler.jsonc
+          uv run pywrangler deploy | tee /tmp/worker-deploy.txt
+          npx --yes wrangler@4 deploy --config wrangler.ops.scheduler.jsonc | tee /tmp/scheduler-deploy.txt
+
+      - name: Verify safe runtime and absent recovery secret
+        shell: bash
+        run: |
+          set -euo pipefail
+          safe=0
+          for attempt in $(seq 1 30); do
+            if curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?alignment=${GITHUB_SHA}-${attempt}" > /tmp/health.json; then
+              if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source')=='twelve_data', h
+          assert h.get('market_data_ownership')=='public_independent', h
+          PY
+              then safe=1; break; fi
+            fi
+            sleep 3
+          done
+          test "$safe" -eq 1
+
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets" > /tmp/secrets.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/secrets.json', encoding='utf-8'))
+          names={str(x.get('name')) for x in (p.get('result') or [])}
+          assert 'AIDY_DAY53_ADMIN_TOKEN' not in names, names
+          print('ephemeral_admin_secret_absent=true')
+          PY
+
+      - name: Require genuine scheduled complete six-timeframe snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 14); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.ops.acceptance.jsonc --command "SELECT id,captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,data_availability_json FROM market_snapshots WHERE captured_at>='${DEPLOYED_AT}' AND capture_status='complete' ORDER BY captured_at DESC LIMIT 1" > /tmp/complete.json
+            if python - <<'PY'
+          import json
+          rows=[]
+          for batch in json.load(open('/tmp/complete.json', encoding='utf-8')):
+              rows.extend(batch.get('results') or [])
+          assert len(rows)==1, rows
+          row=rows[0]
+          availability=json.loads(row['data_availability_json'])
+          assert availability.get('market_data_source')=='twelve_data', availability
+          assert availability.get('market_data_ownership')=='public_independent', availability
+          assert availability.get('request_kind')=='scheduled_capture', availability
+          assert availability.get('request_ledger_status')=='succeeded', availability
+          assert availability.get('all_timeframes_ready') is True, availability
+          assert availability.get('aggregate_evidence_anchor')=='latest_observed_closed_vendor_m1_close', availability
+          assert availability.get('snapshot_candle_identity_policy')=='latest_pit_complete_bucket_as_of_observed_m1', availability
+          for key in ('latest_m1_id','latest_m5_id','latest_m15_id','latest_h1_id','latest_h4_id','latest_d1_id'):
+              assert row.get(key), (key,row)
+          print('fresh_complete_snapshot='+str(row['id']))
+          print('captured_at='+str(row['captured_at']))
+          print('aggregate_evidence_as_of_utc='+str(availability.get('aggregate_evidence_as_of_utc')))
+          PY
+            then found=1; cat /tmp/complete.json; break; fi
+            sleep 60
+          done
+          test "$found" -eq 1
+
+      - name: Preserve acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-observed-m1-alignment-acceptance-${{ github.sha }}
+          path: |
+            /tmp/worker-deploy.txt
+            /tmp/scheduler-deploy.txt
+            /tmp/health.json
+            /tmp/complete.json
+          if-no-files-found: warn
+          retention-days: 90
