@@ -1,3 +1,4 @@
+# Retriggered after replacing the CPython-incompatible Worker import test.
 name: Ops Provider Entry Queue Repair 20260908
 
 on:
