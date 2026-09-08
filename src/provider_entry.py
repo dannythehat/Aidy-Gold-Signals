@@ -18,3 +18,12 @@ class Default(CoreDefault):
         if path == "/provider/context":
             return await provider_context_response(request, self.env)
         return await super().fetch(request)
+
+    async def queue(self, batch, env, ctx):
+        """Expose the queue event on the concrete Worker entrypoint.
+
+        Cloudflare dispatches queue events against the configured entrypoint class.
+        Keep this method concrete here rather than relying on inherited event-handler
+        discovery so provider HTTP routing cannot accidentally strand capture messages.
+        """
+        return await super().queue(batch, env, ctx)
