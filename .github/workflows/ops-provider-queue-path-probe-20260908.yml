@@ -1,0 +1,105 @@
+name: Ops Provider Queue Path Probe 20260908
+
+on:
+  push:
+    branches: [ops/provider-context-snapshot-repair-20260908]
+    paths:
+      - ".github/workflows/ops-provider-queue-path-probe-20260908.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      QUEUE_NAME: aidy-capture-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['triggers']['crons']=[]
+          json.dump(cfg, open('wrangler.queue-probe.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+      - name: Record pre-probe request marker
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROBE_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "PROBE_AT=${PROBE_AT}" >> "$GITHUB_ENV"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.queue-probe.jsonc \
+            --command "SELECT requested_at_utc,status FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' ORDER BY requested_at_utc DESC LIMIT 1;" | tee /tmp/pre.json
+      - name: Push one market-due scheduler message
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues?name=${QUEUE_NAME}" > /tmp/queues.json
+          QUEUE_ID="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/queues.json', encoding='utf-8'))
+          assert p.get('success') is True, p
+          rows=p.get('result') or []
+          assert len(rows)==1, rows
+          print(rows[0]['queue_id'])
+          PY
+          )"
+          SCHEDULED_MS="$(python - <<'PY'
+          import time
+          now=int(time.time())
+          due=(now//300)*300
+          print(due*1000)
+          PY
+          )"
+          python - "$SCHEDULED_MS" <<'PY' > /tmp/body.json
+          import json,sys
+          print(json.dumps({'body': {'scheduledTime': int(sys.argv[1]), 'cron': 'ops-provider-queue-path-probe'}}))
+          PY
+          curl -fsS -X POST -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues/${QUEUE_ID}/messages" \
+            --data-binary @/tmp/body.json | tee /tmp/push.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/push.json', encoding='utf-8'))
+          assert p.get('success') is True, p
+          print('push_result='+json.dumps(p.get('result') or {}, sort_keys=True))
+          PY
+      - name: Require consumer to create a new scheduled capture request
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 12); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.queue-probe.jsonc \
+              --command "SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='${PROBE_AT}' ORDER BY requested_at_utc DESC LIMIT 3;" > /tmp/post.json
+            if python - <<'PY'
+          import json
+          rows=[]
+          for batch in json.load(open('/tmp/post.json', encoding='utf-8')):
+              rows.extend(batch.get('results') or [])
+          print(rows)
+          assert rows, rows
+          PY
+            then
+              found=1
+              cat /tmp/post.json
+              break
+            fi
+            sleep 5
+          done
+          test "$found" -eq 1

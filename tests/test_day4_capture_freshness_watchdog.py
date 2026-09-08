@@ -48,11 +48,12 @@ def test_watchdog_calendar_matches_canonical_aidy_calendar(moment: datetime) -> 
 
 
 def test_closed_session_never_false_alerts_on_old_capture() -> None:
-    now = datetime(2026, 9, 6, 12, 45, tzinfo=UTC)  # Sunday before 18:00 New York.
+    now = datetime(2026, 9, 6, 12, 45, tzinfo=UTC)
     row = {
         "latest_scheduled_success_utc": (now - timedelta(days=2)).isoformat(),
         "latest_scheduled_request_utc": (now - timedelta(days=2)).isoformat(),
         "latest_scheduled_request_status": "succeeded",
+        "latest_provider_context_snapshot_utc": (now - timedelta(days=2)).isoformat(),
     }
     result = watchdog.evaluate(now=now, row=row)
     assert result.status == "session_closed"
@@ -60,7 +61,7 @@ def test_closed_session_never_false_alerts_on_old_capture() -> None:
 
 
 def test_reopen_grace_prevents_false_alert() -> None:
-    now = datetime(2026, 9, 6, 22, 7, tzinfo=UTC)  # Sunday 18:07 New York.
+    now = datetime(2026, 9, 6, 22, 7, tzinfo=UTC)
     result = watchdog.evaluate(now=now, row={})
     assert result.status == "open_grace"
     assert result.alert is False
@@ -73,15 +74,16 @@ def test_open_session_alerts_when_capture_is_stale() -> None:
         "latest_scheduled_request_utc": (now - timedelta(minutes=1)).isoformat(),
         "latest_scheduled_request_status": "failed",
         "latest_scheduled_error_code": "synthetic_failure",
+        "latest_provider_context_snapshot_utc": (now - timedelta(minutes=6)).isoformat(),
     }
     result = watchdog.evaluate(now=now, row=row, stale_seconds=900)
-    assert result.status == "stale"
+    assert result.status == "stale_capture"
     assert result.alert is True
     assert result.success_lag_seconds == 960
     assert result.latest_scheduled_request_status == "failed"
 
 
-def test_open_session_is_fresh_inside_threshold() -> None:
+def test_fresh_capture_without_complete_context_snapshot_alerts() -> None:
     now = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
     row = {
         "latest_scheduled_success_utc": (now - timedelta(minutes=6)).isoformat(),
@@ -89,14 +91,43 @@ def test_open_session_is_fresh_inside_threshold() -> None:
         "latest_scheduled_request_status": "succeeded",
     }
     result = watchdog.evaluate(now=now, row=row, stale_seconds=900)
+    assert result.status == "stale_provider_context"
+    assert result.alert is True
+    assert result.provider_context_snapshot_lag_seconds is None
+
+
+def test_fresh_capture_with_stale_context_snapshot_alerts() -> None:
+    now = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    row = {
+        "latest_scheduled_success_utc": (now - timedelta(minutes=6)).isoformat(),
+        "latest_scheduled_request_utc": (now - timedelta(minutes=6)).isoformat(),
+        "latest_scheduled_request_status": "succeeded",
+        "latest_provider_context_snapshot_utc": (now - timedelta(minutes=16)).isoformat(),
+    }
+    result = watchdog.evaluate(now=now, row=row, stale_seconds=900)
+    assert result.status == "stale_provider_context"
+    assert result.alert is True
+    assert result.provider_context_snapshot_lag_seconds == 960
+
+
+def test_open_session_is_fresh_only_when_capture_and_context_are_fresh() -> None:
+    now = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+    row = {
+        "latest_scheduled_success_utc": (now - timedelta(minutes=6)).isoformat(),
+        "latest_scheduled_request_utc": (now - timedelta(minutes=6)).isoformat(),
+        "latest_scheduled_request_status": "succeeded",
+        "latest_provider_context_snapshot_utc": (now - timedelta(minutes=5)).isoformat(),
+    }
+    result = watchdog.evaluate(now=now, row=row, stale_seconds=900)
     assert result.status == "fresh"
     assert result.alert is False
     assert result.success_lag_seconds == 360
+    assert result.provider_context_snapshot_lag_seconds == 300
 
 
 def test_open_session_without_any_success_alerts_after_grace() -> None:
     now = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
     result = watchdog.evaluate(now=now, row={}, stale_seconds=900)
-    assert result.status == "stale"
+    assert result.status == "stale_capture"
     assert result.alert is True
     assert result.latest_scheduled_success_utc is None
