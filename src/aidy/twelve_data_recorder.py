@@ -55,6 +55,23 @@ def _row_open_time(row: dict[str, object]) -> datetime:
     return datetime.fromisoformat(str(value)).astimezone(UTC)
 
 
+def aggregate_evidence_as_of(fetch: TwelveDataFetch) -> datetime:
+    """Return the newest instant for which aggregate candle inputs are actually known.
+
+    Twelve can be fresh while still trailing wall clock by one or two M1 bars. Higher
+    timeframes must therefore be selected from the latest genuinely observed closed M1,
+    never from the HTTP response timestamp. Adding one microsecond makes a bucket whose
+    end is exactly the observed M1 close eligible under ``latest_completed_bucket``'s
+    strict-before rule without admitting any later market minute.
+    """
+
+    latest_close = fetch.latest_closed_bar_close_utc
+    if latest_close is None:
+        return _utc(fetch.fetched_at_utc)
+    observed_boundary = _utc(latest_close) + timedelta(microseconds=1)
+    return min(_utc(fetch.fetched_at_utc), observed_boundary)
+
+
 def bootstrap_required_m1_open_times(
     fetched_at_utc: datetime,
     *,
@@ -62,6 +79,8 @@ def bootstrap_required_m1_open_times(
 ) -> frozenset[datetime]:
     """Return only M1 opens needed to prove the latest six live timeframes.
 
+    ``fetched_at_utc`` is the caller's PIT aggregation anchor. During scheduled capture
+    this is the latest observed closed M1 boundary, not blindly the HTTP wall clock.
     A bootstrap may fetch a wide vendor window so the previous completed D1 is
     available even early in the current trading day. Persisting every returned
     historical minute is unnecessary. This union keeps only the latest genuine
@@ -158,8 +177,9 @@ class AidyTwelveDataRecorderService:
             if fetch.closed_bars
             else None
         )
+        aggregate_as_of = aggregate_evidence_as_of(fetch)
         required_opens = bootstrap_required_m1_open_times(
-            fetch.fetched_at_utc,
+            aggregate_as_of,
             latest_m1_open_utc=(
                 None if latest_vendor_m1 is None else latest_vendor_m1.open_time_utc
             ),
@@ -191,7 +211,7 @@ class AidyTwelveDataRecorderService:
                 current_ids["1m"] = candle_id
 
         timeframe_windows = {
-            timeframe: latest_completed_bucket(fetch.fetched_at_utc, timeframe)
+            timeframe: latest_completed_bucket(aggregate_as_of, timeframe)
             for timeframe in ("5m", "15m", "1h", "4h", "1d")
         }
         history_start = min(start for start, _ in timeframe_windows.values())
@@ -251,7 +271,9 @@ class AidyTwelveDataRecorderService:
             "spread_missing_blocks": False,
             "candles": candle_states,
             "all_timeframes_ready": all_timeframes_ready,
-            "snapshot_candle_identity_policy": "current_capture_exact_bucket_only",
+            "aggregate_evidence_as_of_utc": aggregate_as_of.isoformat(),
+            "aggregate_evidence_anchor": "latest_observed_closed_vendor_m1_close",
+            "snapshot_candle_identity_policy": "latest_pit_complete_bucket_as_of_observed_m1",
             "admitted_m1_read_policy": "one_bounded_read_reused_across_aggregate_timeframes",
             "bootstrap_required_m1_minutes": len(required_opens),
             "bootstrap_required_m1_minutes_missing_from_vendor_fetch": len(
