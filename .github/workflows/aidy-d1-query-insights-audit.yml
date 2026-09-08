@@ -1,0 +1,54 @@
+name: AIDY D1 Query Insights Audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/aidy-d1-query-insights-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Top queries by rows read over 24h
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 insights aidy-ops-test \
+            --sort-type=sum \
+            --sort-by=reads \
+            --sort-direction=DESC \
+            --limit=30 \
+            --timePeriod=1d \
+            --json | tee /tmp/d1-insights-reads.json
+
+      - name: Top queries by execution count over 24h
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 insights aidy-ops-test \
+            --sort-type=sum \
+            --sort-by=count \
+            --sort-direction=DESC \
+            --limit=20 \
+            --timePeriod=1d \
+            --json | tee /tmp/d1-insights-count.json
+
+      - name: Top queries by rows written over 24h
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 insights aidy-ops-test \
+            --sort-type=sum \
+            --sort-by=writes \
+            --sort-direction=DESC \
+            --limit=20 \
+            --timePeriod=1d \
+            --json | tee /tmp/d1-insights-writes.json
