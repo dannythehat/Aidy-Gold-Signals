@@ -1,0 +1,79 @@
+name: Ops Provider Context Snapshot Diagnostic 20260908
+
+on:
+  push:
+    branches: [ops/provider-context-snapshot-repair-20260908]
+    paths:
+      - ".github/workflows/ops-provider-context-snapshot-diagnostic-20260908.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['triggers']['crons']=[]
+          json.dump(cfg, open('wrangler.provider-context-diagnostic.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+      - name: Inspect latest scheduled requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.provider-context-diagnostic.jsonc \
+            --command "SELECT requested_at_utc,completed_at_utc,status,outputsize,error_code,response_digest FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' ORDER BY requested_at_utc DESC LIMIT 12;" \
+            | tee /tmp/requests.json
+      - name: Inspect latest Twelve snapshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.provider-context-diagnostic.jsonc \
+            --command "SELECT captured_at,capture_status,market_data_source,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,json_extract(data_availability_json,'$.freshness_state') AS freshness,json_extract(data_availability_json,'$.all_timeframes_ready') AS all_ready,json_extract(data_availability_json,'$.bootstrap_required_m1_minutes') AS required_minutes,json_extract(data_availability_json,'$.bootstrap_required_m1_minutes_missing_from_vendor_fetch') AS required_missing,json_extract(data_availability_json,'$.candles') AS candles FROM market_snapshots WHERE market_data_source='twelve_data' ORDER BY captured_at DESC LIMIT 20;" \
+            | tee /tmp/snapshots.json
+      - name: Inspect admitted M1 and bootstrap state
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.provider-context-diagnostic.jsonc \
+            --command "SELECT COUNT(*) AS admitted_m1,MIN(open_time_utc) AS first_m1,MAX(open_time_utc) AS last_m1 FROM twelve_data_decision_admitted_m1_v1;" \
+            | tee /tmp/m1.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.provider-context-diagnostic.jsonc \
+            --command "SELECT started_at_utc,as_of_utc,planned_windows,required_m1_minutes,state,completed_at_utc FROM twelve_data_bootstrap_runs ORDER BY started_at_utc DESC LIMIT 8;" \
+            | tee /tmp/bootstrap.json
+      - name: Summarize Provider Context eligibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.provider-context-diagnostic.jsonc \
+            --command "SELECT captured_at,capture_status,json_extract(data_availability_json,'$.request_ledger_status') AS request_status FROM market_snapshots WHERE symbol='XAUUSD' AND market_data_source='twelve_data' AND capture_status='complete' AND json_extract(data_availability_json,'$.request_kind')='scheduled_capture' AND json_extract(data_availability_json,'$.request_ledger_status')='succeeded' ORDER BY captured_at DESC LIMIT 5;" \
+            | tee /tmp/eligible.json
