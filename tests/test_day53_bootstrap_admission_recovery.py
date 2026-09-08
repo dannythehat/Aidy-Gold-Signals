@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -78,7 +79,6 @@ def test_recovery_uses_ephemeral_masked_admin_secret_and_restores_bootstrap_off(
     assert '"ref":"main"' in workflow
 
 
-
 def test_resumable_bootstrap_runtime_is_bounded_and_retry_safe() -> None:
     bootstrap = (ROOT / "src" / "aidy" / "twelve_data_bootstrap.py").read_text(encoding="utf-8")
     entry = (ROOT / "src" / "entry.py").read_text(encoding="utf-8")
@@ -88,3 +88,16 @@ def test_resumable_bootstrap_runtime_is_bounded_and_retry_safe() -> None:
     assert "planned_windows=1" in entry
     assert '"decision_snapshot_created": False' in entry
     assert '"decision_ready": False' in entry
+
+
+def test_provider_aware_entry_keeps_queue_handler_concrete_after_recovery() -> None:
+    """Recovery must restore a Worker that can still consume scheduler messages."""
+
+    source = (ROOT / "src" / "provider_entry.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    default = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "Default"
+    )
+    methods = {node.name for node in default.body if isinstance(node, ast.AsyncFunctionDef)}
+    assert "fetch" in methods
+    assert "queue" in methods
