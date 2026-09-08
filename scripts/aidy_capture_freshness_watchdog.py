@@ -189,18 +189,18 @@ def evaluate(
         else max(0, int((observed - latest_context_snapshot).total_seconds()))
     )
 
-    common = dict(
-        observed=observed,
-        latest_success=latest_success,
-        latest_request=latest_request,
-        latest_status=latest_status,
-        latest_error=latest_error,
-        latest_context_snapshot=latest_context_snapshot,
-        success_lag=success_lag,
-        snapshot_lag=snapshot_lag,
-        stale_seconds=stale_seconds,
-        open_grace_seconds=open_grace_seconds,
-    )
+    common = {
+        "observed": observed,
+        "latest_success": latest_success,
+        "latest_request": latest_request,
+        "latest_status": latest_status,
+        "latest_error": latest_error,
+        "latest_context_snapshot": latest_context_snapshot,
+        "success_lag": success_lag,
+        "snapshot_lag": snapshot_lag,
+        "stale_seconds": stale_seconds,
+        "open_grace_seconds": open_grace_seconds,
+    }
 
     if not session_open:
         return _diagnostic(
