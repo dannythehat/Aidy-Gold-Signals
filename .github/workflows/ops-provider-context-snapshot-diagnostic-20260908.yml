@@ -41,6 +41,30 @@ jobs:
           cfg['triggers']['crons']=[]
           json.dump(cfg, open('wrangler.provider-context-diagnostic.jsonc','w',encoding='utf-8'), indent=2)
           PY
+      - name: Inspect live scheduler configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-scheduler-test/schedules" \
+            | tee /tmp/scheduler.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/scheduler.json', encoding='utf-8'))
+          assert p.get('success') is True, p
+          print('live_schedules='+json.dumps(p.get('result') or [], sort_keys=True))
+          PY
+      - name: Inspect Twelve quota usage
+        shell: bash
+        run: |
+          set -euo pipefail
+          NOW="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          DAY="$(date -u +%Y-%m-%dT00:00:00+00:00)"
+          ROLLING="$(date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%S+00:00)"
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.provider-context-diagnostic.jsonc \
+            --command "SELECT SUM(CASE WHEN requested_at_utc>='${DAY}' AND requested_at_utc<='${NOW}' THEN internal_accounted_credits ELSE 0 END) AS utc_day_credits,SUM(CASE WHEN requested_at_utc>='${ROLLING}' AND requested_at_utc<='${NOW}' THEN internal_accounted_credits ELSE 0 END) AS rolling_24h_credits,SUM(CASE WHEN requested_at_utc>='${DAY}' AND request_kind='scheduled_capture' THEN 1 ELSE 0 END) AS scheduled_today,SUM(CASE WHEN requested_at_utc>='${DAY}' AND status='started' THEN 1 ELSE 0 END) AS started_today FROM twelve_data_request_ledger;" \
+            | tee /tmp/quota.json
       - name: Inspect latest scheduled requests
         shell: bash
         run: |
