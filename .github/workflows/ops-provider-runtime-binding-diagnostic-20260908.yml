@@ -1,0 +1,109 @@
+name: Ops Provider Runtime Binding Diagnostic 20260908
+
+on:
+  push:
+    branches: [ops/provider-context-snapshot-repair-20260908]
+    paths:
+      - ".github/workflows/ops-provider-runtime-binding-diagnostic-20260908.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+      CAPTURE_WORKER: aidy-signals-test
+      SCHEDULER_WORKER: aidy-signals-scheduler-test
+      QUEUE_NAME: aidy-capture-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Require Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+      - name: Read live worker health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H 'Cache-Control: no-cache' "${AIDY_WORKER_URL}/health?binding_diag=${GITHUB_SHA}" | tee /tmp/health.json
+          python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json', encoding='utf-8'))
+          print('health='+json.dumps(h, sort_keys=True))
+          assert h.get('status')=='ok', h
+          PY
+      - name: Read deployed capture worker settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${CAPTURE_WORKER}/settings" \
+            | tee /tmp/capture-settings.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/capture-settings.json', encoding='utf-8'))
+          assert p.get('success') is True, p
+          result=p.get('result') or {}
+          bindings=result.get('bindings') or []
+          safe=[]
+          for b in bindings:
+              item={k:b.get(k) for k in ('name','type','queue_name','database_name','bucket_name') if b.get(k) is not None}
+              if b.get('type')=='plain_text' and b.get('name') in {'AIDY_ENV','AIDY_CAPTURE_ENABLED','AIDY_MARKET_DATA_SOURCE','AIDY_MARKET_DATA_OWNERSHIP','AIDY_MARKET_POLL_SECONDS','AIDY_FORMAL_FORWARD_ENABLED','AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED'}:
+                  item['text']=b.get('text')
+              safe.append(item)
+          print('capture_bindings='+json.dumps(safe, sort_keys=True))
+          PY
+      - name: Read deployed scheduler settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${SCHEDULER_WORKER}/settings" \
+            | tee /tmp/scheduler-settings.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/scheduler-settings.json', encoding='utf-8'))
+          assert p.get('success') is True, p
+          result=p.get('result') or {}
+          bindings=result.get('bindings') or []
+          safe=[{k:b.get(k) for k in ('name','type','queue_name') if b.get(k) is not None} for b in bindings]
+          print('scheduler_bindings='+json.dumps(safe, sort_keys=True))
+          PY
+      - name: Resolve queue and inspect consumers
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues?name=${QUEUE_NAME}" \
+            | tee /tmp/queues.json
+          QUEUE_ID="$(python - <<'PY'
+          import json
+          p=json.load(open('/tmp/queues.json', encoding='utf-8'))
+          assert p.get('success') is True, p
+          rows=p.get('result') or []
+          assert len(rows)==1, rows
+          print(rows[0]['queue_id'])
+          PY
+          )"
+          echo "queue_id=${QUEUE_ID}"
+          status="$(curl -sS -o /tmp/consumers.json -w '%{http_code}' -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues/${QUEUE_ID}/consumers")"
+          echo "consumer_http_status=${status}"
+          cat /tmp/consumers.json
+          test "$status" = "200"
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/consumers.json', encoding='utf-8'))
+          assert p.get('success') is True, p
+          print('consumers='+json.dumps(p.get('result') or [], sort_keys=True))
+          PY
