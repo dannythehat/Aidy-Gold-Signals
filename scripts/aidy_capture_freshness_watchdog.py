@@ -1,10 +1,11 @@
-"""AIDY production capture-freshness watchdog.
+"""AIDY production capture and Provider Context freshness watchdog.
 
-Consumes the tiny JSON result from a bounded Cloudflare D1 query and decides whether
-scheduled Twelve Data capture is fresh enough for the current gold session.
+Consumes a tiny bounded D1 heartbeat and verifies two independent facts:
+1. scheduled Twelve Data capture is still succeeding; and
+2. those captures are still producing complete snapshots eligible for Provider Context.
 
-This script is deliberately stdlib-only so the recurring GitHub Actions watchdog does
-not need to install the AIDY runtime or make market-data/broker calls.
+The script is stdlib-only so the recurring watchdog remains cheap and independent of
+AIDY runtime imports.
 """
 
 from __future__ import annotations
@@ -37,7 +38,9 @@ class WatchdogDiagnostic:
     latest_scheduled_request_utc: str | None
     latest_scheduled_request_status: str | None
     latest_scheduled_error_code: str | None
+    latest_provider_context_snapshot_utc: str | None
     success_lag_seconds: int | None
+    provider_context_snapshot_lag_seconds: int | None
     stale_after_seconds: int
     open_grace_seconds: int
 
@@ -63,11 +66,7 @@ def _parse_datetime(value: object | None) -> datetime | None:
 
 
 def gold_session_is_open(value: datetime) -> bool:
-    """Mirror AIDY's canonical CME-style gold calendar.
-
-    Open Sunday 18:00 through Friday 17:00 New York, with the daily
-    17:00-18:00 New York maintenance break.
-    """
+    """Mirror AIDY's canonical CME-style gold calendar."""
 
     local = _utc(value).astimezone(NEW_YORK)
     weekday = local.weekday()
@@ -89,37 +88,69 @@ def current_session_open_utc(value: datetime) -> datetime | None:
         return None
     local = now.astimezone(NEW_YORK)
     wall = local.time().replace(tzinfo=None)
-
     if wall >= time(18, 0):
         local_open = datetime.combine(local.date(), time(18, 0), tzinfo=NEW_YORK)
         return local_open.astimezone(UTC)
-
     previous = local.date() - timedelta(days=1)
     local_open = datetime.combine(previous, time(18, 0), tzinfo=NEW_YORK)
     return local_open.astimezone(UTC)
 
 
 def _extract_first_result(payload: object) -> dict[str, Any]:
-    """Accept Wrangler D1 --json output or a direct object used by tests."""
-
     if isinstance(payload, dict):
         if any(key in payload for key in ("latest_scheduled_success_utc", "latest_success")):
             return dict(payload)
         results = payload.get("results")
-        if isinstance(results, list) and results:
-            row = results[0]
-            if isinstance(row, dict):
-                return dict(row)
+        if isinstance(results, list) and results and isinstance(results[0], dict):
+            return dict(results[0])
     if isinstance(payload, list):
         for item in payload:
             if not isinstance(item, dict):
                 continue
             results = item.get("results")
-            if isinstance(results, list) and results:
-                row = results[0]
-                if isinstance(row, dict):
-                    return dict(row)
+            if isinstance(results, list) and results and isinstance(results[0], dict):
+                return dict(results[0])
     return {}
+
+
+def _diagnostic(
+    *,
+    status: str,
+    alert: bool,
+    reason: str,
+    observed: datetime,
+    session_open: bool,
+    session_opened: datetime | None,
+    latest_success: datetime | None,
+    latest_request: datetime | None,
+    latest_status: str | None,
+    latest_error: str | None,
+    latest_context_snapshot: datetime | None,
+    success_lag: int | None,
+    snapshot_lag: int | None,
+    stale_seconds: int,
+    open_grace_seconds: int,
+) -> WatchdogDiagnostic:
+    return WatchdogDiagnostic(
+        status=status,
+        alert=alert,
+        reason=reason,
+        observed_at_utc=observed.isoformat(),
+        session_calendar_version=SESSION_CALENDAR_VERSION,
+        session_open=session_open,
+        session_opened_at_utc=None if session_opened is None else session_opened.isoformat(),
+        latest_scheduled_success_utc=None if latest_success is None else latest_success.isoformat(),
+        latest_scheduled_request_utc=None if latest_request is None else latest_request.isoformat(),
+        latest_scheduled_request_status=latest_status,
+        latest_scheduled_error_code=latest_error,
+        latest_provider_context_snapshot_utc=(
+            None if latest_context_snapshot is None else latest_context_snapshot.isoformat()
+        ),
+        success_lag_seconds=success_lag,
+        provider_context_snapshot_lag_seconds=snapshot_lag,
+        stale_after_seconds=stale_seconds,
+        open_grace_seconds=open_grace_seconds,
+    )
 
 
 def evaluate(
@@ -143,111 +174,113 @@ def evaluate(
     latest_request = _parse_datetime(
         row.get("latest_scheduled_request_utc", row.get("latest_request"))
     )
+    latest_context_snapshot = _parse_datetime(row.get("latest_provider_context_snapshot_utc"))
     latest_status_raw = row.get("latest_scheduled_request_status", row.get("latest_status"))
     latest_status = None if latest_status_raw is None else str(latest_status_raw)
     latest_error_raw = row.get("latest_scheduled_error_code", row.get("latest_error_code"))
     latest_error = None if latest_error_raw is None else str(latest_error_raw)
 
-    lag_seconds = None
-    if latest_success is not None:
-        lag_seconds = max(0, int((observed - latest_success).total_seconds()))
+    success_lag = (
+        None if latest_success is None else max(0, int((observed - latest_success).total_seconds()))
+    )
+    snapshot_lag = (
+        None
+        if latest_context_snapshot is None
+        else max(0, int((observed - latest_context_snapshot).total_seconds()))
+    )
+
+    common = dict(
+        observed=observed,
+        latest_success=latest_success,
+        latest_request=latest_request,
+        latest_status=latest_status,
+        latest_error=latest_error,
+        latest_context_snapshot=latest_context_snapshot,
+        success_lag=success_lag,
+        snapshot_lag=snapshot_lag,
+        stale_seconds=stale_seconds,
+        open_grace_seconds=open_grace_seconds,
+    )
 
     if not session_open:
-        return WatchdogDiagnostic(
+        return _diagnostic(
             status="session_closed",
             alert=False,
             reason="capture freshness is not required while the canonical gold session is closed",
-            observed_at_utc=observed.isoformat(),
-            session_calendar_version=SESSION_CALENDAR_VERSION,
             session_open=False,
-            session_opened_at_utc=None,
-            latest_scheduled_success_utc=None if latest_success is None else latest_success.isoformat(),
-            latest_scheduled_request_utc=None if latest_request is None else latest_request.isoformat(),
-            latest_scheduled_request_status=latest_status,
-            latest_scheduled_error_code=latest_error,
-            success_lag_seconds=lag_seconds,
-            stale_after_seconds=stale_seconds,
-            open_grace_seconds=open_grace_seconds,
+            session_opened=None,
+            **common,
         )
 
     assert session_opened is not None
-    open_age = int((observed - session_opened).total_seconds())
-    if open_age < open_grace_seconds:
-        return WatchdogDiagnostic(
+    if int((observed - session_opened).total_seconds()) < open_grace_seconds:
+        return _diagnostic(
             status="open_grace",
             alert=False,
             reason="gold session has reopened but is still inside the capture startup grace window",
-            observed_at_utc=observed.isoformat(),
-            session_calendar_version=SESSION_CALENDAR_VERSION,
             session_open=True,
-            session_opened_at_utc=session_opened.isoformat(),
-            latest_scheduled_success_utc=None if latest_success is None else latest_success.isoformat(),
-            latest_scheduled_request_utc=None if latest_request is None else latest_request.isoformat(),
-            latest_scheduled_request_status=latest_status,
-            latest_scheduled_error_code=latest_error,
-            success_lag_seconds=lag_seconds,
-            stale_after_seconds=stale_seconds,
-            open_grace_seconds=open_grace_seconds,
+            session_opened=session_opened,
+            **common,
         )
 
     if latest_success is None:
-        return WatchdogDiagnostic(
-            status="stale",
+        return _diagnostic(
+            status="stale_capture",
             alert=True,
             reason="gold session is open and no successful scheduled Twelve capture is recorded",
-            observed_at_utc=observed.isoformat(),
-            session_calendar_version=SESSION_CALENDAR_VERSION,
             session_open=True,
-            session_opened_at_utc=session_opened.isoformat(),
-            latest_scheduled_success_utc=None,
-            latest_scheduled_request_utc=None if latest_request is None else latest_request.isoformat(),
-            latest_scheduled_request_status=latest_status,
-            latest_scheduled_error_code=latest_error,
-            success_lag_seconds=None,
-            stale_after_seconds=stale_seconds,
-            open_grace_seconds=open_grace_seconds,
+            session_opened=session_opened,
+            **common,
         )
 
-    assert lag_seconds is not None
-    if lag_seconds > stale_seconds:
-        return WatchdogDiagnostic(
-            status="stale",
+    assert success_lag is not None
+    if success_lag > stale_seconds:
+        return _diagnostic(
+            status="stale_capture",
             alert=True,
             reason="successful scheduled Twelve capture is older than the allowed open-session lag",
-            observed_at_utc=observed.isoformat(),
-            session_calendar_version=SESSION_CALENDAR_VERSION,
             session_open=True,
-            session_opened_at_utc=session_opened.isoformat(),
-            latest_scheduled_success_utc=latest_success.isoformat(),
-            latest_scheduled_request_utc=None if latest_request is None else latest_request.isoformat(),
-            latest_scheduled_request_status=latest_status,
-            latest_scheduled_error_code=latest_error,
-            success_lag_seconds=lag_seconds,
-            stale_after_seconds=stale_seconds,
-            open_grace_seconds=open_grace_seconds,
+            session_opened=session_opened,
+            **common,
         )
 
-    return WatchdogDiagnostic(
+    if latest_context_snapshot is None:
+        return _diagnostic(
+            status="stale_provider_context",
+            alert=True,
+            reason="scheduled Twelve capture is fresh but no complete Provider Context snapshot exists",
+            session_open=True,
+            session_opened=session_opened,
+            **common,
+        )
+
+    assert snapshot_lag is not None
+    if snapshot_lag > stale_seconds:
+        return _diagnostic(
+            status="stale_provider_context",
+            alert=True,
+            reason=(
+                "scheduled Twelve capture is fresh but the latest complete Provider Context "
+                "snapshot is older than the allowed open-session lag"
+            ),
+            session_open=True,
+            session_opened=session_opened,
+            **common,
+        )
+
+    return _diagnostic(
         status="fresh",
         alert=False,
-        reason="scheduled Twelve capture is fresh for the open gold session",
-        observed_at_utc=observed.isoformat(),
-        session_calendar_version=SESSION_CALENDAR_VERSION,
+        reason="scheduled Twelve capture and complete Provider Context snapshot are both fresh",
         session_open=True,
-        session_opened_at_utc=session_opened.isoformat(),
-        latest_scheduled_success_utc=latest_success.isoformat(),
-        latest_scheduled_request_utc=None if latest_request is None else latest_request.isoformat(),
-        latest_scheduled_request_status=latest_status,
-        latest_scheduled_error_code=latest_error,
-        success_lag_seconds=lag_seconds,
-        stale_after_seconds=stale_seconds,
-        open_grace_seconds=open_grace_seconds,
+        session_opened=session_opened,
+        **common,
     )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--d1-json", required=True, help="Wrangler D1 --json output file")
+    parser.add_argument("--d1-json", required=True, help="D1 JSON heartbeat file")
     parser.add_argument("--diagnostic", required=True, help="Diagnostic JSON output file")
     parser.add_argument("--now", help="Override observation time with an ISO-8601 timestamp")
     parser.add_argument("--stale-seconds", type=int, default=DEFAULT_STALE_SECONDS)
@@ -261,10 +294,9 @@ def main(argv: list[str] | None = None) -> int:
         now = _parse_datetime(args.now) if args.now else datetime.now(UTC)
         assert now is not None
         payload = json.loads(Path(args.d1_json).read_text(encoding="utf-8"))
-        row = _extract_first_result(payload)
         diagnostic = evaluate(
             now=now,
-            row=row,
+            row=_extract_first_result(payload),
             stale_seconds=args.stale_seconds,
             open_grace_seconds=args.open_grace_seconds,
         )
@@ -274,7 +306,7 @@ def main(argv: list[str] | None = None) -> int:
         target.write_text(json.dumps(output, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(json.dumps(output, sort_keys=True))
         return 2 if diagnostic.alert else 0
-    except Exception as exc:  # noqa: BLE001 - CLI must emit a deterministic failure.
+    except Exception as exc:  # noqa: BLE001
         print(f"watchdog_error={type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
 
