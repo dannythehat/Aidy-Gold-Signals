@@ -118,3 +118,6 @@ def test_provider_rollout_guard_checks_real_formal_forward_env_var() -> None:
         "str(cfg['vars'].get('AIDY_FORMAL_FORWARD_ENABLED', '')).strip().lower() == 'false'"
         in rollout
     )
+
+
+# Provider-context D1 read-budget fix protection-check trigger; no runtime semantic change.
