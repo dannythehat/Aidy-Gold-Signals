@@ -1,0 +1,117 @@
+name: AIDY D1 Provider Context Read Budget
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "migrations/d1/0016_provider_context_read_budget.sql"
+      - "tests/test_provider_context_d1_read_budget.py"
+      - ".github/workflows/aidy-d1-provider-context-read-budget.yml"
+  push:
+    branches: [main]
+    paths:
+      - "migrations/d1/0016_provider_context_read_budget.sql"
+      - "tests/test_provider_context_d1_read_budget.py"
+      - ".github/workflows/aidy-d1-provider-context-read-budget.yml"
+
+concurrency:
+  group: aidy-d1-provider-context-read-budget
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  acceptance:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify query-plan optimization and regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pytest -q tests/test_provider_context_d1_read_budget.py tests/test_day53_d1_free_tier_hot_paths.py
+          uv run pytest -q
+
+  apply-and-prove:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build D1-only production config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['triggers']['crons']=[]
+          json.dump(cfg, open('wrangler.d1-read-budget.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply D1 migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.d1-read-budget.jsonc
+
+      - name: Prove index exists and hot lookup is index-efficient
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.d1-read-budget.jsonc \
+            --command "SELECT name FROM sqlite_master WHERE type='index' AND name='idx_market_snapshots_provider_context_scheduled_success';" \
+            | tee /tmp/index.json
+
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.d1-read-budget.jsonc \
+            --command "SELECT id,captured_at FROM market_snapshots WHERE symbol='XAUUSD' AND market_data_source='twelve_data' AND capture_status='complete' AND captured_at<='2099-01-01T00:00:00+00:00' AND json_extract(data_availability_json,'$.request_kind')='scheduled_capture' AND json_extract(data_availability_json,'$.request_ledger_status')='succeeded' ORDER BY captured_at DESC,id DESC LIMIT 1;" \
+            | tee /tmp/lookup.json
+
+          python - <<'PY'
+          import json
+          idx=json.load(open('/tmp/index.json', encoding='utf-8'))
+          lookup=json.load(open('/tmp/lookup.json', encoding='utf-8'))
+          assert idx and idx[0].get('success') is True, idx
+          names=[r.get('name') for item in idx for r in item.get('results', [])]
+          assert 'idx_market_snapshots_provider_context_scheduled_success' in names, names
+          assert lookup and lookup[0].get('success') is True, lookup
+          meta=lookup[0].get('meta') or {}
+          rows_read=int(meta.get('rows_read', meta.get('rowsRead', 999999)))
+          print(json.dumps({'production_hot_lookup_rows_read': rows_read, 'meta': meta}, sort_keys=True))
+          assert rows_read <= 5, rows_read
+          PY
