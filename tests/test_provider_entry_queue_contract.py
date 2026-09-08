@@ -1,17 +1,28 @@
 from __future__ import annotations
 
-import inspect
+import ast
+from pathlib import Path
 
-from provider_entry import Default as ProviderDefault
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_provider_entry_declares_concrete_queue_handler() -> None:
     """The configured Worker entrypoint must expose queue directly.
 
-    Provider HTTP routing lives in a subclass of the core Worker. Cloudflare queue
-    delivery must not depend on inherited event-handler discovery: if this method
-    disappears, scheduled market capture can strand messages while HTTP health stays green.
+    This is intentionally a source-level contract test. Importing Cloudflare's
+    Python Worker runtime under normal CPython requires the Pyodide ``js`` module,
+    so an import-based unit test would test the wrong runtime rather than the
+    production entrypoint shape.
     """
 
-    assert "queue" in ProviderDefault.__dict__
-    assert inspect.iscoroutinefunction(ProviderDefault.__dict__["queue"])
+    source = (ROOT / "src" / "provider_entry.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    default = next(
+        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "Default"
+    )
+    async_methods = {
+        node.name for node in default.body if isinstance(node, ast.AsyncFunctionDef)
+    }
+    assert "fetch" in async_methods
+    assert "queue" in async_methods
