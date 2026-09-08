@@ -73,10 +73,11 @@ jobs:
               assert forbidden not in text
           settings=AidySettings.from_worker_env(SimpleNamespace(**base['vars']))
           assert settings.capture_enabled is True
-          assert settings.formal_forward_enabled is False
           assert settings.market_data_source=='twelve_data'
           assert settings.market_data_ownership=='public_independent'
           assert settings.market_poll_seconds>=300
+          assert base['vars']['AIDY_FORMAL_FORWARD_ENABLED']=='false'
+          assert base['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']=='false'
           json.dump(base, open('wrangler.ops.acceptance.jsonc','w',encoding='utf-8'), indent=2)
 
           scheduler=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
