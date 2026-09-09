@@ -6,6 +6,7 @@ on:
     paths:
       - "src/aidy/twelve_data_bootstrap.py"
       - "src/entry.py"
+      - "src/day2_scheduler.js"
       - "tests/test_day53_bootstrap_admission_recovery.py"
       - ".github/workflows/day53-resumable-bootstrap-recovery.yml"
   push:
@@ -13,6 +14,7 @@ on:
     paths:
       - "src/aidy/twelve_data_bootstrap.py"
       - "src/entry.py"
+      - "src/day2_scheduler.js"
       - "tests/test_day53_bootstrap_admission_recovery.py"
       - ".github/workflows/day53-resumable-bootstrap-recovery.yml"
   workflow_dispatch:
@@ -35,7 +37,7 @@ jobs:
   acceptance:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - name: Checkout exact candidate head
         uses: actions/checkout@v4
@@ -55,6 +57,10 @@ jobs:
         with:
           python-version: "3.13"
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install project dependencies
         shell: bash
         run: |
@@ -62,7 +68,7 @@ jobs:
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
 
-      - name: Resumable-bootstrap boundary checks
+      - name: Resumable-bootstrap and queue-budget boundary checks
         shell: bash
         run: |
           set -euo pipefail
@@ -75,6 +81,33 @@ jobs:
           grep -F '"decision_snapshot_created": False' src/entry.py
           grep -F '"decision_ready": False' src/entry.py
           ! grep -Ein 'metaapi|mt5|vantage|super_signals' src/aidy/twelve_data_bootstrap.py
+          grep -F "shouldEnqueueCaptureTick" src/day2_scheduler.js
+          grep -F "FED_RSS_INTERVAL_SECONDS = 120" src/day2_scheduler.js
+          grep -F "MARKET_INTERVAL_SECONDS = 300" src/day2_scheduler.js
+          grep -F "twelve_data_time_series_rate_limited" .github/workflows/day53-resumable-bootstrap-recovery.yml
+          grep -F "sleep 65" .github/workflows/day53-resumable-bootstrap-recovery.yml
+
+      - name: Prove queue producer only emits useful recorder ticks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp src/day2_scheduler.js /tmp/day2_scheduler.mjs
+          node --input-type=module - <<'JS'
+          import { shouldEnqueueCaptureTick } from 'file:///tmp/day2_scheduler.mjs';
+          const base=Date.UTC(2026,8,9,0,0,0);
+          const expected={0:true,1:false,2:true,3:false,4:true,5:true,6:true,7:false,8:true,9:false,10:true};
+          for (const [minute,due] of Object.entries(expected)) {
+            const actual=shouldEnqueueCaptureTick(base+Number(minute)*60_000);
+            if (actual!==due) throw new Error(`minute ${minute}: ${actual} != ${due}`);
+          }
+          let emitted=0;
+          for (let minute=0; minute<1440; minute++) {
+            if (shouldEnqueueCaptureTick(base+minute*60_000)) emitted++;
+          }
+          if (emitted!==864) throw new Error(`daily queue messages ${emitted} != 864`);
+          console.log(`daily_queue_messages=${emitted}`);
+          console.log(`healthy_queue_ops_estimate=${emitted*3}`);
+          JS
 
       - name: Focused recovery tests
         shell: bash
@@ -89,7 +122,7 @@ jobs:
   recover-and-dispatch-proof:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
-    timeout-minutes: 70
+    timeout-minutes: 90
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -166,13 +199,30 @@ jobs:
           json.dump(sched, open('wrangler.day53.resumable.scheduler.jsonc','w',encoding='utf-8'), indent=2)
           PY
 
+      - name: Prove queue-budget gate before any live deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp src/day2_scheduler.js /tmp/day2_scheduler.mjs
+          node --input-type=module - <<'JS'
+          import { shouldEnqueueCaptureTick } from 'file:///tmp/day2_scheduler.mjs';
+          const base=Date.UTC(2026,8,9,0,0,0);
+          let emitted=0;
+          for (let minute=0; minute<1440; minute++) {
+            if (shouldEnqueueCaptureTick(base+minute*60_000)) emitted++;
+          }
+          if (emitted!==864) throw new Error(`unexpected daily queue message budget ${emitted}`);
+          if (emitted*3>3000) throw new Error(`healthy Queue operations too high: ${emitted*3}`);
+          console.log(`daily_queue_messages=${emitted} healthy_queue_ops_estimate=${emitted*3}`);
+          JS
+
       - name: Apply all D1 migrations
         shell: bash
         run: |
           set -euo pipefail
           npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote --config wrangler.day53.resumable.restored.jsonc | tee /tmp/resumable-migrations.txt
 
-      - name: Install Twelve secret and run resumable bounded bootstrap
+      - name: Install Twelve secret and run rate-limit-safe resumable bootstrap
         id: bootstrap
         shell: bash
         run: |
@@ -193,15 +243,59 @@ jobs:
             sleep $((attempt*5))
           done
           test "$deployed" -eq 1
+
+          worker_ready=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?bootstrap_ready=${GITHUB_SHA}-${attempt}" > /tmp/bootstrap-health.json || true
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/bootstrap-health.json', encoding='utf-8'))
+          assert h.get('capture_enabled') is False, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source')=='twelve_data', h
+          PY
+            then worker_ready=1; break; fi
+            sleep 3
+          done
+          test "$worker_ready" -eq 1 || { echo 'Bootstrap Worker never became active'; exit 1; }
+
           complete=0
           for chunk in $(seq 1 80); do
             result="/tmp/bootstrap-chunk-${chunk}.json"
-            status="$(curl --silent --show-error --max-time 120 -o "$result" -w '%{http_code}' -X POST -H "X-AIDY-Admin-Token: ${ADMIN_TOKEN}" "$AIDY_TEST_WORKER_URL/day53/twelve-data-bootstrap")"
-            if test "$status" != "200"; then
-              echo "bootstrap_http_status=$status"
+            request_ok=0
+            for request_attempt in $(seq 1 8); do
+              curl_rc=0
+              status="$(curl --silent --show-error --max-time 120 -o "$result" -w '%{http_code}' -X POST -H "X-AIDY-Admin-Token: ${ADMIN_TOKEN}" "$AIDY_TEST_WORKER_URL/day53/twelve-data-bootstrap")" || curl_rc=$?
+              if test "$curl_rc" -ne 0; then
+                echo "bootstrap_transient_retry chunk=${chunk} attempt=${request_attempt} curl_rc=${curl_rc}"
+                sleep $((request_attempt*5))
+                continue
+              fi
+              if test "$status" = "200"; then
+                request_ok=1
+                break
+              fi
+              if grep -Fq 'twelve_data_time_series_rate_limited' "$result" 2>/dev/null; then
+                echo "bootstrap_rate_limit_retry chunk=${chunk} attempt=${request_attempt} sleep_seconds=65"
+                sleep 65
+                continue
+              fi
+              if echo "$status" | grep -Eq '^(502|503|504)$' || grep -Fq 'error code: 1102' "$result" 2>/dev/null; then
+                echo "bootstrap_transient_retry chunk=${chunk} attempt=${request_attempt} http_status=${status}"
+                sleep $((request_attempt*5))
+                continue
+              fi
+              if test "$chunk" -eq 1 && test "$status" = "409" && grep -Fq 'twelve_data_bootstrap_disabled' "$result" 2>/dev/null; then
+                echo "bootstrap_transient_retry chunk=1 attempt=${request_attempt} reason=deployment_propagation"
+                sleep 5
+                continue
+              fi
+              echo "bootstrap_hard_failure chunk=${chunk} attempt=${request_attempt} http_status=${status}"
               cat "$result" || true
               exit 1
-            fi
+            done
+            test "$request_ok" -eq 1 || { echo "bootstrap_retries_exhausted chunk=${chunk}"; exit 1; }
+
             next="$(python - "$result" <<'PY'
           import json, sys
           payload=json.load(open(sys.argv[1], encoding='utf-8'))
@@ -228,7 +322,8 @@ jobs:
               complete=1
               break
             fi
-            sleep 9
+            # Deliberately keep recovery below the provider's burst ceiling.
+            sleep 22
           done
           test "$complete" -eq 1
           echo 'bootstrap_complete=true'
@@ -241,45 +336,30 @@ jobs:
           admin_deleted=0
           for attempt in 1 2 3 4 5; do
             status="$(curl -sS -o /tmp/admin-delete.json -w '%{http_code}' -X DELETE -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets/AIDY_DAY53_ADMIN_TOKEN" || true)"
-            if test "$status" = "200" || test "$status" = "404"; then
-              admin_deleted=1
-              break
-            fi
+            if test "$status" = "200" || test "$status" = "404"; then admin_deleted=1; break; fi
             sleep $((attempt*5))
           done
           cp wrangler.day53.resumable.restored.jsonc wrangler.jsonc
           worker_restored=0
           for attempt in 1 2 3 4 5; do
-            if uv run pywrangler deploy 2>&1 | tee "/tmp/restored-worker-deploy-${attempt}.txt"; then
-              worker_restored=1
-              break
-            fi
+            if uv run pywrangler deploy 2>&1 | tee "/tmp/restored-worker-deploy-${attempt}.txt"; then worker_restored=1; break; fi
             sleep $((attempt*5))
           done
           scheduler_restored=0
           for attempt in 1 2 3 4 5; do
-            if npx --yes wrangler@4 deploy --config wrangler.day53.resumable.scheduler.jsonc 2>&1 | tee "/tmp/restored-scheduler-deploy-${attempt}.txt"; then
-              scheduler_restored=1
-              break
-            fi
+            if npx --yes wrangler@4 deploy --config wrangler.day53.resumable.scheduler.jsonc 2>&1 | tee "/tmp/restored-scheduler-deploy-${attempt}.txt"; then scheduler_restored=1; break; fi
             sleep $((attempt*5))
           done
           runtime_safe=0
           for attempt in $(seq 1 20); do
             curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?resumable_restore=${GITHUB_SHA}-${attempt}" > /tmp/restored-health.json || true
-            if python -c "import json; h=json.load(open('/tmp/restored-health.json')); assert h.get('capture_enabled') is True; assert h.get('formal_forward_enabled') is False; assert h.get('market_data_source')=='twelve_data'"; then
-              runtime_safe=1
-              break
-            fi
+            if python -c "import json; h=json.load(open('/tmp/restored-health.json')); assert h.get('capture_enabled') is True; assert h.get('formal_forward_enabled') is False; assert h.get('market_data_source')=='twelve_data'"; then runtime_safe=1; break; fi
             sleep 3
           done
           secret_absent=0
           for attempt in 1 2 3 4 5; do
             if curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets" > /tmp/worker-secrets-after.json; then
-              if python -c "import json; p=json.load(open('/tmp/worker-secrets-after.json')); names={str(x.get('name')) for x in (p.get('result') or [])}; assert 'AIDY_DAY53_ADMIN_TOKEN' not in names"; then
-                secret_absent=1
-                break
-              fi
+              if python -c "import json; p=json.load(open('/tmp/worker-secrets-after.json')); names={str(x.get('name')) for x in (p.get('result') or [])}; assert 'AIDY_DAY53_ADMIN_TOKEN' not in names"; then secret_absent=1; break; fi
             fi
             sleep $((attempt*5))
           done
@@ -306,8 +386,7 @@ jobs:
           rows=[]
           for batch in json.load(open('/tmp/complete-snapshot.json', encoding='utf-8')):
               rows.extend(batch.get('results') or [])
-          if len(rows)!=1:
-              raise SystemExit(1)
+          if len(rows)!=1: raise SystemExit(1)
           row=rows[0]
           availability=json.loads(row['data_availability_json'])
           assert availability.get('market_data_source')=='twelve_data', availability
@@ -318,10 +397,7 @@ jobs:
               assert row.get(key), (key,row)
           print('fresh_complete_snapshot='+str(row['id']))
           PY
-            then
-              found=1
-              break
-            fi
+            then found=1; break; fi
             sleep 60
           done
           test "$found" -eq 1 || { echo 'No fresh complete scheduled Twelve snapshot appeared after bootstrap'; exit 1; }
@@ -341,6 +417,7 @@ jobs:
           name: aidy-day53-resumable-bootstrap-recovery-${{ github.sha }}
           path: |
             /tmp/resumable-migrations.txt
+            /tmp/bootstrap-health.json
             /tmp/bootstrap-worker-deploy-*.txt
             /tmp/bootstrap-chunk-*.json
             /tmp/bootstrap-result.json
