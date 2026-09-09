@@ -35,7 +35,7 @@ jobs:
           import json
           cfg=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
           cfg['triggers']['crons']=['*/2 * * * *','5-55/10 * * * *']
-          json.dump(cfg,open('/tmp/wrangler.scheduler.live-repair.jsonc','w',encoding='utf-8'),indent=2)
+          json.dump(cfg,open('wrangler.scheduler.live-repair.jsonc','w',encoding='utf-8'),indent=2)
           even=set(range(0,60,2))
           odd_fives=set(range(5,60,10))
           daily=len(even | odd_fives)*24
@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 deploy --config /tmp/wrangler.scheduler.live-repair.jsonc | tee /tmp/deploy.txt
+          npx --yes wrangler@4 deploy --config wrangler.scheduler.live-repair.jsonc | tee /tmp/deploy.txt
       - name: Require exact Cron triggers and bindings
         shell: bash
         run: |
