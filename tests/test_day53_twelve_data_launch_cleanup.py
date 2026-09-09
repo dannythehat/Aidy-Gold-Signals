@@ -168,3 +168,12 @@ def test_manual_smoke_cannot_write_canonical_candles_or_run_legacy_bootstrap() -
     assert '"canonical_candles_written": 0' in entry
     assert 'url.path == "/day53/twelve-data-bootstrap"' in entry
     assert "AidyTwelveDataBootstrapService" in entry
+
+
+def test_scheduler_uses_nominal_utc_minute_not_exact_second_alignment() -> None:
+    scheduler = (ROOT / "src" / "day2_scheduler.js").read_text(encoding="utf-8")
+    assert "getUTCMinutes" in scheduler
+    assert "FED_RSS_INTERVAL_SECONDS = 120" in scheduler
+    assert "MARKET_INTERVAL_SECONDS = 300" in scheduler
+    assert "seconds % FED_RSS_INTERVAL_SECONDS" not in scheduler
+    assert "seconds % MARKET_INTERVAL_SECONDS" not in scheduler
