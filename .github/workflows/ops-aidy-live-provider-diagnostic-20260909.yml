@@ -12,18 +12,17 @@ permissions:
 
 env:
   AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
-  QUEUE_NAME: aidy-capture-test
   SCHEDULER_NAME: aidy-signals-scheduler-test
 
 jobs:
   diagnose:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 5
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Inspect cron, queue and prove direct consumer delivery
+      - name: Read automatic Cron delivery and Provider Context only
         shell: bash
         run: |
           set -euo pipefail
@@ -32,63 +31,21 @@ jobs:
           account=os.environ['CLOUDFLARE_ACCOUNT_ID']
           token=os.environ['CLOUDFLARE_API_TOKEN']
           headers={'Authorization':'Bearer '+token,'Content-Type':'application/json','User-Agent':'AIDY-live-diagnostic/20260909'}
-          def get(url):
-              req=urllib.request.Request(url,headers=headers)
-              with urllib.request.urlopen(req,timeout=30) as r: return json.load(r)
           base='https://api.cloudflare.com/client/v4/accounts/'+account
+          def get(url):
+              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=30) as r:
+                  return json.load(r)
+          def d1(sql):
+              endpoint=base+'/d1/database/'+os.environ['AIDY_D1_DATABASE_ID']+'/query'
+              req=urllib.request.Request(endpoint,data=json.dumps({'sql':sql,'params':[]}).encode(),headers=headers)
+              with urllib.request.urlopen(req,timeout=30) as r: p=json.load(r)
+              rows=[]
+              for b in p.get('result') or []: rows.extend(b.get('results') or [])
+              return rows
           schedules=get(base+'/workers/scripts/'+os.environ['SCHEDULER_NAME']+'/schedules')
           print('SCHEDULES='+json.dumps(schedules,sort_keys=True))
-          queues=get(base+'/queues?name='+os.environ['QUEUE_NAME'])
-          print('QUEUES='+json.dumps(queues,sort_keys=True))
-          rows=queues.get('result') or []
-          assert queues.get('success') is True and len(rows)==1, queues
-          qid=rows[0]['queue_id']
-          try:
-              consumers=get(base+'/queues/'+qid+'/consumers')
-              print('CONSUMERS='+json.dumps(consumers,sort_keys=True))
-          except Exception as exc:
-              print('CONSUMERS_ERROR='+type(exc).__name__+':'+str(exc))
-          open('/tmp/queue-id','w').write(qid)
+          ledger=d1("SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='2026-09-09T03:22:27+00:00' ORDER BY requested_at_utc DESC LIMIT 20")
+          print('AUTOMATIC_LEDGER='+json.dumps(ledger,sort_keys=True))
+          snaps=d1("SELECT id,captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,json_extract(data_availability_json,'$.all_timeframes_ready') AS all_timeframes_ready FROM market_snapshots WHERE market_data_source='twelve_data' ORDER BY captured_at DESC,id DESC LIMIT 5")
+          print('SNAPSHOTS='+json.dumps(snaps,sort_keys=True))
           PY
-
-          PROBE_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
-          echo "PROBE_AT=$PROBE_AT"
-          QUEUE_ID="$(cat /tmp/queue-id)"
-          SCHEDULED_MS="$(python - <<'PY'
-          import time
-          print((int(time.time())//300)*300000)
-          PY
-          )"
-          python - "$SCHEDULED_MS" <<'PY' > /tmp/body.json
-          import json,sys
-          print(json.dumps({'body': {'scheduledTime': int(sys.argv[1]), 'cron': 'ops-live-provider-diagnostic'}}))
-          PY
-          curl -fsS -X POST \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H 'Content-Type: application/json' \
-            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/queues/${QUEUE_ID}/messages" \
-            --data-binary @/tmp/body.json | tee /tmp/push.json
-
-          found=0
-          for attempt in $(seq 1 18); do
-            python - "$PROBE_AT" <<'PY' > /tmp/post.json
-          import json, os, sys, urllib.request
-          sql="SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='"+sys.argv[1]+"' ORDER BY requested_at_utc DESC LIMIT 5;"
-          endpoint='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']+'/d1/database/'+os.environ['AIDY_D1_DATABASE_ID']+'/query'
-          req=urllib.request.Request(endpoint,data=json.dumps({'sql':sql,'params':[]}).encode(),headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json','User-Agent':'AIDY-live-diagnostic/20260909'})
-          with urllib.request.urlopen(req,timeout=30) as r: p=json.load(r)
-          rows=[]
-          for b in p.get('result') or []: rows.extend(b.get('results') or [])
-          print(json.dumps(rows,sort_keys=True))
-          PY
-            if python - <<'PY'
-          import json
-          rows=json.load(open('/tmp/post.json'))
-          assert rows
-          print('DIRECT_QUEUE_CAPTURE='+json.dumps(rows,sort_keys=True))
-          PY
-            then found=1; break; fi
-            sleep 5
-          done
-          cat /tmp/post.json
-          test "$found" -eq 1
