@@ -6,19 +6,21 @@ export function shouldEnqueueCaptureTick(scheduledTime) {
   if (!Number.isFinite(milliseconds)) {
     throw new TypeError("AIDY scheduler requires a finite scheduledTime.");
   }
-  const seconds = Math.floor(milliseconds / 1000);
+  // Cloudflare guarantees the scheduled minute, but ScheduledController.scheduledTime
+  // must not be treated as though it is always second-aligned. Decide the recorder
+  // cadence from the nominal UTC minute so delayed Cron delivery cannot silently
+  // suppress every Queue message.
+  const minute = new Date(milliseconds).getUTCMinutes();
   return (
-    seconds % FED_RSS_INTERVAL_SECONDS === 0 ||
-    seconds % MARKET_INTERVAL_SECONDS === 0
+    minute % (FED_RSS_INTERVAL_SECONDS / 60) === 0 ||
+    minute % (MARKET_INTERVAL_SECONDS / 60) === 0
   );
 }
 
 export default {
   async scheduled(controller, env) {
-    // The Cloudflare Cron still fires every minute so we preserve the existing
-    // clock contract, but a Queue operation is only needed when at least one
-    // recorder can actually be due. The 2-minute FED cadence and 5-minute
-    // market cadence cover the slower macro/cross-market and hourly prune work.
+    // The Cloudflare Cron fires every minute; Queue operations are emitted only
+    // on the union of the 2-minute FED cadence and 5-minute market cadence.
     if (!shouldEnqueueCaptureTick(controller.scheduledTime)) {
       return;
     }
