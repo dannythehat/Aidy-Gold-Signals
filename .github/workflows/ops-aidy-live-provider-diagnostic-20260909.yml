@@ -26,6 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "verification_refresh=2026-09-09T03:41Z"
           python - <<'PY'
           import json, os, urllib.request
           account=os.environ['CLOUDFLARE_ACCOUNT_ID']
