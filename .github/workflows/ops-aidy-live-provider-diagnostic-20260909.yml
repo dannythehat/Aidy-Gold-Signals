@@ -22,12 +22,12 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - name: Query live AIDY heartbeat, request ledger, and snapshots
+      - name: Query live AIDY request ledger and snapshots
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, os, urllib.request
+          import json, os, urllib.error, urllib.request
 
           def d1(sql):
               endpoint=(
@@ -39,6 +39,7 @@ jobs:
               req=urllib.request.Request(endpoint,data=body,headers={
                   'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],
                   'Content-Type':'application/json',
+                  'User-Agent':'AIDY-live-diagnostic/20260909',
               })
               with urllib.request.urlopen(req,timeout=30) as response:
                   payload=json.load(response)
@@ -49,14 +50,21 @@ jobs:
                   rows.extend(batch.get('results') or [])
               return rows
 
-          with urllib.request.urlopen(os.environ['AIDY_TEST_WORKER_URL']+'/health?live_diag=20260909',timeout=30) as response:
-              health=json.load(response)
-          print('HEALTH='+json.dumps(health,sort_keys=True))
+          try:
+              req=urllib.request.Request(
+                  os.environ['AIDY_TEST_WORKER_URL']+'/health?live_diag=20260909',
+                  headers={'User-Agent':'curl/8.5.0','Cache-Control':'no-cache'},
+              )
+              with urllib.request.urlopen(req,timeout=30) as response:
+                  health=json.load(response)
+              print('HEALTH='+json.dumps(health,sort_keys=True))
+          except Exception as exc:
+              print('HEALTH_ERROR='+type(exc).__name__+':'+str(exc))
 
           ledger=d1('''
           SELECT requested_at_utc,completed_at_utc,status,error_code,request_kind,
-                 outputsize,raw_bar_count,closed_bar_count,forming_bar_count,
-                 off_session_bar_count,freshness_state
+                 outputsize,internal_accounted_credits,provider_credits_request,
+                 provider_minute_credits_used,provider_minute_credits_left,response_digest
           FROM twelve_data_request_ledger
           WHERE request_kind='scheduled_capture'
           ORDER BY requested_at_utc DESC LIMIT 20
