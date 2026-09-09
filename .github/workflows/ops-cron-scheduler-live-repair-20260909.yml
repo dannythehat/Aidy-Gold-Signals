@@ -1,0 +1,115 @@
+name: Ops Cron Scheduler Live Repair 20260909
+
+on:
+  push:
+    branches: [fix/cron-scheduler-delivery-20260909]
+    paths:
+      - ".github/workflows/ops-cron-scheduler-live-repair-20260909.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  SCHEDULER_NAME: aidy-signals-scheduler-test
+
+jobs:
+  deploy-and-prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/cron-scheduler-delivery-20260909
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build and verify recorder-due scheduler config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          cfg['triggers']['crons']=['*/2 * * * *','5-55/10 * * * *']
+          json.dump(cfg,open('/tmp/wrangler.scheduler.live-repair.jsonc','w',encoding='utf-8'),indent=2)
+          even=set(range(0,60,2))
+          odd_fives=set(range(5,60,10))
+          daily=len(even | odd_fives)*24
+          assert daily==864, daily
+          assert daily*3<=3000, daily*3
+          js=open('src/day2_scheduler.js',encoding='utf-8').read()
+          assert 'shouldEnqueueCaptureTick' not in js, js
+          assert 'AIDY_CAPTURE_QUEUE.send' in js, js
+          print(f'daily_queue_messages={daily} healthy_queue_ops_estimate={daily*3}')
+          PY
+      - name: Deploy live scheduler repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy --config /tmp/wrangler.scheduler.live-repair.jsonc | tee /tmp/deploy.txt
+      - name: Require exact Cron triggers and bindings
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,urllib.request
+          base='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']
+          headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'User-Agent':'AIDY-cron-repair/20260909'}
+          def get(url):
+              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=30) as r: return json.load(r)
+          schedules=get(base+'/workers/scripts/'+os.environ['SCHEDULER_NAME']+'/schedules')
+          crons=sorted(x['cron'] for x in schedules['result']['schedules'])
+          assert crons==sorted(['*/2 * * * *','5-55/10 * * * *']), schedules
+          queues=get(base+'/queues?name=aidy-capture-test')
+          q=(queues.get('result') or [])[0]
+          assert any(p.get('script')=='aidy-signals-scheduler-test' for p in q.get('producers') or []), q
+          assert any(c.get('script')=='aidy-signals-test' for c in q.get('consumers') or []), q
+          print('cron_bindings=PASS crons='+json.dumps(crons))
+          PY
+      - name: Prove next Cron tick reaches live consumer without manual Queue push
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROBE_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "probe_at=${PROBE_AT}"
+          found=0
+          for attempt in $(seq 1 48); do
+            python - "$PROBE_AT" <<'PY' > /tmp/post.json
+          import json,os,sys,urllib.request
+          sql="SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='"+sys.argv[1]+"' ORDER BY requested_at_utc DESC LIMIT 5;"
+          endpoint='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']+'/d1/database/'+os.environ['AIDY_D1_DATABASE_ID']+'/query'
+          req=urllib.request.Request(endpoint,data=json.dumps({'sql':sql,'params':[]}).encode(),headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json','User-Agent':'AIDY-cron-repair/20260909'})
+          with urllib.request.urlopen(req,timeout=30) as r: p=json.load(r)
+          rows=[]
+          for batch in p.get('result') or []: rows.extend(batch.get('results') or [])
+          print(json.dumps(rows,sort_keys=True))
+          PY
+            if python - <<'PY'
+          import json
+          rows=json.load(open('/tmp/post.json'))
+          assert rows and rows[0].get('status') in {'started','succeeded','failed'}, rows
+          print('automatic_cron_delivery='+json.dumps(rows,sort_keys=True))
+          PY
+            then found=1; break; fi
+            sleep 5
+          done
+          cat /tmp/post.json
+          test "$found" -eq 1
+      - name: Report current Provider Context readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,urllib.request
+          sql="SELECT id,captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,json_extract(data_availability_json,'$.all_timeframes_ready') AS all_timeframes_ready FROM market_snapshots WHERE market_data_source='twelve_data' ORDER BY captured_at DESC,id DESC LIMIT 3;"
+          endpoint='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']+'/d1/database/'+os.environ['AIDY_D1_DATABASE_ID']+'/query'
+          req=urllib.request.Request(endpoint,data=json.dumps({'sql':sql,'params':[]}).encode(),headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json','User-Agent':'AIDY-cron-repair/20260909'})
+          with urllib.request.urlopen(req,timeout=30) as r: p=json.load(r)
+          rows=[]
+          for batch in p.get('result') or []: rows.extend(batch.get('results') or [])
+          print('provider_context='+json.dumps(rows,sort_keys=True))
+          PY
