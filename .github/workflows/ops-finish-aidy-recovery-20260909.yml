@@ -1,0 +1,229 @@
+name: Ops Finish AIDY Recovery 20260909
+
+on:
+  push:
+    branches: [ops/finish-aidy-recovery-20260909]
+    paths:
+      - ".github/workflows/ops-finish-aidy-recovery-20260909.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  recover-restore-prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build safe bootstrap and restored configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          python - <<'PY'
+          import json, os
+          base=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          base['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          base['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          base['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          base['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          base['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          base['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          bootstrap=json.loads(json.dumps(base))
+          bootstrap['vars']['AIDY_CAPTURE_ENABLED']='false'
+          bootstrap['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          bootstrap['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='true'
+          restored=json.loads(json.dumps(base))
+          restored['vars']['AIDY_CAPTURE_ENABLED']='true'
+          restored['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          restored['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          json.dump(bootstrap, open('wrangler.ops.bootstrap.jsonc','w',encoding='utf-8'), indent=2)
+          json.dump(restored, open('wrangler.ops.restored.jsonc','w',encoding='utf-8'), indent=2)
+          scheduler=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
+          scheduler['triggers']['crons']=['* * * * *']
+          json.dump(scheduler, open('wrangler.ops.scheduler.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          cp src/day2_scheduler.js /tmp/day2_scheduler.mjs
+          node --input-type=module - <<'JS'
+          import { shouldEnqueueCaptureTick } from 'file:///tmp/day2_scheduler.mjs';
+          const base=Date.UTC(2026,8,9,0,0,0);
+          let emitted=0;
+          for (let m=0;m<1440;m++) if (shouldEnqueueCaptureTick(base+m*60000)) emitted++;
+          if (emitted!==864) throw new Error(`queue budget=${emitted}`);
+          console.log(`daily_queue_messages=${emitted} healthy_queue_ops_estimate=${emitted*3}`);
+          JS
+
+      - name: Run resumable bootstrap with bounded vendor retries
+        id: bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$AIDY_TWELVE_DATA_API_KEY" | npx --yes wrangler@4 secret put AIDY_TWELVE_DATA_API_KEY --config wrangler.ops.bootstrap.jsonc >/tmp/twelve-secret.txt
+          ADMIN_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          echo "::add-mask::$ADMIN_TOKEN"
+          echo "AIDY_TEMP_ADMIN_TOKEN=$ADMIN_TOKEN" >> "$GITHUB_ENV"
+          printf '%s' "$ADMIN_TOKEN" | npx --yes wrangler@4 secret put AIDY_DAY53_ADMIN_TOKEN --config wrangler.ops.bootstrap.jsonc >/tmp/admin-secret.txt
+          cp wrangler.ops.bootstrap.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+          ready=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?ops_bootstrap=${GITHUB_SHA}-${attempt}" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json'))
+          assert h.get('capture_enabled') is False
+          assert h.get('formal_forward_enabled') is False
+          assert h.get('market_data_source') == 'twelve_data'
+          PY
+            then ready=1; break; fi
+            sleep 3
+          done
+          test "$ready" -eq 1
+
+          complete=0
+          for chunk in $(seq 1 80); do
+            result="/tmp/bootstrap-${chunk}.json"
+            ok=0
+            for attempt in $(seq 1 8); do
+              rc=0
+              status="$(curl --silent --show-error --max-time 120 -o "$result" -w '%{http_code}' -X POST -H "X-AIDY-Admin-Token: ${ADMIN_TOKEN}" "$AIDY_TEST_WORKER_URL/day53/twelve-data-bootstrap")" || rc=$?
+              if test "$rc" -ne 0; then
+                echo "transient_transport chunk=$chunk attempt=$attempt rc=$rc"
+                sleep $((attempt*5)); continue
+              fi
+              if test "$status" = "200"; then ok=1; break; fi
+              if grep -Fq 'twelve_data_time_series_rate_limited' "$result" 2>/dev/null; then
+                echo "transient_rate_limit chunk=$chunk attempt=$attempt"
+                sleep 65; continue
+              fi
+              if grep -Fq 'twelve_data_time_series_invalid_json' "$result" 2>/dev/null; then
+                echo "transient_invalid_json chunk=$chunk attempt=$attempt"
+                sleep $((attempt*10)); continue
+              fi
+              if echo "$status" | grep -Eq '^(502|503|504)$' || grep -Fq 'error code: 1102' "$result" 2>/dev/null; then
+                echo "transient_upstream chunk=$chunk attempt=$attempt status=$status"
+                sleep $((attempt*5)); continue
+              fi
+              if test "$chunk" -eq 1 && test "$status" = "409" && grep -Fq 'twelve_data_bootstrap_disabled' "$result" 2>/dev/null; then
+                sleep 5; continue
+              fi
+              echo "bootstrap_hard_failure chunk=$chunk attempt=$attempt status=$status"
+              cat "$result" || true
+              exit 1
+            done
+            test "$ok" -eq 1 || { echo "bootstrap_retries_exhausted chunk=$chunk"; exit 1; }
+            state="$(python - "$result" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          assert p.get('ok') is True, p
+          assert p.get('decision_snapshot_created') is False, p
+          assert p.get('decision_ready') is False, p
+          state=p.get('state')
+          assert state in {'in_progress','complete'}, p
+          if state=='complete':
+              assert int(p.get('remaining_m1_minutes') or 0)==0, p
+          print(state)
+          PY
+            )"
+            echo "bootstrap_chunk=$chunk state=$state"
+            if test "$state" = "complete"; then complete=1; break; fi
+            sleep 22
+          done
+          test "$complete" -eq 1
+          echo 'bootstrap_complete=true'
+
+      - name: Restore capture-only runtime and scheduler
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          status="$(curl -sS -o /tmp/admin-delete.json -w '%{http_code}' -X DELETE -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" -H 'Content-Type: application/json' "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/secrets/AIDY_DAY53_ADMIN_TOKEN" || true)"
+          test "$status" = "200" -o "$status" = "404"
+          cp wrangler.ops.restored.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+          npx --yes wrangler@4 deploy --config wrangler.ops.scheduler.jsonc
+          RESTORED_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "RESTORED_AT=$RESTORED_AT" >> "$GITHUB_ENV"
+          good=0
+          for attempt in $(seq 1 20); do
+            curl -fsS -H 'Cache-Control: no-cache' "$AIDY_TEST_WORKER_URL/health?ops_restore=${GITHUB_SHA}-${attempt}" > /tmp/restored-health.json || true
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/restored-health.json'))
+          assert h.get('capture_enabled') is True
+          assert h.get('formal_forward_enabled') is False
+          assert h.get('market_data_source') == 'twelve_data'
+          PY
+            then good=1; break; fi
+            sleep 3
+          done
+          test "$good" -eq 1
+          echo 'capture_only_runtime_restored=true'
+
+      - name: Prove automatic scheduled capture and complete Provider Context snapshot
+        if: steps.bootstrap.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 50); do
+            python - "$RESTORED_AT" <<'PY' > /tmp/proof.json
+          import json,os,sys,urllib.request
+          base='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']
+          headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json','User-Agent':'AIDY-final-recovery/20260909'}
+          def q(sql):
+              url=base+'/d1/database/'+os.environ['AIDY_D1_DATABASE_ID']+'/query'
+              req=urllib.request.Request(url,data=json.dumps({'sql':sql,'params':[]}).encode(),headers=headers)
+              with urllib.request.urlopen(req,timeout=30) as r: p=json.load(r)
+              rows=[]
+              for b in p.get('result') or []: rows.extend(b.get('results') or [])
+              return rows
+          since=sys.argv[1]
+          ledger=q("SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='"+since+"' ORDER BY requested_at_utc DESC LIMIT 5")
+          snaps=q("SELECT id,captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,snapshot_digest,archive_key,json_extract(data_availability_json,'$.all_timeframes_ready') AS all_timeframes_ready,json_extract(data_availability_json,'$.request_kind') AS request_kind,json_extract(data_availability_json,'$.request_ledger_status') AS request_ledger_status FROM market_snapshots WHERE market_data_source='twelve_data' AND captured_at>='"+since+"' ORDER BY captured_at DESC,id DESC LIMIT 5")
+          print(json.dumps({'ledger':ledger,'snapshots':snaps},sort_keys=True))
+          PY
+            if python - <<'PY'
+          import json
+          p=json.load(open('/tmp/proof.json'))
+          ledger=p['ledger']; snaps=p['snapshots']
+          assert any(r.get('status')=='succeeded' for r in ledger), ledger
+          valid=[]
+          for s in snaps:
+              if s.get('capture_status')!='complete': continue
+              if int(s.get('all_timeframes_ready') or 0)!=1: continue
+              if s.get('request_kind')!='scheduled_capture' or s.get('request_ledger_status')!='succeeded': continue
+              if not all(s.get(k) for k in ('latest_m1_id','latest_m5_id','latest_m15_id','latest_h1_id','latest_h4_id','latest_d1_id','snapshot_digest','archive_key')): continue
+              valid.append(s)
+          assert valid, snaps
+          print('AUTOMATIC_COMPLETE_SNAPSHOT='+json.dumps(valid[0],sort_keys=True))
+          PY
+            then found=1; break; fi
+            sleep 30
+          done
+          cat /tmp/proof.json
+          test "$found" -eq 1
+          echo 'AIDY_PROVIDER_CONTEXT_FOUNDATION=READY'
