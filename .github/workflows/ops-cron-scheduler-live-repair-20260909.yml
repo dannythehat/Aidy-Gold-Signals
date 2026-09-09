@@ -34,7 +34,7 @@ jobs:
           python - <<'PY'
           import json
           cfg=json.load(open('wrangler.scheduler.test.jsonc', encoding='utf-8'))
-          cfg['triggers']['crons']=['*/2 * * * *','5-55/10 * * * *']
+          cfg['triggers']['crons']=['*/2,5-55/10 * * * *']
           json.dump(cfg,open('wrangler.scheduler.live-repair.jsonc','w',encoding='utf-8'),indent=2)
           even=set(range(0,60,2))
           odd_fives=set(range(5,60,10))
@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@4 deploy --config wrangler.scheduler.live-repair.jsonc | tee /tmp/deploy.txt
-      - name: Require exact Cron triggers and bindings
+      - name: Require exact Cron trigger and bindings
         shell: bash
         run: |
           set -euo pipefail
@@ -63,7 +63,7 @@ jobs:
               with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=30) as r: return json.load(r)
           schedules=get(base+'/workers/scripts/'+os.environ['SCHEDULER_NAME']+'/schedules')
           crons=sorted(x['cron'] for x in schedules['result']['schedules'])
-          assert crons==sorted(['*/2 * * * *','5-55/10 * * * *']), schedules
+          assert crons==['*/2,5-55/10 * * * *'], schedules
           queues=get(base+'/queues?name=aidy-capture-test')
           q=(queues.get('result') or [])[0]
           assert any(p.get('script')=='aidy-signals-scheduler-test' for p in q.get('producers') or []), q
