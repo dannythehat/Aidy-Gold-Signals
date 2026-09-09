@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "verification_refresh=2026-09-09T03:41Z"
+          echo "verification_refresh=2026-09-09T03:49Z"
           python - <<'PY'
           import json, os, urllib.request
           account=os.environ['CLOUDFLARE_ACCOUNT_ID']
@@ -45,8 +45,8 @@ jobs:
               return rows
           schedules=get(base+'/workers/scripts/'+os.environ['SCHEDULER_NAME']+'/schedules')
           print('SCHEDULES='+json.dumps(schedules,sort_keys=True))
-          ledger=d1("SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='2026-09-09T03:22:27+00:00' ORDER BY requested_at_utc DESC LIMIT 20")
+          ledger=d1("SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='2026-09-09T03:22:27+00:00' ORDER BY requested_at_utc DESC LIMIT 50")
           print('AUTOMATIC_LEDGER='+json.dumps(ledger,sort_keys=True))
-          snaps=d1("SELECT id,captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,json_extract(data_availability_json,'$.all_timeframes_ready') AS all_timeframes_ready FROM market_snapshots WHERE market_data_source='twelve_data' ORDER BY captured_at DESC,id DESC LIMIT 5")
+          snaps=d1("SELECT id,captured_at,capture_status,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id,json_extract(data_availability_json,'$.all_timeframes_ready') AS all_timeframes_ready FROM market_snapshots WHERE market_data_source='twelve_data' ORDER BY captured_at DESC,id DESC LIMIT 10")
           print('SNAPSHOTS='+json.dumps(snaps,sort_keys=True))
           PY
