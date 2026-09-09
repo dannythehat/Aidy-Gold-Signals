@@ -22,19 +22,13 @@
     "required": []
   },
   "triggers": {
-    "crons": []
+    "crons": [
+      "*/2 * * * *",
+      "5,15,25,35,45,55 * * * *"
+    ]
   },
   "queues": {
-    "consumers": [
-      {
-        "queue": "aidy-capture-test",
-        "max_batch_size": 1,
-        "max_batch_timeout": 1,
-        "max_retries": 3,
-        "max_concurrency": 1,
-        "retry_delay": 30
-      }
-    ]
+    "consumers": []
   },
   "d1_databases": [
     {

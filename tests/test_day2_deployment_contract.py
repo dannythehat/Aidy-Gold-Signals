@@ -12,7 +12,7 @@ def _scheduler_config() -> dict[str, object]:
     return json.loads(Path("wrangler.scheduler.test.jsonc").read_text(encoding="utf-8"))
 
 
-def test_boundary_correction_keeps_capture_worker_safe_off() -> None:
+def test_capture_worker_uses_direct_cron_and_no_queue_consumer() -> None:
     config = _test_config()
     vars_ = config["vars"]
     assert isinstance(vars_, dict)
@@ -20,42 +20,46 @@ def test_boundary_correction_keeps_capture_worker_safe_off() -> None:
     assert vars_["AIDY_CAPTURE_ENABLED"] == "false"
     assert vars_["AIDY_MARKET_DATA_SOURCE"] == "gold_api"
     assert vars_["AIDY_MARKET_DATA_OWNERSHIP"] == "public_independent"
-    assert config["triggers"] == {"crons": []}
-    consumers = config["queues"]["consumers"]
-    assert consumers == [
-        {
-            "queue": "aidy-capture-test",
-            "max_batch_size": 1,
-            "max_batch_timeout": 1,
-            "max_retries": 3,
-            "max_concurrency": 1,
-            "retry_delay": 30,
-        }
-    ]
+    assert config["triggers"] == {
+        "crons": [
+            "*/2 * * * *",
+            "5,15,25,35,45,55 * * * *",
+        ]
+    }
+    assert config["queues"]["consumers"] == []
 
 
-def test_day2_python_queue_handler_uses_cloudflare_runtime_signature() -> None:
-    source = Path("src/entry.py").read_text(encoding="utf-8")
-    assert "async def queue(self, batch, env, ctx):" in source
+def test_python_worker_owns_direct_cron_and_retains_queue_rollback_abi() -> None:
+    wrapper = Path("src/provider_entry.py").read_text(encoding="utf-8")
+    core = Path("src/entry.py").read_text(encoding="utf-8")
+    assert "async def scheduled(self, controller, env, ctx):" in wrapper
+    assert "await super().queue(_DirectCronBatch(message), env, ctx)" in wrapper
+    assert "async def queue(self, batch, env, ctx):" in wrapper
+    assert "async def queue(self, batch, env, ctx):" in core
+    assert "run_worker_scheduled_cycle" in core
 
 
-def test_day2_scheduler_is_minimal_one_minute_queue_producer() -> None:
+def test_legacy_scheduler_is_retired_and_cannot_enqueue() -> None:
     config = _scheduler_config()
     assert config["name"] == "aidy-signals-scheduler-test"
     assert config["main"] == "src/day2_scheduler.js"
-    assert config["triggers"] == {"crons": []}
-    assert config["queues"] == {
-        "producers": [
-            {
-                "binding": "AIDY_CAPTURE_QUEUE",
-                "queue": "aidy-capture-test",
-            }
-        ]
-    }
     source = Path("src/day2_scheduler.js").read_text(encoding="utf-8")
-    assert "AIDY_CAPTURE_QUEUE.send" in source
+    assert "shouldEnqueueCaptureTick" in source
+    assert "AIDY_CAPTURE_QUEUE.send" not in source
+    assert ".send(" not in source
     assert "fetch(" not in source
     assert "AIDY_METAAPI" not in source
+    assert "Python AIDY Worker owns the direct Cron Trigger" in source
+
+
+def test_direct_cron_union_matches_two_minute_and_five_minute_capture_contract() -> None:
+    config = _test_config()
+    crons = config["triggers"]["crons"]
+    assert crons == ["*/2 * * * *", "5,15,25,35,45,55 * * * *"]
+    # 30 even minutes + 6 odd multiples of five = 36 direct invocations/hour.
+    # This is the same 864 useful ticks/day as the former filtered Queue producer,
+    # but with zero Queue write/read/delete operations.
+    assert (30 + 6) * 24 == 864
 
 
 def test_broker_free_capture_requires_no_market_secrets() -> None:
