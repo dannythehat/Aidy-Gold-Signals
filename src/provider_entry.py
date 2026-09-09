@@ -18,7 +18,7 @@ class _DirectCronMessage:
     def ack(self) -> None:
         self.acked = True
 
-    def retry(self, *, delaySeconds: int | None = None) -> None:  # noqa: N803 - Cloudflare ABI
+    def retry(self, *, delaySeconds: int | None = None) -> None:
         del delaySeconds
         # Queue retries do not exist on a direct Cron Trigger. Surface the capture
         # failure so Cloudflare records the scheduled event as failed; the next
