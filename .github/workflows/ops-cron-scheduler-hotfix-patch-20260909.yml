@@ -1,0 +1,83 @@
+name: Ops Cron Scheduler Hotfix Patch 20260909
+
+on:
+  push:
+    branches: [fix/cron-scheduler-delivery-20260909]
+    paths:
+      - ".github/workflows/ops-cron-scheduler-hotfix-patch-20260909.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/cron-scheduler-delivery-20260909
+          fetch-depth: 0
+      - name: Replace runtime filtering with recorder-due Cron schedules
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          cron_files = [
+              '.github/workflows/day3-live-acceptance.yml',
+              '.github/workflows/ops-provider-market-rollout-20260905.yml',
+              '.github/workflows/day53-live-forward-activation.yml',
+              '.github/workflows/day53-bootstrap-admission-recovery.yml',
+              '.github/workflows/day53-hardened-bootstrap-recovery.yml',
+              '.github/workflows/day53-resumable-bootstrap-recovery.yml',
+          ]
+          old = "sched['triggers']['crons']=['* * * * *']"
+          new = "sched['triggers']['crons']=['*/2 * * * *','5-55/10 * * * *']"
+          for name in cron_files:
+              p=Path(name)
+              text=p.read_text(encoding='utf-8')
+              if old not in text and new not in text:
+                  raise SystemExit(f'missing scheduler cron assignment in {name}')
+              p.write_text(text.replace(old,new),encoding='utf-8')
+
+          p=Path('.github/workflows/day53-resumable-bootstrap-recovery.yml')
+          text=p.read_text(encoding='utf-8')
+          text=text.replace(
+              '''          grep -F "shouldEnqueueCaptureTick" src/day2_scheduler.js\n          grep -F "FED_RSS_INTERVAL_SECONDS = 120" src/day2_scheduler.js\n          grep -F "MARKET_INTERVAL_SECONDS = 300" src/day2_scheduler.js\n''',
+              '''          ! grep -F "shouldEnqueueCaptureTick" src/day2_scheduler.js\n          grep -F "AIDY_CAPTURE_QUEUE.send" src/day2_scheduler.js\n          grep -F "*/2 * * * *" .github/workflows/day53-resumable-bootstrap-recovery.yml\n          grep -F "5-55/10 * * * *" .github/workflows/day53-resumable-bootstrap-recovery.yml\n'''
+          )
+
+          start='''      - name: Prove queue producer only emits useful recorder ticks\n'''
+          end='''      - name: Focused recovery tests\n'''
+          i=text.index(start)
+          j=text.index(end,i)
+          replacement='''      - name: Prove recorder-due Cron budget\n        shell: bash\n        run: |\n          set -euo pipefail\n          python - <<'PY2'\n          from pathlib import Path\n          js=Path('src/day2_scheduler.js').read_text(encoding='utf-8')\n          assert 'shouldEnqueueCaptureTick' not in js, js\n          assert 'AIDY_CAPTURE_QUEUE.send' in js, js\n          even=set(range(0,60,2))\n          odd_fives=set(range(5,60,10))\n          per_hour=len(even | odd_fives)\n          daily=per_hour*24\n          assert per_hour==36, per_hour\n          assert daily==864, daily\n          assert daily*3<=3000, daily*3\n          print(f'daily_queue_messages={daily}')\n          print(f'healthy_queue_ops_estimate={daily*3}')\n          PY2\n\n'''
+          text=text[:i]+replacement+text[j:]
+
+          start='''      - name: Prove queue-budget gate before any live deploy\n'''
+          end='''      - name: Apply all D1 migrations\n'''
+          i=text.index(start)
+          j=text.index(end,i)
+          replacement='''      - name: Prove queue-budget gate before any live deploy\n        shell: bash\n        run: |\n          set -euo pipefail\n          python - <<'PY2'\n          import json\n          cfg=json.load(open('wrangler.day53.resumable.scheduler.jsonc', encoding='utf-8'))\n          assert cfg['triggers']['crons']==['*/2 * * * *','5-55/10 * * * *'], cfg['triggers']\n          even=set(range(0,60,2))\n          odd_fives=set(range(5,60,10))\n          daily=len(even | odd_fives)*24\n          assert daily==864, daily\n          assert daily*3<=3000, daily*3\n          print(f'daily_queue_messages={daily} healthy_queue_ops_estimate={daily*3}')\n          PY2\n\n'''
+          text=text[:i]+replacement+text[j:]
+          p.write_text(text,encoding='utf-8')
+          PY
+
+          git diff --check
+          git diff -- src/day2_scheduler.js .github/workflows/day53-resumable-bootstrap-recovery.yml .github/workflows/day53-live-forward-activation.yml
+      - name: Commit patched scheduler deployment contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'AIDY Ops'
+          git config user.email 'actions@users.noreply.github.com'
+          git add .github/workflows/day3-live-acceptance.yml \
+                  .github/workflows/ops-provider-market-rollout-20260905.yml \
+                  .github/workflows/day53-live-forward-activation.yml \
+                  .github/workflows/day53-bootstrap-admission-recovery.yml \
+                  .github/workflows/day53-hardened-bootstrap-recovery.yml \
+                  .github/workflows/day53-resumable-bootstrap-recovery.yml
+          git commit -m 'Move Queue budget to explicit recorder-due Cron triggers'
+          git push origin HEAD:fix/cron-scheduler-delivery-20260909
