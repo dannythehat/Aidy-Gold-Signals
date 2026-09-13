@@ -1,0 +1,133 @@
+name: Ops Fix Context Hindsight 20260913
+
+on:
+  push:
+    branches: [ops/aidy-live-recovery-20260913]
+    paths:
+      - ".github/workflows/ops-fix-context-hindsight-20260913.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+
+jobs:
+  repair-test-deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout recovery branch
+        uses: actions/checkout@v4
+        with:
+          ref: ops/aidy-live-recovery-20260913
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Repair setup detector safety-flag compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/aidy/setup_detector.py')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace('    "evaluation_only",\n', '', 1)
+          text = text.replace('    "future_derived",\n', '', 1)
+          old = '''            if normalized in _FORBIDDEN_HINDSIGHT_KEYS:\n                raise ValueError(f"Future/outcome field is forbidden at {path}.{key}.")\n            _assert_no_hindsight(item, path=f"{path}.{key}")\n'''
+          new = '''            if normalized == "future_derived":\n                if item is not False:\n                    raise ValueError(f"Future-derived evidence is forbidden at {path}.{key}.")\n            elif normalized == "evaluation_only":\n                if item is not False:\n                    raise ValueError(f"Evaluation-only evidence is forbidden at {path}.{key}.")\n            elif normalized in _FORBIDDEN_HINDSIGHT_KEYS:\n                raise ValueError(f"Future/outcome field is forbidden at {path}.{key}.")\n            _assert_no_hindsight(item, path=f"{path}.{key}")\n'''
+          if old not in text:
+              raise SystemExit('setup detector hindsight block not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+
+          test = Path('tests/test_context_extension_hindsight_compat_20260913.py')
+          test.write_text('''from __future__ import annotations\n\nimport pytest\n\nfrom aidy.setup_detector import _assert_no_hindsight\n\n\ndef test_setup_detector_allows_explicit_false_safety_flags() -> None:\n    _assert_no_hindsight(\n        {\n            "architecture_v2_extensions": {\n                "market_structure_context": {\n                    "future_derived": False,\n                    "evaluation_only": False,\n                    "pit_eligible": True,\n                }\n            }\n        },\n        path="context",\n    )\n\n\ndef test_setup_detector_still_rejects_true_future_derived() -> None:\n    with pytest.raises(ValueError, match="Future-derived evidence is forbidden"):\n        _assert_no_hindsight(\n            {"architecture_v2_extensions": {"future_derived": True}},\n            path="context",\n        )\n\n\ndef test_setup_detector_still_rejects_true_evaluation_only() -> None:\n    with pytest.raises(ValueError, match="Evaluation-only evidence is forbidden"):\n        _assert_no_hindsight(\n            {"architecture_v2_extensions": {"evaluation_only": True}},\n            path="context",\n        )\n''', encoding='utf-8')
+          PY
+
+      - name: Test repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pytest -q tests/test_context_extension_hindsight_compat_20260913.py
+          uv run pytest -q
+
+      - name: Commit repaired source to recovery branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/aidy/setup_detector.py tests/test_context_extension_hindsight_compat_20260913.py
+          if git diff --cached --quiet; then
+            echo "No source change required"
+          else
+            git commit -m "Allow safe false hindsight flags in setup detector"
+            git push origin HEAD:ops/aidy-live-recovery-20260913
+          fi
+
+      - name: Build canonical direct-Cron deploy config
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          assert cfg['main']=='src/provider_entry.py'
+          assert cfg['triggers']['crons']==['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          assert cfg['queues']['consumers']==[]
+          json.dump(cfg, open('wrangler.context-repair.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+          cp wrangler.context-repair.live.jsonc wrangler.jsonc
+
+      - name: Deploy repaired AIDY worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pywrangler deploy
+
+      - name: Verify health after repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl -fsS -H 'Cache-Control: no-cache' "${AIDY_TEST_WORKER_URL}/health?context-repair=${attempt}" > /tmp/health.json; then
+              python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          assert h.get('status')=='ok', h
+          assert h.get('capture_enabled') is True, h
+          assert h.get('market_data_source')=='twelve_data', h
+          PY
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 3
+          done
+          exit 1
