@@ -1,0 +1,156 @@
+name: Ops AIDY Intelligence Audit 20260913
+
+on:
+  push:
+    branches: [audit/aidy-intelligence-20260913]
+    paths:
+      - ".github/workflows/ops-aidy-intelligence-audit-20260913.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build read-only production D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          json.dump(cfg,open('wrangler.intelligence-audit.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+      - name: Inventory every D1 table and view
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.intelligence-audit.jsonc \
+            --command "SELECT name,type,sql FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY type,name" \
+            > /tmp/schema.json
+          python - <<'PY'
+          import json, pathlib, re, subprocess
+          raw=json.load(open('/tmp/schema.json',encoding='utf-8'))
+          rows=[]
+          for batch in raw:
+              rows.extend(batch.get('results') or [])
+          tables=[r['name'] for r in rows if r.get('type')=='table']
+          views=[r['name'] for r in rows if r.get('type')=='view']
+          cfg='wrangler.intelligence-audit.jsonc'
+          def q(sql):
+              cp=subprocess.run(['npx','--yes','wrangler@4','d1','execute','AIDY_OPS','--remote','--json','--config',cfg,'--command',sql],capture_output=True,text=True,check=True)
+              payload=json.loads(cp.stdout)
+              out=[]
+              for b in payload:
+                  out.extend(b.get('results') or [])
+              return out
+          counts={}
+          columns={}
+          for name in tables:
+              safe=name.replace('"','""')
+              try:
+                  rr=q(f'SELECT COUNT(*) AS n FROM "{safe}"')
+                  counts[name]=int(rr[0]['n']) if rr else 0
+              except Exception as exc:
+                  counts[name]={'error':type(exc).__name__}
+              try:
+                  columns[name]=q(f'PRAGMA table_info("{safe}")')
+              except Exception as exc:
+                  columns[name]=[{'error':type(exc).__name__}]
+          report={'tables':tables,'views':views,'counts':counts,'columns':columns,'schema_rows':rows}
+          pathlib.Path('aidy-d1-inventory.json').write_text(json.dumps(report,sort_keys=True,indent=2),encoding='utf-8')
+          print('AIDY_D1_TABLES='+json.dumps(tables))
+          print('AIDY_D1_VIEWS='+json.dumps(views))
+          print('AIDY_D1_COUNTS='+json.dumps(counts,sort_keys=True))
+          PY
+      - name: Audit live evidence, memory, learning and forward-state tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib, subprocess
+          inventory=json.load(open('aidy-d1-inventory.json',encoding='utf-8'))
+          tables=set(inventory['tables'])
+          views=set(inventory['views'])
+          cfg='wrangler.intelligence-audit.jsonc'
+          def q(sql):
+              cp=subprocess.run(['npx','--yes','wrangler@4','d1','execute','AIDY_OPS','--remote','--json','--config',cfg,'--command',sql],capture_output=True,text=True,check=True)
+              payload=json.loads(cp.stdout)
+              out=[]
+              for b in payload:
+                  out.extend(b.get('results') or [])
+              return out
+          out={}
+          queries={
+            'snapshots': "SELECT capture_status,market_data_source,COUNT(*) AS n,MIN(captured_at) AS first_at,MAX(captured_at) AS last_at FROM market_snapshots GROUP BY capture_status,market_data_source ORDER BY n DESC",
+            'snapshots_recent': "SELECT id,captured_at,capture_status,market_data_source,session_code,archive_key FROM market_snapshots ORDER BY captured_at DESC LIMIT 20",
+            'candles': "SELECT source,timeframe,COUNT(*) AS n,MIN(open_time_utc) AS first_open,MAX(open_time_utc) AS last_open,MAX(first_observed_at) AS latest_observed FROM market_candles GROUP BY source,timeframe ORDER BY source,timeframe",
+            'twelve_requests': "SELECT request_kind,status,COUNT(*) AS n,MIN(requested_at_utc) AS first_request,MAX(requested_at_utc) AS last_request,SUM(COALESCE(credits_used,0)) AS credits FROM twelve_data_request_ledger GROUP BY request_kind,status ORDER BY request_kind,status",
+            'twelve_recent': "SELECT requested_at_utc,completed_at_utc,request_kind,status,error_code,outputsize,credits_used FROM twelve_data_request_ledger ORDER BY requested_at_utc DESC LIMIT 30",
+            'research_ledger': "SELECT record_type,COUNT(*) AS n,MIN(recorded_at_utc) AS first_at,MAX(recorded_at_utc) AS last_at FROM research_evidence_ledger GROUP BY record_type ORDER BY n DESC",
+            'research_recent': "SELECT sequence,record_type,recorded_at_utc,record_digest FROM research_evidence_ledger ORDER BY sequence DESC LIMIT 30",
+            'forward_cohorts': "SELECT cohort_id,cohort_version,accepted_code_head,activated_at_utc,state FROM aidy_forward_cohorts ORDER BY activated_at_utc DESC",
+            'forward_evals': "SELECT COUNT(*) AS n,MIN(evaluated_at_utc) AS first_at,MAX(evaluated_at_utc) AS last_at FROM aidy_forward_evaluations",
+            'forward_eval_states': "SELECT evaluation_status,COUNT(*) AS n FROM aidy_forward_evaluations GROUP BY evaluation_status ORDER BY n DESC",
+            'cycles': "SELECT status,COUNT(*) AS n,MIN(started_at_utc) AS first_at,MAX(started_at_utc) AS last_at FROM aidy_end_to_end_cycles GROUP BY status ORDER BY n DESC",
+            'publications': "SELECT status,COUNT(*) AS n,MIN(created_at_utc) AS first_at,MAX(created_at_utc) AS last_at FROM publication_ledger GROUP BY status ORDER BY n DESC",
+            'feed_observations': "SELECT access_status,COUNT(*) AS n,MIN(observed_at_utc) AS first_at,MAX(observed_at_utc) AS last_at FROM twelve_data_feed_observations GROUP BY access_status ORDER BY n DESC",
+            'bootstrap_runs': "SELECT state,COUNT(*) AS n,MIN(started_at_utc) AS first_at,MAX(started_at_utc) AS last_at FROM twelve_data_bootstrap_runs GROUP BY state ORDER BY n DESC",
+            'bootstrap_requests': "SELECT state,COUNT(*) AS n,SUM(required_m1_minutes) AS required_minutes,SUM(persisted_m1_minutes) AS persisted_minutes FROM twelve_data_bootstrap_requests GROUP BY state ORDER BY n DESC",
+          }
+          dependencies={
+            'snapshots':{'market_snapshots'},'snapshots_recent':{'market_snapshots'},'candles':{'market_candles'},
+            'twelve_requests':{'twelve_data_request_ledger'},'twelve_recent':{'twelve_data_request_ledger'},
+            'research_ledger':{'research_evidence_ledger'},'research_recent':{'research_evidence_ledger'},
+            'forward_cohorts':{'aidy_forward_cohorts'},'forward_evals':{'aidy_forward_evaluations'},'forward_eval_states':{'aidy_forward_evaluations'},
+            'cycles':{'aidy_end_to_end_cycles'},'publications':{'publication_ledger'},'feed_observations':{'twelve_data_feed_observations'},
+            'bootstrap_runs':{'twelve_data_bootstrap_runs'},'bootstrap_requests':{'twelve_data_bootstrap_requests'},
+          }
+          for name,sql in queries.items():
+              if dependencies[name] <= tables:
+                  try: out[name]=q(sql)
+                  except Exception as exc: out[name]={'error':type(exc).__name__,'message':str(exc)[:300]}
+          # Generic audit of likely intelligence/memory/evaluation tables not covered above.
+          interesting=[t for t in sorted(tables) if any(k in t.lower() for k in ('decision','evaluation','outcome','trial','case','analogue','regime','feature','context','macro','event','memory','ledger','archive','episode','paper','watch','flow','vwap','volatility','rate','inflation','cme'))]
+          out['interesting_table_counts']={t:inventory['counts'].get(t) for t in interesting}
+          pathlib.Path('aidy-live-intelligence.json').write_text(json.dumps(out,sort_keys=True,indent=2),encoding='utf-8')
+          print('AIDY_LIVE_INTELLIGENCE='+json.dumps(out,sort_keys=True))
+          PY
+      - name: Record current Worker schedules and public health
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/schedules" \
+            > aidy-worker-schedules.json
+          curl -fsS "https://aidy-signals-test.dannythehat2.workers.dev/health" > aidy-worker-health.json
+          echo 'AIDY_WORKER_SCHEDULES='$(cat aidy-worker-schedules.json)
+          echo 'AIDY_WORKER_HEALTH='$(cat aidy-worker-health.json)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aidy-intelligence-audit-${{ github.sha }}
+          path: |
+            aidy-d1-inventory.json
+            aidy-live-intelligence.json
+            aidy-worker-schedules.json
+            aidy-worker-health.json
+          if-no-files-found: error
+          retention-days: 30
