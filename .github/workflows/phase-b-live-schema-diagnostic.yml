@@ -41,7 +41,7 @@ jobs:
           cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
           json.dump(cfg,open('wrangler.phase-b-diagnostic.jsonc','w',encoding='utf-8'),indent=2)
           PY
-      - name: Read migration ledger and memory schema
+      - name: Read exact live Phase B state
         shell: bash
         run: |
           set -euo pipefail
@@ -49,17 +49,25 @@ jobs:
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
             --config wrangler.phase-b-diagnostic.jsonc \
             --command "SELECT id,name,applied_at FROM d1_migrations ORDER BY id DESC LIMIT 25;"
-          echo '=== MEMORY OBJECTS ==='
+          echo '=== PHASE B OBJECTS ==='
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
             --config wrangler.phase-b-diagnostic.jsonc \
-            --command "SELECT name,type,sql FROM sqlite_master WHERE lower(name) LIKE '%memory%' OR lower(name) LIKE '%episode%' ORDER BY type,name;"
-          for table in aidy_memory_episodes aidy_memory_outcomes aidy_memory_lessons aidy_memory_retrieval_events; do
+            --command "SELECT name,type,sql FROM sqlite_master WHERE lower(name) LIKE '%memory%' OR lower(name) LIKE '%episode%' OR lower(name) LIKE '%learning%' ORDER BY type,name;"
+          for table in aidy_memory_episodes aidy_memory_outcomes aidy_learning_cards aidy_memory_lessons aidy_memory_retrieval_events; do
             echo "=== TABLE ${table} ==="
             npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
               --config wrangler.phase-b-diagnostic.jsonc \
               --command "SELECT name FROM sqlite_master WHERE type='table' AND name='${table}'; PRAGMA table_info(${table});" || true
           done
-          echo '=== MEMORY COUNTS (objects that exist only) ==='
+          echo '=== COUNTS ==='
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
             --config wrangler.phase-b-diagnostic.jsonc \
-            --command "SELECT (SELECT COUNT(*) FROM aidy_forward_evaluations) AS forward_evaluations,(SELECT COUNT(*) FROM aidy_forward_outcomes) AS forward_outcomes;" 
+            --command "SELECT (SELECT COUNT(*) FROM aidy_forward_evaluations) AS forward_evaluations,(SELECT COUNT(*) FROM aidy_forward_outcomes) AS forward_outcomes,(SELECT COUNT(*) FROM aidy_memory_episodes) AS memory_episodes,(SELECT COUNT(*) FROM aidy_memory_outcomes) AS memory_outcomes,(SELECT COUNT(*) FROM aidy_learning_cards) AS learning_cards;"
+          echo '=== EPISODE SAMPLE ==='
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-diagnostic.jsonc \
+            --command "SELECT memory_episode_id,source_cycle_id,source_state,forward_record_id,cohort_id,evaluation_id,decision_id,ex_ante_digest,evaluated_at_utc,disposition,decision_action,direction,recorded_at_utc FROM aidy_memory_episodes ORDER BY recorded_at_utc DESC LIMIT 5;"
+          echo '=== OUTCOME/CARD SAMPLE ==='
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-diagnostic.jsonc \
+            --command "SELECT memory_outcome_id,memory_episode_id,source_attachment_id,source_outcome_type,outcome_state,score_eligible,attached_at_utc,recorded_at_utc FROM aidy_memory_outcomes ORDER BY recorded_at_utc DESC LIMIT 5; SELECT card_id,memory_episode_id,memory_outcome_id,available_at_utc,outcome_class,thesis_class,realized_r,score_eligible,created_at_utc FROM aidy_learning_cards ORDER BY created_at_utc DESC LIMIT 5;" || true
