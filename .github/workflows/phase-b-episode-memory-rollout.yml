@@ -1,0 +1,256 @@
+name: Phase B Episode Memory Rollout
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-b-episode-memory-20260913]
+    paths:
+      - "migrations/d1/0019_aidy_episode_memory.sql"
+      - "src/aidy/episode_memory.py"
+      - "src/aidy/episode_memory_runtime.py"
+      - "src/aidy/provider_decision_memory_api.py"
+      - "src/provider_entry.py"
+      - "tests/test_phase_b_episode_memory.py"
+      - "tests/test_phase_b_episode_memory_runtime.py"
+      - ".github/workflows/phase-b-episode-memory-rollout.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: phase-b-episode-memory-rollout
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  AIDY_WORKER_NAME: aidy-signals-test
+
+jobs:
+  deploy-and-prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test exact Phase B rollout head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python -m compileall -q src tests
+          uv run pytest -q
+
+      - name: Build canonical production config
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          expected=['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          assert cfg['name']==os.environ['AIDY_WORKER_NAME']
+          assert cfg['main']=='src/provider_entry.py'
+          assert cfg['triggers']['crons']==expected
+          assert cfg['queues']['consumers']==[]
+          settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+          assert settings.capture_enabled is True
+          assert settings.market_data_source=='twelve_data'
+          assert settings.market_data_ownership=='public_independent'
+          json.dump(cfg, open('wrangler.phase-b.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Record source-memory baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b.live.jsonc \
+            --command "SELECT COUNT(*) AS ex_ante_cycles FROM aidy_end_to_end_cycles WHERE ex_ante_json IS NOT NULL AND ex_ante_digest IS NOT NULL;" \
+            > /tmp/source-baseline.json
+          python - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/source-baseline.json',encoding='utf-8'))
+          rows=[]
+          for batch in p: rows.extend(batch.get('results') or [])
+          assert rows,rows
+          n=int(rows[0].get('ex_ante_cycles') or 0)
+          print('source_ex_ante_cycles='+str(n))
+          with open(os.environ['GITHUB_ENV'],'a',encoding='utf-8') as f:
+              f.write('SOURCE_EX_ANTE_CYCLES='+str(n)+'\n')
+          PY
+
+      - name: Apply permanent memory migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.phase-b.live.jsonc
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b.live.jsonc \
+            --command "SELECT name,type FROM sqlite_master WHERE name IN ('aidy_memory_episodes','aidy_memory_outcomes','aidy_learning_cards') ORDER BY name;" \
+            > /tmp/phase-b-schema.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/phase-b-schema.json',encoding='utf-8'))
+          rows=[]
+          for batch in p: rows.extend(batch.get('results') or [])
+          actual={r.get('name') for r in rows if r.get('type')=='table'}
+          expected={'aidy_memory_episodes','aidy_memory_outcomes','aidy_learning_cards'}
+          assert expected <= actual,(actual,rows)
+          print('phase_b_schema=PASS')
+          PY
+
+      - name: Deploy Phase B Worker preserving secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYED_AT_UTC="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "DEPLOYED_AT_UTC=${DEPLOYED_AT_UTC}" >> "$GITHUB_ENV"
+          cp wrangler.phase-b.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+      - name: Prove health and protected memory route
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code="$(curl -sS -o /tmp/health.json -w '%{http_code}' \
+              -H 'Cache-Control: no-cache' \
+              "${AIDY_TEST_WORKER_URL}/health?phase_b=${GITHUB_SHA}-${attempt}" || true)"
+            if [ "$code" = "200" ] && python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          assert h.get('status') in {'ok','degraded'},h
+          assert h.get('capture_enabled') is True,h
+          assert h.get('market_data_source')=='twelve_data',h
+          assert h.get('scheduler')=='direct-cron',h
+          assert isinstance(h.get('data_health'),dict),h
+          PY
+            then break; fi
+            test "$attempt" -lt 30
+            sleep 3
+          done
+          cat /tmp/health.json
+          code="$(curl -sS -o /tmp/memory-unauth.txt -w '%{http_code}' \
+            "${AIDY_TEST_WORKER_URL}/provider/decision-memory?limit=5")"
+          echo "provider_decision_memory_unauth_status=${code}"
+          cat /tmp/memory-unauth.txt
+          test "$code" = "401"
+
+      - name: Prove Cron ran Phase B and memory backfill is durable
+        shell: bash
+        run: |
+          set -euo pipefail
+          found_cron=0
+          found_memory=0
+          for attempt in $(seq 1 24); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.phase-b.live.jsonc \
+              --command "SELECT COUNT(*) AS cron_health FROM aidy_data_health_events WHERE observed_at_utc>='${DEPLOYED_AT_UTC}' AND scheduler='direct-cron'; SELECT COUNT(*) AS episodes FROM aidy_memory_episodes;" \
+              > /tmp/phase-b-live.json
+            if python - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/phase-b-live.json',encoding='utf-8'))
+          batches=[b.get('results') or [] for b in p]
+          cron=int((batches[0][0] if len(batches)>0 and batches[0] else {}).get('cron_health') or 0)
+          episodes=int((batches[1][0] if len(batches)>1 and batches[1] else {}).get('episodes') or 0)
+          source=int(os.environ.get('SOURCE_EX_ANTE_CYCLES','0'))
+          print({'cron_health':cron,'episodes':episodes,'source_ex_ante_cycles':source})
+          ok=cron>0 and (source==0 or episodes>0)
+          raise SystemExit(0 if ok else 1)
+          PY
+            then found_cron=1; found_memory=1; break; fi
+            sleep 15
+          done
+          test "$found_cron" -eq 1
+          test "$found_memory" -eq 1
+          cat /tmp/phase-b-live.json
+
+      - name: Prove immutable no-hindsight memory invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b.live.jsonc \
+            --command "SELECT COUNT(*) AS episodes,COALESCE(SUM(future_outcome_fields_present),0) AS future_fields,COALESCE(SUM(broker_or_account_state_used),0) AS broker_state,COALESCE(SUM(follower_state_used),0) AS follower_state,COALESCE(SUM(super_signals_used),0) AS super_signals,COALESCE(SUM(live_money_execution_used),0) AS live_money FROM aidy_memory_episodes; SELECT COUNT(*) AS outcomes,COALESCE(SUM(score_eligible),0) AS score_eligible FROM aidy_memory_outcomes; SELECT COUNT(*) AS cards,COALESCE(SUM(hidden_reasoning_stored),0) AS hidden_reasoning,COALESCE(SUM(same_episode_retrieval_allowed),0) AS same_episode FROM aidy_learning_cards;" \
+            > /tmp/phase-b-invariants.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/phase-b-invariants.json',encoding='utf-8'))
+          batches=[b.get('results') or [] for b in p]
+          e=batches[0][0]
+          o=batches[1][0]
+          c=batches[2][0]
+          assert int(e.get('future_fields') or 0)==0,e
+          assert int(e.get('broker_state') or 0)==0,e
+          assert int(e.get('follower_state') or 0)==0,e
+          assert int(e.get('super_signals') or 0)==0,e
+          assert int(e.get('live_money') or 0)==0,e
+          assert int(c.get('hidden_reasoning') or 0)==0,c
+          assert int(c.get('same_episode') or 0)==0,c
+          print('phase_b_invariants=PASS',{'episodes':e.get('episodes'),'outcomes':o.get('outcomes'),'cards':c.get('cards')})
+          PY
+          cat /tmp/phase-b-invariants.json
+
+      - name: Prove direct Cron schedules survived deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${AIDY_WORKER_NAME}/schedules" \
+            > /tmp/schedules.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/schedules.json',encoding='utf-8'))
+          assert p.get('success') is True,p
+          result=p.get('result') or {}
+          rows=result.get('schedules') if isinstance(result,dict) else result
+          actual=set()
+          for row in rows or []:
+              if isinstance(row,str): actual.add(row)
+              elif isinstance(row,dict) and row.get('cron'): actual.add(str(row['cron']))
+          expected={'*/2 * * * *','5,15,25,35,45,55 * * * *'}
+          assert expected <= actual,(actual,p)
+          print('direct_crons=PASS '+','.join(sorted(actual)))
+          PY
+
+      - name: Print live Phase B evidence summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b.live.jsonc \
+            --command "SELECT source_state,disposition,COUNT(*) AS episodes,MAX(evaluated_at_utc) AS latest FROM aidy_memory_episodes GROUP BY source_state,disposition ORDER BY source_state,disposition; SELECT outcome_state,score_eligible,COUNT(*) AS outcomes FROM aidy_memory_outcomes GROUP BY outcome_state,score_eligible ORDER BY outcome_state,score_eligible; SELECT outcome_class,score_eligible,COUNT(*) AS cards FROM aidy_learning_cards GROUP BY outcome_class,score_eligible ORDER BY outcome_class,score_eligible;" \
+            | tee /tmp/phase-b-summary.json
