@@ -133,9 +133,10 @@ class Default(CoreDefault):
     async def scheduled(self, controller, env, ctx):
         """Run capture directly from Cloudflare Cron without Queue operations.
 
-        The mature queue consumer remains the single capture implementation. This
-        adapter reuses it in-process, eliminating Queue write/read/delete usage and
-        stale-backlog risk while preserving exactly the same recorder semantics.
+        Cloudflare's Python scheduled ABI can pass ``env`` as None; bindings live on
+        ``self.env`` just as the core queue consumer already expects.  Always use
+        the bound Worker environment for telemetry so a successful capture also
+        leaves a durable point-in-time health observation.
         """
         message = _DirectCronMessage(
             scheduled_time=controller.scheduledTime,
@@ -144,7 +145,7 @@ class Default(CoreDefault):
         try:
             await super().queue(_DirectCronBatch(message), env, ctx)
         finally:
-            await _record_health_best_effort(env, scheduler="direct-cron")
+            await _record_health_best_effort(self.env, scheduler="direct-cron")
         if not message.acked:
             raise RuntimeError("aidy_direct_cron_capture_not_acknowledged")
 
@@ -153,4 +154,4 @@ class Default(CoreDefault):
         try:
             return await super().queue(batch, env, ctx)
         finally:
-            await _record_health_best_effort(env, scheduler="queue-consumer")
+            await _record_health_best_effort(self.env, scheduler="queue-consumer")
