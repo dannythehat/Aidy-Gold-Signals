@@ -5,6 +5,7 @@ from pathlib import Path
 
 from aidy.episode_memory_runtime import (
     _context_reference_price,
+    _enriched_episode_payload,
     _shadow_resolution_record,
 )
 
@@ -49,6 +50,56 @@ def test_missing_context_mid_fails_closed_instead_of_using_future_bar() -> None:
     resolver = _shadow_resolution_record(record)
     assert _context_reference_price(record) is None
     assert resolver["decision"]["market_reference_price"] is None
+
+
+def test_episode_memory_preserves_setup_regime_and_confidence_without_future_fields() -> None:
+    record = _no_trade_record()
+    record.update(
+        {
+            "evaluation_id": "aidy_eval_fixture",
+            "decision_id": "aidy_dec_fixture",
+            "ex_ante_digest": "a" * 64,
+            "evaluated_at_utc": "2026-09-10T12:00:30+00:00",
+            "context_hash": "b" * 64,
+            "cycle_disposition": "no_trade",
+            "data_quality_flags": {"state": "known_good"},
+            "reproducibility_bundle": {
+                "evidence_grade": "exploratory",
+                "effective_n": 14,
+                "strategy_version": "strategy-v1",
+                "config_version": "config-v1",
+                "model_id": "model-v1",
+                "analogue_case_ids": ["case-a", "case-b"],
+                "regime_state": {"trend_structure": "uptrend", "volatility_band": "normal"},
+                "setup_state": {"candidate_setup_ids": ["trend_pullback_long"]},
+                "selective_layer_state": {"state": "shadow_only"},
+                "analogue_retrieval_version": "retrieval-v1",
+                "analogue_retrieval_digest": "c" * 64,
+            },
+        }
+    )
+    record["decision"].update(
+        {
+            "confidence": 0.71,
+            "setup_codes": ["trend_pullback_long"],
+            "reason_codes": ["evidence_insufficient"],
+            "decision_summary": "AIDY abstained while retaining a falsifiable bullish shadow.",
+            "valid_until_utc": "2026-09-10T12:15:30+00:00",
+            "entry_type": None,
+        }
+    )
+    payload = _enriched_episode_payload(
+        cycle={"cycle_id": "cycle-1", "source_state": "private_forward"},
+        ex_ante=record,
+        forward={"record_id": "fwd-1", "cohort_id": "cohort-1"},
+    )
+    assert payload["decision"]["confidence"] == 0.71
+    assert payload["decision"]["setup_codes"] == ["trend_pullback_long"]
+    assert payload["evidence"]["regime_state"]["trend_structure"] == "uptrend"
+    assert payload["evidence"]["setup_state"]["candidate_setup_ids"] == ["trend_pullback_long"]
+    assert payload["context_summary"]["market_mid"] == "4375.250000"
+    assert payload["future_outcome_fields_present"] is False
+    assert payload["hidden_reasoning_stored"] is False
 
 
 def test_runtime_filters_only_matured_bounded_horizons_and_worker_uses_bound_env() -> None:
