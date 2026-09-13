@@ -1,6 +1,6 @@
 -- AIDY Hub Phase A: durable point-in-time data-health history.
 --
--- This table is deliberately append-only.  It records what the production worker
+-- This table is deliberately append-only. It records what the production worker
 -- could prove about its inputs at a particular observation time so the future Hub
 -- can reconstruct whether AIDY's brain was genuinely fresh at any point in time.
 
@@ -35,12 +35,14 @@ CREATE TABLE IF NOT EXISTS aidy_data_health_events (
     archive_pending_count INTEGER NOT NULL DEFAULT 0 CHECK (archive_pending_count >= 0),
     archive_backoff_count INTEGER NOT NULL DEFAULT 0 CHECK (archive_backoff_count >= 0),
     archive_dead_letter_count INTEGER NOT NULL DEFAULT 0 CHECK (archive_dead_letter_count >= 0),
+    oldest_archive_unarchived_utc TEXT,
     cross_market_archive_pending_count INTEGER NOT NULL DEFAULT 0
         CHECK (cross_market_archive_pending_count >= 0),
     cross_market_archive_backoff_count INTEGER NOT NULL DEFAULT 0
         CHECK (cross_market_archive_backoff_count >= 0),
     cross_market_archive_dead_letter_count INTEGER NOT NULL DEFAULT 0
         CHECK (cross_market_archive_dead_letter_count >= 0),
+    oldest_cross_market_archive_unarchived_utc TEXT,
     latest_cross_market_first_observed_at TEXT,
     latest_macro_event_first_observed_at TEXT,
     reason TEXT NOT NULL,
