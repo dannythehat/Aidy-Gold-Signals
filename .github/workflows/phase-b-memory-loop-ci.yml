@@ -1,0 +1,46 @@
+name: Phase B Memory Loop CI
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-b-memory-loop-20260913]
+    paths:
+      - "migrations/d1/0018_aidy_episode_memory.sql"
+      - "src/aidy/episode_memory.py"
+      - "src/aidy/provider_memory_api.py"
+      - "src/provider_entry.py"
+      - "tests/test_aidy_episode_memory.py"
+      - ".github/workflows/phase-b-memory-loop-ci.yml"
+      - ".github/workflows/phase-b-memory-loop-rollout.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+      - name: Compile and focused Phase B tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python -m compileall -q src/aidy/episode_memory.py src/aidy/provider_memory_api.py src/provider_entry.py
+          uv run pytest -q tests/test_aidy_episode_memory.py
+      - name: Full AIDY regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q
