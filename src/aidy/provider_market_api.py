@@ -111,28 +111,39 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
         )
 
     cutoff = end.isoformat()
-    result = await env.AIDY_OPS.prepare(
-        """
-        SELECT open_time_utc,open,high,low,close,revision_index,first_observed_at,payload_digest
-        FROM twelve_data_decision_admitted_m1_v1
-        WHERE open_time_utc>=? AND open_time_utc<? AND first_observed_at<=?
-        ORDER BY open_time_utc,revision_index
-        LIMIT ?
-        """
-    ).bind(start.isoformat(), cutoff, cutoff, MAX_M1_ROWS + 1).all()
-    rows = _results(result)
+    try:
+        result = await env.AIDY_OPS.prepare(
+            """
+            SELECT open_time_utc,open,high,low,close,revision_index,first_observed_at,payload_digest
+            FROM twelve_data_decision_admitted_m1_v1
+            WHERE open_time_utc>=? AND open_time_utc<? AND first_observed_at<=?
+            ORDER BY open_time_utc,revision_index
+            LIMIT ?
+            """
+        ).bind(start.isoformat(), cutoff, cutoff, MAX_M1_ROWS + 1).all()
+        rows = _results(result)
+    except Exception as exc:  # noqa: BLE001 - authenticated endpoint must fail closed, not raw 500
+        return Response.json(
+            {
+                "ok": False,
+                "error": "market_evidence_store_unavailable",
+                "exception_type": type(exc).__name__,
+                "message": str(exc)[:500],
+            },
+            status=503,
+        )
     if len(rows) > MAX_M1_ROWS:
         return Response.json(
             {"ok": False, "error": "m1_row_bound_exceeded", "max_rows": MAX_M1_ROWS},
             status=413,
         )
 
-    selected = _latest_revisions(rows)
-    expected = [value.isoformat() for value in expected_market_minute_opens(start, end)]
-    expected_set = set(expected)
-    bars: list[dict[str, str | int]] = []
-    actual: set[str] = set()
     try:
+        selected = _latest_revisions(rows)
+        expected = [value.isoformat() for value in expected_market_minute_opens(start, end)]
+        expected_set = set(expected)
+        bars: list[dict[str, str | int]] = []
+        actual: set[str] = set()
         for row in selected:
             opened = _utc_iso(str(row["open_time_utc"]), name="open_time_utc").isoformat()
             if opened not in expected_set:

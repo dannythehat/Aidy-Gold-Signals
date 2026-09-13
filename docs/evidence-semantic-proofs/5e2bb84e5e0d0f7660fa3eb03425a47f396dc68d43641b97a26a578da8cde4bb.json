@@ -1,0 +1,23 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "7cb2171d2978f409cf94ec428d6609797c208764",
+  "base_sha": "94516b1e0cca24e5d9d8a9ee617dfaca4594b97d",
+  "protected_diff_sha256": "5e2bb84e5e0d0f7660fa3eb03425a47f396dc68d43641b97a26a578da8cde4bb",
+  "classification": "transport-only",
+  "cohort_action": "preserve",
+  "preserve_existing_cohort": true,
+  "reason": "The repair only aligns setup-detector validation with AIDY's existing PIT safety convention: explicit future_derived=false and evaluation_only=false sentinels are accepted, while true values and all outcome/future fields remain rejected. It does not change evidence contents, setup definitions, observations, candidate scoring, risk geometry, or decision semantics.",
+  "deterministic_equivalence_proof": {
+    "invariants": [
+      "setup detection still rejects future_derived=true and evaluation_only=true at every nesting level",
+      "explicit future_derived=false and evaluation_only=false are treated only as PIT safety sentinels and do not add or alter market evidence",
+      "setup definitions, observations, risk geometry, candidate scoring, and no-hindsight outcome-key rejection are unchanged"
+    ],
+    "test_commands": [
+      "uv run pytest -q tests/test_context_extension_hindsight_compat_20260913.py",
+      "uv run pytest -q"
+    ],
+    "result": "pass",
+    "evidence_digest": "fc624476fb7bb87a1e3723afda97b6aa6f18dd130825b5bbe4f337ee4a5cdea7"
+  }
+}
