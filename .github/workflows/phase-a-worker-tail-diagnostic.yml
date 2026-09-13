@@ -1,0 +1,47 @@
+name: Phase A Worker Tail Diagnostic
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-a-data-health-20260913]
+    paths:
+      - ".github/workflows/phase-a-worker-tail-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tail:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Tail next production Cron event
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          json.dump(cfg,open('wrangler.tail.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+          set +e
+          timeout 105s npx --yes wrangler@4 tail aidy-signals-test \
+            --format json --config wrangler.tail.jsonc > /tmp/tail.log 2>&1
+          rc=$?
+          set -e
+          cat /tmp/tail.log
+          if grep -q "AIDY data-health telemetry failed" /tmp/tail.log; then
+            echo "telemetry_failure_observed=YES"
+          else
+            echo "telemetry_failure_observed=NO_OR_NOT_IN_WINDOW"
+          fi
+          test "$rc" -eq 0 -o "$rc" -eq 124
