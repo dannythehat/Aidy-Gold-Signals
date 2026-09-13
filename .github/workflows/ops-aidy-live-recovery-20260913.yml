@@ -191,9 +191,16 @@ jobs:
           import json
           p=json.load(open('/tmp/schedules.json',encoding='utf-8'))
           assert p.get('success') is True,p
-          actual={str(row.get('cron')) for row in (p.get('result') or [])}
+          actual=set()
+          for row in (p.get('result') or []):
+              if isinstance(row, str):
+                  actual.add(row)
+              elif isinstance(row, dict):
+                  cron=str(row.get('cron') or '').strip()
+                  if cron:
+                      actual.add(cron)
           expected={'*/2 * * * *','5,15,25,35,45,55 * * * *'}
-          assert expected <= actual,(actual,expected)
+          assert expected <= actual,(actual,expected,p)
           print('direct_cron_schedules=PASS '+','.join(sorted(actual)))
           PY
 
