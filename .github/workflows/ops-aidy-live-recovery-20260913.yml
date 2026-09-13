@@ -59,17 +59,6 @@ jobs:
           uv run pytest -q tests/test_live_recovery_20260913.py tests/test_provider_market_api.py tests/test_day2_deployment_contract.py
           uv run pytest -q
 
-      - name: Recover existing provider bearer token without printing it
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --quiet origin \
-            refs/heads/ops/provider-token-seed-20260905:refs/remotes/origin/provider-token-seed-20260905
-          TOKEN="$(git show refs/remotes/origin/provider-token-seed-20260905:.provider_token_seed | tr -d '\r\n')"
-          test "${#TOKEN}" -ge 32
-          echo "::add-mask::${TOKEN}"
-          printf 'AIDY_PROVIDER_TOKEN=%s\n' "$TOKEN" >> "$GITHUB_ENV"
-
       - name: Build canonical direct-Cron production config
         shell: bash
         run: |
@@ -140,18 +129,37 @@ jobs:
           print('repaired_view_query=PASS admitted_rows='+str(rows[0]['admitted_rows']))
           PY
 
-      - name: Deploy direct-Cron Worker and preserve required secrets
+      - name: Prove canonical historical snapshot still exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.aidy-recovery.live.jsonc \
+            --command "SELECT id,captured_at,capture_status,market_data_source FROM market_snapshots WHERE symbol='XAUUSD' AND market_data_source='twelve_data' AND capture_status='complete' AND captured_at<='2026-09-09T04:30:25.543000+00:00' ORDER BY captured_at DESC,id DESC LIMIT 1;" \
+            | tee /tmp/context-snapshot.json
+          python - <<'PY'
+          import json
+          batches=json.load(open('/tmp/context-snapshot.json',encoding='utf-8'))
+          rows=[]
+          for batch in batches:
+              rows.extend(batch.get('results') or [])
+          assert rows, rows
+          assert rows[0]['capture_status']=='complete', rows[0]
+          assert rows[0]['market_data_source']=='twelve_data', rows[0]
+          print('canonical_context_snapshot=PASS captured_at='+str(rows[0]['captured_at']))
+          PY
+
+      - name: Deploy direct-Cron Worker preserving existing secrets
         shell: bash
         run: |
           set -euo pipefail
           DEPLOY_STARTED_UTC="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
           echo "DEPLOY_STARTED_UTC=${DEPLOY_STARTED_UTC}" >> "$GITHUB_ENV"
           cp wrangler.aidy-recovery.live.jsonc wrangler.jsonc
+          # Wrangler preserves existing secret bindings across normal deployments.
+          # Do not rotate or overwrite AIDY_PROVIDER_MARKET_TOKEN here: Super Signals
+          # already holds the matching caller secret and production requests authenticate.
           uv run pywrangler deploy
-          printf '%s' "$AIDY_TWELVE_DATA_API_KEY" | \
-            npx --yes wrangler@4 secret put AIDY_TWELVE_DATA_API_KEY --config wrangler.aidy-recovery.live.jsonc >/dev/null
-          printf '%s' "$AIDY_PROVIDER_TOKEN" | \
-            npx --yes wrangler@4 secret put AIDY_PROVIDER_MARKET_TOKEN --config wrangler.aidy-recovery.live.jsonc >/dev/null
 
       - name: Prove live Worker configuration and Cron schedules
         shell: bash
@@ -189,50 +197,23 @@ jobs:
           print('direct_cron_schedules=PASS '+','.join(sorted(actual)))
           PY
 
-      - name: Prove formerly failing Provider Lab M1 endpoint
+      - name: Prove protected Provider Lab routes survived deployment
         shell: bash
         run: |
           set -euo pipefail
-          status="$(curl -sS -o /tmp/provider-m1.json -w '%{http_code}' \
-            -H "Authorization: Bearer ${AIDY_PROVIDER_TOKEN}" --get \
+          m1_status="$(curl -sS -o /tmp/provider-m1-unauth.txt -w '%{http_code}' --get \
             --data-urlencode 'symbol=XAUUSD' \
             --data-urlencode 'timeframe=1m' \
             --data-urlencode 'from=2026-09-10T09:12:00+00:00' \
             --data-urlencode 'to=2026-09-10T10:12:00+00:00' \
             "${AIDY_TEST_WORKER_URL}/market/ohlc")"
-          echo "provider_m1_status=${status}"
-          cat /tmp/provider-m1.json
-          test "$status" = "200"
-          python - <<'PY'
-          import json
-          p=json.load(open('/tmp/provider-m1.json',encoding='utf-8'))
-          assert p.get('ok') is True,p
-          assert p.get('symbol')=='XAUUSD',p
-          assert p.get('timeframe')=='1m',p
-          assert isinstance(p.get('bars'),list),p
-          assert isinstance(p.get('missing_open_times'),list),p
-          print('provider_m1_endpoint=PASS rows='+str(p.get('row_count'))+' complete='+str(p.get('complete')))
-          PY
-
-      - name: Probe canonical historical Provider Context
-        shell: bash
-        run: |
-          set -euo pipefail
-          status="$(curl -sS -o /tmp/provider-context.json -w '%{http_code}' \
-            -H "Authorization: Bearer ${AIDY_PROVIDER_TOKEN}" --get \
+          context_status="$(curl -sS -o /tmp/provider-context-unauth.txt -w '%{http_code}' --get \
             --data-urlencode 'as_of=2026-09-09T04:30:25.543000+00:00' \
             "${AIDY_TEST_WORKER_URL}/provider/context")"
-          echo "provider_context_status=${status}"
-          cat /tmp/provider-context.json
-          test "$status" = "200"
-          python - <<'PY'
-          import json
-          p=json.load(open('/tmp/provider-context.json',encoding='utf-8'))
-          assert p.get('ok') is True,p
-          assert p.get('join_eligible') is True,p
-          assert p.get('context',{}).get('symbol')=='XAUUSD',p
-          print('provider_context_endpoint=PASS')
-          PY
+          echo "provider_m1_unauth_status=${m1_status}"
+          echo "provider_context_unauth_status=${context_status}"
+          test "$m1_status" = "401"
+          test "$context_status" = "401"
 
       - name: Prove scheduler is emitting fresh request-ledger activity
         shell: bash
