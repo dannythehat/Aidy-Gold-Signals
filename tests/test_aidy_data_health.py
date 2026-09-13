@@ -246,3 +246,7 @@ def test_phase_a_migration_and_production_entry_are_point_in_time_safe() -> None
     assert 'path == "/provider/data-health"' in entry
     assert '"scheduler": "direct-cron"' in entry
     assert "collect_and_record_data_health" in entry
+    # Cloudflare's Python scheduled ABI passes env=None in production; bindings are on self.env.
+    assert 'await _record_health_best_effort(self.env, scheduler="direct-cron")' in entry
+    assert 'await _record_health_best_effort(self.env, scheduler="queue-consumer")' in entry
+    assert 'await _record_health_best_effort(env, scheduler="direct-cron")' not in entry
