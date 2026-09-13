@@ -1,0 +1,65 @@
+name: Phase B Live Schema Diagnostic
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-b-memory-loop-20260913]
+    paths:
+      - ".github/workflows/phase-b-live-schema-diagnostic.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build diagnostic Wrangler config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          json.dump(cfg,open('wrangler.phase-b-diagnostic.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+      - name: Read migration ledger and memory schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== D1 MIGRATIONS ==='
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-diagnostic.jsonc \
+            --command "SELECT id,name,applied_at FROM d1_migrations ORDER BY id DESC LIMIT 25;"
+          echo '=== MEMORY OBJECTS ==='
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-diagnostic.jsonc \
+            --command "SELECT name,type,sql FROM sqlite_master WHERE lower(name) LIKE '%memory%' OR lower(name) LIKE '%episode%' ORDER BY type,name;"
+          for table in aidy_memory_episodes aidy_memory_outcomes aidy_memory_lessons aidy_memory_retrieval_events; do
+            echo "=== TABLE ${table} ==="
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.phase-b-diagnostic.jsonc \
+              --command "SELECT name FROM sqlite_master WHERE type='table' AND name='${table}'; PRAGMA table_info(${table});" || true
+          done
+          echo '=== MEMORY COUNTS (objects that exist only) ==='
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-diagnostic.jsonc \
+            --command "SELECT (SELECT COUNT(*) FROM aidy_forward_evaluations) AS forward_evaluations,(SELECT COUNT(*) FROM aidy_forward_outcomes) AS forward_outcomes;" 
