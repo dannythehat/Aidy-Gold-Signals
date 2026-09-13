@@ -1,0 +1,404 @@
+name: Phase B Guarded Forward Restart
+
+on:
+  push:
+    branches: [feature/aidy-phase-b-forward-restart-20260913]
+    paths:
+      - "migrations/d1/0020_phase_b_forward_restart_guard.sql"
+      - ".github/workflows/phase-b-forward-restart.yml"
+      - "tests/test_phase_b_forward_restart_guard.py"
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: aidy-phase-b-forward-restart
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  AIDY_WORKER_NAME: aidy-signals-test
+  AIDY_COHORT_VERSION: aidy_formal_forward_cohort_v2_immediate_start
+  AIDY_RESTART_CAMPAIGN: aidy_phase_b_repaired_forward_restart_20260913
+
+jobs:
+  acceptance:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Full regression and restart guard checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python -m compileall -q src scripts tests
+          uv run pytest -q tests/test_phase_b_forward_restart_guard.py
+          uv run pytest -q
+
+  activate-or-prove:
+    if: github.event_name != 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout exact protected-main head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build direct-Cron D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          assert cfg['main']=='src/provider_entry.py'
+          assert cfg['triggers']['crons']==['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          assert cfg['queues']['consumers']==[]
+          json.dump(cfg,open('wrangler.phase-b-restart.off.jsonc','w',encoding='utf-8'),indent=2)
+          on=json.loads(json.dumps(cfg))
+          on['vars']['AIDY_FORMAL_FORWARD_ENABLED']='true'
+          json.dump(on,open('wrangler.phase-b-restart.on.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Apply restart guard migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.phase-b-restart.off.jsonc
+
+      - name: Read restart campaign state
+        id: campaign
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-restart.off.jsonc \
+            --command "SELECT campaign_id,target_code_head,activated_cohort_id,activated_at_utc,acceptance_state,first_forward_record_id,first_model_resolved_at_utc FROM aidy_forward_restart_runs WHERE campaign_id='${AIDY_RESTART_CAMPAIGN}' LIMIT 1;" \
+            > /tmp/campaign.json
+          python - <<'PY'
+          import json, os
+          batches=json.load(open('/tmp/campaign.json',encoding='utf-8'))
+          rows=[]
+          for batch in batches: rows.extend(batch.get('results') or [])
+          exists=bool(rows)
+          state='' if not rows else str(rows[0].get('acceptance_state') or '')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f:
+              f.write('exists='+('true' if exists else 'false')+'\n')
+              f.write('state='+state+'\n')
+          print({'campaign_exists':exists,'acceptance_state':state})
+          PY
+
+      - name: Stop when campaign is fully accepted
+        if: steps.campaign.outputs.state == 'model_resolved'
+        shell: bash
+        run: |
+          echo "Phase B forward restart already accepted; no mutation required."
+
+      - name: Evaluate market-open and data-freshness gate
+        id: gate
+        if: steps.campaign.outputs.exists != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SESSION_OPEN="$(uv run python - <<'PY'
+          from datetime import UTC, datetime
+          from aidy.twelve_data_market import gold_session_is_open
+          print('true' if gold_session_is_open(datetime.now(UTC)) else 'false')
+          PY
+          )"
+          if [ "$SESSION_OPEN" != "true" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Gold session closed; restart remains armed and idle."
+            exit 0
+          fi
+
+          health_code="$(curl -sS -o /tmp/health.json -w '%{http_code}' -H 'Cache-Control: no-cache' \
+            "${AIDY_TEST_WORKER_URL}/health?phase_b_restart=${GITHUB_SHA}")"
+          test "$health_code" = "200"
+
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-restart.off.jsonc \
+            --command "SELECT requested_at_utc,completed_at_utc,status,error_code FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' ORDER BY requested_at_utc DESC LIMIT 3; SELECT COUNT(*) AS recent_complete_snapshots FROM market_snapshots WHERE symbol='XAUUSD' AND market_data_source='twelve_data' AND capture_status='complete' AND julianday(captured_at)>=julianday('now','-15 minutes'); SELECT (SELECT COUNT(*) FROM archive_outbox WHERE delivery_state!='archived' AND julianday(created_at)<julianday('now','-1 hour')) + (SELECT COUNT(*) FROM cross_market_archive_outbox WHERE delivery_state!='archived' AND julianday(created_at)<julianday('now','-1 hour')) AS stale_archive_rows;" \
+            > /tmp/gate-d1.json
+
+          python - <<'PY'
+          import hashlib, json, os
+          from datetime import UTC, datetime
+
+          h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          p=json.load(open('/tmp/gate-d1.json',encoding='utf-8'))
+          batches=[b.get('results') or [] for b in p]
+          captures=batches[0] if len(batches)>0 else []
+          snapshots=int((batches[1][0] if len(batches)>1 and batches[1] else {}).get('recent_complete_snapshots') or 0)
+          stale_archive=int((batches[2][0] if len(batches)>2 and batches[2] else {}).get('stale_archive_rows') or 0)
+          dh=h.get('data_health') or {}
+          all_three=len(captures)==3 and all(str(r.get('status') or '')=='succeeded' for r in captures)
+          latest_success=dh.get('latest_scheduled_success_utc')
+          latest_context=dh.get('latest_provider_context_snapshot_utc')
+          ready=(
+              h.get('status')=='ok'
+              and h.get('capture_enabled') is True
+              and h.get('formal_forward_enabled') is False
+              and h.get('private_forward_model_gateway_configured') is True
+              and h.get('market_data_source')=='twelve_data'
+              and h.get('scheduler')=='direct-cron'
+              and dh.get('status')=='fresh'
+              and dh.get('alert') is False
+              and dh.get('session_open') is True
+              and all_three
+              and snapshots>=2
+              and stale_archive==0
+          )
+          evidence={
+              'gate_version':'aidy_phase_b_forward_restart_gate_v1',
+              'observed_at_utc':datetime.now(UTC).isoformat(),
+              'target_code_head':os.environ['GITHUB_SHA'],
+              'market_data_source':h.get('market_data_source'),
+              'scheduler':h.get('scheduler'),
+              'session_open':bool(dh.get('session_open')),
+              'data_health_status':dh.get('status'),
+              'data_health_alert':dh.get('alert'),
+              'latest_scheduled_success_utc':latest_success,
+              'latest_provider_context_snapshot_utc':latest_context,
+              'consecutive_capture_successes':3 if all_three else sum(1 for r in captures if str(r.get('status') or '')=='succeeded'),
+              'recent_complete_snapshots':snapshots,
+              'stale_archive_rows':stale_archive,
+              'model_gateway_configured':bool(h.get('private_forward_model_gateway_configured')),
+              'performance_information_used':False,
+              'telegram_publication_enabled':False,
+              'broker_or_account_state_allowed':False,
+              'follower_state_allowed':False,
+              'super_signals_dependency_allowed':False,
+              'live_money_execution_allowed':False,
+          }
+          text=json.dumps(evidence,sort_keys=True,separators=(',',':'))
+          open('/tmp/gate.json','w',encoding='utf-8').write(text+'\n')
+          open('/tmp/gate.digest','w',encoding='utf-8').write(hashlib.sha256(text.encode()).hexdigest()+'\n')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as f:
+              f.write('ready='+('true' if ready else 'false')+'\n')
+          print(json.dumps({'ready':ready,**evidence},sort_keys=True))
+          PY
+
+      - name: Leave armed when the evidence gate is not ready
+        if: steps.campaign.outputs.exists != 'true' && steps.gate.outputs.ready != 'true'
+        shell: bash
+        run: echo "Phase B restart gate not ready; no cohort or Worker mutation performed."
+
+      - name: Prepare replacement cohort and freeze-break evidence
+        if: steps.campaign.outputs.exists != 'true' && steps.gate.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTIVATED_AT="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "ACTIVATED_AT=${ACTIVATED_AT}" >> "$GITHUB_ENV"
+          uv run python scripts/day53_prepare_live_activation.py \
+            --accepted-code-head "$GITHUB_SHA" \
+            --activated-at-utc "$ACTIVATED_AT" \
+            --output-dir /tmp/phase-b-activation
+          NEW_COHORT_ID="$(cat /tmp/phase-b-activation/cohort_id.txt | tr -d '\r\n')"
+          echo "NEW_COHORT_ID=${NEW_COHORT_ID}" >> "$GITHUB_ENV"
+
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-restart.off.jsonc \
+            --command "SELECT cohort_id,accepted_code_head,activated_at_utc,state FROM aidy_forward_cohorts WHERE state='active' AND cohort_version='${AIDY_COHORT_VERSION}' ORDER BY activated_at_utc DESC;" \
+            > /tmp/active-before.json
+
+          python - <<'PY'
+          import hashlib, json, os
+          batches=json.load(open('/tmp/active-before.json',encoding='utf-8'))
+          rows=[]
+          for batch in batches: rows.extend(batch.get('results') or [])
+          if len(rows)!=1:
+              raise SystemExit(f'exactly one active predecessor cohort required: {rows}')
+          old=rows[0]
+          new=os.environ['NEW_COHORT_ID']
+          if str(old['cohort_id'])==new:
+              raise SystemExit('replacement cohort unexpectedly equals active predecessor')
+          gate=json.load(open('/tmp/gate.json',encoding='utf-8'))
+          evidence={
+              'evidence_version':'aidy_phase_b_forward_freeze_break_v1',
+              'reason':'repaired_market_capture_provider_context_and_permanent_episode_memory',
+              'old_cohort_id':old['cohort_id'],
+              'old_accepted_code_head':old['accepted_code_head'],
+              'replacement_cohort_id':new,
+              'replacement_code_head':os.environ['GITHUB_SHA'],
+              'gate_digest':open('/tmp/gate.digest',encoding='utf-8').read().strip(),
+              'performance_information_used':False,
+              'cross_source_analogue_inheritance_allowed':False,
+              'telegram_publication_enabled':False,
+              'live_money_execution_enabled':False,
+          }
+          text=json.dumps(evidence,sort_keys=True,separators=(',',':'))
+          dig=hashlib.sha256(text.encode()).hexdigest()
+          esc=lambda x: str(x).replace("'","''")
+          sql=(
+              "UPDATE aidy_forward_cohorts SET state='closed',closed_at_utc='"+esc(os.environ['ACTIVATED_AT'])+"',"
+              "freeze_break_reason_code='material_safety_or_data_integrity_defect',"
+              "freeze_break_evidence_json='"+esc(text)+"',freeze_break_evidence_digest='"+dig+"',"
+              "replacement_cohort_id='"+esc(new)+"' WHERE cohort_id='"+esc(str(old['cohort_id']))+"' AND state='active';\n"
+          )
+          open('/tmp/close-prior.sql','w',encoding='utf-8').write(sql)
+          open('/tmp/prior-cohort.txt','w',encoding='utf-8').write(str(old['cohort_id'])+'\n')
+          PY
+          echo "PRIOR_COHORT_ID=$(cat /tmp/prior-cohort.txt | tr -d '\r\n')" >> "$GITHUB_ENV"
+
+      - name: Atomically move to the repaired research epoch
+        if: steps.campaign.outputs.exists != 'true' && steps.gate.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.phase-b-restart.off.jsonc --file /tmp/close-prior.sql
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.phase-b-restart.off.jsonc --file /tmp/phase-b-activation/activation.sql
+
+          python - <<'PY'
+          import json, os
+          gate_text=open('/tmp/gate.json',encoding='utf-8').read().strip()
+          gate=json.loads(gate_text)
+          gate_digest=open('/tmp/gate.digest',encoding='utf-8').read().strip()
+          esc=lambda x: str(x).replace("'","''")
+          sql=(
+              "INSERT INTO aidy_forward_restart_runs (campaign_id,restart_version,target_code_head,predecessor_cohort_id,activated_cohort_id,activated_at_utc,gate_json,gate_digest,market_data_source,scheduler,session_open,data_health_fresh,consecutive_capture_successes,recent_complete_snapshots,model_gateway_configured,acceptance_state,acceptance_updated_at_utc,recorded_at_utc) VALUES ("
+              "'"+esc(os.environ['AIDY_RESTART_CAMPAIGN'])+"','aidy_phase_b_forward_restart_v1','"+esc(os.environ['GITHUB_SHA'])+"','"+esc(os.environ['PRIOR_COHORT_ID'])+"','"+esc(os.environ['NEW_COHORT_ID'])+"','"+esc(os.environ['ACTIVATED_AT'])+"','"+esc(gate_text)+"','"+esc(gate_digest)+"','twelve_data','direct-cron',1,1,"+str(int(gate['consecutive_capture_successes']))+","+str(int(gate['recent_complete_snapshots']))+",1,'activated','"+esc(os.environ['ACTIVATED_AT'])+"','"+esc(os.environ['ACTIVATED_AT'])+"');\n"
+          )
+          open('/tmp/record-restart.sql','w',encoding='utf-8').write(sql)
+          PY
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.phase-b-restart.off.jsonc --file /tmp/record-restart.sql
+
+      - name: Deploy current main with private forward enabled
+        if: steps.campaign.outputs.exists != 'true' && steps.gate.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.phase-b-restart.on.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+      - name: Prove repaired cohort and private-forward boundary
+        if: steps.campaign.outputs.exists != 'true' && steps.gate.outputs.ready == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=0
+          for attempt in $(seq 1 30); do
+            code="$(curl -sS -o /tmp/health-on.json -w '%{http_code}' -H 'Cache-Control: no-cache' \
+              "${AIDY_TEST_WORKER_URL}/health?phase_b_forward_on=${GITHUB_SHA}-${attempt}" || true)"
+            if [ "$code" = "200" ] && python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health-on.json',encoding='utf-8'))
+          assert h.get('capture_enabled') is True,h
+          assert h.get('formal_forward_enabled') is True,h
+          assert h.get('private_forward_model_gateway_configured') is True,h
+          assert h.get('market_data_source')=='twelve_data',h
+          assert h.get('scheduler')=='direct-cron',h
+          PY
+            then ready=1; break; fi
+            sleep 3
+          done
+          test "$ready" -eq 1
+          cat /tmp/health-on.json
+
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b-restart.on.jsonc \
+            --command "SELECT cohort_id,accepted_code_head,state,broker_or_account_state_allowed,follower_state_allowed,super_signals_dependency_allowed,live_money_execution_allowed FROM aidy_forward_cohorts WHERE state='active' AND cohort_version='${AIDY_COHORT_VERSION}'; SELECT campaign_id,target_code_head,activated_cohort_id,acceptance_state,broker_or_account_state_allowed,follower_state_allowed,super_signals_dependency_allowed,live_money_execution_allowed FROM aidy_forward_restart_runs WHERE campaign_id='${AIDY_RESTART_CAMPAIGN}';" \
+            > /tmp/restart-proof.json
+          python - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/restart-proof.json',encoding='utf-8'))
+          b=[x.get('results') or [] for x in p]
+          assert len(b[0])==1,b
+          c=b[0][0]
+          assert c['cohort_id']==os.environ['NEW_COHORT_ID'],c
+          assert c['accepted_code_head']==os.environ['GITHUB_SHA'],c
+          assert all(int(c[k])==0 for k in ('broker_or_account_state_allowed','follower_state_allowed','super_signals_dependency_allowed','live_money_execution_allowed')),c
+          assert len(b[1])==1,b
+          r=b[1][0]
+          assert r['acceptance_state']=='activated',r
+          assert all(int(r[k])==0 for k in ('broker_or_account_state_allowed','follower_state_allowed','super_signals_dependency_allowed','live_money_execution_allowed')),r
+          print('phase_b_restart_activation=PASS')
+          PY
+
+      - name: Watch for first genuinely model-resolved forward evaluation
+        if: steps.campaign.outputs.state != 'model_resolved' && (steps.campaign.outputs.exists == 'true' || steps.gate.outputs.ready == 'true')
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 20); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.phase-b-restart.on.jsonc \
+              --command "SELECT r.activated_at_utc,e.record_id,e.evaluated_at_utc,e.disposition,e.data_quality_state,e.data_quality_reason_code FROM aidy_forward_restart_runs r JOIN aidy_forward_evaluations e ON e.cohort_id=r.activated_cohort_id AND e.evaluated_at_utc>=r.activated_at_utc WHERE r.campaign_id='${AIDY_RESTART_CAMPAIGN}' AND e.data_quality_state='known_good' AND e.disposition IN ('self_consistency_abstain','no_trade','decision_admitted','management_admitted') ORDER BY e.evaluated_at_utc,e.record_id LIMIT 1;" \
+              > /tmp/model-resolved.json
+            if python - <<'PY'
+          import json
+          p=json.load(open('/tmp/model-resolved.json',encoding='utf-8'))
+          rows=[]
+          for batch in p: rows.extend(batch.get('results') or [])
+          print(rows)
+          raise SystemExit(0 if rows else 1)
+          PY
+            then found=1; break; fi
+            sleep 30
+          done
+          if [ "$found" -ne 1 ]; then
+            echo "No model-resolved forward evaluation yet; campaign remains in activated state for the next scheduled proof run."
+            exit 0
+          fi
+          python - <<'PY'
+          import json, os
+          p=json.load(open('/tmp/model-resolved.json',encoding='utf-8'))
+          rows=[]
+          for batch in p: rows.extend(batch.get('results') or [])
+          row=rows[0]
+          esc=lambda x: str(x).replace("'","''")
+          sql=(
+              "UPDATE aidy_forward_restart_runs SET acceptance_state='model_resolved',first_forward_record_id='"+esc(row['record_id'])+"',first_model_resolved_at_utc='"+esc(row['evaluated_at_utc'])+"',acceptance_updated_at_utc='"+esc(row['evaluated_at_utc'])+"' WHERE campaign_id='"+esc(os.environ['AIDY_RESTART_CAMPAIGN'])+"' AND acceptance_state='activated';\n"
+          )
+          open('/tmp/accept-model.sql','w',encoding='utf-8').write(sql)
+          PY
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.phase-b-restart.on.jsonc --file /tmp/accept-model.sql
+          echo "Phase B forward observer has produced genuine model-resolved evidence."
