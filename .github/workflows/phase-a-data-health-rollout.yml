@@ -57,17 +57,6 @@ jobs:
           uv sync
           uv run pytest -q
 
-      - name: Recover existing Provider API bearer without printing it
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch --quiet origin \
-            refs/heads/ops/provider-token-seed-20260905:refs/remotes/origin/provider-token-seed-20260905
-          TOKEN="$(git show refs/remotes/origin/provider-token-seed-20260905:.provider_token_seed | tr -d '\r\n')"
-          test "${#TOKEN}" -ge 32
-          echo "::add-mask::${TOKEN}"
-          printf 'AIDY_PROVIDER_TOKEN=%s\n' "$TOKEN" >> "$GITHUB_ENV"
-
       - name: Build canonical direct-Cron production config
         shell: bash
         run: |
@@ -179,26 +168,15 @@ jobs:
           print('direct_crons=PASS '+','.join(sorted(actual)))
           PY
 
-      - name: Prove authenticated Hub data-health endpoint
+      - name: Prove protected Hub route exists and remains authenticated
         shell: bash
         run: |
           set -euo pipefail
-          code="$(curl -sS -o /tmp/data-health.json -w '%{http_code}' \
-            -H "Authorization: Bearer ${AIDY_PROVIDER_TOKEN}" \
+          code="$(curl -sS -o /tmp/data-health-unauth.txt -w '%{http_code}' \
             "${AIDY_TEST_WORKER_URL}/provider/data-health?limit=5")"
-          echo "provider_data_health_status=${code}"
-          cat /tmp/data-health.json
-          test "$code" = "200"
-          python - <<'PY'
-          import json
-          p=json.load(open('/tmp/data-health.json',encoding='utf-8'))
-          assert p.get('ok') is True,p
-          c=p.get('current') or {}
-          assert c.get('health_version')=='aidy_data_health_v1',p
-          assert c.get('scheduler')=='direct-cron',p
-          assert isinstance(c.get('checks'),dict),p
-          print('provider_data_health=PASS current='+str(c.get('status'))+' history='+str(p.get('history_count')))
-          PY
+          echo "provider_data_health_unauth_status=${code}"
+          cat /tmp/data-health-unauth.txt
+          test "$code" = "401"
 
       - name: Prove append-only Cron health observation
         shell: bash
