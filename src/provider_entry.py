@@ -11,6 +11,7 @@ from aidy.provider_calibration_api import calibration_market_ohlc_response
 from aidy.provider_context_api import provider_context_response
 from aidy.provider_data_health_api import provider_data_health_response
 from aidy.provider_market_api import market_ohlc_response
+from aidy.provider_memory_api import provider_memory_response
 from entry import Default as CoreDefault
 
 
@@ -128,6 +129,8 @@ class Default(CoreDefault):
             return await provider_context_response(request, self.env)
         if path == "/provider/data-health":
             return await provider_data_health_response(request, self.env)
+        if path == "/provider/memory":
+            return await provider_memory_response(request, self.env)
         return await super().fetch(request)
 
     async def scheduled(self, controller, env, ctx):
