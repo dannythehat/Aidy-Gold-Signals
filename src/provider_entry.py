@@ -7,9 +7,11 @@ from workers import Response
 
 from aidy.config import AidySettings
 from aidy.data_health import collect_and_record_data_health, collect_data_health
+from aidy.episode_memory import sync_aidy_episode_memory
 from aidy.provider_calibration_api import calibration_market_ohlc_response
 from aidy.provider_context_api import provider_context_response
 from aidy.provider_data_health_api import provider_data_health_response
+from aidy.provider_decision_memory_api import provider_decision_memory_response
 from aidy.provider_market_api import market_ohlc_response
 from entry import Default as CoreDefault
 
@@ -115,6 +117,31 @@ async def _record_health_best_effort(env: object, *, scheduler: str) -> None:
         print(f"AIDY data-health telemetry failed: {type(exc).__name__}: {str(exc)[:500]}")
 
 
+async def _sync_episode_memory_best_effort(env: object) -> None:
+    """Close the decision->outcome->learning loop without risking market capture."""
+
+    try:
+        result = await sync_aidy_episode_memory(
+            env.AIDY_OPS,
+            now_utc=datetime.now(UTC),
+        )
+        changed = (
+            int(result.get("episodes_materialized") or 0)
+            + int((result.get("forward_outcomes") or {}).get("resolved") or 0)
+            + int(result.get("outcomes_materialized") or 0)
+            + int(result.get("learning_cards_materialized") or 0)
+        )
+        if changed:
+            print(
+                "AIDY episode-memory sync: "
+                f"episodes={result.get('episodes_materialized')} "
+                f"outcomes={result.get('outcomes_materialized')} "
+                f"cards={result.get('learning_cards_materialized')}"
+            )
+    except Exception as exc:  # noqa: BLE001 - memory cannot undo successful capture
+        print(f"AIDY episode-memory sync failed: {type(exc).__name__}: {str(exc)[:500]}")
+
+
 class Default(CoreDefault):
     async def fetch(self, request):
         path = urlparse(request.url).path
@@ -128,15 +155,17 @@ class Default(CoreDefault):
             return await provider_context_response(request, self.env)
         if path == "/provider/data-health":
             return await provider_data_health_response(request, self.env)
+        if path == "/provider/decision-memory":
+            return await provider_decision_memory_response(request, self.env)
         return await super().fetch(request)
 
     async def scheduled(self, controller, env, ctx):
         """Run capture directly from Cloudflare Cron without Queue operations.
 
         Cloudflare's Python scheduled ABI can pass ``env`` as None; bindings live on
-        ``self.env`` just as the core queue consumer already expects.  Always use
-        the bound Worker environment for telemetry so a successful capture also
-        leaves a durable point-in-time health observation.
+        ``self.env`` just as the core queue consumer already expects. Always use
+        the bound Worker environment for health and memory so a successful capture
+        leaves both point-in-time health evidence and permanent decision memory.
         """
         message = _DirectCronMessage(
             scheduled_time=controller.scheduledTime,
@@ -145,6 +174,7 @@ class Default(CoreDefault):
         try:
             await super().queue(_DirectCronBatch(message), env, ctx)
         finally:
+            await _sync_episode_memory_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="direct-cron")
         if not message.acked:
             raise RuntimeError("aidy_direct_cron_capture_not_acknowledged")
@@ -154,4 +184,5 @@ class Default(CoreDefault):
         try:
             return await super().queue(batch, env, ctx)
         finally:
+            await _sync_episode_memory_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="queue-consumer")
