@@ -1,3 +1,9 @@
+"""Build a frozen private-forward cohort activation artifact.
+
+Phase B's guarded restart deliberately reuses this exact builder so replacement
+research epochs retain the original Day 53 no-hindsight and no-live-money contract.
+"""
+
 from __future__ import annotations
 
 import argparse
