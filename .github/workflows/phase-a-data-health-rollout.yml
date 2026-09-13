@@ -1,0 +1,213 @@
+name: Phase A Data Health Rollout
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-a-data-health-20260913]
+    paths:
+      - "migrations/d1/0017_aidy_data_health_events.sql"
+      - "src/aidy/data_health.py"
+      - "src/aidy/provider_data_health_api.py"
+      - "src/provider_entry.py"
+      - "tests/test_aidy_data_health.py"
+      - ".github/workflows/phase-a-data-health-rollout.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: phase-a-data-health-rollout
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  AIDY_WORKER_NAME: aidy-signals-test
+
+jobs:
+  deploy-and-prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Test exact rollout head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pytest -q
+
+      - name: Build canonical direct-Cron production config
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          expected=['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          assert cfg['name']==os.environ['AIDY_WORKER_NAME']
+          assert cfg['main']=='src/provider_entry.py'
+          assert cfg['triggers']['crons']==expected
+          assert cfg['queues']['consumers']==[]
+          settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+          assert settings.capture_enabled is True
+          assert settings.market_data_source=='twelve_data'
+          assert settings.market_data_ownership=='public_independent'
+          json.dump(cfg, open('wrangler.phase-a.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Apply append-only data-health migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.phase-a.live.jsonc
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-a.live.jsonc \
+            --command "SELECT name,type FROM sqlite_master WHERE name='aidy_data_health_events';" \
+            > /tmp/phase-a-schema.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/phase-a-schema.json',encoding='utf-8'))
+          rows=[]
+          for batch in p: rows.extend(batch.get('results') or [])
+          assert any(r.get('name')=='aidy_data_health_events' and r.get('type')=='table' for r in rows),rows
+          print('phase_a_schema=PASS')
+          PY
+
+      - name: Deploy production Worker preserving existing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOYED_AT_UTC="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "DEPLOYED_AT_UTC=${DEPLOYED_AT_UTC}" >> "$GITHUB_ENV"
+          cp wrangler.phase-a.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+      - name: Prove truthful public health contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code="$(curl -sS -o /tmp/health.json -w '%{http_code}' \
+              -H 'Cache-Control: no-cache' \
+              "${AIDY_TEST_WORKER_URL}/health?phase_a=${GITHUB_SHA}-${attempt}" || true)"
+            if [ "$code" = "200" ] && python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          assert h.get('status') in {'ok','degraded'},h
+          assert h.get('capture_enabled') is True,h
+          assert h.get('market_data_source')=='twelve_data',h
+          assert h.get('scheduler')=='direct-cron',h
+          d=h.get('data_health') or {}
+          assert d.get('status') in {
+              'fresh','open_grace','session_closed','capture_disabled','stale_capture',
+              'capture_failed','stale_provider_context','archive_backlog','monitor_error'
+          },h
+          assert 'reason' in d,h
+          assert d.get('health_version')=='aidy_data_health_v1' or d.get('status')=='monitor_error',h
+          print('public_health=PASS status='+str(h.get('status'))+' data_health='+str(d.get('status')))
+          PY
+            then break; fi
+            test "$attempt" -lt 30
+            sleep 3
+          done
+          cat /tmp/health.json
+
+      - name: Prove direct Cron schedules survived deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${AIDY_WORKER_NAME}/schedules" \
+            > /tmp/schedules.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/schedules.json',encoding='utf-8'))
+          assert p.get('success') is True,p
+          result=p.get('result') or {}
+          rows=result.get('schedules') if isinstance(result,dict) else result
+          actual=set()
+          for row in rows or []:
+              if isinstance(row,str): actual.add(row)
+              elif isinstance(row,dict) and row.get('cron'): actual.add(str(row['cron']))
+          expected={'*/2 * * * *','5,15,25,35,45,55 * * * *'}
+          assert expected <= actual,(actual,p)
+          print('direct_crons=PASS '+','.join(sorted(actual)))
+          PY
+
+      - name: Prove protected Hub route exists and remains authenticated
+        shell: bash
+        run: |
+          set -euo pipefail
+          code="$(curl -sS -o /tmp/data-health-unauth.txt -w '%{http_code}' \
+            "${AIDY_TEST_WORKER_URL}/provider/data-health?limit=5")"
+          echo "provider_data_health_unauth_status=${code}"
+          cat /tmp/data-health-unauth.txt
+          test "$code" = "401"
+
+      - name: Prove append-only Cron health observation
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 24); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.phase-a.live.jsonc \
+              --command "SELECT id,observed_at_utc,status,alert,scheduler,reason FROM aidy_data_health_events WHERE observed_at_utc>='${DEPLOYED_AT_UTC}' ORDER BY observed_at_utc DESC LIMIT 3;" \
+              > /tmp/health-events.json
+            if python - <<'PY'
+          import json
+          p=json.load(open('/tmp/health-events.json',encoding='utf-8'))
+          rows=[]
+          for batch in p: rows.extend(batch.get('results') or [])
+          print(rows)
+          raise SystemExit(0 if rows else 1)
+          PY
+            then found=1; break; fi
+            sleep 15
+          done
+          test "$found" -eq 1
+          cat /tmp/health-events.json
+          echo 'phase_a_append_only_health=PASS'
+
+      - name: Print live Phase A evidence summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-a.live.jsonc \
+            --command "SELECT status,COUNT(*) AS observations,MAX(observed_at_utc) AS latest FROM aidy_data_health_events GROUP BY status ORDER BY status;" \
+            | tee /tmp/phase-a-summary.json

@@ -1,0 +1,99 @@
+name: Phase A Postdeploy Proof
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-a-data-health-20260913]
+    paths:
+      - ".github/workflows/phase-a-postdeploy-proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          json.dump(cfg,open('wrangler.phase-a.proof.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+      - name: Prove current public health and protected route after propagation
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -H 'Cache-Control: no-cache' \
+            "${AIDY_TEST_WORKER_URL}/health?proof=${GITHUB_SHA}" | tee /tmp/health.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/health.json',encoding='utf-8'))
+          assert p.get('scheduler')=='direct-cron',p
+          assert (p.get('data_health') or {}).get('health_version')=='aidy_data_health_v1',p
+          print('live_health=PASS',p.get('status'),(p.get('data_health') or {}).get('status'))
+          PY
+          code="$(curl -sS -o /tmp/route.txt -w '%{http_code}' -H 'Cache-Control: no-cache' \
+            "${AIDY_TEST_WORKER_URL}/provider/data-health?limit=5&proof=${GITHUB_SHA}")"
+          echo "provider_data_health_unauth_status=${code}"
+          cat /tmp/route.txt
+          test "$code" = "401"
+      - name: Query live health history and capture ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.phase-a.proof.jsonc \
+            --command "SELECT observed_at_utc,status,alert,session_open,scheduler,reason,archive_pending_count,archive_backoff_count,archive_dead_letter_count,cross_market_archive_pending_count,cross_market_archive_backoff_count,cross_market_archive_dead_letter_count FROM aidy_data_health_events ORDER BY observed_at_utc DESC,id DESC LIMIT 10;" \
+            | tee /tmp/health-events.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.phase-a.proof.jsonc \
+            --command "SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' ORDER BY requested_at_utc DESC LIMIT 10;" \
+            | tee /tmp/capture-ledger.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/health-events.json',encoding='utf-8'))
+          rows=[]
+          for b in p: rows.extend(b.get('results') or [])
+          if rows:
+              assert all(r.get('scheduler')=='direct-cron' for r in rows),rows
+              print('append_only_health=PASS rows='+str(len(rows)))
+          else:
+              print('append_only_health=WAITING_FOR_FIRST_POST_DEPLOY_CRON')
+          PY
+      - name: Diagnose both archive outboxes
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.phase-a.proof.jsonc \
+            --command "SELECT status,delivery_state,attempts,COALESCE(last_error,'') AS last_error,COUNT(*) AS rows,MIN(created_at) AS oldest,MAX(created_at) AS newest FROM archive_outbox GROUP BY status,delivery_state,attempts,COALESCE(last_error,'') ORDER BY status,delivery_state,attempts,last_error;" \
+            | tee /tmp/core-outbox.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.phase-a.proof.jsonc \
+            --command "SELECT status,delivery_state,attempts,COALESCE(last_error,'') AS last_error,COUNT(*) AS rows,MIN(created_at) AS oldest,MAX(created_at) AS newest FROM cross_market_archive_outbox GROUP BY status,delivery_state,attempts,COALESCE(last_error,'') ORDER BY status,delivery_state,attempts,last_error;" \
+            | tee /tmp/cross-outbox.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.phase-a.proof.jsonc \
+            --command "SELECT id,record_type,evidence_id,archive_key,status,delivery_state,attempts,last_error,created_at,next_attempt_at,first_failed_at,dead_lettered_at FROM archive_outbox WHERE status!='archived' OR delivery_state!='archived' ORDER BY created_at,id LIMIT 30;" \
+            | tee /tmp/core-problems.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.phase-a.proof.jsonc \
+            --command "SELECT id,evidence_id,archive_key,status,delivery_state,attempts,last_error,created_at,next_attempt_at,first_failed_at,dead_lettered_at FROM cross_market_archive_outbox WHERE status!='archived' OR delivery_state!='archived' ORDER BY created_at,id LIMIT 30;" \
+            | tee /tmp/cross-problems.json

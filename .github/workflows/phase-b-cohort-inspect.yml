@@ -1,0 +1,48 @@
+name: Phase B Cohort Inspect
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-b-episode-memory-20260913]
+    paths:
+      - ".github/workflows/phase-b-cohort-inspect.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build D1 config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          json.dump(cfg,open('wrangler.phase-b.inspect.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+      - name: Inspect active research cohort and forward state
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.phase-b.inspect.jsonc \
+            --command "SELECT cohort_id,cohort_version,manifest_version,accepted_code_head,earliest_start_utc,prepared_at_utc,activated_at_utc,state,broker_or_account_state_allowed,follower_state_allowed,super_signals_dependency_allowed,live_money_execution_allowed FROM aidy_forward_cohorts WHERE state='active' ORDER BY activated_at_utc DESC; SELECT disposition,data_quality_state,COALESCE(data_quality_reason_code,'') AS reason,COUNT(*) AS n,MAX(evaluated_at_utc) AS latest FROM aidy_forward_evaluations GROUP BY disposition,data_quality_state,COALESCE(data_quality_reason_code,'') ORDER BY n DESC; SELECT COUNT(*) AS outcomes FROM aidy_forward_outcomes; SELECT COUNT(*) AS complete_snapshots,MAX(captured_at) AS latest_complete_snapshot FROM market_snapshots WHERE symbol='XAUUSD' AND capture_status='complete' AND market_data_source='twelve_data';" \
+            | tee /tmp/cohort.json

@@ -1,0 +1,40 @@
+name: Phase B Episode Memory CI
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-b-episode-memory-20260913]
+    paths:
+      - "migrations/d1/0019_aidy_episode_memory.sql"
+      - "src/aidy/episode_memory.py"
+      - "src/aidy/episode_memory_runtime.py"
+      - "src/aidy/provider_decision_memory_api.py"
+      - "src/provider_entry.py"
+      - "tests/test_phase_b_episode_memory.py"
+      - "tests/test_phase_b_episode_memory_runtime.py"
+      - ".github/workflows/phase-b-episode-memory-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+      - name: Compile and focused tests
+        run: |
+          uv run python -m compileall -q src tests
+          uv run pytest -q tests/test_phase_b_episode_memory.py tests/test_phase_b_episode_memory_runtime.py tests/test_day34_decision_ledger.py tests/test_day46_paper_simulator.py tests/test_day53_formal_forward.py
+      - name: Full regression suite
+        run: uv run pytest -q
