@@ -7,7 +7,7 @@ from workers import Response
 
 from aidy.config import AidySettings
 from aidy.data_health import collect_and_record_data_health, collect_data_health
-from aidy.episode_memory import sync_aidy_episode_memory
+from aidy.episode_memory_runtime import sync_aidy_episode_memory_runtime
 from aidy.provider_calibration_api import calibration_market_ohlc_response
 from aidy.provider_context_api import provider_context_response
 from aidy.provider_data_health_api import provider_data_health_response
@@ -121,7 +121,7 @@ async def _sync_episode_memory_best_effort(env: object) -> None:
     """Close the decision->outcome->learning loop without risking market capture."""
 
     try:
-        result = await sync_aidy_episode_memory(
+        result = await sync_aidy_episode_memory_runtime(
             env.AIDY_OPS,
             now_utc=datetime.now(UTC),
         )
