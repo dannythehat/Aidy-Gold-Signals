@@ -156,20 +156,15 @@ jobs:
           DEPLOY_STARTED_UTC="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
           echo "DEPLOY_STARTED_UTC=${DEPLOY_STARTED_UTC}" >> "$GITHUB_ENV"
           cp wrangler.aidy-recovery.live.jsonc wrangler.jsonc
-          # Wrangler preserves existing secret bindings across normal deployments.
-          # Do not rotate or overwrite AIDY_PROVIDER_MARKET_TOKEN here: Super Signals
-          # already holds the matching caller secret and production requests authenticate.
           uv run pywrangler deploy
 
       - name: Prove live Worker configuration and Cron schedules
         shell: bash
         run: |
           set -euo pipefail
-          ok=0
-          for attempt in $(seq 1 30); do
-            curl -fsS -H 'Cache-Control: no-cache' \
-              "${AIDY_TEST_WORKER_URL}/health?recovery=${GITHUB_SHA}-${attempt}" > /tmp/health.json || true
-            if python - <<'PY'
+          curl -fsS -H 'Cache-Control: no-cache' \
+            "${AIDY_TEST_WORKER_URL}/health?recovery=${GITHUB_SHA}" > /tmp/health.json
+          python - <<'PY'
           import json
           h=json.load(open('/tmp/health.json',encoding='utf-8'))
           assert h.get('status')=='ok',h
@@ -178,10 +173,6 @@ jobs:
           assert h.get('market_data_source')=='twelve_data',h
           assert h.get('market_data_ownership')=='public_independent',h
           PY
-            then ok=1; break; fi
-            sleep 3
-          done
-          test "$ok" -eq 1
           cat /tmp/health.json
 
           curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
@@ -191,11 +182,13 @@ jobs:
           import json
           p=json.load(open('/tmp/schedules.json',encoding='utf-8'))
           assert p.get('success') is True,p
+          result=p.get('result') or {}
+          rows=result.get('schedules') if isinstance(result,dict) else result
           actual=set()
-          for row in (p.get('result') or []):
-              if isinstance(row, str):
+          for row in (rows or []):
+              if isinstance(row,str):
                   actual.add(row)
-              elif isinstance(row, dict):
+              elif isinstance(row,dict):
                   cron=str(row.get('cron') or '').strip()
                   if cron:
                       actual.add(cron)
