@@ -1,0 +1,262 @@
+name: Ops AIDY Live Recovery 20260913
+
+on:
+  push:
+    branches: [ops/aidy-live-recovery-20260913]
+    paths:
+      - "migrations/d1/0016_provider_market_view_recovery.sql"
+      - "src/aidy/provider_market_api.py"
+      - "tests/test_live_recovery_20260913.py"
+      - ".github/workflows/ops-aidy-live-recovery-20260913.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: aidy-live-recovery-20260913
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  AIDY_WORKER_NAME: aidy-signals-test
+
+jobs:
+  test-repair-deploy-prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+    steps:
+      - name: Checkout exact recovery head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install and run recovery plus full regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check src/aidy/provider_market_api.py tests/test_live_recovery_20260913.py
+          uv run pytest -q tests/test_live_recovery_20260913.py tests/test_provider_market_api.py tests/test_day2_deployment_contract.py
+          uv run pytest -q
+
+      - name: Recover existing provider bearer token without printing it
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin \
+            refs/heads/ops/provider-token-seed-20260905:refs/remotes/origin/provider-token-seed-20260905
+          TOKEN="$(git show refs/remotes/origin/provider-token-seed-20260905:.provider_token_seed | tr -d '\r\n')"
+          test "${#TOKEN}" -ge 32
+          echo "::add-mask::${TOKEN}"
+          printf 'AIDY_PROVIDER_TOKEN=%s\n' "$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Build canonical direct-Cron production config
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json, os
+          from types import SimpleNamespace
+          from aidy.config import AidySettings
+
+          cfg=json.load(open('wrangler.test.example.jsonc', encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
+          expected_crons=['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          assert cfg['main']=='src/provider_entry.py'
+          assert cfg['triggers']['crons'] == expected_crons
+          assert cfg['queues']['consumers'] == []
+          settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
+          assert settings.capture_enabled is True
+          assert settings.market_data_source == 'twelve_data'
+          assert settings.market_data_ownership == 'public_independent'
+          assert int(settings.market_poll_seconds) == 300
+          assert str(cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']).lower() == 'false'
+          json.dump(cfg, open('wrangler.aidy-recovery.live.jsonc','w',encoding='utf-8'), indent=2)
+          PY
+
+      - name: Record pre-repair D1 state
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.aidy-recovery.live.jsonc \
+            --command "SELECT name,type FROM sqlite_master WHERE name IN ('twelve_data_decision_admitted_m1_v1','idx_twelve_data_request_ledger_completion_success','idx_twelve_data_bootstrap_requests_by_ledger_window','idx_market_candles_twelve_private_forward_m1') ORDER BY name;" \
+            | tee /tmp/pre-schema.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.aidy-recovery.live.jsonc \
+            --command "SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' ORDER BY requested_at_utc DESC LIMIT 3;" \
+            | tee /tmp/pre-ledger.json
+
+      - name: Apply PIT-safe M1 view recovery migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.aidy-recovery.live.jsonc
+
+      - name: Prove repaired D1 admission view directly
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.aidy-recovery.live.jsonc \
+            --command "SELECT COUNT(*) AS admitted_rows FROM twelve_data_decision_admitted_m1_v1 WHERE open_time_utc>='2026-09-10T09:12:00+00:00' AND open_time_utc<'2026-09-10T10:12:00+00:00' AND first_observed_at<='2026-09-10T10:12:00+00:00';" \
+            | tee /tmp/repaired-view.json
+          python - <<'PY'
+          import json
+          batches=json.load(open('/tmp/repaired-view.json',encoding='utf-8'))
+          rows=[]
+          for batch in batches:
+              rows.extend(batch.get('results') or [])
+          assert rows and 'admitted_rows' in rows[0], rows
+          print('repaired_view_query=PASS admitted_rows='+str(rows[0]['admitted_rows']))
+          PY
+
+      - name: Deploy direct-Cron Worker and preserve required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_STARTED_UTC="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
+          echo "DEPLOY_STARTED_UTC=${DEPLOY_STARTED_UTC}" >> "$GITHUB_ENV"
+          cp wrangler.aidy-recovery.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+          printf '%s' "$AIDY_TWELVE_DATA_API_KEY" | \
+            npx --yes wrangler@4 secret put AIDY_TWELVE_DATA_API_KEY --config wrangler.aidy-recovery.live.jsonc >/dev/null
+          printf '%s' "$AIDY_PROVIDER_TOKEN" | \
+            npx --yes wrangler@4 secret put AIDY_PROVIDER_MARKET_TOKEN --config wrangler.aidy-recovery.live.jsonc >/dev/null
+
+      - name: Prove live Worker configuration and Cron schedules
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' \
+              "${AIDY_TEST_WORKER_URL}/health?recovery=${GITHUB_SHA}-${attempt}" > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          assert h.get('status')=='ok',h
+          assert h.get('capture_enabled') is True,h
+          assert h.get('formal_forward_enabled') is False,h
+          assert h.get('market_data_source')=='twelve_data',h
+          assert h.get('market_data_ownership')=='public_independent',h
+          PY
+            then ok=1; break; fi
+            sleep 3
+          done
+          test "$ok" -eq 1
+          cat /tmp/health.json
+
+          curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${AIDY_WORKER_NAME}/schedules" \
+            > /tmp/schedules.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/schedules.json',encoding='utf-8'))
+          assert p.get('success') is True,p
+          actual={str(row.get('cron')) for row in (p.get('result') or [])}
+          expected={'*/2 * * * *','5,15,25,35,45,55 * * * *'}
+          assert expected <= actual,(actual,expected)
+          print('direct_cron_schedules=PASS '+','.join(sorted(actual)))
+          PY
+
+      - name: Prove formerly failing Provider Lab M1 endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/provider-m1.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${AIDY_PROVIDER_TOKEN}" --get \
+            --data-urlencode 'symbol=XAUUSD' \
+            --data-urlencode 'timeframe=1m' \
+            --data-urlencode 'from=2026-09-10T09:12:00+00:00' \
+            --data-urlencode 'to=2026-09-10T10:12:00+00:00' \
+            "${AIDY_TEST_WORKER_URL}/market/ohlc")"
+          echo "provider_m1_status=${status}"
+          cat /tmp/provider-m1.json
+          test "$status" = "200"
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/provider-m1.json',encoding='utf-8'))
+          assert p.get('ok') is True,p
+          assert p.get('symbol')=='XAUUSD',p
+          assert p.get('timeframe')=='1m',p
+          assert isinstance(p.get('bars'),list),p
+          assert isinstance(p.get('missing_open_times'),list),p
+          print('provider_m1_endpoint=PASS rows='+str(p.get('row_count'))+' complete='+str(p.get('complete')))
+          PY
+
+      - name: Probe canonical historical Provider Context
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(curl -sS -o /tmp/provider-context.json -w '%{http_code}' \
+            -H "Authorization: Bearer ${AIDY_PROVIDER_TOKEN}" --get \
+            --data-urlencode 'as_of=2026-09-09T04:30:25.543000+00:00' \
+            "${AIDY_TEST_WORKER_URL}/provider/context")"
+          echo "provider_context_status=${status}"
+          cat /tmp/provider-context.json
+          test "$status" = "200"
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/provider-context.json',encoding='utf-8'))
+          assert p.get('ok') is True,p
+          assert p.get('join_eligible') is True,p
+          assert p.get('context',{}).get('symbol')=='XAUUSD',p
+          print('provider_context_endpoint=PASS')
+          PY
+
+      - name: Prove scheduler is emitting fresh request-ledger activity
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for attempt in $(seq 1 24); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.aidy-recovery.live.jsonc \
+              --command "SELECT requested_at_utc,completed_at_utc,status,error_code,outputsize FROM twelve_data_request_ledger WHERE request_kind='scheduled_capture' AND requested_at_utc>='${DEPLOY_STARTED_UTC}' ORDER BY requested_at_utc DESC LIMIT 3;" \
+              > /tmp/post-ledger.json
+            if python - <<'PY'
+          import json
+          batches=json.load(open('/tmp/post-ledger.json',encoding='utf-8'))
+          rows=[]
+          for batch in batches:
+              rows.extend(batch.get('results') or [])
+          print(rows)
+          raise SystemExit(0 if rows else 1)
+          PY
+            then found=1; break; fi
+            sleep 15
+          done
+          cat /tmp/post-ledger.json
+          test "$found" -eq 1
+          echo "direct_cron_request_ledger=PASS"
