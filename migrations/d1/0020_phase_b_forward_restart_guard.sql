@@ -1,7 +1,8 @@
 -- Phase B controlled forward-observer restart guard.
 --
 -- One campaign is allowed to activate once. The existing forward-cohort registry remains
--- authoritative. This table records the operational gate that permitted activation.
+-- authoritative. This table records the operational gate that permitted activation and
+-- the first model-resolved evidence after restart.
 -- Nothing here grants Telegram publication, broker/account access, follower state, a
 -- Super Signals dependency, or live-money authority.
 
@@ -25,6 +26,11 @@ CREATE TABLE IF NOT EXISTS aidy_forward_restart_runs (
     consecutive_capture_successes INTEGER NOT NULL CHECK (consecutive_capture_successes >= 3),
     recent_complete_snapshots INTEGER NOT NULL CHECK (recent_complete_snapshots >= 2),
     model_gateway_configured INTEGER NOT NULL CHECK (model_gateway_configured = 1),
+    acceptance_state TEXT NOT NULL DEFAULT 'activated'
+        CHECK (acceptance_state IN ('activated','model_resolved')),
+    first_forward_record_id TEXT,
+    first_model_resolved_at_utc TEXT,
+    acceptance_updated_at_utc TEXT NOT NULL,
     broker_or_account_state_allowed INTEGER NOT NULL DEFAULT 0
         CHECK (broker_or_account_state_allowed = 0),
     follower_state_allowed INTEGER NOT NULL DEFAULT 0
@@ -35,7 +41,13 @@ CREATE TABLE IF NOT EXISTS aidy_forward_restart_runs (
         CHECK (live_money_execution_allowed = 0),
     recorded_at_utc TEXT NOT NULL,
     FOREIGN KEY (predecessor_cohort_id) REFERENCES aidy_forward_cohorts(cohort_id),
-    FOREIGN KEY (activated_cohort_id) REFERENCES aidy_forward_cohorts(cohort_id)
+    FOREIGN KEY (activated_cohort_id) REFERENCES aidy_forward_cohorts(cohort_id),
+    FOREIGN KEY (first_forward_record_id) REFERENCES aidy_forward_evaluations(record_id),
+    CHECK (
+        (acceptance_state='activated' AND first_model_resolved_at_utc IS NULL)
+        OR (acceptance_state='model_resolved' AND first_forward_record_id IS NOT NULL
+            AND first_model_resolved_at_utc IS NOT NULL)
+    )
 );
 
 CREATE INDEX IF NOT EXISTS ix_aidy_forward_restart_runs_activated
