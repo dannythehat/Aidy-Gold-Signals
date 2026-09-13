@@ -56,7 +56,6 @@ jobs:
           test -n "${AIDY_TWELVE_DATA_API_KEY:-}"
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py tests/test_live_recovery_20260913.py
           uv run pytest -q tests/test_live_recovery_20260913.py tests/test_provider_market_api.py tests/test_day2_deployment_contract.py
           uv run pytest -q
 
