@@ -29,8 +29,6 @@ _HEX = frozenset("0123456789abcdef")
 _FORBIDDEN_HINDSIGHT_KEYS = {
     "available_after_utc",
     "counterfactual_digest",
-    "evaluation_only",
-    "future_derived",
     "future_return",
     "future_returns",
     "horizon_assessments",
@@ -346,7 +344,13 @@ def _assert_no_hindsight(value: Any, *, path: str) -> None:
     if isinstance(value, Mapping):
         for key, item in value.items():
             normalized = str(key).strip().lower()
-            if normalized in _FORBIDDEN_HINDSIGHT_KEYS:
+            if normalized == "future_derived":
+                if item is not False:
+                    raise ValueError(f"Future-derived evidence is forbidden at {path}.{key}.")
+            elif normalized == "evaluation_only":
+                if item is not False:
+                    raise ValueError(f"Evaluation-only evidence is forbidden at {path}.{key}.")
+            elif normalized in _FORBIDDEN_HINDSIGHT_KEYS:
                 raise ValueError(f"Future/outcome field is forbidden at {path}.{key}.")
             _assert_no_hindsight(item, path=f"{path}.{key}")
     elif isinstance(value, (list, tuple)):
