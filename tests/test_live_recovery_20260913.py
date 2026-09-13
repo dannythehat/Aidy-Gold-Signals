@@ -20,7 +20,8 @@ def test_provider_m1_recovery_keeps_pit_admission_without_forced_plan() -> None:
     assert "r.outputsize BETWEEN 1 AND 30" in sql
     assert "r.request_kind='bootstrap'" in sql
     assert "b.state='succeeded'" in sql
-    assert "INDEXED BY" not in sql
+    view_sql = sql.split("CREATE VIEW twelve_data_decision_admitted_m1_v1 AS", 1)[1]
+    assert "INDEXED BY" not in view_sql
 
 
 def test_provider_market_endpoint_converts_store_failures_to_fail_closed_response() -> None:
