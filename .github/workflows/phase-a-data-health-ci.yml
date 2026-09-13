@@ -1,0 +1,38 @@
+name: Phase A Data Health CI
+
+on:
+  push:
+    branches: [feature/aidy-hub-phase-a-data-health-20260913]
+    paths:
+      - "migrations/d1/0017_aidy_data_health_events.sql"
+      - "src/aidy/data_health.py"
+      - "src/aidy/provider_data_health_api.py"
+      - "src/provider_entry.py"
+      - "tests/test_aidy_data_health.py"
+      - ".github/workflows/phase-a-data-health-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+      - name: Compile and focused tests
+        run: |
+          uv run python -m compileall -q src tests
+          uv run pytest -q tests/test_aidy_data_health.py tests/test_day4_capture_freshness_watchdog.py tests/test_live_recovery_20260913.py
+      - name: Full regression suite
+        run: uv run pytest -q
