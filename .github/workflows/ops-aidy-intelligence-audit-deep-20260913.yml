@@ -1,0 +1,66 @@
+name: Ops AIDY Intelligence Audit Deep 20260913
+
+on:
+  push:
+    branches: [audit/aidy-intelligence-20260913]
+    paths:
+      - ".github/workflows/ops-aidy-intelligence-audit-deep-20260913.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          cfg=json.load(open('wrangler.test.example.jsonc'))
+          cfg['d1_databases'][0]['database_name']='aidy-ops-test'
+          cfg['d1_databases'][0]['database_id']='3588d82a-d686-4430-872d-d4c0e62c3d5d'
+          cfg['r2_buckets'][0]['bucket_name']='aidy-memory-test'
+          json.dump(cfg,open('wrangler.audit.jsonc','w'),indent=2)
+          PY
+      - name: Query deep live intelligence state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, subprocess
+          cfg='wrangler.audit.jsonc'
+          def q(name,sql):
+              cp=subprocess.run(['npx','--yes','wrangler@4','d1','execute','AIDY_OPS','--remote','--json','--config',cfg,'--command',sql],capture_output=True,text=True,check=True)
+              payload=json.loads(cp.stdout); rows=[]
+              for b in payload: rows.extend(b.get('results') or [])
+              print(name+'='+json.dumps(rows,sort_keys=True))
+          q('FORWARD_DISPOSITIONS',"SELECT disposition,data_quality_state,COUNT(*) n,COUNT(DISTINCT episode_id) episode_n,MIN(evaluated_at_utc) first_at,MAX(evaluated_at_utc) last_at,AVG(retrieval_effective_n) avg_retrieval_n,SUM(CASE WHEN decision_id IS NOT NULL THEN 1 ELSE 0 END) decision_rows,SUM(CASE WHEN self_consistency_digest IS NOT NULL THEN 1 ELSE 0 END) sc_rows FROM aidy_forward_evaluations GROUP BY disposition,data_quality_state ORDER BY n DESC")
+          q('FORWARD_BY_COHORT',"SELECT c.cohort_id,c.state,c.activated_at_utc,COUNT(e.record_id) raw_n,COUNT(DISTINCT e.episode_id) episode_n,MAX(e.evaluated_at_utc) last_eval,SUM(CASE WHEN e.disposition='no_trade' THEN 1 ELSE 0 END) no_trade,SUM(CASE WHEN e.data_quality_state='failure' THEN 1 ELSE 0 END) dq_fail,SUM(CASE WHEN e.disposition='decision_admitted' THEN 1 ELSE 0 END) admitted FROM aidy_forward_cohorts c LEFT JOIN aidy_forward_evaluations e ON e.cohort_id=c.cohort_id GROUP BY c.cohort_id,c.state,c.activated_at_utc ORDER BY c.activated_at_utc DESC")
+          q('FORWARD_RECENT',"SELECT evaluated_at_utc,disposition,data_quality_state,data_quality_reason_code,episode_id,decision_id,retrieval_effective_n,self_consistency_digest FROM aidy_forward_evaluations ORDER BY evaluated_at_utc DESC LIMIT 25")
+          q('REQUESTS',"SELECT request_kind,status,COUNT(*) n,MIN(requested_at_utc) first_at,MAX(requested_at_utc) last_at,SUM(internal_accounted_credits) credits FROM twelve_data_request_ledger GROUP BY request_kind,status ORDER BY request_kind,status")
+          q('REQUEST_ERRORS',"SELECT COALESCE(error_code,'none') error_code,COUNT(*) n,MAX(requested_at_utc) last_at FROM twelve_data_request_ledger WHERE status<>'succeeded' GROUP BY COALESCE(error_code,'none') ORDER BY n DESC")
+          q('REQUEST_RECENT',"SELECT requested_at_utc,completed_at_utc,request_kind,status,error_code,outputsize,internal_accounted_credits FROM twelve_data_request_ledger ORDER BY requested_at_utc DESC LIMIT 30")
+          q('FEED_FRESHNESS',"SELECT freshness_state,session_open_at_fetch,COUNT(*) n,MIN(fetched_at_utc) first_at,MAX(fetched_at_utc) last_at,AVG(observed_lag_seconds) avg_lag_seconds FROM twelve_data_feed_observations GROUP BY freshness_state,session_open_at_fetch ORDER BY n DESC")
+          q('M1_BY_DAY',"SELECT substr(open_time_utc,1,10) day,COUNT(*) n,MIN(open_time_utc) first_bar,MAX(open_time_utc) last_bar FROM market_candles WHERE source='twelve_data_vendor_m1_v1' AND timeframe='1m' GROUP BY substr(open_time_utc,1,10) ORDER BY day")
+          q('SNAPSHOTS_BY_DAY',"SELECT substr(captured_at,1,10) day,capture_status,COUNT(*) n,MIN(captured_at) first_at,MAX(captured_at) last_at FROM market_snapshots WHERE market_data_source='twelve_data' GROUP BY substr(captured_at,1,10),capture_status ORDER BY day,capture_status")
+          q('EVENTS',"SELECT source,event_type,COUNT(*) n,MIN(first_observed_at) first_at,MAX(first_observed_at) last_at FROM market_event_observations GROUP BY source,event_type ORDER BY n DESC")
+          q('CROSS_MARKET',"SELECT source,series_id,COUNT(*) n,MIN(observation_date) first_obs,MAX(observation_date) last_obs,MAX(first_observed_at) latest_seen FROM cross_market_observations GROUP BY source,series_id ORDER BY series_id")
+          q('ARCHIVE_OUTBOX',"SELECT record_type,status,delivery_state,COUNT(*) n,MAX(created_at) latest_created,MAX(archived_at) latest_archived FROM archive_outbox GROUP BY record_type,status,delivery_state ORDER BY n DESC")
+          q('CROSS_ARCHIVE',"SELECT status,delivery_state,COUNT(*) n,MAX(created_at) latest_created,MAX(archived_at) latest_archived FROM cross_market_archive_outbox GROUP BY status,delivery_state ORDER BY n DESC")
+          q('CALIBRATION_WINDOWS',"SELECT status,research_only,pit_eligible,COUNT(*) n,SUM(expected_row_count) expected,SUM(observed_row_count) observed,SUM(missing_row_count) missing,MIN(window_from) first_from,MAX(window_to) last_to FROM provider_calibration_backfill_windows GROUP BY status,research_only,pit_eligible ORDER BY n DESC")
+          q('CALIBRATION_ROWS',"SELECT source_kind,source_provider,pit_eligible,research_only,live_money_execution_allowed,COUNT(*) n,MIN(open_time_utc) first_at,MAX(open_time_utc) last_at FROM provider_calibration_m1_backfill GROUP BY source_kind,source_provider,pit_eligible,research_only,live_money_execution_allowed ORDER BY n DESC")
+          q('MIGRATIONS',"SELECT id,name,applied_at FROM d1_migrations ORDER BY id")
+          PY
