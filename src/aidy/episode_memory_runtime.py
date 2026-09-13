@@ -6,17 +6,20 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from aidy.episode_memory import (
+    EPISODE_MEMORY_VERSION,
     MAX_AUTO_RESOLUTION_HORIZON_MINUTES,
     MEMORY_SYNC_VERSION,
     OUTCOME_RESOLVER_VERSION,
     D1EpisodeMemoryStore,
     _ceil_next_minute,
-    _decision_summary,
+    _episode_payload,
+    _memory_episode_id,
     _resolve_no_trade_path,
     _resolve_trade_path,
     _results,
     _safe_json_object,
     _utc,
+    canonical_json,
     digest,
 )
 from aidy.decision_ledger import verify_ex_ante_record
@@ -27,11 +30,7 @@ RUNTIME_VERSION = "aidy_episode_memory_runtime_v1"
 
 
 def _context_reference_price(ex_ante: Mapping[str, Any]) -> Any:
-    """Read the exact ex-ante market mid for a no-trade shadow.
-
-    No-trade decisions correctly carry no trade geometry. The reference price must
-    therefore come from the immutable point-in-time context, never from a later bar.
-    """
+    """Read the exact ex-ante market mid for a no-trade shadow."""
 
     context = ex_ante.get("context_snapshot")
     if not isinstance(context, Mapping):
@@ -50,9 +49,8 @@ def _context_reference_price(ex_ante: Mapping[str, Any]) -> Any:
 def _shadow_resolution_record(ex_ante: Mapping[str, Any]) -> dict[str, Any]:
     """Create a resolver-only copy with PIT shadow reference geometry.
 
-    This copy is never persisted as ex-ante truth and its digest is never presented
-    as the immutable decision digest. It only gives the shadow resolver the context
-    mid that was genuinely known when AIDY abstained.
+    The immutable ex-ante record remains untouched. This derived copy exists only so
+    a no-trade shadow can start from the market mid that was genuinely known then.
     """
 
     copied = copy.deepcopy(dict(ex_ante))
@@ -66,18 +64,152 @@ def _shadow_resolution_record(ex_ante: Mapping[str, Any]) -> dict[str, Any]:
     return copied
 
 
+def _enriched_episode_payload(
+    *,
+    cycle: Mapping[str, Any],
+    ex_ante: Mapping[str, Any],
+    forward: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Build compact durable memory with enough setup/regime evidence to learn later."""
+
+    payload = _episode_payload(cycle=cycle, ex_ante=ex_ante, forward=forward)
+    raw_decision = ex_ante.get("decision")
+    if isinstance(raw_decision, Mapping):
+        decision = payload.get("decision")
+        if isinstance(decision, dict):
+            decision.update(
+                {
+                    "confidence": raw_decision.get("confidence"),
+                    "setup_codes": copy.deepcopy(raw_decision.get("setup_codes") or []),
+                    "reason_codes": copy.deepcopy(raw_decision.get("reason_codes") or []),
+                    "decision_summary": raw_decision.get("decision_summary"),
+                    "valid_until_utc": raw_decision.get("valid_until_utc"),
+                    "entry_type": raw_decision.get("entry_type"),
+                }
+            )
+
+    repro = ex_ante.get("reproducibility_bundle")
+    if isinstance(repro, Mapping):
+        evidence = payload.get("evidence")
+        if isinstance(evidence, dict):
+            evidence.update(
+                {
+                    "regime_state": copy.deepcopy(repro.get("regime_state") or {}),
+                    "setup_state": copy.deepcopy(repro.get("setup_state") or {}),
+                    "selective_layer_state": copy.deepcopy(repro.get("selective_layer_state")),
+                    "analogue_retrieval_version": repro.get("analogue_retrieval_version"),
+                    "analogue_retrieval_digest": repro.get("analogue_retrieval_digest"),
+                }
+            )
+
+    context = ex_ante.get("context_snapshot")
+    context_summary: dict[str, Any] = {
+        "as_of_utc": None,
+        "symbol": "XAUUSD",
+        "market_mid": _context_reference_price(ex_ante),
+    }
+    if isinstance(context, Mapping):
+        context_summary["as_of_utc"] = context.get("as_of_utc")
+        context_summary["symbol"] = context.get("symbol") or "XAUUSD"
+    payload["context_summary"] = context_summary
+    payload["episode_digest"] = ""
+    payload.pop("episode_digest", None)
+    payload["episode_digest"] = digest(payload)
+    return payload
+
+
 class D1EpisodeMemoryRuntimeStore(D1EpisodeMemoryStore):
+    async def materialize_episodes(
+        self,
+        *,
+        recorded_at_utc: datetime,
+        limit: int = 50,
+    ) -> int:
+        result = await self._d1.prepare(
+            """
+            SELECT c.cycle_id,c.source_state,c.ex_ante_json,c.ex_ante_digest,c.decision_id,
+                   f.record_id AS forward_record_id,f.cohort_id
+            FROM aidy_end_to_end_cycles c
+            LEFT JOIN aidy_forward_evaluations f ON f.ex_ante_digest=c.ex_ante_digest
+            LEFT JOIN aidy_memory_episodes m ON m.ex_ante_digest=c.ex_ante_digest
+            WHERE c.ex_ante_json IS NOT NULL AND c.ex_ante_digest IS NOT NULL
+              AND m.memory_episode_id IS NULL
+            ORDER BY c.created_at_utc,c.cycle_id
+            LIMIT ?
+            """
+        ).bind(max(1, min(int(limit), 500))).all()
+        rows = _results(result)
+        stamp = _utc(recorded_at_utc, name="recorded_at_utc").isoformat()
+        inserted = 0
+
+        for row in rows:
+            ex_ante = _safe_json_object(row["ex_ante_json"], name="ex_ante_json")
+            if not verify_ex_ante_record(ex_ante):
+                raise ValueError(f"Invalid immutable ex-ante record in cycle {row['cycle_id']}.")
+            if str(ex_ante["ex_ante_digest"]) != str(row["ex_ante_digest"]):
+                raise ValueError("End-to-end ex-ante digest mismatch.")
+            forward = None
+            if row.get("forward_record_id"):
+                forward = {
+                    "record_id": row["forward_record_id"],
+                    "cohort_id": row.get("cohort_id"),
+                }
+            payload = _enriched_episode_payload(cycle=row, ex_ante=ex_ante, forward=forward)
+            episode_id = _memory_episode_id(str(ex_ante["ex_ante_digest"]))
+            decision = payload.get("decision") if isinstance(payload.get("decision"), Mapping) else {}
+            text = canonical_json(payload)
+            await self._d1.prepare(
+                """
+                INSERT INTO aidy_memory_episodes (
+                    memory_episode_id,memory_version,source_cycle_id,source_state,
+                    forward_record_id,cohort_id,evaluation_id,decision_id,ex_ante_digest,
+                    evaluated_at_utc,context_hash,disposition,decision_action,direction,
+                    expected_horizon_minutes,thesis_text,episode_json,episode_digest,
+                    recorded_at_utc
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(memory_episode_id) DO NOTHING
+                """
+            ).bind(
+                episode_id,
+                EPISODE_MEMORY_VERSION,
+                row["cycle_id"],
+                row["source_state"],
+                row.get("forward_record_id"),
+                row.get("cohort_id"),
+                ex_ante["evaluation_id"],
+                ex_ante["decision_id"],
+                ex_ante["ex_ante_digest"],
+                ex_ante["evaluated_at_utc"],
+                ex_ante["context_hash"],
+                ex_ante["cycle_disposition"],
+                decision.get("action"),
+                decision.get("direction"),
+                decision.get("expected_horizon_minutes"),
+                decision.get("thesis"),
+                text,
+                payload["episode_digest"],
+                stamp,
+            ).run()
+            stored = await self._first(
+                "SELECT episode_digest,episode_json FROM aidy_memory_episodes WHERE memory_episode_id=? LIMIT 1",
+                episode_id,
+            )
+            if (
+                stored is None
+                or stored.get("episode_digest") != payload["episode_digest"]
+                or stored.get("episode_json") != text
+            ):
+                raise RuntimeError("Immutable AIDY memory episode conflict.")
+            inserted += 1
+        return inserted
+
     async def resolve_due_forward_outcomes(
         self,
         *,
         now_utc: datetime,
         limit: int = 20,
     ) -> dict[str, int]:
-        """Resolve only matured bounded-horizon private-forward episodes.
-
-        Filtering maturity in SQL prevents an old long-horizon episode from occupying
-        the bounded work queue every Cron and starving newer, already-matured episodes.
-        """
+        """Resolve only matured bounded-horizon private-forward episodes."""
 
         now = _utc(now_utc, name="now_utc")
         result = await self._d1.prepare(
