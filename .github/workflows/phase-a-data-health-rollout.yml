@@ -76,7 +76,7 @@ jobs:
           cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
           cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
           cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
-          expected=['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          expected=['* * * * *']
           assert cfg['name']==os.environ['AIDY_WORKER_NAME']
           assert cfg['main']=='src/provider_entry.py'
           assert cfg['triggers']['crons']==expected
@@ -163,7 +163,7 @@ jobs:
           for row in rows or []:
               if isinstance(row,str): actual.add(row)
               elif isinstance(row,dict) and row.get('cron'): actual.add(str(row['cron']))
-          expected={'*/2 * * * *','5,15,25,35,45,55 * * * *'}
+          expected={'* * * * *'}
           assert expected <= actual,(actual,p)
           print('direct_crons=PASS '+','.join(sorted(actual)))
           PY
