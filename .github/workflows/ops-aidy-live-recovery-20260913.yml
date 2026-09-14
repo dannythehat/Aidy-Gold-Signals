@@ -78,7 +78,7 @@ jobs:
           cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
           cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
           cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
-          expected_crons=['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          expected_crons=['* * * * *']
           assert cfg['main']=='src/provider_entry.py'
           assert cfg['triggers']['crons'] == expected_crons
           assert cfg['queues']['consumers'] == []
@@ -192,7 +192,7 @@ jobs:
                   cron=str(row.get('cron') or '').strip()
                   if cron:
                       actual.add(cron)
-          expected={'*/2 * * * *','5,15,25,35,45,55 * * * *'}
+          expected={'* * * * *'}
           assert expected <= actual,(actual,expected,p)
           print('direct_cron_schedules=PASS '+','.join(sorted(actual)))
           PY

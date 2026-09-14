@@ -122,7 +122,7 @@ jobs:
           for row in rows or []:
               if isinstance(row,str): actual.add(row)
               elif isinstance(row,dict) and row.get('cron'): actual.add(str(row['cron']))
-          expected={'*/2 * * * *','5,15,25,35,45,55 * * * *'}
+          expected={'* * * * *'}
           assert expected <= actual,(actual,p)
           print('phase_b_direct_crons=PASS')
           PY

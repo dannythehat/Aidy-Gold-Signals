@@ -20,12 +20,7 @@ def test_capture_worker_uses_direct_cron_and_no_queue_consumer() -> None:
     assert vars_["AIDY_CAPTURE_ENABLED"] == "false"
     assert vars_["AIDY_MARKET_DATA_SOURCE"] == "gold_api"
     assert vars_["AIDY_MARKET_DATA_OWNERSHIP"] == "public_independent"
-    assert config["triggers"] == {
-        "crons": [
-            "*/2 * * * *",
-            "5,15,25,35,45,55 * * * *",
-        ]
-    }
+    assert config["triggers"] == {"crons": ["* * * * *"]}
     assert config["queues"]["consumers"] == []
 
 
@@ -55,11 +50,13 @@ def test_legacy_scheduler_is_retired_and_cannot_enqueue() -> None:
 def test_direct_cron_union_matches_two_minute_and_five_minute_capture_contract() -> None:
     config = _test_config()
     crons = config["triggers"]["crons"]
-    assert crons == ["*/2 * * * *", "5,15,25,35,45,55 * * * *"]
-    # 30 even minutes + 6 odd multiples of five = 36 direct invocations/hour.
-    # This is the same 864 useful ticks/day as the former filtered Queue producer,
-    # but with zero Queue write/read/delete operations.
-    assert (30 + 6) * 24 == 864
+    assert crons == ["* * * * *"]
+    # 60 direct invocations/hour = 1440/day, still free-tier trivial and still zero
+    # Queue write/read/delete operations. Only the 12 ticks/hour that satisfy the
+    # offset due-window perform a capture, so the useful capture rate is unchanged at
+    # 288/day; the extra ticks early-return before any vendor request or D1 write.
+    assert 60 * 24 == 1440
+    assert 12 * 24 == 288
 
 
 def test_broker_free_capture_requires_no_market_secrets() -> None:

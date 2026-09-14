@@ -100,7 +100,7 @@ jobs:
           cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
           cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
           assert cfg['main']=='src/provider_entry.py'
-          assert cfg['triggers']['crons']==['*/2 * * * *','5,15,25,35,45,55 * * * *']
+          assert cfg['triggers']['crons']==['* * * * *']
           assert cfg['queues']['consumers']==[]
           json.dump(cfg, open('wrangler.context-repair.live.jsonc','w',encoding='utf-8'), indent=2)
           PY

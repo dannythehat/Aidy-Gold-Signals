@@ -50,7 +50,7 @@ def test_restart_workflow_never_adds_queue_or_live_execution_dependency() -> Non
         ROOT / ".github" / "workflows" / "phase-b-forward-restart.yml"
     ).read_text(encoding="utf-8")
     assert "assert cfg['queues']['consumers']==[]" in workflow
-    assert "assert cfg['triggers']['crons']==['*/2 * * * *','5,15,25,35,45,55 * * * *']" in workflow
+    assert "assert cfg['triggers']['crons']==['* * * * *']" in workflow
     assert "telegram_publication_enabled':False" in workflow
     assert "live_money_execution_enabled':False" in workflow
     assert "performance_information_used':False" in workflow

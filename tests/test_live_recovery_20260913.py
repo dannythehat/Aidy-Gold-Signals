@@ -38,10 +38,10 @@ def test_provider_market_endpoint_converts_store_failures_to_fail_closed_respons
 def test_direct_cron_template_cannot_regress_to_queue_or_no_schedule() -> None:
     cfg = json.loads((ROOT / "wrangler.test.example.jsonc").read_text(encoding="utf-8"))
     assert cfg["main"] == "src/provider_entry.py"
-    assert cfg["triggers"]["crons"] == [
-        "*/2 * * * *",
-        "5,15,25,35,45,55 * * * *",
-    ]
+    # Per-minute Cron is required by the M1 publication-lag offset: market capture is
+    # due two minutes past each five-minute boundary, and the former boundary-aligned
+    # schedule had no tick in half of those windows. Capture cadence is unchanged.
+    assert cfg["triggers"]["crons"] == ["* * * * *"]
     assert cfg["queues"]["consumers"] == []
 
 

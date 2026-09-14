@@ -35,13 +35,36 @@ class RecorderCycleResult:
     archive: ArchiveFlushResult
 
 
-def interval_due(now: datetime, interval_seconds: float, *, tick_seconds: int = 60) -> bool:
-    """Return whether a periodic task is due on this scheduler tick."""
+# Twelve Data publishes each closed M1 bar roughly 64 seconds after the bar closes
+# (observed 63.8-64.0s across every production capture on 2026-09-14). Sampling a
+# just-closed aggregate bucket at the boundary therefore always misses that bucket's
+# final minute, which pins 5m coverage at 0.800 and keeps all_timeframes_ready false
+# forever. Market capture is offset past the boundary so the vendor has published the
+# final bar before the bucket is evaluated. This changes only WHEN the decision surface
+# is sampled; bucket boundaries, coverage thresholds and PIT semantics are untouched.
+MARKET_PUBLICATION_LAG_OFFSET_SECONDS = 120
+
+
+def interval_due(
+    now: datetime,
+    interval_seconds: float,
+    *,
+    tick_seconds: int = 60,
+    offset_seconds: int = 0,
+) -> bool:
+    """Return whether a periodic task is due on this scheduler tick.
+
+    ``offset_seconds`` shifts the due window later within each interval without
+    changing the interval itself. The scheduler must provide a tick inside the shifted
+    window; a non-zero offset with a boundary-aligned Cron would silently halve the
+    capture rate.
+    """
 
     if now.tzinfo is None:
         raise ValueError("AIDY scheduler requires a timezone-aware datetime.")
     interval = max(int(interval_seconds), tick_seconds)
-    return int(now.astimezone(UTC).timestamp()) % interval < tick_seconds
+    offset = int(offset_seconds) % interval
+    return (int(now.astimezone(UTC).timestamp()) - offset) % interval < tick_seconds
 
 
 MarketGateway = GoldApiGateway | ArgentApiGateway | TwelveDataOhlcGateway
@@ -158,7 +181,11 @@ async def run_worker_scheduled_cycle(
             archive=archive,
         )
 
-    market_due = interval_due(scheduled_at, settings.market_poll_seconds)
+    market_due = interval_due(
+        scheduled_at,
+        settings.market_poll_seconds,
+        offset_seconds=MARKET_PUBLICATION_LAG_OFFSET_SECONDS,
+    )
     fed_due = interval_due(scheduled_at, settings.fed_rss_poll_seconds)
     macro_due = interval_due(scheduled_at, settings.macro_poll_seconds)
     cross_market_due = interval_due(scheduled_at, settings.cross_market_poll_seconds)
