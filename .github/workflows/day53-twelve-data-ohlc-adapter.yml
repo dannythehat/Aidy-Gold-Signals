@@ -25,6 +25,7 @@ on:
       - "src/aidy/cross_market_storage.py"
       - "src/entry.py"
       - ".github/workflows/aidy-retrospective-m1-backfill.yml"
+      - ".github/workflows/aidy-provider-research-read-deploy.yml"
       - "wrangler.test.example.jsonc"
       - "migrations/d1/0006_twelve_data_feed_observations.sql"
       - "migrations/d1/0007_twelve_data_quota_bootstrap.sql"
