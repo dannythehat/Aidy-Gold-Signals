@@ -234,6 +234,25 @@ def test_research_read_is_separate_from_the_decision_read() -> None:
     assert RETROSPECTIVE_M1_SOURCE in research_body
 
 
+def test_a_research_bar_carries_everything_its_reader_needs() -> None:
+    """A bar that omits its provenance cannot be parsed by the one thing that reads it.
+
+    Super Signals' market client requires first_observed_at and payload_digest on every
+    bar: the first is what marks retrospective history as not point-in-time, the second
+    is what lets the reader verify what it was handed. The response selected both from
+    the store and then dropped them when building the payload, so the scorer recorded a
+    parse failure against every trade it tried -- 2,214 of them -- rather than a P&L.
+    """
+    api = (ROOT / "src" / "aidy" / "provider_market_api.py").read_text(encoding="utf-8")
+    research = api[api.index("async def research_market_ohlc_response") :]
+    selected = research[research.index("SELECT") : research.index("FROM market_candles")]
+    emitted = research[research.index("bars.append(") : research.index("missing = [")]
+
+    for field in ("first_observed_at", "payload_digest", "open_time_utc", "revision_index"):
+        assert field in selected, f"{field} must be read from the store"
+        assert f'"{field}"' in emitted, f"{field} is read but never sent to the reader"
+
+
 def test_retrospective_source_is_absent_from_every_decision_path() -> None:
     """Nothing on AIDY's forward path may name the retrospective source."""
     forward_surfaces = (
