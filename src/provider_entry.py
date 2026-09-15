@@ -12,7 +12,7 @@ from aidy.provider_calibration_api import calibration_market_ohlc_response
 from aidy.provider_context_api import provider_context_response
 from aidy.provider_data_health_api import provider_data_health_response
 from aidy.provider_decision_memory_api import provider_decision_memory_response
-from aidy.provider_market_api import market_ohlc_response
+from aidy.provider_market_api import market_ohlc_response, research_market_ohlc_response
 from entry import Default as CoreDefault
 
 
@@ -151,6 +151,8 @@ class Default(CoreDefault):
             return await market_ohlc_response(request, self.env)
         if path == "/calibration/market/ohlc":
             return await calibration_market_ohlc_response(request, self.env)
+        if path == "/research/market/ohlc":
+            return await research_market_ohlc_response(request, self.env)
         if path == "/provider/context":
             return await provider_context_response(request, self.env)
         if path == "/provider/data-health":
