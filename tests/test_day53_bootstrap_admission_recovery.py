@@ -67,16 +67,35 @@ def test_recovery_uses_ephemeral_masked_admin_secret_and_restores_bootstrap_off(
     mask = workflow.index('echo "::add-mask::$ADMIN_TOKEN"')
     install = workflow.index("secret put AIDY_DAY53_ADMIN_TOKEN")
     delete = workflow.index("secrets/AIDY_DAY53_ADMIN_TOKEN")
-    dispatch = workflow.index("day53-live-forward-activation.yml/dispatches")
 
-    assert mask < install < delete < dispatch
+    assert mask < install < delete
     assert "AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='true'" in workflow
     assert "AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'" in workflow
     assert "AIDY_CAPTURE_ENABLED']='false'" in workflow
     assert "AIDY_FORMAL_FORWARD_ENABLED']='false'" in workflow
     assert "capture_status='complete'" in workflow
     assert "all_timeframes_ready" in workflow
-    assert '"ref":"main"' in workflow
+
+
+def test_no_bootstrap_workflow_arms_the_live_forward_gate() -> None:
+    """Backfilling market history must never activate live forward trading.
+
+    Each of these workflows used to finish by dispatching
+    day53-live-forward-activation.yml as a "production proof", and the hardened one
+    asserted its own dispatch was present, so the chain was deliberate rather than a
+    slip. On 2026-09-14 a re-dispatch of a bootstrap recovery run followed that chain,
+    deployed AIDY_FORMAL_FORWARD_ENABLED=true and activated a live forward cohort that
+    nobody had asked for. Repairing market data is not evidence that the system should
+    start trading forward, and the two decisions belong to different people.
+    """
+    for name in (
+        "day53-hardened-bootstrap-recovery.yml",
+        "day53-bootstrap-admission-recovery.yml",
+        "day53-resumable-bootstrap-recovery.yml",
+    ):
+        workflow = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        assert "day53-live-forward-activation.yml/dispatches" not in workflow, name
+        assert "AIDY_FORMAL_FORWARD_ENABLED']='false'" in workflow, name
 
 
 def test_resumable_bootstrap_runtime_is_bounded_and_retry_safe() -> None:
