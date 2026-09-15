@@ -280,6 +280,16 @@ async def research_market_ohlc_response(request: Any, env: Any) -> Any:
                     "close": str(row["close"]),
                     "revision_index": int(row.get("revision_index") or 0),
                     "source": str(row.get("source") or ""),
+                    # Both are already read from the store above, and a reader needs
+                    # them: first_observed_at says when the bar was learned, which for
+                    # retrospective history is long after the minute it describes and is
+                    # exactly what marks it as not point-in-time; payload_digest is what
+                    # lets a reader verify the bar it was handed. Omitting them left the
+                    # only consumer unable to parse a single bar.
+                    "first_observed_at": _utc_iso(
+                        str(row["first_observed_at"]), name="first_observed_at"
+                    ).isoformat(),
+                    "payload_digest": str(row.get("payload_digest") or ""),
                 }
             )
     except (KeyError, TypeError, ValueError) as exc:
