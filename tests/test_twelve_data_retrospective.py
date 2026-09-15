@@ -202,3 +202,46 @@ def test_window_bounds_are_enforced(start, end, expected) -> None:
 def test_naive_timestamps_are_refused() -> None:
     with pytest.raises(ValueError, match="timezone-aware"):
         validate_window(GAP_START.replace(tzinfo=None), GAP_END.replace(tzinfo=None))
+
+
+def test_research_read_is_separate_from_the_decision_read() -> None:
+    """The two endpoints must keep answering different questions.
+
+    /market/ohlc answers "what could AIDY have seen at the time": it reads the
+    decision-admitted view and refuses a row observed after the window closed.
+    /research/market/ohlc answers "what did the market do": it reads market_candles
+    across both sources with no cutoff, and says so on every response.
+    """
+    api = (ROOT / "src" / "aidy" / "provider_market_api.py").read_text(encoding="utf-8")
+
+    decision = api.index("async def market_ohlc_response")
+    research = api.index("async def research_market_ohlc_response")
+    assert decision < research
+
+    decision_body = api[decision:research]
+    research_body = api[research:]
+
+    # The decision path reads the admitted view and enforces the PIT cutoff.
+    assert "twelve_data_decision_admitted_m1_v1" in decision_body
+    assert "admitted_row_exceeds_pit_cutoff" in decision_body
+
+    # The research path reads neither the view nor applies that cutoff, and never
+    # presents itself as evidence.
+    assert "twelve_data_decision_admitted_m1_v1" not in research_body
+    assert "admitted_row_exceeds_pit_cutoff" not in research_body
+    assert '"pit_eligible": False' in research_body
+    assert '"decision_admitted": False' in research_body
+    assert RETROSPECTIVE_M1_SOURCE in research_body
+
+
+def test_retrospective_source_is_absent_from_every_decision_path() -> None:
+    """Nothing on AIDY's forward path may name the retrospective source."""
+    forward_surfaces = (
+        ROOT / "src" / "aidy" / "twelve_data_recorder.py",
+        ROOT / "src" / "aidy" / "twelve_data_bootstrap.py",
+        ROOT / "src" / "aidy" / "forward_live_observer.py",
+    )
+    for path in forward_surfaces:
+        if not path.exists():
+            continue
+        assert RETROSPECTIVE_M1_SOURCE not in path.read_text(encoding="utf-8"), path.name

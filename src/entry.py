@@ -22,6 +22,7 @@ from aidy.runtime import run_capture_cycle, run_worker_scheduled_cycle
 from aidy.storage_contracts import AidyMarketRepository
 from aidy.twelve_data_bootstrap import AidyTwelveDataBootstrapService, plan_bootstrap_windows
 from aidy.twelve_data_market import TwelveDataOhlcGateway, latest_completed_bucket
+from aidy.twelve_data_retrospective import AidyRetrospectiveBackfillService
 from aidy.twelve_data_storage import D1TwelveDataMarketStore
 
 
@@ -230,6 +231,54 @@ class Default(WorkerEntrypoint):
                     {"ok": False, "error": type(exc).__name__, "message": str(exc)[:1000]},
                     status=500,
                 )
+
+        if request.method == "POST" and url.path == "/research/m1-backfill":
+            # Retrospective history for provider research. Bars land under
+            # RETROSPECTIVE_M1_SOURCE, which the decision-admitted view does not select,
+            # so nothing ingested here can reach a forward decision.
+            if str(self.env.AIDY_ENV).lower() != "test":
+                return Response("Not found", status=404)
+            if not _admin_authorized(request, self.env):
+                return Response("Forbidden", status=403)
+            settings = AidySettings.from_worker_env(self.env)
+            if settings.market_data_source != "twelve_data":
+                return Response.json(
+                    {"ok": False, "error": "twelve_data_not_configured"}, status=409
+                )
+            params = parse_qs(url.query)
+            try:
+                start = datetime.fromisoformat(str(params.get("from", [""])[0]))
+                end = datetime.fromisoformat(str(params.get("to", [""])[0]))
+            except ValueError:
+                return Response.json(
+                    {"ok": False, "error": "invalid_window"}, status=400
+                )
+            _, repository = _repository(self.env)
+            market_gateway, market_store = _market_runtime_dependencies(self.env, settings)
+            try:
+                assert isinstance(market_gateway, TwelveDataOhlcGateway)
+                assert isinstance(market_store, D1TwelveDataMarketStore)
+                service = AidyRetrospectiveBackfillService(
+                    repository=repository,
+                    gateway=market_gateway,
+                    store=market_store,
+                )
+                result = await service.ingest_window(start_utc=start, end_utc=end)
+            except ValueError as exc:
+                return Response.json(
+                    {"ok": False, "error": str(exc)}, status=400
+                )
+            except Exception as exc:  # noqa: BLE001 - administrative endpoint fails closed
+                return Response.json(
+                    {
+                        "ok": False,
+                        "error": "retrospective_backfill_failed",
+                        "exception_type": type(exc).__name__,
+                        "message": str(exc)[:500],
+                    },
+                    status=503,
+                )
+            return Response.json(result)
 
         if request.method == "POST" and url.path == "/day53/twelve-data-bootstrap":
             if str(self.env.AIDY_ENV).lower() != "test":

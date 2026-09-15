@@ -190,3 +190,119 @@ async def market_ohlc_response(request: Any, env: Any, *, now: datetime | None =
             "bars": bars,
         }
     )
+
+
+async def research_market_ohlc_response(request: Any, env: Any) -> Any:
+    """Serve settled M1 history for provider research, never for a decision.
+
+    ``/market/ohlc`` answers "what could AIDY have seen at the time", so it reads the
+    decision-admitted view and refuses any row observed after the window closed. That is
+    the right rule for a decision and the wrong one for scoring a provider's past trades,
+    where the question is simply what the market did.
+
+    This path therefore reads ``market_candles`` directly across both the live vendor
+    source and the retrospective research source, with no point-in-time cutoff. It is
+    labelled accordingly so a caller cannot mistake it for evidence: ``pit_eligible`` is
+    false and ``decision_admitted`` is false on every response. Nothing here feeds
+    AIDY's forward path, which reads only the admitted view.
+    """
+    from workers import Response
+
+    if request.method != "GET":
+        return Response("Method not allowed", status=405)
+    if not _authorized(request, env):
+        return Response("Unauthorized", status=401)
+
+    url = urlparse(request.url)
+    params = parse_qs(url.query, keep_blank_values=True)
+    symbol = str(params.get("symbol", [""])[0]).strip().upper().replace("/", "")
+    timeframe = str(params.get("timeframe", [""])[0]).strip().lower()
+    if symbol != "XAUUSD" or timeframe != "1m":
+        return Response.json({"ok": False, "error": "unsupported_research_request"}, status=400)
+
+    try:
+        start = _utc_iso(str(params.get("from", [""])[0]), name="from")
+        end = _utc_iso(str(params.get("to", [""])[0]), name="to")
+    except ValueError as exc:
+        return Response.json(
+            {"ok": False, "error": "invalid_window", "message": str(exc)}, status=400
+        )
+    if start >= end or start.second or start.microsecond or end.second or end.microsecond:
+        return Response.json({"ok": False, "error": "invalid_window"}, status=400)
+    if end - start > MAX_WINDOW:
+        return Response.json(
+            {"ok": False, "error": "window_too_large", "max_window_hours": 48}, status=413
+        )
+
+    try:
+        result = await env.AIDY_OPS.prepare(
+            """
+            SELECT open_time_utc,open,high,low,close,revision_index,first_observed_at,
+                   payload_digest,source
+            FROM market_candles
+            WHERE symbol='XAUUSD' AND timeframe='1m'
+              AND source IN ('twelve_data_vendor_m1_v1','twelve_data_retrospective_m1_v1')
+              AND open_time_utc>=? AND open_time_utc<?
+            ORDER BY open_time_utc,revision_index
+            LIMIT ?
+            """
+        ).bind(start.isoformat(), end.isoformat(), MAX_M1_ROWS + 1).all()
+        rows = _results(result)
+    except Exception as exc:  # noqa: BLE001 - authenticated endpoint must fail closed
+        return Response.json(
+            {
+                "ok": False,
+                "error": "research_evidence_store_unavailable",
+                "exception_type": type(exc).__name__,
+                "message": str(exc)[:500],
+            },
+            status=503,
+        )
+    if len(rows) > MAX_M1_ROWS:
+        return Response.json(
+            {"ok": False, "error": "m1_row_bound_exceeded", "max_rows": MAX_M1_ROWS}, status=413
+        )
+
+    try:
+        selected = _latest_revisions(rows)
+        expected = [value.isoformat() for value in expected_market_minute_opens(start, end)]
+        bars: list[dict[str, str | int]] = []
+        actual: set[str] = set()
+        for row in selected:
+            opened = _utc_iso(str(row["open_time_utc"]), name="open_time_utc").isoformat()
+            actual.add(opened)
+            bars.append(
+                {
+                    "open_time_utc": opened,
+                    "open": str(row["open"]),
+                    "high": str(row["high"]),
+                    "low": str(row["low"]),
+                    "close": str(row["close"]),
+                    "revision_index": int(row.get("revision_index") or 0),
+                    "source": str(row.get("source") or ""),
+                }
+            )
+    except (KeyError, TypeError, ValueError) as exc:
+        return Response.json(
+            {"ok": False, "error": "research_evidence_invalid", "message": str(exc)}, status=503
+        )
+
+    missing = [opened for opened in expected if opened not in actual]
+    return Response.json(
+        {
+            "ok": True,
+            "symbol": "XAUUSD",
+            "timeframe": "1m",
+            "from": start.isoformat(),
+            "to": end.isoformat(),
+            "row_count": len(bars),
+            "expected_row_count": len(expected),
+            "complete": not missing,
+            "expected_open_times": expected,
+            "missing_open_times": missing,
+            "bars": bars,
+            "pit_eligible": False,
+            "decision_admitted": False,
+            "research_only": True,
+        }
+    )
