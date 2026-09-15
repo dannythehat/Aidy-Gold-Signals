@@ -70,6 +70,26 @@ jobs:
             > /tmp/secret-put.json
           rm -f /tmp/secret-body.json
           python3 -c "import json;p=json.load(open('/tmp/secret-put.json'));assert p.get('success') is True, p;print('admin_secret_installed=true')"
+          # A newly written secret is not visible to the Worker immediately, so the
+          # first request can be refused by a Worker still holding the old value. This
+          # waits for the token to take effect using a window the endpoint cannot parse:
+          # authorisation is checked before the window is read, so an authorised call
+          # answers 400 and an unauthorised one 403, and no vendor credit is spent
+          # either way.
+          for attempt in $(seq 1 20); do
+            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 -X POST \
+              -H "X-AIDY-Admin-Token: ${ADMIN_TOKEN}" \
+              "${AIDY_TEST_WORKER_URL}/research/m1-backfill?from=probe&to=probe")"
+            if [ "$code" != "403" ] && [ "$code" != "404" ]; then
+              echo "admin_token_effective_after_attempts=${attempt}"
+              break
+            fi
+            if [ "$attempt" = "20" ]; then
+              echo "admin token never took effect (last status ${code})"
+              exit 1
+            fi
+            sleep 3
+          done
 
       - name: Walk the range in paced 240-minute windows
         shell: bash
@@ -80,7 +100,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY' | tee /tmp/backfill-log.txt
-          import json, os, subprocess, sys, time
+          import json, os, subprocess, time
+          from urllib.parse import quote
           from datetime import UTC, datetime, timedelta
 
           WINDOW = timedelta(minutes=240)
@@ -142,9 +163,11 @@ jobs:
                   break
               if requested:
                   time.sleep(SPACING_SECONDS)
+              # quote(), not raw isoformat: the "+" in a UTC offset is decoded as a
+              # space in a query string, and the endpoint then rejects the window.
               url = (
                   f"{base}/research/m1-backfill"
-                  f"?from={cursor.isoformat()}&to={window_end.isoformat()}"
+                  f"?from={quote(cursor.isoformat())}&to={quote(window_end.isoformat())}"
               )
               result = subprocess.run(
                   ["curl", "-sS", "--max-time", "120", "-X", "POST",
