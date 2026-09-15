@@ -1,0 +1,222 @@
+name: AIDY Retrospective M1 Backfill
+
+# Shadow research needs price history for days capture was down. `/research/m1-backfill`
+# serves exactly that, but it is admin-gated and the admin token is deliberately not a
+# standing secret: the Day 53 workflows mint one, use it, and delete it. This does the
+# same, so a backfill never requires a long-lived administrative credential to exist.
+#
+# Bars land under `twelve_data_retrospective_m1_v1`, which the decision-admitted view does
+# not select, so nothing ingested here can reach a forward decision.
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Window start, UTC ISO-8601 (e.g. 2026-08-12T00:00:00+00:00)"
+        required: true
+      to:
+        description: "Window end, UTC ISO-8601, exclusive"
+        required: true
+      max_windows:
+        description: "Hard cap on vendor requests for this run"
+        required: false
+        default: "150"
+
+concurrency:
+  # Shares the vendor's per-minute credit allowance with live capture, so two of these
+  # must never run at once.
+  group: aidy-retrospective-m1-backfill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  WORKER_SCRIPT: aidy-signals-test
+
+jobs:
+  backfill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Require Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Mint and install an ephemeral admin token
+        id: admin
+        shell: bash
+        run: |
+          set -euo pipefail
+          ADMIN_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          echo "::add-mask::$ADMIN_TOKEN"
+          printf '%s' "$ADMIN_TOKEN" > /tmp/admin-token
+          python3 - "$ADMIN_TOKEN" > /tmp/secret-body.json <<'PY'
+          import json, sys
+          print(json.dumps({"name": "AIDY_DAY53_ADMIN_TOKEN", "text": sys.argv[1], "type": "secret_text"}))
+          PY
+          curl -fsS -X PUT \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data @/tmp/secret-body.json \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_SCRIPT}/secrets" \
+            > /tmp/secret-put.json
+          rm -f /tmp/secret-body.json
+          python3 -c "import json;p=json.load(open('/tmp/secret-put.json'));assert p.get('success') is True, p;print('admin_secret_installed=true')"
+
+      - name: Walk the range in paced 240-minute windows
+        shell: bash
+        env:
+          RANGE_FROM: ${{ inputs.from }}
+          RANGE_TO: ${{ inputs.to }}
+          MAX_WINDOWS: ${{ inputs.max_windows }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' | tee /tmp/backfill-log.txt
+          import json, os, subprocess, sys, time
+          from datetime import UTC, datetime, timedelta
+
+          WINDOW = timedelta(minutes=240)
+          # The service paces itself within one call, but each window is a separate Worker
+          # invocation with no shared state, so the spacing has to be enforced here. 12s
+          # keeps this under 5 requests/min, leaving headroom in the vendor's 8/min
+          # allowance for live scheduled capture running alongside.
+          SPACING_SECONDS = 12.0
+
+          def parse(name):
+              raw = os.environ[name]
+              value = datetime.fromisoformat(raw)
+              if value.tzinfo is None:
+                  raise SystemExit(f"{name} must carry a UTC offset: {raw}")
+              value = value.astimezone(UTC)
+              if value.second or value.microsecond:
+                  raise SystemExit(f"{name} must be minute-aligned: {raw}")
+              return value
+
+          start, end = parse("RANGE_FROM"), parse("RANGE_TO")
+          if start >= end:
+              raise SystemExit("from must be before to")
+          settled = datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(minutes=5)
+          end = min(end, settled)
+          cap = int(os.environ["MAX_WINDOWS"])
+
+          def market_closed(window_start, window_end):
+              """Gold trades Sun 22:00 UTC to Fri 21:00 UTC.
+
+              A window lying wholly inside the weekend gap would spend a vendor credit to
+              be told there are no bars, so it is skipped rather than requested.
+              """
+              probe = window_start
+              while probe < window_end:
+                  weekday, minute = probe.weekday(), probe.hour * 60 + probe.minute
+                  open_now = not (
+                      (weekday == 5)
+                      or (weekday == 4 and minute >= 21 * 60)
+                      or (weekday == 6 and minute < 22 * 60)
+                  )
+                  if open_now:
+                      return False
+                  probe += timedelta(minutes=1)
+              return True
+
+          token = open("/tmp/admin-token", encoding="utf-8").read()
+          base = os.environ["AIDY_TEST_WORKER_URL"]
+          cursor, requested, persisted_total, returned_total, skipped = start, 0, 0, 0, 0
+          failures = []
+
+          while cursor < end:
+              window_end = min(cursor + WINDOW, end)
+              if market_closed(cursor, window_end):
+                  skipped += 1
+                  cursor = window_end
+                  continue
+              if requested >= cap:
+                  print(f"stopped_at_cap cursor={cursor.isoformat()}")
+                  break
+              if requested:
+                  time.sleep(SPACING_SECONDS)
+              url = (
+                  f"{base}/research/m1-backfill"
+                  f"?from={cursor.isoformat()}&to={window_end.isoformat()}"
+              )
+              result = subprocess.run(
+                  ["curl", "-sS", "--max-time", "120", "-X", "POST",
+                   "-H", f"X-AIDY-Admin-Token: {token}", url],
+                  capture_output=True, text=True, check=False,
+              )
+              requested += 1
+              try:
+                  payload = json.loads(result.stdout)
+              except json.JSONDecodeError:
+                  failures.append((cursor.isoformat(), result.stdout[:200]))
+                  print(f"window={cursor.isoformat()} UNPARSEABLE {result.stdout[:200]}")
+                  cursor = window_end
+                  continue
+              if payload.get("ok") is not True:
+                  failures.append((cursor.isoformat(), json.dumps(payload)[:200]))
+                  print(f"window={cursor.isoformat()} FAILED {json.dumps(payload)[:200]}")
+                  cursor = window_end
+                  continue
+              # A research response that claims decision admissibility is a contract break.
+              assert payload.get("pit_eligible") is False, payload
+              assert payload.get("decision_admitted") is False, payload
+              returned = int(payload.get("vendor_minutes_returned") or 0)
+              persisted = int(payload.get("persisted_new_minutes") or 0)
+              returned_total += returned
+              persisted_total += persisted
+              print(
+                  f"window={cursor.isoformat()} returned={returned} persisted={persisted}"
+              )
+              cursor = window_end
+
+          print("---")
+          print(f"windows_requested={requested}")
+          print(f"windows_skipped_market_closed={skipped}")
+          print(f"vendor_minutes_returned={returned_total}")
+          print(f"persisted_new_minutes={persisted_total}")
+          print(f"failed_windows={len(failures)}")
+          # A run that reached the vendor but stored nothing new anywhere is a finding,
+          # not a success: it means the history is already present or unavailable.
+          if requested and not failures and returned_total == 0:
+              raise SystemExit("vendor returned no minutes for any requested window")
+          if failures and len(failures) == requested:
+              raise SystemExit("every requested window failed")
+          PY
+
+      - name: Remove the ephemeral admin token
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f /tmp/admin-token
+          status="$(curl -sS -o /tmp/admin-delete.json -w '%{http_code}' -X DELETE \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_SCRIPT}/secrets/AIDY_DAY53_ADMIN_TOKEN")"
+          test "$status" = "200" || test "$status" = "404"
+          curl -fsS \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_SCRIPT}/secrets" \
+            > /tmp/worker-secrets-after.json
+          python3 - <<'PY'
+          import json
+          payload = json.load(open('/tmp/worker-secrets-after.json', encoding='utf-8'))
+          names = {str(item.get('name')) for item in (payload.get('result') or [])}
+          assert 'AIDY_DAY53_ADMIN_TOKEN' not in names, names
+          print('ephemeral_admin_secret_absent=true')
+          PY
+
+      - name: Publish the window log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retrospective-backfill-log
+          path: /tmp/backfill-log.txt
+          if-no-files-found: ignore
