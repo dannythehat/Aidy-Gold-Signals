@@ -1,5 +1,9 @@
 name: AIDY Provider Research Read Deploy
 
+# Manual recovery trigger 2026-09-16: redeploy the canonical direct-Cron Worker after
+# provider context was observed stale in Super Signals. This is intentionally a no-op
+# workflow comment; the deploy job below is the recovery mechanism.
+
 # Two things this exists for.
 #
 # The research read path had no deploy trigger. Every workflow that pushes this Worker is
