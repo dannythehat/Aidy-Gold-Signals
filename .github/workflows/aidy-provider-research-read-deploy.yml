@@ -1,24 +1,16 @@
 name: AIDY Provider Research Read Deploy
 
-# Two things this exists for.
-#
-# The research read path had no deploy trigger. Every workflow that pushes this Worker is
-# filtered to the files its own feature touches, and none of them lists
-# src/aidy/provider_market_api.py, so a fix to the research endpoint merged to main and
-# simply never reached production.
-#
-# And the deploy must not strip the Worker's cron triggers. wrangler.test.example.jsonc
-# declares crons ['* * * * *'] and /health reports scheduler "direct-cron": the minute
-# cron IS scheduled capture. A deploy that rebuilds the config without it silently ends
-# live capture, which is what happened on 2026-09-15 -- the last scheduled success was
-# 03:52, minutes after a deploy that set triggers.crons to []. This one asserts the cron
-# survives, before and after.
+# This workflow owns safe deployment of the read-only provider research surfaces.
+# It must deploy changes to either the raw market-read endpoint or the canonical
+# Provider Context endpoint, and it must never strip scheduled capture or arm formal
+# forward authority while doing so.
 
 on:
   push:
     branches: [main]
     paths:
       - "src/aidy/provider_market_api.py"
+      - "src/aidy/provider_context_api.py"
       - "src/provider_entry.py"
       - ".github/workflows/aidy-provider-research-read-deploy.yml"
   workflow_dispatch:
@@ -59,15 +51,18 @@ jobs:
           test -n "${CLOUDFLARE_API_TOKEN:-}"
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
 
-      - name: Install dependencies and check the read path
+      - name: Install dependencies and check provider read paths
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/provider_entry.py
           uv run python -m compileall -q src tests
-          uv run pytest -q tests/test_provider_market_api.py tests/test_twelve_data_retrospective.py
+          uv run pytest -q \
+            tests/test_provider_market_api.py \
+            tests/test_provider_context_api.py \
+            tests/test_twelve_data_retrospective.py
 
       - name: Build the Worker config, cron included
         shell: bash
@@ -86,8 +81,7 @@ jobs:
           cfg['vars']['AIDY_MARKET_DATA_SOURCE'] = 'twelve_data'
           cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP'] = 'public_independent'
           cfg['vars']['AIDY_MARKET_POLL_SECONDS'] = '300'
-          # Never armed from here. Deploying the research read path is not an occasion
-          # to change forward authority.
+          # Never arm formal forward execution from a research-read deploy.
           cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED'] = 'false'
 
           settings = AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
@@ -95,8 +89,8 @@ jobs:
           assert settings.market_data_source == 'twelve_data'
           assert settings.market_data_ownership == 'public_independent'
           assert str(cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']).lower() == 'false'
-          # The minute cron is scheduled capture. Deploying without it stops the
-          # capture this system depends on, silently and with a green deploy.
+          # The minute cron is scheduled capture. A green deploy without this cron is a
+          # capture outage, so assert it before deployment.
           assert cfg['triggers']['crons'] == ['* * * * *'], cfg['triggers']
           json.dump(cfg, open('wrangler.research.live.jsonc', 'w', encoding='utf-8'), indent=2)
           print('config_built_with_cron=true')
@@ -109,7 +103,7 @@ jobs:
           cp wrangler.research.live.jsonc wrangler.jsonc
           uv run pywrangler deploy
 
-      - name: Verify configuration, cron and the research route
+      - name: Verify configuration, cron and provider research routes
         shell: bash
         run: |
           set -euo pipefail
@@ -131,8 +125,8 @@ jobs:
           done
           test "$ok" = "1"
 
-          # The cron is the thing most easily lost by a rebuilt config, so it is checked
-          # against Cloudflare rather than inferred from the file we just wrote.
+          # The cron is the thing most easily lost by a rebuilt config, so verify it
+          # against Cloudflare rather than trusting the local file.
           curl -fsS \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/aidy-signals-test/schedules" \
@@ -145,8 +139,11 @@ jobs:
           print('capture_cron_present=true')
           PY
 
-          # A 401 proves the route is served and still requires authorisation.
-          code="$(curl -sS -o /dev/null -w '%{http_code}' \
+          # 401 proves both routes are present and remain authenticated.
+          market_code="$(curl -sS -o /dev/null -w '%{http_code}' \
             "${AIDY_TEST_WORKER_URL}/research/market/ohlc?symbol=XAUUSD&timeframe=1m")"
-          test "$code" = "401"
-          echo "research_route_live_and_authenticated=true"
+          test "$market_code" = "401"
+          context_code="$(curl -sS -o /dev/null -w '%{http_code}' \
+            "${AIDY_TEST_WORKER_URL}/provider/context?as_of=2026-09-16T00:00:00%2B00:00")"
+          test "$context_code" = "401"
+          echo "provider_research_routes_live_and_authenticated=true"
