@@ -9,11 +9,26 @@ from urllib.parse import parse_qs, urlparse
 from aidy.private_forward_context import build_private_forward_decision_inputs
 from aidy.twelve_data_market import AIDY_SYMBOL
 
-PROVIDER_CONTEXT_API_VERSION = "aidy_provider_context_api_v1"
+PROVIDER_CONTEXT_API_VERSION = "aidy_provider_context_api_v2"
 MAX_CONTEXT_LAG = timedelta(minutes=10)
 _PROVIDER_TOKEN_ENV = "AIDY_PROVIDER_MARKET_TOKEN"
 _CACHE_LIMIT = 32
 _CONTEXT_CACHE: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_REQUIRED_PROVIDER_CONTEXT_FIELDS = (
+    "latest_m1_id",
+    "latest_m5_id",
+    "latest_m15_id",
+    "latest_h1_id",
+    "latest_h4_id",
+)
+_TIMEFRAME_FIELDS = {
+    "1m": "latest_m1_id",
+    "5m": "latest_m5_id",
+    "15m": "latest_m15_id",
+    "1h": "latest_h1_id",
+    "4h": "latest_h4_id",
+    "1d": "latest_d1_id",
+}
 
 
 def _utc_iso(value: str, *, name: str) -> datetime:
@@ -53,21 +68,63 @@ def _authorized(request: Any, env: Any) -> bool:
         return False
 
 
+def _provider_context_evidence(snapshot: Mapping[str, Any]) -> tuple[str, list[str]]:
+    """Grade a scheduled snapshot for Provider Intelligence only.
+
+    Formal AIDY forward execution keeps its existing all-timeframe ``complete`` gate.
+    Provider Intelligence is allowed to remain observationally alive when the current
+    intraday stack is intact but the prior D1 aggregate is unavailable because of a
+    historical capture gap. Missing M1/M5/M15/H1/H4 is never admitted here.
+    """
+
+    status = str(snapshot.get("capture_status") or "").strip().lower()
+    missing = [
+        timeframe
+        for timeframe, field in _TIMEFRAME_FIELDS.items()
+        if snapshot.get(field) in {None, ""}
+    ]
+    if status == "complete":
+        if missing:
+            raise ValueError("provider_context_complete_snapshot_missing_timeframe")
+        return "complete", []
+    if status != "partial":
+        raise ValueError("provider_context_snapshot_status_ineligible")
+    if any(snapshot.get(field) in {None, ""} for field in _REQUIRED_PROVIDER_CONTEXT_FIELDS):
+        raise ValueError("provider_context_intraday_stack_incomplete")
+    if missing != ["1d"]:
+        raise ValueError("provider_context_partial_scope_exceeded")
+    return "intraday_complete_d1_missing", missing
+
+
 async def _snapshot_at_or_before(d1: Any, *, as_of: datetime) -> dict[str, Any] | None:
     value = await d1.prepare(
         """
         SELECT id,captured_at,symbol,capture_status,market_data_source,session_code,
-               snapshot_digest,archive_key,data_availability_json
+               snapshot_digest,archive_key,data_availability_json,
+               latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,latest_h4_id,latest_d1_id
         FROM market_snapshots
         WHERE symbol=? AND market_data_source='twelve_data'
-          AND capture_status='complete' AND captured_at<=?
+          AND capture_status IN ('complete','partial') AND captured_at<=?
           AND json_extract(data_availability_json,'$.request_kind')='scheduled_capture'
           AND json_extract(data_availability_json,'$.request_ledger_status')='succeeded'
+          AND json_extract(data_availability_json,'$.freshness_state')='fresh'
+          AND latest_m1_id IS NOT NULL
+          AND latest_m5_id IS NOT NULL
+          AND latest_m15_id IS NOT NULL
+          AND latest_h1_id IS NOT NULL
+          AND latest_h4_id IS NOT NULL
         ORDER BY captured_at DESC,id DESC
         LIMIT 1
         """
     ).bind(AIDY_SYMBOL, as_of.isoformat()).first()
-    return _row(value)
+    snapshot = _row(value)
+    if snapshot is None:
+        return None
+    try:
+        _provider_context_evidence(snapshot)
+    except ValueError:
+        return None
+    return snapshot
 
 
 def _compact_join_packet(inputs: Mapping[str, Any], *, snapshot: Mapping[str, Any]) -> dict[str, Any]:
@@ -92,6 +149,7 @@ def _compact_join_packet(inputs: Mapping[str, Any], *, snapshot: Mapping[str, An
     built_as_of = _utc_iso(str(inputs["as_of_utc"]), name="inputs.as_of_utc")
     if built_as_of != snapshot_captured:
         raise RuntimeError("canonical_context_snapshot_timestamp_mismatch")
+    evidence_grade, missing_timeframes = _provider_context_evidence(snapshot)
 
     return {
         "api_version": PROVIDER_CONTEXT_API_VERSION,
@@ -107,6 +165,8 @@ def _compact_join_packet(inputs: Mapping[str, Any], *, snapshot: Mapping[str, An
             "session_code": str(snapshot.get("session_code") or ""),
             "snapshot_digest": str(snapshot.get("snapshot_digest") or ""),
             "archive_key": str(snapshot.get("archive_key") or ""),
+            "provider_context_evidence_grade": evidence_grade,
+            "provider_context_missing_timeframes": missing_timeframes,
         },
         "session": dict(session),
         "regime": dict(regime),
@@ -115,7 +175,12 @@ def _compact_join_packet(inputs: Mapping[str, Any], *, snapshot: Mapping[str, An
             "quote_context": dict(quote),
             "architecture_v2_extension_digest": str(extensions.get("extension_digest") or ""),
             "price_structure_digest": str(
-                ((extensions.get("price_structure_context") or {}) if isinstance(extensions.get("price_structure_context"), Mapping) else {}).get("structure_semantic_digest") or ""
+                (
+                    (extensions.get("price_structure_context") or {})
+                    if isinstance(extensions.get("price_structure_context"), Mapping)
+                    else {}
+                ).get("structure_semantic_digest")
+                or ""
             ),
         },
         "provenance": {
@@ -124,6 +189,10 @@ def _compact_join_packet(inputs: Mapping[str, Any], *, snapshot: Mapping[str, An
             "cross_source_analogue_permission": False,
             "public_publication_enabled": False,
             "live_money_execution_allowed": False,
+            "provider_context_observational_only": True,
+            "provider_context_evidence_grade": evidence_grade,
+            "provider_context_missing_timeframes": missing_timeframes,
+            "formal_forward_complete_snapshot_required": True,
         },
     }
 
@@ -146,10 +215,11 @@ async def _context_for_snapshot(d1: Any, *, snapshot: Mapping[str, Any]) -> dict
 
 
 async def provider_context_response(request: Any, env: Any, *, now: datetime | None = None) -> Any:
-    """Return AIDY's canonical PIT context for a provider signal timestamp.
+    """Return PIT-safe observational market context for a provider signal timestamp.
 
     The endpoint is read-only, bearer-authenticated and fails closed if the latest
-    complete scheduled AIDY snapshot is more than ten minutes older than the signal.
+    Provider-Intelligence-eligible scheduled snapshot is more than ten minutes older
+    than the signal. Formal AIDY execution authority is never granted here.
     """
     from workers import Response
 
