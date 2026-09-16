@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hmac
 from collections import OrderedDict
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
-from typing import Any, Mapping
+from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from aidy.private_forward_context import build_private_forward_decision_inputs
