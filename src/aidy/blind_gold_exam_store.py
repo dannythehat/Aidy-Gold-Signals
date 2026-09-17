@@ -4,6 +4,7 @@ import json
 from typing import Any, Mapping
 
 from aidy.blind_gold_exam import ExamEpisode, evaluate_learning
+from aidy.blind_gold_exam_context import frozen_exam_context
 
 
 def _obj(raw: Any) -> dict[str, Any]:
@@ -56,13 +57,9 @@ def _predicted_direction(episode: Mapping[str, Any]) -> str:
     return {"buy": "long", "sell": "short"}.get(value, value)
 
 
-def _difficulty(episode: Mapping[str, Any]) -> int:
-    # V1 is deliberately conservative: do not infer difficulty from future outcome.
-    # Frozen context enrichment can raise this once contemporaneous regime/liquidity
-    # features are joined to the episode.
-    context = _obj(episode.get("exam_context"))
-    value = context.get("difficulty")
-    return int(value) if value in {1, 2, 3, 4, 5} else 1
+def _regime_label(context: Mapping[str, Any]) -> str | None:
+    parts = [str(context[key]) for key in ("market_structure", "volatility_state", "liquidity_state", "session", "event_state") if context.get(key)]
+    return "|".join(parts) if parts else None
 
 
 class D1BlindGoldExamStore:
@@ -97,6 +94,7 @@ class D1BlindGoldExamStore:
             outcome = _obj(outcome_record.get("outcome_payload"))
             predicted = _predicted_direction(episode)
             actual = _actual_direction(predicted=predicted, outcome=outcome)
+            context = frozen_exam_context(episode)
             output.append(
                 ExamEpisode(
                     episode_id=str(row["memory_episode_id"]),
@@ -106,11 +104,23 @@ class D1BlindGoldExamStore:
                     actual_direction=actual,
                     confidence=_confidence(episode),
                     provider=None,
-                    regime=None,
-                    difficulty=_difficulty(episode),
+                    regime=_regime_label(context),
+                    difficulty=int(context["difficulty"]),
                 )
             )
         return output
+
+    async def context_coverage(self, *, limit: int = 5000) -> dict[str, Any]:
+        result = await self._d1.prepare(
+            "SELECT episode_json FROM aidy_memory_episodes ORDER BY evaluated_at_utc,memory_episode_id LIMIT ?"
+        ).bind(max(1, min(int(limit), 20000))).all()
+        rows = getattr(result, "results", None)
+        if rows is None and isinstance(result, Mapping):
+            rows = result.get("results")
+        contexts = [frozen_exam_context(_obj(dict(row).get("episode_json"))) for row in (rows or [])]
+        counts = {name: sum(1 for c in contexts if c.get(name) is not None) for name in ("market_structure", "volatility_state", "liquidity_state", "session", "event_state")}
+        total = len(contexts)
+        return {"episode_count": total, "known_counts": counts, "fully_contextualized": sum(1 for c in contexts if c["context_dimension_count"] == 5), "context_enrichment_is_pit_only": True}
 
     async def report(self, *, batch_size: int = 20, limit: int = 5000) -> dict[str, Any]:
         episodes = await self.episodes(limit=limit)
@@ -119,6 +129,7 @@ class D1BlindGoldExamStore:
             {
                 "source": "immutable_aidy_episode_memory",
                 "episode_count_loaded": len(episodes),
+                "context_coverage": await self.context_coverage(limit=limit),
                 "pit_learning_count_enforced": True,
                 "same_episode_learning_excluded": True,
                 "future_outcome_used_as_input": False,
