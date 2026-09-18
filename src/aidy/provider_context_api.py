@@ -10,7 +10,8 @@ from urllib.parse import parse_qs, urlparse
 from aidy.private_forward_context import build_private_forward_decision_inputs
 from aidy.twelve_data_market import AIDY_SYMBOL
 
-PROVIDER_CONTEXT_API_VERSION = "aidy_provider_context_api_v2"
+PROVIDER_CONTEXT_API_VERSION = "aidy_provider_context_api_v3"
+PROVIDER_GOLD_STATE_VERSION = "aidy_provider_gold_state_v1"
 MAX_CONTEXT_LAG = timedelta(minutes=10)
 _PROVIDER_TOKEN_ENV = "AIDY_PROVIDER_MARKET_TOKEN"
 _CACHE_LIMIT = 32
@@ -128,6 +129,99 @@ async def _snapshot_at_or_before(d1: Any, *, as_of: datetime) -> dict[str, Any] 
     return snapshot
 
 
+def _provider_gold_state(
+    *,
+    context: Mapping[str, Any],
+    extensions: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Expose only PIT-safe Gold state with explicit qualification semantics.
+
+    This is descriptive context, not a directional edge claim. Research surfaces that are
+    not operationally live/qualified stay present only as machine-readable UNKNOWN states.
+    """
+    price = extensions.get("price_structure_context")
+    price = price if isinstance(price, Mapping) else {}
+    volatility = extensions.get("volatility_state")
+    volatility = volatility if isinstance(volatility, Mapping) else {}
+    availability = extensions.get("live_source_availability")
+    availability = availability if isinstance(availability, Mapping) else {}
+    event_risk = context.get("event_risk")
+    event_risk = event_risk if isinstance(event_risk, Mapping) else {}
+
+    price_allowed = (
+        price.get("pit_eligible") is True
+        and price.get("future_values_used") is False
+        and str(availability.get("price_liquidity_structure") or "").startswith("derived_live")
+    )
+    volatility_allowed = (
+        volatility.get("mode") == "pit"
+        and volatility.get("decision_input_allowed") is True
+        and volatility.get("retrospective_history_included") is False
+    )
+    event_allowed = event_risk.get("evidence_state") == "known"
+
+    return {
+        "contract_version": PROVIDER_GOLD_STATE_VERSION,
+        "as_of_utc": context.get("as_of_utc"),
+        "symbol": context.get("symbol"),
+        "descriptive_context_only": True,
+        "predictive_edge_claimed": False,
+        "live_money_execution_allowed": False,
+        "price_liquidity": {
+            "state": "known" if price_allowed else "unknown",
+            "decision_input_allowed": price_allowed,
+            "source_state": availability.get("price_liquidity_structure"),
+            "structure_semantic_digest": price.get("structure_semantic_digest"),
+            "structure": dict(price.get("structure") or {}) if price_allowed else {},
+            "feed_health": dict(price.get("feed_health") or {}) if price_allowed else {},
+        },
+        "volatility": {
+            "state": str(volatility.get("state") or "unknown"),
+            "decision_input_allowed": volatility_allowed,
+            "source_state": availability.get("realized_volatility"),
+            "volatility_state_digest": volatility.get("volatility_state_digest"),
+            "realized_volatility": (
+                dict(volatility.get("realized_volatility") or {}) if volatility_allowed else {}
+            ),
+            "jump_continuous": (
+                dict(volatility.get("jump_continuous") or {}) if volatility_allowed else {}
+            ),
+            "vol_of_vol": dict(volatility.get("vol_of_vol") or {}) if volatility_allowed else {},
+            "gvz": dict(volatility.get("gvz") or {}) if volatility_allowed else {},
+            "iv_minus_rv": dict(volatility.get("iv_minus_rv") or {}) if volatility_allowed else {},
+        },
+        "scheduled_event_risk": {
+            "state": str(event_risk.get("evidence_state") or "unknown"),
+            "decision_input_allowed": event_allowed,
+            "events_in_window": list(event_risk.get("events_in_window") or []) if event_allowed else [],
+            "next_scheduled_event": event_risk.get("next_scheduled_event") if event_allowed else None,
+        },
+        "research_surfaces": {
+            "rates_macro": {
+                "state": availability.get("rates_macro_vintages") or "unknown",
+                "decision_input_allowed": False,
+            },
+            "tiered_macro_events": {
+                "state": availability.get("tiered_macro_events") or "unknown",
+                "decision_input_allowed": False,
+            },
+            "cme_contract_state": {
+                "state": availability.get("cme_contract_state") or "unknown",
+                "decision_input_allowed": False,
+            },
+            "gvz_implied_volatility": {
+                "state": availability.get("gvz_implied_volatility") or "unknown",
+                "decision_input_allowed": bool(
+                    volatility_allowed
+                    and isinstance(volatility.get("gvz"), Mapping)
+                    and volatility["gvz"].get("state") == "known"
+                ),
+            },
+        },
+        "unknown_stays_unknown": True,
+    }
+
+
 def _compact_join_packet(inputs: Mapping[str, Any], *, snapshot: Mapping[str, Any]) -> dict[str, Any]:
     context = inputs.get("context")
     context = context if isinstance(context, Mapping) else {}
@@ -184,6 +278,7 @@ def _compact_join_packet(inputs: Mapping[str, Any], *, snapshot: Mapping[str, An
                 or ""
             ),
         },
+        "gold_state": _provider_gold_state(context=context, extensions=extensions),
         "provenance": {
             "source_contract_versions": dict(versions),
             "private_forward_only": True,
