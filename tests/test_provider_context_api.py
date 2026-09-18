@@ -202,3 +202,92 @@ def test_provider_endpoint_remains_read_only_bounded_and_non_authoritative() -> 
     assert 'path == "/provider/context"' in wrapper
     assert 'if status != "complete":' in formal
     assert 'return "market_reference_not_complete"' in formal
+
+
+def test_gold_state_dossier_exposes_only_qualified_pit_surfaces() -> None:
+    context = {
+        "as_of_utc": "2026-09-04T12:00:00+00:00",
+        "symbol": "XAUUSD",
+        "event_risk": {
+            "evidence_state": "known",
+            "events_in_window": [{"event_type": "cpi", "published_at": "2026-09-04T12:30:00+00:00"}],
+            "next_scheduled_event": {"event_type": "cpi", "published_at": "2026-09-04T12:30:00+00:00"},
+        },
+    }
+    extensions = {
+        "live_source_availability": {
+            "price_liquidity_structure": "derived_live_from_admitted_twelve_candles",
+            "realized_volatility": "derived_when_candle_history_is_sufficient",
+            "rates_macro_vintages": "unknown_no_operational_day28_vintage_feed",
+            "tiered_macro_events": "unknown_no_operational_day29_schedule_feed",
+            "cme_contract_state": "unknown_no_operational_day30_bulletin_feed",
+            "gvz_implied_volatility": "unknown_no_operational_day31_gvz_feed",
+        },
+        "price_structure_context": {
+            "pit_eligible": True,
+            "future_values_used": False,
+            "structure_semantic_digest": "structure-digest",
+            "structure": {
+                "prior_day_breakout": {"state": "upside_hold"},
+                "wick_footprint": {"state": "known", "close_location": "0.8"},
+            },
+            "feed_health": {"quote": {"state": "observed"}},
+        },
+        "volatility_state": {
+            "mode": "pit",
+            "decision_input_allowed": True,
+            "retrospective_history_included": False,
+            "state": "partial",
+            "volatility_state_digest": "vol-digest",
+            "realized_volatility": {"state": "known", "annualized_percent": {"21": "18.4"}},
+            "jump_continuous": {"state": "continuous_dominant"},
+            "vol_of_vol": {"state": "unknown_insufficient_history"},
+            "gvz": {"state": "unknown"},
+            "iv_minus_rv": {"state": "unknown_missing_iv_or_comparable_rv"},
+        },
+    }
+
+    state = api._provider_gold_state(context=context, extensions=extensions)
+
+    assert state["contract_version"] == "aidy_provider_gold_state_v1"
+    assert state["descriptive_context_only"] is True
+    assert state["predictive_edge_claimed"] is False
+    assert state["live_money_execution_allowed"] is False
+    assert state["price_liquidity"]["decision_input_allowed"] is True
+    assert state["price_liquidity"]["structure"]["prior_day_breakout"]["state"] == "upside_hold"
+    assert state["volatility"]["decision_input_allowed"] is True
+    assert state["volatility"]["realized_volatility"]["state"] == "known"
+    assert state["scheduled_event_risk"]["decision_input_allowed"] is True
+    assert state["research_surfaces"]["rates_macro"]["decision_input_allowed"] is False
+    assert state["research_surfaces"]["tiered_macro_events"]["decision_input_allowed"] is False
+    assert state["unknown_stays_unknown"] is True
+
+
+def test_gold_state_dossier_masks_non_pit_or_research_only_surfaces() -> None:
+    state = api._provider_gold_state(
+        context={"as_of_utc": "2026-09-04T12:00:00+00:00", "symbol": "XAUUSD"},
+        extensions={
+            "live_source_availability": {
+                "price_liquidity_structure": "derived_live_from_admitted_twelve_candles",
+                "realized_volatility": "derived_when_candle_history_is_sufficient",
+            },
+            "price_structure_context": {
+                "pit_eligible": False,
+                "future_values_used": False,
+                "structure": {"prior_day_breakout": {"state": "upside_hold"}},
+            },
+            "volatility_state": {
+                "mode": "retrospective_research",
+                "decision_input_allowed": False,
+                "retrospective_history_included": True,
+                "state": "known",
+                "realized_volatility": {"state": "known"},
+            },
+        },
+    )
+
+    assert state["price_liquidity"]["decision_input_allowed"] is False
+    assert state["price_liquidity"]["structure"] == {}
+    assert state["volatility"]["decision_input_allowed"] is False
+    assert state["volatility"]["realized_volatility"] == {}
+    assert state["scheduled_event_risk"]["decision_input_allowed"] is False
