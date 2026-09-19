@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 import aidy.provider_context_api as api
+from aidy.gold_state_engine import build_gold_state_engine
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -53,6 +54,44 @@ def _snapshot(*, status: str = "complete", d1: bool = True) -> dict[str, object]
         "latest_h4_id": "h4",
         "latest_d1_id": "d1" if d1 else None,
     }
+
+
+def _engine_state(
+    *,
+    context: dict[str, object] | None = None,
+) -> dict[str, object]:
+    semantic = context or {
+        "gold": {"quote_context": {"mid": "3500"}},
+        "event_risk": {"evidence_state": "unknown", "timing_state": "unknown"},
+    }
+    return build_gold_state_engine(
+        as_of="2026-09-04T12:00:00+00:00",
+        symbol="XAUUSD",
+        candle_rows=[],
+        semantic_context=semantic,
+        price_structure_packet={
+            "mode": "pit",
+            "pit_eligible": True,
+            "future_values_used": False,
+            "structure_semantic_digest": "structure-digest",
+            "structure": {
+                "prior_day_breakout": {"state": "upside_hold"},
+                "wick_footprint": {"state": "known", "close_location": "0.8"},
+            },
+        },
+        volatility_state={
+            "mode": "pit",
+            "decision_input_allowed": True,
+            "retrospective_history_included": False,
+            "state": "partial",
+            "volatility_state_digest": "vol-digest",
+            "realized_volatility": {"state": "unknown_insufficient_daily_history"},
+            "jump_continuous": {"state": "unknown_insufficient_intraday_coverage"},
+            "vol_of_vol": {"state": "unknown_insufficient_history"},
+            "gvz": {"state": "unknown"},
+            "iv_minus_rv": {"state": "unknown_missing_iv_or_comparable_rv"},
+        },
+    )
 
 
 @pytest.mark.asyncio
@@ -113,7 +152,17 @@ def test_compact_packet_preserves_canonical_context_and_provenance() -> None:
             "source_contract_versions": {"semantic_context": "v1"},
             "architecture_v2_extensions": {
                 "extension_digest": "extension-digest",
-                "price_structure_context": {"structure_semantic_digest": "structure-digest"},
+                "price_structure_context": {
+                    "pit_eligible": True,
+                    "future_values_used": False,
+                    "structure_semantic_digest": "structure-digest",
+                    "structure": {},
+                    "feed_health": {},
+                },
+                "gold_state_engine": _engine_state(),
+                "live_source_availability": {
+                    "price_liquidity_structure": "derived_live_from_admitted_twelve_candles"
+                },
             },
         },
     }
@@ -137,7 +186,25 @@ def test_partial_d1_packet_is_explicitly_degraded_and_non_executable() -> None:
         "adapter_version": "adapter-v1",
         "as_of_utc": snapshot["captured_at"],
         "regime": {"compound_regime_key": "mixed"},
-        "context": {"context_hash": "hash", "session": {}, "data_quality": {}, "gold": {}},
+        "context": {
+            "context_hash": "hash",
+            "session": {},
+            "data_quality": {},
+            "gold": {},
+            "architecture_v2_extensions": {
+                "price_structure_context": {
+                    "pit_eligible": True,
+                    "future_values_used": False,
+                    "structure_semantic_digest": "structure-digest",
+                    "structure": {},
+                    "feed_health": {},
+                },
+                "gold_state_engine": _engine_state(),
+                "live_source_availability": {
+                    "price_liquidity_structure": "derived_live_from_admitted_twelve_candles"
+                },
+            },
+        },
     }
     packet = api._compact_join_packet(inputs, snapshot=snapshot)
     assert packet["snapshot"]["capture_status"] == "partial"
@@ -175,7 +242,25 @@ async def test_context_cache_is_keyed_by_immutable_snapshot(monkeypatch: pytest.
             "adapter_version": "adapter-v1",
             "as_of_utc": "2026-09-04T12:00:00+00:00",
             "regime": {"compound_regime_key": "range"},
-            "context": {"context_hash": "hash", "session": {}, "data_quality": {}, "gold": {}},
+            "context": {
+                "context_hash": "hash",
+                "session": {},
+                "data_quality": {},
+                "gold": {},
+                "architecture_v2_extensions": {
+                    "price_structure_context": {
+                        "pit_eligible": True,
+                        "future_values_used": False,
+                        "structure_semantic_digest": "structure-digest",
+                        "structure": {},
+                        "feed_health": {},
+                    },
+                    "gold_state_engine": _engine_state(),
+                    "live_source_availability": {
+                        "price_liquidity_structure": "derived_live_from_admitted_twelve_candles"
+                    },
+                },
+            },
         }
 
     monkeypatch.setattr(api, "build_private_forward_decision_inputs", fake_builder)
@@ -204,20 +289,21 @@ def test_provider_endpoint_remains_read_only_bounded_and_non_authoritative() -> 
     assert 'return "market_reference_not_complete"' in formal
 
 
-def test_gold_state_dossier_exposes_only_qualified_pit_surfaces() -> None:
+def test_gold_state_dossier_exposes_verified_engine_v2_and_research_boundaries() -> None:
     context = {
-        "as_of_utc": "2026-09-04T12:00:00+00:00",
-        "symbol": "XAUUSD",
+        "gold": {"quote_context": {"mid": "3500"}},
         "event_risk": {
             "evidence_state": "known",
-            "events_in_window": [{"event_type": "cpi", "published_at": "2026-09-04T12:30:00+00:00"}],
-            "next_scheduled_event": {"event_type": "cpi", "published_at": "2026-09-04T12:30:00+00:00"},
+            "timing_state": "inside_high_impact_window",
+            "events_in_window": [{"event_type": "cpi", "scheduled_at": "2026-09-04T12:00:00+00:00"}],
+            "next_scheduled_event": None,
         },
     }
+    engine = _engine_state(context=context)
     extensions = {
+        "gold_state_engine": engine,
         "live_source_availability": {
             "price_liquidity_structure": "derived_live_from_admitted_twelve_candles",
-            "realized_volatility": "derived_when_candle_history_is_sufficient",
             "rates_macro_vintages": "unknown_no_operational_day28_vintage_feed",
             "tiered_macro_events": "unknown_no_operational_day29_schedule_feed",
             "cme_contract_state": "unknown_no_operational_day30_bulletin_feed",
@@ -227,67 +313,41 @@ def test_gold_state_dossier_exposes_only_qualified_pit_surfaces() -> None:
             "pit_eligible": True,
             "future_values_used": False,
             "structure_semantic_digest": "structure-digest",
-            "structure": {
-                "prior_day_breakout": {"state": "upside_hold"},
-                "wick_footprint": {"state": "known", "close_location": "0.8"},
-            },
+            "structure": {"prior_day_breakout": {"state": "upside_hold"}},
             "feed_health": {"quote": {"state": "observed"}},
-        },
-        "volatility_state": {
-            "mode": "pit",
-            "decision_input_allowed": True,
-            "retrospective_history_included": False,
-            "state": "partial",
-            "volatility_state_digest": "vol-digest",
-            "realized_volatility": {"state": "known", "annualized_percent": {"21": "18.4"}},
-            "jump_continuous": {"state": "continuous_dominant"},
-            "vol_of_vol": {"state": "unknown_insufficient_history"},
-            "gvz": {"state": "unknown"},
-            "iv_minus_rv": {"state": "unknown_missing_iv_or_comparable_rv"},
         },
     }
 
     state = api._provider_gold_state(context=context, extensions=extensions)
 
-    assert state["contract_version"] == "aidy_provider_gold_state_v1"
+    assert state["contract_version"] == "aidy_provider_gold_state_v2"
+    assert state["gold_state_engine_version"] == "aidy_gold_state_engine_v1"
     assert state["descriptive_context_only"] is True
     assert state["predictive_edge_claimed"] is False
     assert state["live_money_execution_allowed"] is False
+    assert state["provider_context_observational_only"] is True
+    assert state["market_structure"]["predictive_edge_claimed"] is False
+    assert state["liquidity"]["proxy_not_order_flow"] is True
+    assert state["move_observation"]["causal_attribution_proven"] is False
     assert state["price_liquidity"]["decision_input_allowed"] is True
-    assert state["price_liquidity"]["structure"]["prior_day_breakout"]["state"] == "upside_hold"
-    assert state["volatility"]["decision_input_allowed"] is True
-    assert state["volatility"]["realized_volatility"]["state"] == "known"
-    assert state["scheduled_event_risk"]["decision_input_allowed"] is True
     assert state["research_surfaces"]["rates_macro"]["decision_input_allowed"] is False
     assert state["research_surfaces"]["tiered_macro_events"]["decision_input_allowed"] is False
-    assert state["unknown_stays_unknown"] is True
+    assert state["research_surfaces"]["cme_contract_state"]["decision_input_allowed"] is False
 
 
-def test_gold_state_dossier_masks_non_pit_or_research_only_surfaces() -> None:
-    state = api._provider_gold_state(
-        context={"as_of_utc": "2026-09-04T12:00:00+00:00", "symbol": "XAUUSD"},
-        extensions={
-            "live_source_availability": {
-                "price_liquidity_structure": "derived_live_from_admitted_twelve_candles",
-                "realized_volatility": "derived_when_candle_history_is_sufficient",
-            },
-            "price_structure_context": {
-                "pit_eligible": False,
-                "future_values_used": False,
-                "structure": {"prior_day_breakout": {"state": "upside_hold"}},
-            },
-            "volatility_state": {
-                "mode": "retrospective_research",
-                "decision_input_allowed": False,
-                "retrospective_history_included": True,
-                "state": "known",
-                "realized_volatility": {"state": "known"},
-            },
-        },
-    )
+def test_gold_state_provider_surface_rejects_missing_or_tampered_engine() -> None:
+    with pytest.raises(RuntimeError, match="provider_gold_state_engine_unavailable"):
+        api._provider_gold_state(context={}, extensions={})
 
-    assert state["price_liquidity"]["decision_input_allowed"] is False
-    assert state["price_liquidity"]["structure"] == {}
-    assert state["volatility"]["decision_input_allowed"] is False
-    assert state["volatility"]["realized_volatility"] == {}
-    assert state["scheduled_event_risk"]["decision_input_allowed"] is False
+    engine = _engine_state()
+    engine["location"]["mid"] = "9999"
+    with pytest.raises(RuntimeError, match="provider_gold_state_engine_unavailable"):
+        api._provider_gold_state(
+            context={},
+            extensions={
+                "gold_state_engine": engine,
+                "live_source_availability": {},
+                "price_structure_context": {},
+            },
+        )
+
