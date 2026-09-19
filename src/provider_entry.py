@@ -8,8 +8,9 @@ from workers import Response
 from aidy.config import AidySettings
 from aidy.data_health import collect_and_record_data_health, collect_data_health
 from aidy.episode_memory_runtime import sync_aidy_episode_memory_runtime
+from aidy.gold_state_engine import GOLD_STATE_ENGINE_VERSION, PROVIDER_GOLD_STATE_VERSION
 from aidy.provider_calibration_api import calibration_market_ohlc_response
-from aidy.provider_context_api import provider_context_response
+from aidy.provider_context_api import PROVIDER_CONTEXT_API_VERSION, provider_context_response
 from aidy.provider_data_health_api import provider_data_health_response
 from aidy.provider_decision_memory_api import provider_decision_memory_response
 from aidy.provider_market_api import market_ohlc_response, research_market_ohlc_response
@@ -96,6 +97,9 @@ async def _public_health_response(env: object):
             "market_data_ownership": settings.market_data_ownership,
             "cross_market_source": "public_official_daily",
             "scheduler": "direct-cron",
+            "provider_context_api_version": PROVIDER_CONTEXT_API_VERSION,
+            "gold_state_engine_version": GOLD_STATE_ENGINE_VERSION,
+            "provider_gold_state_version": PROVIDER_GOLD_STATE_VERSION,
             "data_health": health_summary,
         }
     )
