@@ -275,6 +275,34 @@ def _location(
         if pos is not None:
             ranges[session] = pos
 
+    opening_ranges = structure.get("opening_ranges")
+    opening_ranges = opening_ranges if isinstance(opening_ranges, Mapping) else {}
+    for session in ("asia", "london", "new_york"):
+        session_ranges = opening_ranges.get(session)
+        session_ranges = session_ranges if isinstance(session_ranges, Mapping) else {}
+        for window in ("15m", "30m", "60m"):
+            payload = session_ranges.get(window)
+            payload = payload if isinstance(payload, Mapping) else {}
+            if payload.get("state") != "known":
+                continue
+            for field in ("high", "low"):
+                item = _reference(
+                    mid=mid,
+                    value=payload.get(field),
+                    source_path=(
+                        f"price_structure.opening_ranges.{session}.{window}.{field}"
+                    ),
+                )
+                if item is not None:
+                    references[f"{session}_opening_{window}_{field}"] = item
+            pos = _range_position(
+                mid=mid,
+                low=payload.get("low"),
+                high=payload.get("high"),
+            )
+            if pos is not None:
+                ranges[f"{session}_opening_{window}"] = pos
+
     round_refs: dict[str, Any] = {}
     for label, increment in (("nearest_10_usd", Decimal("10")), ("nearest_50_usd", Decimal("50"))):
         level = _nearest_increment(mid, increment)
@@ -413,6 +441,43 @@ def _five_minute_baseline(rows: list[Candle]) -> tuple[str, str | None, int]:
     return state, _fmt(percentile), len(blocks)
 
 
+def _five_minute_range_baseline(rows: list[Candle]) -> tuple[str, str | None, int]:
+    if len(rows) < 65:
+        return "unknown_insufficient_baseline", None, 0
+    latest = rows[-5:]
+    latest_start = latest[0].open
+    latest_range = _bps(
+        max(row.high for row in latest) - min(row.low for row in latest),
+        latest_start,
+    ) or Decimal(0)
+
+    history = rows[:-5][-120:]
+    blocks: list[Decimal] = []
+    end = len(history)
+    while end >= 5:
+        sample = history[end - 5 : end]
+        start = sample[0].open
+        value = _bps(
+            max(row.high for row in sample) - min(row.low for row in sample),
+            start,
+        ) or Decimal(0)
+        blocks.append(value)
+        end -= 5
+    if len(blocks) < 12:
+        return "unknown_insufficient_baseline", None, len(blocks)
+    rank = sum(value <= latest_range for value in blocks)
+    percentile = Decimal(rank) / Decimal(len(blocks))
+    if percentile >= Decimal("0.95"):
+        state = "extreme_range_expansion"
+    elif percentile >= Decimal("0.80"):
+        state = "range_expansion"
+    elif percentile <= Decimal("0.20"):
+        state = "range_compression"
+    else:
+        state = "normal_range"
+    return state, _fmt(percentile), len(blocks)
+
+
 def _move_observation(
     *,
     m1: list[Candle],
@@ -426,6 +491,7 @@ def _move_observation(
         "60m": _window_move(m1, 60),
     }
     classification, percentile, baseline_n = _five_minute_baseline(m1)
+    range_state, range_percentile, range_baseline_n = _five_minute_range_baseline(m1)
     contexts: list[dict[str, Any]] = []
 
     if event_risk.get("evidence_state") == "known":
@@ -465,10 +531,6 @@ def _move_observation(
         "extreme_recent_displacement",
         "elevated_recent_displacement",
     }
-    has_context = any(
-        item.get("state") not in {"unknown", "clear_current_window"}
-        for item in contexts
-    )
 
     return {
         "state": "known" if windows["5m"]["state"] == "known" else "unknown",
@@ -477,9 +539,12 @@ def _move_observation(
         "five_minute_distribution_state": classification,
         "five_minute_abs_return_percentile": percentile,
         "five_minute_baseline_blocks": baseline_n,
+        "five_minute_range_state": range_state,
+        "five_minute_range_percentile": range_percentile,
+        "five_minute_range_baseline_blocks": range_baseline_n,
         "mechanism_context": contexts,
         "causal_attribution_proven": False,
-        "cause_unknown": bool(elevated and not has_context),
+        "cause_unknown": bool(elevated),
         "definition": "completed_m1_recent_displacement_vs_prior_nonoverlap_5m_blocks_v1",
     }
 
@@ -515,6 +580,15 @@ def build_gold_state_engine(
     structure = structure if isinstance(structure, Mapping) else {}
     event_risk = semantic_context.get("event_risk")
     event_risk = event_risk if isinstance(event_risk, Mapping) else {}
+    session_context = semantic_context.get("session")
+    session_context = session_context if isinstance(session_context, Mapping) else {}
+    session_state = {
+        "state": "known" if session_context else "unknown",
+        "decision_input_allowed": bool(session_context),
+        "computed_session_code": session_context.get("computed_session_code"),
+        "recorded_session_code": session_context.get("recorded_session_code"),
+        "session_code_consistent": session_context.get("session_code_consistent"),
+    }
 
     market_structure = _market_structure(completed)
     liquidity = _liquidity(structure=structure)
@@ -578,6 +652,8 @@ def build_gold_state_engine(
     )
 
     unknowns: list[str] = []
+    if session_state["state"] == "unknown":
+        unknowns.append("session")
     if location["state"] == "unknown":
         unknowns.append("current_mid")
     if market_structure["state"] != "known":
@@ -600,6 +676,7 @@ def build_gold_state_engine(
         "predictive_edge_claimed": False,
         "live_money_execution_allowed": False,
         "future_values_used": False,
+        "session": session_state,
         "market_structure": market_structure,
         "liquidity": liquidity,
         "location": location,
