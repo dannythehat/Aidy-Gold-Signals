@@ -152,6 +152,11 @@ def _context(*, event_known: bool = False) -> dict[str, object]:
     )
     return {
         "gold": {"quote_context": {"mid": "4387"}},
+        "session": {
+            "computed_session_code": "new_york",
+            "recorded_session_code": "NEW_YORK",
+            "session_code_consistent": True,
+        },
         "event_risk": event,
     }
 
@@ -176,6 +181,7 @@ def test_gold_state_is_research_only_and_digest_verified() -> None:
     assert packet["predictive_edge_claimed"] is False
     assert packet["live_money_execution_allowed"] is False
     assert packet["future_values_used"] is False
+    assert packet["session"]["computed_session_code"] == "new_york"
     assert verify_gold_state_engine(packet)
 
 
@@ -215,7 +221,10 @@ def test_large_recent_move_is_detected_without_claiming_a_cause() -> None:
     move = _build(shock=True)["move_observation"]
     assert move["five_minute_distribution_state"] == "extreme_recent_displacement"
     assert Decimal(move["five_minute_abs_return_percentile"]) >= Decimal("0.95")
+    assert move["five_minute_range_state"] in {"range_expansion", "extreme_range_expansion"}
+    assert Decimal(move["five_minute_range_percentile"]) >= Decimal("0.80")
     assert move["causal_attribution_proven"] is False
+    assert move["cause_unknown"] is True
 
 
 def test_scheduled_event_is_context_not_causal_attribution() -> None:
@@ -227,6 +236,7 @@ def test_scheduled_event_is_context_not_causal_attribution() -> None:
     assert event_context["state"] == "inside_high_impact_window"
     assert event_context["causal_claim"] is False
     assert move["causal_attribution_proven"] is False
+    assert move["cause_unknown"] is True
 
 
 def test_missing_mid_stays_unknown() -> None:
@@ -293,3 +303,28 @@ def test_tampering_breaks_gold_state_digest() -> None:
     packet = _build()
     packet["location"]["mid"] = "9999"
     assert not verify_gold_state_engine(packet)
+
+
+def test_opening_range_location_is_exposed_only_from_known_ranges() -> None:
+    packet = _build()
+    location = packet["location"]
+    assert "london_opening_15m_high" in location["reference_distances"]
+    assert location["reference_distances"]["london_opening_15m_high"]["source_path"].endswith(
+        "opening_ranges.london.15m.high"
+    )
+    assert "london_opening_15m" in location["range_positions"]
+
+
+def test_unknown_session_remains_explicit_unknown() -> None:
+    context = _context()
+    context.pop("session")
+    packet = build_gold_state_engine(
+        as_of=AS_OF,
+        symbol="XAUUSD",
+        candle_rows=_candles(),
+        semantic_context=context,
+        price_structure_packet=_price_structure(),
+        volatility_state=_volatility(),
+    )
+    assert packet["session"]["state"] == "unknown"
+    assert "session" in packet["unknowns"]
