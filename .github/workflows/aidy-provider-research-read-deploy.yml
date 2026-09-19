@@ -122,6 +122,9 @@ jobs:
           assert h.get('formal_forward_enabled') is False, h
           assert h.get('market_data_source') == 'twelve_data', h
           assert h.get('market_data_ownership') == 'public_independent', h
+          assert h.get('provider_context_api_version') == 'aidy_provider_context_api_v4', h
+          assert h.get('gold_state_engine_version') == 'aidy_gold_state_engine_v1', h
+          assert h.get('provider_gold_state_version') == 'aidy_provider_gold_state_v2', h
           PY
             then ok=1; break; fi
             sleep 10
