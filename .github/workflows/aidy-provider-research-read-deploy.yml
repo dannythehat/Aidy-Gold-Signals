@@ -11,6 +11,8 @@ on:
     paths:
       - "src/aidy/provider_market_api.py"
       - "src/aidy/provider_context_api.py"
+      - "src/aidy/gold_state_engine.py"
+      - "src/aidy/private_forward_context.py"
       - "src/provider_entry.py"
       - ".github/workflows/aidy-provider-research-read-deploy.yml"
   workflow_dispatch:
@@ -57,11 +59,12 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/private_forward_context.py src/provider_entry.py
           uv run python -m compileall -q src tests
           uv run pytest -q \
             tests/test_provider_market_api.py \
             tests/test_provider_context_api.py \
+            tests/test_gold_state_engine.py \
             tests/test_twelve_data_retrospective.py
 
       - name: Build the Worker config, cron included
