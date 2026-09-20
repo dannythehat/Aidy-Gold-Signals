@@ -11,10 +11,11 @@ from aidy.gold_state_engine import (
     PROVIDER_GOLD_STATE_VERSION,
     verify_gold_state_engine,
 )
+from aidy.gold_movement_investigator import verify_gold_movement_investigation
 from aidy.private_forward_context import build_private_forward_decision_inputs
 from aidy.twelve_data_market import AIDY_SYMBOL
 
-PROVIDER_CONTEXT_API_VERSION = "aidy_provider_context_api_v4"
+PROVIDER_CONTEXT_API_VERSION = "aidy_provider_context_api_v5"
 MAX_CONTEXT_LAG = timedelta(minutes=10)
 _PROVIDER_TOKEN_ENV = "AIDY_PROVIDER_MARKET_TOKEN"
 _CACHE_LIMIT = 32
@@ -164,6 +165,12 @@ def _provider_gold_state(
         "feed_health": dict(price.get("feed_health") or {}) if price_allowed else {},
     }
 
+    movement = extensions.get("gold_movement_investigation")
+    movement = movement if isinstance(movement, Mapping) else {}
+    if movement and not verify_gold_movement_investigation(movement):
+        raise RuntimeError("provider_gold_movement_investigation_invalid")
+    result["movement_investigation"] = dict(movement)
+
     result["research_surfaces"] = {
         "rates_macro": {
             "state": availability.get("rates_macro_vintages") or "unknown",
@@ -176,6 +183,18 @@ def _provider_gold_state(
         "cme_contract_state": {
             "state": availability.get("cme_contract_state") or "unknown",
             "decision_input_allowed": False,
+        },
+        "gold_movement_investigation": {
+            "state": (
+                str(movement.get("state") or "unknown")
+                if movement
+                else "unknown"
+            ),
+            "decision_input_allowed": bool(
+                movement
+                and movement.get("future_values_used") is False
+                and movement.get("research_only") is True
+            ),
         },
         "gvz_implied_volatility": {
             "state": availability.get("gvz_implied_volatility") or "unknown",
