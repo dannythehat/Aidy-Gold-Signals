@@ -13,7 +13,11 @@ on:
       - "src/aidy/provider_context_api.py"
       - "src/aidy/gold_state_engine.py"
       - "src/aidy/gold_movement_investigator.py"
+      - "src/aidy/gold_movement_memory.py"
       - "src/aidy/private_forward_context.py"
+      - "src/provider_entry.py"
+      - "migrations/d1/0021_gold_movement_memory.sql"
+      - "tests/test_gold_movement_memory.py"
       - "src/provider_entry.py"
       - ".github/workflows/aidy-provider-research-read-deploy.yml"
   workflow_dispatch:
@@ -60,13 +64,14 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/private_forward_context.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/private_forward_context.py src/provider_entry.py
           uv run python -m compileall -q src tests
           uv run pytest -q \
             tests/test_provider_market_api.py \
             tests/test_provider_context_api.py \
             tests/test_gold_state_engine.py \
             tests/test_gold_movement_investigator.py \
+            tests/test_gold_movement_memory.py \
             tests/test_twelve_data_retrospective.py
 
       - name: Build the Worker config, cron included
@@ -101,6 +106,13 @@ jobs:
           print('config_built_with_cron=true')
           PY
 
+      - name: Apply Gold movement memory migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.research.live.jsonc
+
       - name: Deploy
         shell: bash
         run: |
@@ -127,6 +139,8 @@ jobs:
           assert h.get('provider_context_api_version') == 'aidy_provider_context_api_v5', h
           assert h.get('gold_state_engine_version') == 'aidy_gold_state_engine_v1', h
           assert h.get('provider_gold_state_version') == 'aidy_provider_gold_state_v2', h
+          assert h.get('gold_movement_investigator_version') == 'aidy_gold_movement_investigator_v1', h
+          assert h.get('gold_movement_memory_version') == 'aidy_gold_movement_memory_v1', h
           PY
             then ok=1; break; fi
             sleep 10
