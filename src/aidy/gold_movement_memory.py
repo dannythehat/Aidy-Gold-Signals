@@ -318,6 +318,94 @@ class D1GoldMovementMemoryStore:
             stats["cards_stored"] += 1
         return stats
 
+    async def analogous_cards(
+        self,
+        *,
+        as_of_utc: datetime,
+        investigation: Mapping[str, Any],
+        limit: int = 8,
+        candidate_limit: int = 100,
+    ) -> dict[str, Any]:
+        """Retrieve prior movement lessons available before the current investigation."""
+
+        if not verify_gold_movement_investigation(investigation):
+            raise ValueError("Movement analogue retrieval requires a verified investigation.")
+        as_of = _utc(as_of_utc, name="as_of_utc")
+        cards = await self.recent_cards(
+            as_of_utc=as_of,
+            limit=max(limit, min(int(candidate_limit), 100)),
+        )
+        current_direction = str(investigation.get("move_direction") or "unknown")
+        current_triggers = set(str(x) for x in investigation.get("triggered_by") or [])
+        current_leading = investigation.get("leading_mechanism")
+        current_leading = current_leading if isinstance(current_leading, Mapping) else {}
+        current_mechanism = str(current_leading.get("mechanism") or "unknown")
+        current_attribution = str(investigation.get("attribution_state") or "cause_unknown")
+
+        ranked: list[tuple[Decimal, dict[str, Any]]] = []
+        for card in cards:
+            trigger_at = card.get("trigger_at_utc")
+            if trigger_at is not None and _utc(str(trigger_at), name="card.trigger_at_utc") >= as_of:
+                continue
+            score = Decimal("0")
+            if str(card.get("initial_move_direction") or "") == current_direction:
+                score += Decimal("2")
+            card_triggers = set(str(x) for x in card.get("triggered_by") or [])
+            union = current_triggers | card_triggers
+            if union:
+                score += Decimal("2") * Decimal(len(current_triggers & card_triggers)) / Decimal(
+                    len(union)
+                )
+            card_leading = card.get("leading_mechanism")
+            card_leading = card_leading if isinstance(card_leading, Mapping) else {}
+            card_mechanism = str(card_leading.get("mechanism") or "unknown")
+            if current_mechanism != "unknown" and card_mechanism == current_mechanism:
+                score += Decimal("3")
+            if str(card.get("attribution_state") or "") == current_attribution:
+                score += Decimal("1")
+            ranked.append((score, card))
+
+        ranked.sort(
+            key=lambda item: (
+                item[0],
+                str(item[1].get("available_at_utc") or ""),
+            ),
+            reverse=True,
+        )
+        selected = ranked[: max(1, min(int(limit), 20))]
+        analogues: list[dict[str, Any]] = []
+        counts = {"continuation": 0, "reversal": 0, "mixed": 0, "insufficient_forward_path": 0}
+        for score, card in selected:
+            path_class = str(card.get("path_class") or "insufficient_forward_path")
+            counts[path_class] = counts.get(path_class, 0) + 1
+            analogues.append(
+                {
+                    "learning_card_digest": card.get("learning_card_digest"),
+                    "available_at_utc": card.get("available_at_utc"),
+                    "initial_move_direction": card.get("initial_move_direction"),
+                    "attribution_state": card.get("attribution_state"),
+                    "leading_mechanism": card.get("leading_mechanism"),
+                    "triggered_by": card.get("triggered_by"),
+                    "forward_path": card.get("forward_path"),
+                    "path_class": path_class,
+                    "similarity_score": str(score.quantize(Decimal("0.000001"))),
+                }
+            )
+
+        return {
+            "retrieval_version": "aidy_gold_movement_analogue_retrieval_v1",
+            "as_of_utc": as_of.isoformat(),
+            "current_investigation_digest": investigation.get("investigation_digest"),
+            "candidate_count": len(ranked),
+            "selected_count": len(analogues),
+            "path_class_counts": counts,
+            "analogues": analogues,
+            "counterexamples_preserved": True,
+            "selection_bias_possible": True,
+            "usable_for_live_edge_claim": False,
+            "live_money_execution_allowed": False,
+        }
+
     async def recent_cards(
         self, *, as_of_utc: datetime, limit: int = 20
     ) -> list[dict[str, Any]]:
