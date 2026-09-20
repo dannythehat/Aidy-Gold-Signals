@@ -20,6 +20,11 @@ from aidy.gold_state_engine import (
     build_gold_state_engine,
     verify_gold_state_engine,
 )
+from aidy.gold_movement_investigator import (
+    GOLD_MOVEMENT_INVESTIGATOR_VERSION,
+    build_gold_movement_investigation,
+    verify_gold_movement_investigation,
+)
 from aidy.historical_case_semantics import build_semantic_pit_case_input
 from aidy.macro_event_intelligence import EVENT_INTELLIGENCE_VERSION
 from aidy.macro_vintages import (
@@ -54,7 +59,7 @@ from aidy.volatility_intelligence import (
 )
 
 PRIVATE_FORWARD_CONTEXT_ADAPTER_VERSION = "aidy_private_forward_context_adapter_v1"
-ARCHITECTURE_V2_EXTENSION_VERSION = "aidy_private_forward_architecture_v2_extensions_v2"
+ARCHITECTURE_V2_EXTENSION_VERSION = "aidy_private_forward_architecture_v2_extensions_v3"
 PRIVATE_FORWARD_SIGNAL_STATE_VERSION = "aidy_private_forward_signal_state_v1"
 _MAX_PRIVATE_FORWARD_M1_ROWS = 3500
 
@@ -446,6 +451,18 @@ def _architecture_extensions(
         "trading_gate_created": False,
         "unknown_stays_unknown": True,
     }
+    movement_investigation = build_gold_movement_investigation(
+        as_of=as_of,
+        gold_state=gold_state,
+        semantic_context=semantic_context,
+        rates_macro_state=rates,
+        event_intelligence_state=event_intelligence,
+        cme_contract_state=cme,
+        volatility_state=volatility,
+    )
+    if not verify_gold_movement_investigation(movement_investigation):
+        raise RuntimeError("Private-forward Gold movement investigation failed verification.")
+
     result: dict[str, Any] = {
         "extension_version": ARCHITECTURE_V2_EXTENSION_VERSION,
         "as_of_utc": as_of.isoformat(),
@@ -458,6 +475,7 @@ def _architecture_extensions(
         "cme_contract_context": cme,
         "volatility_state": volatility,
         "gold_state_engine": gold_state,
+        "gold_movement_investigation": movement_investigation,
         "live_source_availability": {
             "market_structure": "derived_live",
             "price_liquidity_structure": "derived_live_from_admitted_twelve_candles",
@@ -466,6 +484,7 @@ def _architecture_extensions(
             "cme_contract_state": "unknown_no_operational_day30_bulletin_feed",
             "gvz_implied_volatility": "unknown_no_operational_day31_gvz_feed",
             "realized_volatility": "derived_when_candle_history_is_sufficient",
+            "gold_movement_investigation": "derived_live_from_verified_gold_state",
         },
         "unknown_stays_unknown": True,
         "predictive_edge_claimed_by_adapter": False,
@@ -567,6 +586,7 @@ async def build_private_forward_decision_inputs(
             "cme_contract_intelligence": CME_CONTRACT_INTELLIGENCE_VERSION,
             "volatility_intelligence": VOLATILITY_INTELLIGENCE_VERSION,
             "gold_state_engine": GOLD_STATE_ENGINE_VERSION,
+            "gold_movement_investigator": GOLD_MOVEMENT_INVESTIGATOR_VERSION,
             "private_forward_context_adapter": PRIVATE_FORWARD_CONTEXT_ADAPTER_VERSION,
         }
     )
