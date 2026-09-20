@@ -12,6 +12,7 @@ from aidy.gold_state_engine import (
     verify_gold_state_engine,
 )
 from aidy.gold_movement_investigator import verify_gold_movement_investigation
+from aidy.gold_movement_memory import D1GoldMovementMemoryStore
 from aidy.private_forward_context import build_private_forward_decision_inputs
 from aidy.twelve_data_market import AIDY_SYMBOL
 
@@ -291,6 +292,16 @@ async def _context_for_snapshot(d1: Any, *, snapshot: Mapping[str, Any]) -> dict
         return dict(cached)
     inputs = await build_private_forward_decision_inputs(d1=d1, snapshot_id=snapshot_id)
     packet = _compact_join_packet(inputs, snapshot=snapshot)
+    gold_state = packet.get("gold_state")
+    gold_state = gold_state if isinstance(gold_state, dict) else {}
+    investigation = gold_state.get("movement_investigation")
+    if isinstance(investigation, Mapping) and investigation.get("investigation_required") is True:
+        analogues = await D1GoldMovementMemoryStore(d1).analogous_cards(
+            as_of_utc=_utc_iso(str(packet["context_as_of_utc"]), name="context_as_of_utc"),
+            investigation=investigation,
+        )
+        gold_state["movement_analogues"] = analogues
+        packet["gold_state"] = gold_state
     _CONTEXT_CACHE[snapshot_id] = packet
     _CONTEXT_CACHE.move_to_end(snapshot_id)
     while len(_CONTEXT_CACHE) > _CACHE_LIMIT:
