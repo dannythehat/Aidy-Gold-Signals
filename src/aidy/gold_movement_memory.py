@@ -343,7 +343,7 @@ async def sync_gold_movement_memory(
     d1: Any,
     *,
     now_utc: datetime,
-    scan_limit: int = 10,
+    scan_limit: int = 1,
     resolve_limit: int = 10,
 ) -> dict[str, Any]:
     now = _utc(now_utc, name="now_utc")
