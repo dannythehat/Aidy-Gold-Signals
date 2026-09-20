@@ -8,8 +8,14 @@ from workers import Response
 from aidy.config import AidySettings
 from aidy.data_health import collect_and_record_data_health, collect_data_health
 from aidy.episode_memory_runtime import sync_aidy_episode_memory_runtime
+from aidy.gold_movement_investigator import GOLD_MOVEMENT_INVESTIGATOR_VERSION
+from aidy.gold_movement_memory import (
+    GOLD_MOVEMENT_MEMORY_VERSION,
+    sync_gold_movement_memory,
+)
+from aidy.gold_state_engine import GOLD_STATE_ENGINE_VERSION, PROVIDER_GOLD_STATE_VERSION
 from aidy.provider_calibration_api import calibration_market_ohlc_response
-from aidy.provider_context_api import provider_context_response
+from aidy.provider_context_api import PROVIDER_CONTEXT_API_VERSION, provider_context_response
 from aidy.provider_data_health_api import provider_data_health_response
 from aidy.provider_decision_memory_api import provider_decision_memory_response
 from aidy.provider_market_api import market_ohlc_response, research_market_ohlc_response
@@ -96,6 +102,11 @@ async def _public_health_response(env: object):
             "market_data_ownership": settings.market_data_ownership,
             "cross_market_source": "public_official_daily",
             "scheduler": "direct-cron",
+            "provider_context_api_version": PROVIDER_CONTEXT_API_VERSION,
+            "gold_state_engine_version": GOLD_STATE_ENGINE_VERSION,
+            "provider_gold_state_version": PROVIDER_GOLD_STATE_VERSION,
+            "gold_movement_investigator_version": GOLD_MOVEMENT_INVESTIGATOR_VERSION,
+            "gold_movement_memory_version": GOLD_MOVEMENT_MEMORY_VERSION,
             "data_health": health_summary,
         }
     )
@@ -142,6 +153,33 @@ async def _sync_episode_memory_best_effort(env: object) -> None:
         print(f"AIDY episode-memory sync failed: {type(exc).__name__}: {str(exc)[:500]}")
 
 
+async def _sync_gold_movement_memory_best_effort(env: object) -> None:
+    """Detect, diagnose and learn from abnormal Gold moves without risking capture."""
+
+    try:
+        result = await sync_gold_movement_memory(
+            env.AIDY_OPS,
+            now_utc=datetime.now(UTC),
+        )
+        detection = result.get("detection") or {}
+        resolution = result.get("resolution") or {}
+        changed = (
+            int(detection.get("episodes_stored") or 0)
+            + int(resolution.get("cards_stored") or 0)
+        )
+        if changed:
+            print(
+                "AIDY Gold-movement memory sync: "
+                f"episodes={detection.get('episodes_stored')} "
+                f"cards={resolution.get('cards_stored')}"
+            )
+    except Exception as exc:  # noqa: BLE001 - learning cannot undo successful capture
+        print(
+            "AIDY Gold-movement memory sync failed: "
+            f"{type(exc).__name__}: {str(exc)[:500]}"
+        )
+
+
 class Default(CoreDefault):
     async def fetch(self, request):
         path = urlparse(request.url).path
@@ -177,6 +215,7 @@ class Default(CoreDefault):
             await super().queue(_DirectCronBatch(message), env, ctx)
         finally:
             await _sync_episode_memory_best_effort(self.env)
+            await _sync_gold_movement_memory_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="direct-cron")
         if not message.acked:
             raise RuntimeError("aidy_direct_cron_capture_not_acknowledged")
@@ -187,4 +226,5 @@ class Default(CoreDefault):
             return await super().queue(batch, env, ctx)
         finally:
             await _sync_episode_memory_best_effort(self.env)
+            await _sync_gold_movement_memory_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="queue-consumer")
