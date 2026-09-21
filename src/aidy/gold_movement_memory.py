@@ -353,7 +353,7 @@ class D1GoldMovementMemoryStore:
             card_triggers = {str(x) for x in card.get("triggered_by") or []}
             union = current_triggers | card_triggers
             if union:
-                score += Decimal("2") * Decimal(len(current_triggers & card_triggers)) / Decimal(
+                score += Decimal(2) * Decimal(len(current_triggers & card_triggers)) / Decimal(
                     len(union)
                 )
             card_leading = card.get("leading_mechanism")
