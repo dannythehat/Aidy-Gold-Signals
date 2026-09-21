@@ -75,17 +75,17 @@ def _symbology_resolve(
         )
     payload = response.json()
     if not isinstance(payload, dict):
-        raise RuntimeError("Databento Build17 symbology returned non-object payload")
+        raise TypeError("Databento Build17 symbology returned non-object payload")
     return payload
 
 
 def _continuous_ids(payload: dict[str, Any]) -> list[str]:
     result = payload.get("result")
     if not isinstance(result, dict):
-        raise RuntimeError("Databento continuous resolution lacks result mapping")
+        raise TypeError("Databento continuous resolution lacks result mapping")
     entries = result.get(GC_CONTINUOUS_SYMBOL)
     if not isinstance(entries, list):
-        raise RuntimeError("Databento continuous resolution lacks GC entries")
+        raise TypeError("Databento continuous resolution lacks GC entries")
     ids = sorted(
         {
             str(entry.get("s"))
