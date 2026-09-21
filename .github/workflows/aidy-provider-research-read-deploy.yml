@@ -15,6 +15,10 @@ on:
       - "src/aidy/gold_movement_investigator.py"
       - "src/aidy/gold_movement_memory.py"
       - "src/aidy/private_forward_context.py"
+      - "src/aidy/twelve_data_intraday_repair.py"
+      - "src/aidy/runtime.py"
+      - "src/aidy/data_health.py"
+      - "src/aidy/config.py"
       - "src/provider_entry.py"
       - "migrations/d1/0021_gold_movement_memory.sql"
       - "tests/test_gold_movement_memory.py"
@@ -64,7 +68,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/private_forward_context.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
           uv run python -m compileall -q src tests
           uv run pytest -q \
             tests/test_provider_market_api.py \
@@ -72,6 +76,8 @@ jobs:
             tests/test_gold_state_engine.py \
             tests/test_gold_movement_investigator.py \
             tests/test_gold_movement_memory.py \
+            tests/test_twelve_data_intraday_repair.py \
+            tests/test_aidy_data_health.py \
             tests/test_twelve_data_retrospective.py
 
       - name: Build the Worker config, cron included
@@ -91,6 +97,7 @@ jobs:
           cfg['vars']['AIDY_MARKET_DATA_SOURCE'] = 'twelve_data'
           cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP'] = 'public_independent'
           cfg['vars']['AIDY_MARKET_POLL_SECONDS'] = '300'
+          cfg['vars']['AIDY_TWELVE_INTRADAY_SELF_HEAL_ENABLED'] = 'true'
           # Never arm formal forward execution from a research-read deploy.
           cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED'] = 'false'
 
@@ -98,6 +105,7 @@ jobs:
           assert settings.capture_enabled is True
           assert settings.market_data_source == 'twelve_data'
           assert settings.market_data_ownership == 'public_independent'
+          assert settings.twelve_intraday_self_heal_enabled is True
           assert str(cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']).lower() == 'false'
           # The minute cron is scheduled capture. A green deploy without this cron is a
           # capture outage, so assert it before deployment.
