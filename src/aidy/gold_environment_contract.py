@@ -64,7 +64,10 @@ GLOBAL_ENVIRONMENT_DIMENSION_REGISTRY: tuple[dict[str, str], ...] = (
     {"name": "jump_state", "family": "volatility", "kind": "categorical"},
     {"name": "event_timing_state", "family": "event", "kind": "categorical"},
     {"name": "event_proximity", "family": "event", "kind": "bucket"},
+    {"name": "cross_market_known_count", "family": "cross_market", "kind": "exact"},
     {"name": "cross_market_coverage", "family": "cross_market", "kind": "bucket"},
+    {"name": "cross_market_known_series", "family": "cross_market", "kind": "set"},
+    {"name": "cross_market_age_bands", "family": "cross_market", "kind": "mapping"},
     {"name": "compound_regime", "family": "regime", "kind": "categorical"},
     {"name": "data_quality_state", "family": "data_quality", "kind": "categorical"},
 )
@@ -119,7 +122,12 @@ FACTOR_DIMENSION_GROUPS: dict[str, tuple[str, ...]] = {
     ),
     "volatility": ("volatility_state", "jump_state"),
     "event": ("event_timing_state", "event_proximity"),
-    "cross_market": ("cross_market_coverage",),
+    "cross_market": (
+        "cross_market_known_count",
+        "cross_market_coverage",
+        "cross_market_known_series",
+        "cross_market_age_bands",
+    ),
     "regime": ("compound_regime",),
     "data_quality": ("data_quality_state",),
 }
