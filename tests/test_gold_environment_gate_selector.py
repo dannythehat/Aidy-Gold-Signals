@@ -132,7 +132,11 @@ def _packet(
             if state != "known"
             else conclusion
         ),
-        internal_conviction=None,
+        internal_conviction=(
+            "0.70"
+            if mode == "directional" and state == "known" and conclusion in {"bullish", "bearish"}
+            else None
+        ),
         explanation_parts=[
             {
                 "text": "Build 21 selector fixture.",
