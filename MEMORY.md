@@ -20,6 +20,46 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+## Build 23 — Chronological Replay, Ablation & Untouched Holdout COMPLETE
+
+Build 23 adds `aidy_gold_meta_replay_report_v1` and the versioned meta-replay dataset/split/policy contracts.
+
+What is built and proven:
+- immutable replay cases separate pre-outcome decision state from later evaluation-only outcomes;
+- deterministic versioned input/case/report digests;
+- chronological development, validation and untouched holdout partitions;
+- purge + embargo around split boundaries;
+- holdout tuning and holdout recommendation updates are forbidden;
+- frozen comparisons cover legacy simple 15m, every gate alone, full system, full-minus-each-gate and full system with/without dependency penalties;
+- metrics cover directional accuracy by class, +2/+1/-1/-2 impact score, Brier where confidence exists, coverage/abstention, environment performance, time stability, incremental contribution and sample N;
+- gate pruning/retention recommendations are derived from validation only;
+- a flashy development-only gate cannot earn promotion from in-sample beauty;
+- changing holdout outcomes cannot change gate/dependency recommendations;
+- dependency penalty is explicitly ablated rather than assumed useful;
+- acceptance data are explicitly tagged `acceptance_fixture` and cannot be represented as real-market edge;
+- real-market-edge flag remains false;
+- formal-forward OFF and live-money authority OFF.
+
+Acceptance evidence:
+- exact tested PR #235 head: `54c7e7df71c6e97bd18898e712f68657890bf52b`;
+- implementation merge: `12d5f0f17b6678a426890fd8bcd643d3984d1d27`;
+- Build 23 workflow run: `35617356644` — PASS;
+- Evidence Semantic Change Gate: `35617356841` — PASS;
+- static/compile checks: PASS;
+- focused replay suite: 54 passed;
+- dedicated anti-overfit/holdout suite: 6 passed;
+- full repository regression: 1652 passed;
+- development-only star rejected by validation: PASS;
+- strong validation contributor retained candidate: PASS;
+- dependency-penalty ablation: PASS;
+- holdout recommendation immutability: PASS;
+- fixture/real-market evidence separation: PASS;
+- deterministic replay: PASS.
+
+Build 23 proves the replay and pruning machinery. Its acceptance fixture is not a claim that AIDY has already demonstrated real-market predictive edge. Fresh prospective market evidence is the purpose of Build 24.
+
+**Next:** Build 24 — Live Forward Shadow Soak & Permanent Scorecard. This is the final planned build and will persist fresh expert packets, selector state, final AIDY view and later outcomes on every eligible cycle for permanent environment-specific scoring.
+
 ## Build 22 — AIDY Meta Direction Aggregator & Explanation COMPLETE
 
 Build 22 adds `aidy_gold_meta_direction_aggregator_v1`.
