@@ -6,6 +6,39 @@ Updated: 2026-09-21
 
 
 
+
+## Build 4 COMPLETE — Common Price Expert Mathematics
+
+Build 4 adds `aidy_gold_price_expert_math_v1`, the shared deterministic mathematics layer for the future M5/M15/H1/H4/D1 expert gates.
+
+The library computes the same auditable primitive families on each timeframe:
+- returns over multiple completed-bar lookbacks;
+- log-price OLS slope and R²;
+- close-step persistence;
+- path efficiency;
+- ATR/RV-normalised movement;
+- acceleration/deceleration;
+- confirmed wing-2 swing sequences;
+- structure breaks;
+- breakout acceptance/retest/reclaim state;
+- 20/50-bar range location;
+- candle body/wick/close geometry;
+- contradiction diagnostics.
+
+Important safety/quality properties:
+- only completed bars at T are admitted;
+- partial current candles are excluded;
+- swing pivots appear only after their right-hand confirmation bars are known;
+- the primitive manifest is unique and duplicate-feature counting is rejected;
+- flat/choppy paths remain measurably low-efficiency/low-quality rather than being promoted to strong trend;
+- output is factual only and emits no directional gate decision;
+- historical outcomes are not used;
+- research-only=true and live-money authority=false.
+
+Engineering acceptance on PR #205: semantic gate PASS, static checks PASS, focused workflow suite 122 passed, full repository regression 1390 passed.
+
+**Next build:** Build 5 — M5 Price Structure Expert. Build 5 will turn these common primitives into the first actual expert mini-brain, with its own mini-environment, sub-calculator votes, contradictions, explanation and Build-3 conditional trust lookup.
+
 ## Build 3 — Conditional Trust & Score Engine v3
 
 Build 3 is complete and production-verified. It introduces `aidy_gold_expert_conditional_trust_v3` for the expert-gate programme.
