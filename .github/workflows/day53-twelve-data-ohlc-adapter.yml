@@ -30,6 +30,7 @@ on:
       - "src/aidy/gold_m15_price_structure_expert.py"
       - "src/aidy/gold_h1_price_structure_expert.py"
       - "src/aidy/gold_h4_price_structure_expert.py"
+      - "src/aidy/gold_d1_context_expert.py"
       - "migrations/d1/0026_gold_expert_conditional_trust.sql"
       - "src/entry.py"
       - ".github/workflows/aidy-retrospective-m1-backfill.yml"
@@ -54,6 +55,7 @@ on:
       - "tests/test_gold_m15_price_structure_expert.py"
       - "tests/test_gold_h1_price_structure_expert.py"
       - "tests/test_gold_h4_price_structure_expert.py"
+      - "tests/test_gold_d1_context_expert.py"
       - "tests/test_phase_b_forward_restart_guard.py"
       - "tests/test_day4_capture_freshness_watchdog.py"
       - "tests/test_day5_archive_outbox_watchdog.py"
@@ -123,6 +125,7 @@ jobs:
             src/aidy/gold_m15_price_structure_expert.py \
             src/aidy/gold_h1_price_structure_expert.py \
             src/aidy/gold_h4_price_structure_expert.py \
+            src/aidy/gold_d1_context_expert.py \
             scripts/aidy_capture_freshness_watchdog.py \
             scripts/aidy_archive_outbox_watchdog.py \
             tests/test_day4_capture_freshness_watchdog.py \
@@ -163,7 +166,8 @@ jobs:
             tests/test_gold_m5_price_structure_expert.py \
             tests/test_gold_m15_price_structure_expert.py \
             tests/test_gold_h1_price_structure_expert.py \
-            tests/test_gold_h4_price_structure_expert.py
+            tests/test_gold_h4_price_structure_expert.py \
+            tests/test_gold_d1_context_expert.py
 
       - name: Full repository regression
         shell: bash

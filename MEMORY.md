@@ -11,6 +11,76 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 9 — D1 Context Expert COMPLETE
+
+Build 9 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_d1_context_expert_v1`
+
+What Build 9 adds:
+- a true context-only D1 gate rather than another directional BUY/SELL brain;
+- slow daily trend, structure, range-location and breakout context from completed D1 bars;
+- explicit freshness gating with a 72-hour maximum context age;
+- core completeness gating for daily trend/location evidence;
+- confirmed daily swing/breakout context allowed to remain UNKNOWN without invalidating otherwise usable fresh D1 trend/location context;
+- automatic ABSTAIN from usable context when D1 evidence is stale, missing or genuinely partial;
+- zero direct 15-minute directional authority and zero default next-15m weight;
+- a historical evaluator that measures context uplift versus a baseline separately from direct D1 directional accuracy;
+- Build-3 conditional trust for the D1 context gate and its context calculators.
+
+Acceptance on PR #212 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 199 passed;
+- full repository regression: 1451 passed;
+- stale D1 -> ABSTAIN: PASS;
+- partial/missing D1 -> ABSTAIN: PASS;
+- strong D1 trend cannot emit bullish/bearish gate conclusion: PASS;
+- context value vs direct forecast value measured separately: PASS;
+- PIT/no-future and chronological freeze: PASS.
+
+Build 9 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this context library alone.
+
+**Next:** Build 10 — Momentum / Impulse Expert. It will distinguish continuation-quality momentum from noisy direction using multi-horizon returns, volatility normalisation, acceleration, persistence, path efficiency, impulse/drift, exhaustion and agreement. One large candle alone must not equal persistent momentum.
+
+
+## Build 9 — D1 Context Expert COMPLETE
+
+Build 9 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_d1_context_expert_v1`
+
+What Build 9 adds:
+- a true context-only D1 expert rather than another BUY/SELL timeframe brain;
+- daily trend, structure, location and breakout context from completed D1 bars;
+- explicit freshness gating with a 72-hour maximum context age;
+- core daily completeness gating for trend/location inputs;
+- swing and breakout context allowed to remain UNKNOWN when pivots are not yet confirmed, without incorrectly invalidating otherwise usable D1 trend/location context;
+- stale, missing or materially partial D1 evidence -> ABSTAIN from usable context;
+- zero direct 15-minute directional authority and zero default next-15m weight;
+- a separate evaluator for context value versus direct directional forecast value;
+- Build-3 conditional trust attached to the D1 context gate and sub-calculators;
+- context-only dependency/correlation metadata;
+- PIT/no-future and chronological-freeze guarantees.
+
+Acceptance on PR #212 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 199 passed;
+- full repository regression: 1451 passed;
+- stale D1 abstention: PASS;
+- partial/missing D1 abstention: PASS;
+- strong D1 trend cannot force a 15-minute direction: PASS;
+- context-value and direct-forecast metrics remain separate: PASS;
+- PIT/no-future and chronological freeze: PASS.
+
+Build 9 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this context library alone.
+
+**Next:** Build 10 — Momentum / Impulse Expert. It will distinguish continuation-quality momentum from noisy direction using multi-horizon returns, volatility-normalisation, acceleration, persistence, path efficiency, impulse/drift, exhaustion and multi-horizon agreement, while tagging correlated price-expert influence for later penalty.
+
 ## Build 8 — H4 Price Structure Expert COMPLETE
 
 Build 8 of the environment-aware expert-gate programme is complete and engineering-proven.
