@@ -1,0 +1,132 @@
+name: AIDY Build 24 Health Hotfix Deploy
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/build24-health-hotfix-deploy.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  deploy-and-prove:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build safe live config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_TWELVE_INTRADAY_SELF_HEAL_ENABLED']='true'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          assert cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']=='false'
+          json.dump(cfg,open('wrangler.build24.hotfix.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Deploy corrected Build 24
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.build24.hotfix.jsonc wrangler.jsonc
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run pywrangler deploy
+
+      - name: Prove health row is now written
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 20); do
+            curl -fsS -H 'Cache-Control: no-cache'               "${AIDY_TEST_WORKER_URL}/health?build24_hotfix=${GITHUB_SHA}-${attempt}"               > /tmp/health.json || true
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json               --config wrangler.build24.hotfix.jsonc               --command "
+                SELECT status,observed_at_utc,error_type,error_message,
+                       cycles_created,cycles_scored,latest_cycle_view_id,
+                       latest_meta_direction,expected_gate_n,known_gate_n,
+                       explicit_unknown_gate_n
+                FROM aidy_gold_expert_shadow_sync_health
+                WHERE singleton_id=1;
+              " > /tmp/shadow_health.json
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('gold_expert_shadow_version')=='aidy_gold_expert_shadow_v1', h
+          p=json.load(open('/tmp/shadow_health.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          if not rows or rows[0].get('status')!='ok':
+              raise SystemExit(1)
+          row=rows[0]
+          assert row.get('error_type') is None, row
+          assert row.get('error_message') is None, row
+          print('BUILD24_HEALTH_OK='+json.dumps(row,sort_keys=True))
+          PY
+            then
+              ok=1
+              break
+            fi
+            sleep 15
+          done
+          test "$ok" = "1"
+
+      - name: Print exact first-cycle gate-level results
+        shell: bash
+        run: |
+          set -euo pipefail
+          CYCLE='aidy_cycle_260cafe072061252c0799260fba6642f'
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.build24.hotfix.jsonc             --command "
+              SELECT
+                g.gate_id,
+                g.gate_mode,
+                g.conclusion,
+                g.availability_state,
+                l.score,
+                l.correct,
+                l.impact_class,
+                l.realised_direction,
+                l.realised_return_bps
+              FROM aidy_gold_expert_gate_snapshots g
+              LEFT JOIN aidy_gold_expert_outcome_ledger l
+                ON l.packet_digest=g.packet_digest
+               AND l.subject_type='gate'
+               AND l.subject_id=g.gate_id
+              WHERE g.cycle_view_id='${CYCLE}'
+              ORDER BY g.gate_id;
+            " > /tmp/gate_results.json
+          cat /tmp/gate_results.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/gate_results.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          assert len(rows)==15, rows
+          print('BUILD24_GATE_LEVEL_RESULTS='+json.dumps(rows,sort_keys=True))
+          PY
