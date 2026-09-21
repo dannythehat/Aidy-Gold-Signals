@@ -4,6 +4,25 @@ Authoritative current design note for the AIDY Gold learning runtime.
 
 Updated: 2026-09-21
 
+
+## Build 1 candidate — factorised environment contract v3
+
+The next environment contract is `aidy_gold_cycle_environment_v3`, implemented in PR #198 and pending production verification.
+
+The v3 contract keeps exact PIT facts for audit but separates learning identity into factor families: time/participation, structure, movement, location, liquidity, volatility, event, cross-market, regime and data quality. The shared `environment_key` is now a compact global-core key rather than a digest of every condition. Each factor also gets its own key. This prevents a single giant cross-product from making most historical environments unique.
+
+New mandatory environment state includes:
+- 15-minute UTC clock bucket;
+- weekday/week-transition state;
+- explicit market-calendar/weekend state;
+- explicit data-quality state;
+- registered factor families and dimension registry digest;
+- an explicit declaration that expert-gate mini-environments are deferred to later builds.
+
+Build 1 also rejects labelled future/outcome fields before environment freeze and preserves UNKNOWN rather than fabricating missing evidence.
+
+The current directional marker logic is intentionally unchanged in Build 1. Expert-gate intelligence begins only after the shared environment and trust foundations pass their own acceptance gates.
+
 ## Why this exists
 
 AIDY must not learn that a tool is simply "good" or "bad" in all markets.

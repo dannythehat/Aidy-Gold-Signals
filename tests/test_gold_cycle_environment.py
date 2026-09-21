@@ -72,7 +72,7 @@ def _gold_state(*, reference_distance: str = "2.4") -> dict:
                 },
                 "prior_day_high": {
                     "relative_side": "below",
-                    "distance_bps": "-18.0",
+                    "distance_bps": "-80.0",
                     "level": "4395.1",
                 },
             },
@@ -121,6 +121,12 @@ def _build(*, distance: str = "2.4") -> dict:
         observed_state="bearish",
         gold_state=_gold_state(reference_distance=distance),
         semantic_context={
+            "data_quality": {
+                "quote_state": "known",
+                "quote_freshness": "fresh",
+                "spread_state": "unknown",
+                "flags": ["spread_unknown"],
+            },
             "cross_market": {
                 "series": {
                     "DXY": {"state": "known"},
@@ -144,6 +150,9 @@ def test_cycle_environment_captures_real_start_state() -> None:
     # 07:25 UTC is 08:25 London local time during UK DST.
     assert facts["session"]["active_session_minutes_since_open"] == 25
     assert dimensions["session_phase"] == "opening_15_30m"
+    assert dimensions["utc_clock_bucket_15m"] == "07:15"
+    assert dimensions["week_transition_state"] == "post_weekend_day"
+    assert dimensions["market_calendar_state"] == "weekday_session"
     assert dimensions["nearest_reference"] == "asia_overnight_low"
     assert dimensions["nearest_reference_side"] == "above"
     assert dimensions["nearest_reference_distance_band"] == "near_1_3bp"
@@ -156,6 +165,7 @@ def test_cycle_environment_captures_real_start_state() -> None:
     assert dimensions["event_proximity"] == "within_120m"
     assert dimensions["cross_market_known_count"] == 2
     assert dimensions["cross_market_coverage"] == "low"
+    assert dimensions["data_quality_state"] == "fresh"
     assert environment["future_values_used"] is False
     assert environment["live_money_execution_allowed"] is False
 
@@ -179,7 +189,12 @@ def test_environment_key_changes_when_market_condition_changes() -> None:
     assert farther["learning_dimensions"]["nearest_reference_distance_band"] == (
         "moderate_8_20bp"
     )
-    assert near["environment_key"] != farther["environment_key"]
+    # The shared core key is intentionally stable; only the location factor changes.
+    assert near["environment_key"] == farther["environment_key"]
+    assert (
+        near["environment_contract"]["factor_keys"]["location"]
+        != farther["environment_contract"]["factor_keys"]["location"]
+    )
 
 
 def test_environment_has_liquidity_location_and_session_scopes() -> None:
@@ -187,6 +202,7 @@ def test_environment_has_liquidity_location_and_session_scopes() -> None:
     scopes = {row["scope_type"] for row in environment["scopes"]}
     assert {
         "global",
+        "global_core",
         "session",
         "session_phase",
         "session_state",
@@ -198,8 +214,9 @@ def test_environment_has_liquidity_location_and_session_scopes() -> None:
         "volatility_move_regime",
         "session_state_event",
         "event_regime",
-        "full_environment",
     }.issubset(scopes)
+    assert "full_environment" not in scopes
+    assert environment["environment_contract"]["monolithic_full_environment_key_used"] is False
 
 
 def test_environment_rejects_decision_after_target_window_start() -> None:
@@ -213,3 +230,183 @@ def test_environment_rejects_decision_after_target_window_start() -> None:
             semantic_context={},
             regime={},
         )
+
+
+
+def test_build1_environment_is_deterministic_for_identical_pit_inputs() -> None:
+    first = _build()
+    second = _build()
+    assert first == second
+    assert first["environment_digest"] == second["environment_digest"]
+    assert first["environment_key"] == second["environment_key"]
+
+
+@pytest.mark.parametrize(
+    ("distance", "expected"),
+    [
+        ("1.0", "at_level_0_1bp"),
+        ("1.01", "near_1_3bp"),
+        ("3.0", "near_1_3bp"),
+        ("3.01", "close_3_8bp"),
+        ("8.0", "close_3_8bp"),
+        ("8.01", "moderate_8_20bp"),
+        ("20.0", "moderate_8_20bp"),
+        ("20.01", "far_gt20bp"),
+    ],
+)
+def test_build1_distance_bucket_edges_are_frozen(distance: str, expected: str) -> None:
+    environment = _build(distance=distance)
+    assert environment["learning_dimensions"]["nearest_reference_distance_band"] == expected
+
+
+def test_build1_rejects_hindsight_fields_before_environment_freeze() -> None:
+    state = _gold_state()
+    state["outcome"] = "bullish"
+    with pytest.raises(ValueError, match="hindsight field"):
+        build_cycle_environment(
+            as_of_utc=AS_OF,
+            target_window_start_utc=TARGET,
+            session_code="london",
+            observed_state="bearish",
+            gold_state=state,
+            semantic_context={},
+            regime={},
+        )
+
+
+def test_build1_rejects_explicit_future_values_flag() -> None:
+    state = _gold_state()
+    state["future_values_used"] = True
+    with pytest.raises(ValueError, match="future-valued evidence"):
+        build_cycle_environment(
+            as_of_utc=AS_OF,
+            target_window_start_utc=TARGET,
+            session_code="london",
+            observed_state="bearish",
+            gold_state=state,
+            semantic_context={},
+            regime={},
+        )
+
+
+def test_build1_missing_quality_is_explicit_unknown() -> None:
+    environment = build_cycle_environment(
+        as_of_utc=AS_OF,
+        target_window_start_utc=TARGET,
+        session_code="london",
+        observed_state="bearish",
+        gold_state=_gold_state(),
+        semantic_context={"cross_market": {"series": {}}},
+        regime={},
+    )
+    assert environment["learning_dimensions"]["data_quality_state"] == "unknown"
+    assert environment["exact_facts"]["data_quality"]["source_present"] is False
+
+
+def test_build1_stale_quote_is_explicit_stale_quality() -> None:
+    environment = build_cycle_environment(
+        as_of_utc=AS_OF,
+        target_window_start_utc=TARGET,
+        session_code="london",
+        observed_state="bearish",
+        gold_state=_gold_state(),
+        semantic_context={
+            "data_quality": {
+                "quote_state": "known",
+                "quote_freshness": "stale",
+                "spread_state": "known",
+            }
+        },
+        regime={},
+    )
+    assert environment["learning_dimensions"]["data_quality_state"] == "stale"
+    assert environment["exact_facts"]["data_quality"]["quote_freshness"] == "stale"
+
+
+def test_build1_weekend_market_state_is_not_mislabelled_as_missing() -> None:
+    saturday = datetime(2026, 9, 26, 10, 5, tzinfo=UTC)
+    environment = build_cycle_environment(
+        as_of_utc=saturday,
+        target_window_start_utc=saturday + timedelta(minutes=5),
+        session_code="weekend",
+        observed_state="neutral",
+        gold_state=_gold_state(),
+        semantic_context={},
+        regime={},
+    )
+    dimensions = environment["learning_dimensions"]
+    assert dimensions["market_calendar_state"] == "calendar_closed_weekend"
+    assert dimensions["week_transition_state"] == "calendar_weekend"
+    assert dimensions["session_phase"] == "unknown"
+
+
+@pytest.mark.parametrize(
+    ("as_of", "expected_minutes"),
+    [
+        (datetime(2026, 3, 27, 8, 25, tzinfo=UTC), 25),
+        (datetime(2026, 3, 30, 7, 25, tzinfo=UTC), 25),
+    ],
+)
+def test_build1_london_session_phase_is_dst_safe(
+    as_of: datetime,
+    expected_minutes: int,
+) -> None:
+    environment = build_cycle_environment(
+        as_of_utc=as_of,
+        target_window_start_utc=as_of + timedelta(minutes=5),
+        session_code="london",
+        observed_state="neutral",
+        gold_state=_gold_state(),
+        semantic_context={},
+        regime={},
+    )
+    session = environment["exact_facts"]["session"]
+    assert session["active_session_minutes_since_open"] == expected_minutes
+    assert session["active_session_phase"] == "opening_15_30m"
+
+
+def test_build1_preserves_exact_facts_but_reuses_repeatable_environment() -> None:
+    left = _build(distance="2.10")
+    right = _build(distance="2.90")
+    assert (
+        left["exact_facts"]["location"]["nearest_reference"]["distance_bps"]
+        != right["exact_facts"]["location"]["nearest_reference"]["distance_bps"]
+    )
+    assert left["environment_key"] == right["environment_key"]
+    assert left["environment_contract"]["factor_keys"] == right["environment_contract"]["factor_keys"]
+
+
+def test_build1_contract_is_factorised_not_one_giant_environment_key() -> None:
+    environment = _build()
+    contract = environment["environment_contract"]
+    assert contract["monolithic_full_environment_key_used"] is False
+    assert contract["mini_environment_contract"]["state"] == "deferred_to_expert_gate_builds"
+    assert len(contract["factor_keys"]) >= 8
+    assert environment["environment_key"].startswith("envcore_")
+    assert "full_environment" not in {row["scope_type"] for row in environment["scopes"]}
+
+
+def test_build1_every_registered_dimension_is_present_or_unknown() -> None:
+    environment = build_cycle_environment(
+        as_of_utc=AS_OF,
+        target_window_start_utc=TARGET,
+        session_code="london",
+        observed_state="unknown",
+        gold_state={},
+        semantic_context={},
+        regime={},
+    )
+    dimensions = environment["learning_dimensions"]
+    # The registry count is authoritative; all entries are materialised even when evidence is absent.
+    assert len(dimensions) == environment["environment_contract"]["dimension_count"]
+    assert all(value is not None and value != "" for value in dimensions.values())
+    assert dimensions["m5_direction"] == "unknown"
+    assert dimensions["nearest_reference"] == "unknown"
+    assert dimensions["data_quality_state"] in {"unknown", "partial"}
+
+
+def test_build1_environment_digest_detects_mutation() -> None:
+    environment = _build()
+    assert verify_cycle_environment(environment)
+    environment["learning_dimensions"]["session"] = "asia"
+    assert verify_cycle_environment(environment) is False

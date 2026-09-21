@@ -59,7 +59,7 @@ def test_environment_fingerprint_is_contextual_and_multi_scope() -> None:
         semantic_context={},
         regime={"compound_regime_key": "trend|normal"},
     )
-    assert env["environment_version"] == "aidy_gold_cycle_environment_v2"
+    assert env["environment_version"] == "aidy_gold_cycle_environment_v3"
     assert env["learning_dimensions"]["session"] == "london"
     assert env["learning_dimensions"]["observed_15m_state"] == "bearish"
     assert env["learning_dimensions"]["h4_direction"] == "bullish"
@@ -77,8 +77,9 @@ def test_environment_fingerprint_is_contextual_and_multi_scope() -> None:
         "volatility_move_regime",
         "session_state_event",
         "event_regime",
-        "full_environment",
+        "global_core",
     }.issubset(scope_types)
+    assert "full_environment" not in scope_types
 
 
 def test_impact_scoring_rewards_and_penalizes_large_moves_more() -> None:

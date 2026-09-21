@@ -14,12 +14,23 @@ from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
+from aidy.gold_environment_contract import (
+    assert_no_hindsight_fields,
+    build_contract_metadata,
+    classify_data_quality,
+    complete_dimensions,
+    global_core_payload,
+    global_environment_key,
+    market_calendar_state,
+    utc_clock_bucket_15m,
+    week_transition_state,
+)
 from aidy.market_sessions import (
     london_utc_offset_hours,
     new_york_utc_offset_hours,
 )
 
-GOLD_CYCLE_ENVIRONMENT_VERSION = "aidy_gold_cycle_environment_v2"
+GOLD_CYCLE_ENVIRONMENT_VERSION = "aidy_gold_cycle_environment_v3"
 
 
 def _canonical_json(value: object) -> str:
@@ -158,6 +169,12 @@ def _session_timing(*, as_of: datetime, session_code: str) -> dict[str, Any]:
     return {
         "utc_weekday": now.weekday(),
         "utc_time_slot": now.strftime("%H:%M"),
+        "utc_clock_bucket_15m": utc_clock_bucket_15m(now),
+        "week_transition_state": week_transition_state(now),
+        "market_calendar_state": market_calendar_state(
+            as_of=now,
+            session_code=session_code,
+        ),
         "session_code": session_code,
         "active_session_minutes_since_open": active_minutes,
         "active_session_phase": _bucket_minutes(active_minutes),
@@ -453,9 +470,22 @@ def build_cycle_environment(
     if target <= as_of:
         raise ValueError("cycle environment must be frozen before the target window")
 
+    assert_no_hindsight_fields(gold_state, path="gold_state")
+    if semantic_context is not None:
+        assert_no_hindsight_fields(semantic_context, path="semantic_context")
+    if regime is not None:
+        assert_no_hindsight_fields(regime, path="regime")
+
     regime = regime if isinstance(regime, Mapping) else {}
     session = _session_timing(as_of=as_of, session_code=session_code)
     structure = _timeframe_environment(gold_state)
+    data_quality = classify_data_quality(
+        semantic_context=semantic_context,
+        timeframe_states={
+            timeframe: str(structure[timeframe].get("state") or "unknown")
+            for timeframe in ("M5", "M15", "H1", "H4", "D1")
+        },
+    )
     movement = _movement_environment(gold_state)
     location = _location_environment(gold_state=gold_state, session_code=session_code)
     liquidity = _liquidity_environment(gold_state)
@@ -477,6 +507,7 @@ def build_cycle_environment(
         "volatility": volatility,
         "scheduled_event": event,
         "cross_market": cross_market,
+        "data_quality": data_quality,
         "compound_regime": compound_regime,
         "unknowns": list(gold_state.get("unknowns") or []),
     }
@@ -485,6 +516,9 @@ def build_cycle_environment(
         "session": session_code,
         "session_phase": session["active_session_phase"],
         "utc_weekday": session["utc_weekday"],
+        "utc_clock_bucket_15m": session["utc_clock_bucket_15m"],
+        "week_transition_state": session["week_transition_state"],
+        "market_calendar_state": session["market_calendar_state"],
         "observed_15m_state": observed_state,
         "m5_direction": structure["M5"]["direction"],
         "m15_direction": structure["M15"]["direction"],
@@ -528,10 +562,14 @@ def build_cycle_environment(
         "cross_market_known_series": cross_market["known_series"],
         "cross_market_age_bands": cross_market["series_age_bands"],
         "compound_regime": compound_regime,
+        "data_quality_state": data_quality["state"],
     }
+    learning_dimensions = complete_dimensions(learning_dimensions)
+    contract = build_contract_metadata(learning_dimensions)
 
     scope_payloads = [
         ("global", {"global": "all"}),
+        ("global_core", global_core_payload(learning_dimensions)),
         ("session", {"session": session_code}),
         (
             "session_phase",
@@ -622,7 +660,6 @@ def build_cycle_environment(
                 "compound_regime": compound_regime,
             },
         ),
-        ("full_environment", learning_dimensions),
     ]
     scopes = [
         {
@@ -635,9 +672,10 @@ def build_cycle_environment(
 
     result = {
         "environment_version": GOLD_CYCLE_ENVIRONMENT_VERSION,
-        "environment_key": "env_" + _digest(learning_dimensions)[:32],
+        "environment_key": global_environment_key(learning_dimensions),
         "exact_facts": exact_facts,
         "learning_dimensions": learning_dimensions,
+        "environment_contract": contract,
         "scopes": scopes,
         "research_only": True,
         "future_values_used": False,
@@ -658,7 +696,13 @@ def verify_cycle_environment(value: Mapping[str, Any]) -> bool:
         and body.get("future_values_used") is False
         and body.get("live_money_execution_allowed") is False
         and isinstance(body.get("learning_dimensions"), Mapping)
+        and isinstance(body.get("environment_contract"), Mapping)
+        and body["environment_contract"].get("monolithic_full_environment_key_used") is False
         and isinstance(body.get("scopes"), list)
+        and not any(
+            isinstance(scope, Mapping) and scope.get("scope_type") == "full_environment"
+            for scope in body["scopes"]
+        )
     )
 
 
