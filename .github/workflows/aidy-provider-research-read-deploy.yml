@@ -29,6 +29,7 @@ on:
       - "migrations/d1/0022_gold_movement_scan_ledger.sql"
       - "migrations/d1/0023_gold_cycle_learning.sql"
       - "migrations/d1/0024_gold_contextual_marker_learning.sql"
+      - "migrations/d1/0025_gold_cycle_sync_health.sql"
       - "tests/test_gold_movement_memory.py"
       - "tests/test_gold_cycle_environment.py"
       - "tests/test_gold_cycle_memory.py"
