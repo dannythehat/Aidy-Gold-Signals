@@ -131,15 +131,29 @@ class D1GoldMovementMemoryStore:
     ) -> list[dict[str, Any]]:
         result = await self._d1.prepare(
             """
-            SELECT id,captured_at
-            FROM market_snapshots
-            WHERE symbol='XAUUSD'
-              AND market_data_source='twelve_data'
-              AND capture_status='complete'
-              AND captured_at<=?
-              AND json_extract(data_availability_json,'$.request_kind')='scheduled_capture'
-              AND json_extract(data_availability_json,'$.request_ledger_status')='succeeded'
-            ORDER BY captured_at DESC,id DESC
+            SELECT s.id,s.captured_at,s.capture_status
+            FROM market_snapshots s
+            LEFT JOIN aidy_gold_movement_scan_ledger l
+              ON l.source_snapshot_id=s.id
+            WHERE s.symbol='XAUUSD'
+              AND s.market_data_source='twelve_data'
+              AND s.captured_at<=?
+              AND l.source_snapshot_id IS NULL
+              AND json_extract(s.data_availability_json,'$.request_kind')='scheduled_capture'
+              AND json_extract(s.data_availability_json,'$.request_ledger_status')='succeeded'
+              AND (
+                s.capture_status='complete'
+                OR (
+                  s.capture_status='partial'
+                  AND json_extract(s.data_availability_json,'$.freshness_state')='fresh'
+                  AND s.latest_m1_id IS NOT NULL
+                  AND s.latest_m5_id IS NOT NULL
+                  AND s.latest_m15_id IS NOT NULL
+                  AND s.latest_h1_id IS NOT NULL
+                  AND s.latest_h4_id IS NOT NULL
+                )
+              )
+            ORDER BY s.captured_at DESC,s.id DESC
             LIMIT ?
             """
         ).bind(as_of.isoformat(), max(1, min(int(limit), 30))).all()
@@ -159,6 +173,38 @@ class D1GoldMovementMemoryStore:
             ).bind(snapshot_id).first()
         )
         return row is not None
+
+    async def _mark_snapshot_scanned(
+        self,
+        *,
+        snapshot_id: str,
+        captured_at: str,
+        capture_status: str,
+        scanned_at: datetime,
+        investigation: Mapping[str, Any],
+        episode_stored: bool,
+    ) -> None:
+        await self._d1.prepare(
+            """
+            INSERT INTO aidy_gold_movement_scan_ledger (
+                source_snapshot_id,captured_at_utc,scanned_at_utc,capture_status,
+                investigation_required,move_direction,attribution_state,
+                triggered_by_json,investigation_digest,episode_stored
+            ) VALUES (?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(source_snapshot_id) DO NOTHING
+            """
+        ).bind(
+            snapshot_id,
+            captured_at,
+            scanned_at.isoformat(),
+            capture_status,
+            1 if investigation.get("investigation_required") is True else 0,
+            str(investigation.get("move_direction") or "unknown"),
+            str(investigation.get("attribution_state") or "not_applicable"),
+            _canonical_json(list(investigation.get("triggered_by") or [])),
+            str(investigation.get("investigation_digest") or ""),
+            1 if episode_stored else 0,
+        ).run()
 
     async def _recent_episode_exists(
         self, *, trigger_at: datetime, move_direction: str
@@ -184,13 +230,24 @@ class D1GoldMovementMemoryStore:
     ) -> dict[str, int]:
         now = _utc(now_utc, name="now_utc")
         rows = await self._latest_candidate_snapshots(as_of=now, limit=limit)
-        stats = {"snapshots_checked": 0, "abnormal_detected": 0, "episodes_stored": 0, "deduped": 0}
+        stats = {
+            "snapshots_checked": 0,
+            "normal_scanned": 0,
+            "abnormal_detected": 0,
+            "episodes_stored": 0,
+            "deduped": 0,
+            "partial_intraday_eligible_scanned": 0,
+        }
 
         for row in rows:
             snapshot_id = str(row.get("id") or "")
-            if not snapshot_id or await self._already_seen_snapshot(snapshot_id):
+            if not snapshot_id:
                 continue
+            capture_status = str(row.get("capture_status") or "unknown")
+            captured_at = str(row.get("captured_at") or "")
             stats["snapshots_checked"] += 1
+            if capture_status == "partial":
+                stats["partial_intraday_eligible_scanned"] += 1
             inputs = await build_private_forward_decision_inputs(
                 d1=self._d1,
                 snapshot_id=snapshot_id,
@@ -205,6 +262,15 @@ class D1GoldMovementMemoryStore:
             if not verify_gold_movement_investigation(investigation):
                 raise ValueError("Gold movement memory received invalid investigation.")
             if investigation.get("investigation_required") is not True:
+                await self._mark_snapshot_scanned(
+                    snapshot_id=snapshot_id,
+                    captured_at=captured_at,
+                    capture_status=capture_status,
+                    scanned_at=now,
+                    investigation=investigation,
+                    episode_stored=False,
+                )
+                stats["normal_scanned"] += 1
                 continue
 
             stats["abnormal_detected"] += 1
@@ -214,6 +280,14 @@ class D1GoldMovementMemoryStore:
                 trigger_at=trigger_at,
                 move_direction=direction,
             ):
+                await self._mark_snapshot_scanned(
+                    snapshot_id=snapshot_id,
+                    captured_at=captured_at,
+                    capture_status=capture_status,
+                    scanned_at=now,
+                    investigation=investigation,
+                    episode_stored=False,
+                )
                 stats["deduped"] += 1
                 continue
 
@@ -241,6 +315,14 @@ class D1GoldMovementMemoryStore:
                 investigation_digest,
                 now.isoformat(),
             ).run()
+            await self._mark_snapshot_scanned(
+                snapshot_id=snapshot_id,
+                captured_at=captured_at,
+                capture_status=capture_status,
+                scanned_at=now,
+                investigation=investigation,
+                episode_stored=True,
+            )
             stats["episodes_stored"] += 1
         return stats
 
@@ -431,7 +513,7 @@ async def sync_gold_movement_memory(
     d1: Any,
     *,
     now_utc: datetime,
-    scan_limit: int = 1,
+    scan_limit: int = 10,
     resolve_limit: int = 10,
 ) -> dict[str, Any]:
     now = _utc(now_utc, name="now_utc")
