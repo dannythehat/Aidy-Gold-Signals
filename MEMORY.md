@@ -5,6 +5,39 @@ Updated: 2026-09-21
 This file is the repo-level handoff entry point for the live AIDY Gold-learning system.
 
 
+## Build 2 — Expert Gate Contract v1 COMPLETE
+
+Build 2 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Contract:
+`aidy_gold_expert_gate_contract_v1`
+
+What Build 2 adds:
+- every future expert gate must bind to one verified frozen Environment v3 packet;
+- every gate gets a separate specialist mini-environment with its own stable digest/key;
+- evidence inputs carry source/path/observed timestamp/state/value/provenance and immutable value digests;
+- sub-calculators have explicit identity/version/role/dependency family/state/vote/strength/evidence refs/observation/explanation;
+- directional, context-only, NEUTRAL, ABSTAIN and UNKNOWN are explicit contract states;
+- missing evidence cannot manufacture a directional conclusion;
+- context-only experts cannot accidentally vote bullish/bearish;
+- a bullish/bearish gate conclusion requires a matching scoreable sub-calculator;
+- internal conviction is stored separately from historical reliability;
+- every readable explanation/contradiction must cite a real calculator or evidence input;
+- future/outcome-labelled fields and future-dated evidence fail closed;
+- packet, mini-environment, evidence and calculator digests make later mutation detectable;
+- live-money authority remains false and research-only remains true.
+
+Acceptance on PR #202:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused Build 2/regression gate: PASS;
+- focused workflow tests: 108 passed;
+- full repository regression: 1360 passed.
+
+Build 2 is a contract/foundation library. It does not yet change live AIDY gate reasoning or weights, so no Worker deployment is required for completion.
+
+**Next:** Build 3 — Conditional Trust & Score Engine v3. Build 3 will give each gate and each scoreable sub-calculator different historical reliability under different environments, with small-sample shrinkage and hierarchical backoff.
+
 ## Build 1 — Environment Contract v3 COMPLETE
 
 Build 1 of the environment-aware expert-gate programme is complete and production-verified.
