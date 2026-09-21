@@ -9,6 +9,7 @@ from aidy.config import AidySettings
 from aidy.data_health import collect_and_record_data_health, collect_data_health
 from aidy.episode_memory_runtime import sync_aidy_episode_memory_runtime
 from aidy.gold_cycle_memory import GOLD_CYCLE_MEMORY_VERSION, sync_gold_cycle_memory
+from aidy.gold_marker_brain import GOLD_MARKER_BRAIN_VERSION
 from aidy.gold_movement_investigator import GOLD_MOVEMENT_INVESTIGATOR_VERSION
 from aidy.gold_movement_memory import (
     GOLD_MOVEMENT_MEMORY_VERSION,
@@ -110,6 +111,7 @@ async def _public_health_response(env: object):
             "gold_movement_investigator_version": GOLD_MOVEMENT_INVESTIGATOR_VERSION,
             "gold_movement_memory_version": GOLD_MOVEMENT_MEMORY_VERSION,
             "gold_cycle_memory_version": GOLD_CYCLE_MEMORY_VERSION,
+            "gold_marker_brain_version": GOLD_MARKER_BRAIN_VERSION,
             "gold_toolbox_manifest_version": GOLD_TOOLBOX_MANIFEST_VERSION,
             "data_health": health_summary,
         }
