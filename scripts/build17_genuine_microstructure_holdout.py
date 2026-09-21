@@ -23,8 +23,8 @@ from aidy.gc_microstructure import (
 from aidy.gc_shadow_spine import normalize_databento_api_key
 from aidy.gold_cycle_environment import build_cycle_environment
 from aidy.gold_futures_microstructure_expert import summarise_incremental_holdout
-from aidy.gold_m15_price_structure_expert import build_m15_price_structure_expert
 from aidy.gold_m5_price_structure_expert import build_m5_price_structure_expert
+from aidy.gold_m15_price_structure_expert import build_m15_price_structure_expert
 from aidy.gold_price_expert_math import build_price_expert_math_packet
 
 DATABENTO_DATASET = "GLBX.MDP3"
@@ -546,7 +546,7 @@ def main() -> int:
                     "anchor_utc": anchor.isoformat(),
                     "fresh_quoted_cost_usd": str(fresh_cost),
                     "receipt": receipt,
-                    "resolved_contracts": sorted(set(item.contract_symbol for item in minutes)),
+                    "resolved_contracts": sorted({item.contract_symbol for item in minutes}),
                     "trade_rows": len(trades),
                     "microstructure_minutes": len(minutes),
                 }
