@@ -35,8 +35,8 @@ def _row(
         "open_time_utc": opened,
         "first_observed_at": opened + timedelta(seconds=seconds),
         "open": str(price),
-        "high": str(price + Decimal("0.6")),
-        "low": str(price - Decimal("0.4")),
+        "high": str(price + max(Decimal("0.6"), close_delta)),
+        "low": str(price + min(Decimal("-0.4"), close_delta)),
         "close": str(price + close_delta),
         "source": "twelve_data",
     }
