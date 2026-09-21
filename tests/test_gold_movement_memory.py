@@ -69,11 +69,22 @@ def test_movement_memory_contract_is_bounded_and_not_execution_authority() -> No
     migration = (
         ROOT / "migrations" / "d1" / "0021_gold_movement_memory.sql"
     ).read_text(encoding="utf-8")
+    scan_migration = (
+        ROOT / "migrations" / "d1" / "0022_gold_movement_scan_ledger.sql"
+    ).read_text(encoding="utf-8")
     provider = (ROOT / "src" / "provider_entry.py").read_text(encoding="utf-8")
 
-    assert "scan_limit: int = 1" in source
+    assert "scan_limit: int = 10" in source
+    assert "aidy_gold_movement_scan_ledger" in source
+    assert "capture_status='partial'" in source
+    assert "latest_m1_id IS NOT NULL" in source
+    assert "latest_h4_id IS NOT NULL" in source
     assert "future_values_used INTEGER NOT NULL DEFAULT 0" in migration
     assert "live_money_execution_allowed INTEGER NOT NULL DEFAULT 0" in migration
     assert "same_episode_retrieval_allowed INTEGER NOT NULL DEFAULT 0" in migration
+    assert "source_snapshot_id TEXT PRIMARY KEY" in scan_migration
+    assert "investigation_required INTEGER NOT NULL" in scan_migration
+    assert "episode_stored INTEGER NOT NULL DEFAULT 0" in scan_migration
+    assert "live_money_execution_allowed INTEGER NOT NULL DEFAULT 0" in scan_migration
     assert "sync_gold_movement_memory" in provider
     assert "_sync_gold_movement_memory_best_effort" in provider
