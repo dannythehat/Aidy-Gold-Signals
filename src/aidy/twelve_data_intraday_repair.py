@@ -23,7 +23,7 @@ from .twelve_data_market import (
 )
 from .twelve_data_storage import D1TwelveDataMarketStore
 
-INTRADAY_REPAIR_VERSION = "aidy_twelve_intraday_self_heal_v1"
+INTRADAY_REPAIR_VERSION = "aidy_twelve_intraday_self_heal_v2"
 _INTRADAY_TIMEFRAMES = ("5m", "15m", "1h", "4h")
 MAX_AUTO_REPAIR_MINUTES = 30
 MAX_AUTO_REPAIR_SPAN_MINUTES = 30
