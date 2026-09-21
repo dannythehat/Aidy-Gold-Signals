@@ -232,11 +232,13 @@ def test_cycle_runtime_is_wired_to_cron_provider_context_and_deploy_gate() -> No
     assert 'gold_state["cycle_memory"]' in provider
     assert "D1GoldCycleMemoryStore" in provider
     assert "gold_cycle_memory.py" in deploy
+    assert "gold_marker_brain.py" in deploy
     assert "test_gold_cycle_memory.py" in deploy
+    assert "test_gold_marker_brain.py" in deploy
 
 
 def test_cycle_versions_and_neutral_band_are_explicit() -> None:
-    assert GOLD_CYCLE_MEMORY_VERSION == "aidy_gold_cycle_memory_v1"
+    assert GOLD_CYCLE_MEMORY_VERSION == "aidy_gold_cycle_memory_v2"
     assert GOLD_CYCLE_VIEW_VERSION == "aidy_gold_cycle_view_v1"
     assert GOLD_CYCLE_OUTCOME_VERSION == "aidy_gold_cycle_outcome_v1"
     assert CYCLE_NEUTRAL_BAND_BPS > 0

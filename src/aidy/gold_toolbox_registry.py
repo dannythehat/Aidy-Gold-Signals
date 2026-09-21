@@ -47,6 +47,7 @@ _CATALOG: tuple[dict[str, str], ...] = (
     {"name": "gold_movement_episode_memory", "category": "learning", "owner": "aidy", "purpose": "immutable abnormal-move episode storage"},
     {"name": "gold_movement_analogue_retrieval", "category": "learning", "owner": "aidy", "purpose": "retrieve prior comparable Gold episodes with counterexamples"},
     {"name": "gold_cycle_15m_memory", "category": "learning", "owner": "aidy", "purpose": "freeze 15-minute Gold views, reason trail, realised outcomes, daily cycle path and prior comparable sequences"},
+    {"name": "gold_contextual_marker_brain", "category": "learning", "owner": "aidy", "purpose": "score toolbox markers by environment and horizon, then apply bounded learned trust on later cycles"},
     {"name": "recent_gold_candles_on_demand", "category": "price", "owner": "super_signals", "purpose": "bounded live candle inspection during signal reasoning"},
     {"name": "provider_history_conditional_alpha", "category": "provider", "owner": "super_signals", "purpose": "PIT provider side/session/conditional evidence"},
     {"name": "recent_provider_messages", "category": "provider", "owner": "super_signals", "purpose": "recent message sequence and management semantics"},
@@ -93,6 +94,7 @@ def build_gold_toolbox_manifest(
         "gold_movement_episode_memory",
         "gold_movement_analogue_retrieval",
         "gold_cycle_15m_memory",
+        "gold_contextual_marker_brain",
     }
     if (
         isinstance(gold_state.get("market_structure"), Mapping)
@@ -189,6 +191,7 @@ def build_gold_toolbox_manifest(
             "breaking_news_event_search",
             "gold_movement_analogue_retrieval",
             "gold_cycle_15m_memory",
+            "gold_contextual_marker_brain",
         ],
         "live_source_availability": dict(live_source_availability),
         "move_state": str(move.get("state") or "unknown"),

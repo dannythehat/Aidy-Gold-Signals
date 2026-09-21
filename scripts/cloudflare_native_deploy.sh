@@ -15,6 +15,7 @@ uv run ruff check \
   src/aidy/gold_movement_investigator.py \
   src/aidy/gold_movement_memory.py \
   src/aidy/gold_cycle_memory.py \
+  src/aidy/gold_marker_brain.py \
   src/aidy/gold_toolbox_registry.py \
   src/aidy/private_forward_context.py \
   src/aidy/twelve_data_intraday_repair.py \
@@ -30,6 +31,7 @@ uv run pytest -q \
   tests/test_gold_movement_investigator.py \
   tests/test_gold_movement_memory.py \
   tests/test_gold_cycle_memory.py \
+  tests/test_gold_marker_brain.py \
   tests/test_gold_toolbox_registry.py \
   tests/test_twelve_data_intraday_repair.py \
   tests/test_aidy_data_health.py \

@@ -15,12 +15,22 @@ from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
+from aidy.gold_marker_brain import (
+    GOLD_MARKER_BRAIN_VERSION,
+    MARKER_SCORE_HORIZON_MINUTES,
+    apply_learning_to_reasons,
+    build_environment_fingerprint,
+    marker_id,
+    score_marker_vote,
+    select_score_profile,
+    toolbox_cycle_coverage,
+)
 from aidy.gold_movement_investigator import verify_gold_movement_investigation
 from aidy.gold_state_engine import verify_gold_state_engine
 from aidy.gold_toolbox_registry import verify_gold_toolbox_manifest
 from aidy.private_forward_context import build_private_forward_decision_inputs
 
-GOLD_CYCLE_MEMORY_VERSION = "aidy_gold_cycle_memory_v1"
+GOLD_CYCLE_MEMORY_VERSION = "aidy_gold_cycle_memory_v2"
 GOLD_CYCLE_VIEW_VERSION = "aidy_gold_cycle_view_v1"
 GOLD_CYCLE_OUTCOME_VERSION = "aidy_gold_cycle_outcome_v1"
 CYCLE_WINDOW_MINUTES = 15
@@ -134,29 +144,12 @@ def _reason(
     }
 
 
-def build_cycle_view_payload(
+def _build_directional_reasons(
     *,
-    as_of: datetime,
-    window_start: datetime,
-    session_code: str,
     gold_state: Mapping[str, Any],
     movement_investigation: Mapping[str, Any],
-    toolbox_manifest: Mapping[str, Any],
-    prior_observed_states: list[str],
     analogue_summary: Mapping[str, Any],
-) -> dict[str, Any]:
-    """Build one frozen and auditable 15-minute Gold research view."""
-
-    if not verify_gold_state_engine(gold_state):
-        raise ValueError("cycle_view_requires_verified_gold_state")
-    if movement_investigation and not verify_gold_movement_investigation(
-        movement_investigation
-    ):
-        raise ValueError("cycle_view_requires_verified_movement_investigation")
-    if not verify_gold_toolbox_manifest(toolbox_manifest):
-        raise ValueError("cycle_view_requires_verified_toolbox_manifest")
-
-    observed_state, observed_return_bps = _observed_state(gold_state)
+) -> list[dict[str, Any]]:
     structure = gold_state.get("market_structure")
     structure = structure if isinstance(structure, Mapping) else {}
     timeframes = structure.get("timeframes")
@@ -171,6 +164,7 @@ def build_cycle_view_payload(
         ("M15", 3, "gold_m15_structure"),
         ("H1", 2, "gold_h1_structure"),
         ("H4", 1, "gold_h4_structure"),
+        ("D1", 1, "gold_d1_context"),
     ):
         frame = timeframes.get(timeframe)
         frame = frame if isinstance(frame, Mapping) else {}
@@ -183,7 +177,10 @@ def build_cycle_view_payload(
                     observation=f"{timeframe} completed-bar close path is {raw}",
                     vote=vote,
                     weight=weight,
-                    source_path=f"gold_state.market_structure.timeframes.{timeframe}.net_close_direction",
+                    source_path=(
+                        f"gold_state.market_structure.timeframes."
+                        f"{timeframe}.net_close_direction"
+                    ),
                 )
             )
 
@@ -208,6 +205,65 @@ def build_cycle_view_payload(
                     source_path=f"gold_state.move_observation.windows.{horizon}",
                 )
             )
+
+    liquidity = gold_state.get("liquidity")
+    liquidity = liquidity if isinstance(liquidity, Mapping) else {}
+    breakout = liquidity.get("prior_day_breakout")
+    breakout = breakout if isinstance(breakout, Mapping) else {}
+    breakout_state = str(breakout.get("state") or "unknown")
+    breakout_vote = {
+        "upside_failed": -1,
+        "downside_failed": 1,
+    }.get(breakout_state, 0)
+    if breakout_vote:
+        reasons.append(
+            _reason(
+                surface="liquidity_sweep_reclaim_proxies",
+                observation=f"prior-day breakout/reclaim proxy is {breakout_state}",
+                vote=breakout_vote,
+                weight=1,
+                source_path="gold_state.liquidity.prior_day_breakout.state",
+            )
+        )
+
+    sweep_proxies = liquidity.get("sweep_reclaim_proxies")
+    sweep_proxies = sweep_proxies if isinstance(sweep_proxies, list) else []
+    high_reclaims = sum(
+        1
+        for item in sweep_proxies
+        if isinstance(item, Mapping) and item.get("side") == "high"
+    )
+    low_reclaims = sum(
+        1
+        for item in sweep_proxies
+        if isinstance(item, Mapping) and item.get("side") == "low"
+    )
+    if high_reclaims > low_reclaims:
+        reasons.append(
+            _reason(
+                surface="liquidity_sweep_reclaim_proxies",
+                observation=(
+                    f"{high_reclaims} high-side reclaim proxy/proxies versus "
+                    f"{low_reclaims} low-side"
+                ),
+                vote=-1,
+                weight=1,
+                source_path="gold_state.liquidity.sweep_reclaim_proxies",
+            )
+        )
+    elif low_reclaims > high_reclaims:
+        reasons.append(
+            _reason(
+                surface="liquidity_sweep_reclaim_proxies",
+                observation=(
+                    f"{low_reclaims} low-side reclaim proxy/proxies versus "
+                    f"{high_reclaims} high-side"
+                ),
+                vote=1,
+                weight=1,
+                source_path="gold_state.liquidity.sweep_reclaim_proxies",
+            )
+        )
 
     if movement_investigation.get("investigation_required") is True:
         raw = str(movement_investigation.get("move_direction") or "unknown")
@@ -256,19 +312,59 @@ def build_cycle_view_payload(
                         source_path="cycle_analogue_memory.next_state_distribution",
                     )
                 )
+    return reasons
 
+
+def build_cycle_view_payload(
+    *,
+    as_of: datetime,
+    window_start: datetime,
+    session_code: str,
+    gold_state: Mapping[str, Any],
+    movement_investigation: Mapping[str, Any],
+    toolbox_manifest: Mapping[str, Any],
+    prior_observed_states: list[str],
+    analogue_summary: Mapping[str, Any],
+    marker_profiles: Mapping[str, Mapping[str, Any]] | None = None,
+    environment_fingerprint: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build one frozen and auditable 15-minute Gold research view."""
+
+    if not verify_gold_state_engine(gold_state):
+        raise ValueError("cycle_view_requires_verified_gold_state")
+    if movement_investigation and not verify_gold_movement_investigation(
+        movement_investigation
+    ):
+        raise ValueError("cycle_view_requires_verified_movement_investigation")
+    if not verify_gold_toolbox_manifest(toolbox_manifest):
+        raise ValueError("cycle_view_requires_verified_toolbox_manifest")
+
+    observed_state, observed_return_bps = _observed_state(gold_state)
+    reasons = _build_directional_reasons(
+        gold_state=gold_state,
+        movement_investigation=movement_investigation,
+        analogue_summary=analogue_summary,
+    )
+    reasons = apply_learning_to_reasons(
+        reasons=reasons,
+        profiles=marker_profiles or {},
+    )
     score = sum(
-        (1 if item["vote"] == "bullish" else -1) * int(item["weight"])
+        (Decimal(1) if item["vote"] == "bullish" else Decimal(-1))
+        * (Decimal(str(item.get("effective_weight") or "0")))
         for item in reasons
     )
-    weight_total = sum(int(item["weight"]) for item in reasons)
+    weight_total = sum(
+        (Decimal(str(item.get("effective_weight") or "0")) for item in reasons),
+        Decimal(0),
+    )
     if weight_total == 0:
         view_direction = "unknown"
         confidence = Decimal(0)
-    elif score >= 2:
+    elif score >= Decimal(2):
         view_direction = "bullish"
         confidence = Decimal(abs(score)) / Decimal(weight_total)
-    elif score <= -2:
+    elif score <= Decimal(-2):
         view_direction = "bearish"
         confidence = Decimal(abs(score)) / Decimal(weight_total)
     else:
@@ -325,7 +421,10 @@ def build_cycle_view_payload(
                 }
             )
 
-    contradiction_weight = sum(int(item["weight"]) for item in contradicting)
+    contradiction_weight = sum(
+        (Decimal(str(item.get("effective_weight") or "0")) for item in contradicting),
+        Decimal(0),
+    )
     if weight_total and contradiction_weight:
         confidence *= max(
             Decimal("0.40"),
@@ -340,12 +439,12 @@ def build_cycle_view_payload(
         reasoning_summary = "No directional view: connected evidence did not produce a coherent directional case."
     elif view_direction == "neutral":
         reasoning_summary = (
-            f"Neutral 15-minute view: directional evidence is mixed/weak; weighted score={score}/{weight_total}."
+            f"Neutral 15-minute view: directional evidence is mixed/weak; weighted score={_fmt(score)}/{_fmt(weight_total)}."
         )
     else:
         reasoning_summary = (
             f"{view_direction.title()} 15-minute view: weighted connected evidence "
-            f"score={score}/{weight_total}, with {len(contradicting)} contradictory reason(s) "
+            f"score={_fmt(score)}/{_fmt(weight_total)}, with {len(contradicting)} contradictory reason(s) "
             f"and {len(unavailable)} unavailable evidence item(s)."
         )
 
@@ -372,6 +471,9 @@ def build_cycle_view_payload(
         "toolbox_considered": considered,
         "toolbox_used": used,
         "toolbox_manifest_digest": str(toolbox_manifest.get("manifest_digest") or ""),
+        "marker_brain_version": GOLD_MARKER_BRAIN_VERSION,
+        "environment_fingerprint": dict(environment_fingerprint or {}),
+        "marker_profile_count": len(marker_profiles or {}),
         "neutral_band_bps": _fmt(CYCLE_NEUTRAL_BAND_BPS),
         "research_only": True,
         "predictive_edge_claimed": False,
@@ -517,6 +619,357 @@ class D1GoldCycleMemoryStore:
             "usable_for_live_edge_claim": False,
         }
 
+    async def _marker_profiles(
+        self,
+        *,
+        reasons: list[Mapping[str, Any]],
+        scopes: list[Mapping[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        scope_keys = [str(scope.get("scope_key") or "") for scope in scopes]
+        scope_keys = [value for value in scope_keys if value]
+        profiles: dict[str, dict[str, Any]] = {}
+        if not scope_keys:
+            return profiles
+        placeholders = ",".join("?" for _ in scope_keys)
+        for reason in reasons:
+            surface = str(reason.get("surface") or "")
+            source_path = str(reason.get("source_path") or "")
+            mid = marker_id(surface=surface, source_path=source_path)
+            query = (
+                "SELECT scope_key,scope_type,marker_id,surface,source_path,"
+                "sample_n,correct_n,incorrect_n,net_score,score_mean,accuracy "
+                "FROM aidy_gold_marker_context_scores "
+                f"WHERE marker_id=? AND horizon_minutes=? AND scope_key IN ({placeholders})"
+            )
+            result = await self._d1.prepare(query).bind(
+                mid,
+                MARKER_SCORE_HORIZON_MINUTES,
+                *scope_keys,
+            ).all()
+            profiles[mid] = select_score_profile(
+                score_rows=_results(result),
+                scopes=scopes,
+            )
+        return profiles
+
+    async def _store_environment_and_markers(
+        self,
+        *,
+        cycle_view_id: str,
+        environment: Mapping[str, Any],
+        reasons: list[Mapping[str, Any]],
+        toolbox_coverage: list[Mapping[str, Any]],
+    ) -> None:
+        scopes = environment.get("scopes")
+        scopes = scopes if isinstance(scopes, list) else []
+        environment_body = dict(environment)
+        environment_body["toolbox_coverage"] = [dict(item) for item in toolbox_coverage]
+        await self._d1.prepare(
+            """
+            INSERT INTO aidy_gold_cycle_environments (
+                cycle_view_id,environment_key,environment_json,scope_keys_json,
+                environment_version
+            ) VALUES (?,?,?,?,?)
+            ON CONFLICT(cycle_view_id) DO NOTHING
+            """
+        ).bind(
+            cycle_view_id,
+            str(environment.get("environment_key") or ""),
+            _canonical_json(environment_body),
+            _canonical_json(scopes),
+            str(environment.get("environment_version") or "unknown"),
+        ).run()
+
+        for reason in reasons:
+            surface = str(reason.get("surface") or "")
+            source_path = str(reason.get("source_path") or "")
+            mid = str(
+                reason.get("marker_id")
+                or marker_id(surface=surface, source_path=source_path)
+            )
+            observation = {
+                "cycle_view_id": cycle_view_id,
+                "marker_id": mid,
+                "surface": surface,
+                "vote": str(reason.get("vote") or "neutral"),
+                "source_path": source_path,
+                "base_weight": str(reason.get("base_weight") or reason.get("weight") or "0"),
+                "learned_multiplier": str(reason.get("learned_multiplier") or "1"),
+                "effective_weight": str(
+                    reason.get("effective_weight") or reason.get("weight") or "0"
+                ),
+                "selected_score_scope": str(
+                    reason.get("selected_score_scope") or "bootstrap_prior"
+                ),
+                "selected_score_sample_n": int(
+                    reason.get("selected_score_sample_n") or 0
+                ),
+                "selected_score_net": int(reason.get("selected_score_net") or 0),
+                "selected_score_accuracy": reason.get("selected_score_accuracy"),
+            }
+            await self._d1.prepare(
+                """
+                INSERT INTO aidy_gold_cycle_marker_observations (
+                    cycle_view_id,marker_id,surface,vote,source_path,base_weight,
+                    learned_multiplier,effective_weight,selected_score_scope,
+                    selected_score_sample_n,selected_score_net,
+                    selected_score_accuracy,observation_digest
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(cycle_view_id,marker_id) DO NOTHING
+                """
+            ).bind(
+                cycle_view_id,
+                mid,
+                surface,
+                observation["vote"],
+                source_path,
+                observation["base_weight"],
+                observation["learned_multiplier"],
+                observation["effective_weight"],
+                observation["selected_score_scope"],
+                observation["selected_score_sample_n"],
+                observation["selected_score_net"],
+                observation["selected_score_accuracy"],
+                _digest(observation),
+            ).run()
+
+    async def _score_marker_results(
+        self,
+        *,
+        cycle_view_id: str,
+        resolved_at_utc: datetime,
+        realised_direction: str,
+        realised_return_bps: Decimal | None,
+    ) -> int:
+        environment_row = _row(
+            await self._d1.prepare(
+                """
+                SELECT scope_keys_json
+                FROM aidy_gold_cycle_environments
+                WHERE cycle_view_id=?
+                LIMIT 1
+                """
+            ).bind(cycle_view_id).first()
+        )
+        if environment_row is None:
+            return 0
+        try:
+            scopes = json.loads(str(environment_row.get("scope_keys_json") or "[]"))
+        except json.JSONDecodeError:
+            return 0
+        if not isinstance(scopes, list):
+            return 0
+
+        existing_result = await self._d1.prepare(
+            """
+            SELECT marker_id
+            FROM aidy_gold_cycle_marker_results
+            WHERE cycle_view_id=?
+            """
+        ).bind(cycle_view_id).all()
+        already = {str(row.get("marker_id") or "") for row in _results(existing_result)}
+
+        observations_result = await self._d1.prepare(
+            """
+            SELECT marker_id,surface,vote,source_path
+            FROM aidy_gold_cycle_marker_observations
+            WHERE cycle_view_id=?
+            ORDER BY marker_id
+            """
+        ).bind(cycle_view_id).all()
+        scored = 0
+        for observation in _results(observations_result):
+            mid = str(observation.get("marker_id") or "")
+            if not mid or mid in already:
+                continue
+            vote = str(observation.get("vote") or "unknown")
+            score, correct = score_marker_vote(
+                vote=vote,
+                realised_direction=realised_direction,
+                realised_return_bps=realised_return_bps,
+            )
+            if correct is None:
+                continue
+            result_body = {
+                "cycle_view_id": cycle_view_id,
+                "marker_id": mid,
+                "resolved_at_utc": resolved_at_utc.isoformat(),
+                "realised_direction": realised_direction,
+                "marker_score": score,
+                "marker_correct": correct,
+                "realised_return_bps": _fmt(realised_return_bps),
+            }
+            await self._d1.prepare(
+                """
+                INSERT INTO aidy_gold_cycle_marker_results (
+                    cycle_view_id,marker_id,resolved_at_utc,realised_direction,
+                    marker_score,marker_correct,result_digest
+                ) VALUES (?,?,?,?,?,?,?)
+                ON CONFLICT(cycle_view_id,marker_id) DO NOTHING
+                """
+            ).bind(
+                cycle_view_id,
+                mid,
+                resolved_at_utc.isoformat(),
+                realised_direction,
+                score,
+                correct,
+                _digest(result_body),
+            ).run()
+
+            surface = str(observation.get("surface") or "")
+            source_path = str(observation.get("source_path") or "")
+            for scope in scopes:
+                if not isinstance(scope, Mapping):
+                    continue
+                scope_key = str(scope.get("scope_key") or "")
+                scope_type = str(scope.get("scope_type") or "")
+                if not scope_key or not scope_type:
+                    continue
+                await self._d1.prepare(
+                    """
+                    INSERT INTO aidy_gold_marker_context_scores (
+                        scope_key,scope_type,marker_id,surface,source_path,horizon_minutes,
+                        sample_n,correct_n,incorrect_n,neutral_n,net_score,score_mean,
+                        accuracy,last_resolved_at_utc
+                    ) VALUES (?,?,?,?,?,?,1,?,?,0,?,
+                        printf('%.6f',CAST(? AS REAL)),
+                        printf('%.6f',CAST(? AS REAL)),?)
+                    ON CONFLICT(scope_key,marker_id,horizon_minutes) DO UPDATE SET
+                        sample_n=sample_n+1,
+                        correct_n=correct_n+excluded.correct_n,
+                        incorrect_n=incorrect_n+excluded.incorrect_n,
+                        net_score=net_score+excluded.net_score,
+                        score_mean=printf(
+                            '%.6f',
+                            CAST(net_score+excluded.net_score AS REAL)/(sample_n+1)
+                        ),
+                        accuracy=printf(
+                            '%.6f',
+                            CAST(correct_n+excluded.correct_n AS REAL)/(sample_n+1)
+                        ),
+                        last_resolved_at_utc=excluded.last_resolved_at_utc
+                    """
+                ).bind(
+                    scope_key,
+                    scope_type,
+                    mid,
+                    surface,
+                    source_path,
+                    MARKER_SCORE_HORIZON_MINUTES,
+                    correct,
+                    1 - correct,
+                    score,
+                    score,
+                    correct,
+                    resolved_at_utc.isoformat(),
+                ).run()
+            scored += 1
+        return scored
+
+    async def backfill_contextual_learning(self, *, now_utc: datetime) -> dict[str, int]:
+        """Materialize marker learning for pre-brain cycle views without rewriting them."""
+
+        now = _utc(now_utc, name="now_utc")
+        result = await self._d1.prepare(
+            """
+            SELECT v.cycle_view_id,v.session_code,v.observed_state,v.evidence_json,
+                   o.resolved_at_utc,o.realised_direction,o.return_bps
+            FROM aidy_gold_cycle_views v
+            LEFT JOIN aidy_gold_cycle_environments e
+              ON e.cycle_view_id=v.cycle_view_id
+            LEFT JOIN aidy_gold_cycle_outcomes o
+              ON o.cycle_view_id=v.cycle_view_id
+            WHERE e.cycle_view_id IS NULL
+            ORDER BY v.window_start_utc
+            LIMIT 50
+            """
+        ).all()
+        stats = {"views_backfilled": 0, "markers_scored": 0}
+        for row in _results(result):
+            try:
+                evidence = json.loads(str(row.get("evidence_json") or "{}"))
+            except json.JSONDecodeError:
+                continue
+            reasons = evidence.get("all_directional_reasons")
+            reasons = reasons if isinstance(reasons, list) else []
+            if not reasons:
+                continue
+
+            synthetic_timeframes: dict[str, Any] = {}
+            for reason in reasons:
+                if not isinstance(reason, Mapping):
+                    continue
+                surface = str(reason.get("surface") or "")
+                vote = str(reason.get("vote") or "unknown")
+                timeframe = {
+                    "gold_h1_structure": "H1",
+                    "gold_h4_structure": "H4",
+                    "gold_d1_context": "D1",
+                }.get(surface)
+                if timeframe and timeframe not in synthetic_timeframes:
+                    synthetic_timeframes[timeframe] = {
+                        "net_close_direction": vote,
+                    }
+            legacy_gold_state = {
+                "market_structure": {"timeframes": synthetic_timeframes},
+                "move_observation": {
+                    "five_minute_distribution_state": "unknown_legacy_view",
+                    "five_minute_range_state": "unknown_legacy_view",
+                    "windows": {},
+                },
+                "volatility": {},
+                "liquidity": {},
+                "scheduled_event_risk": {},
+            }
+            environment = build_environment_fingerprint(
+                session_code=str(row.get("session_code") or "unknown"),
+                observed_state=str(row.get("observed_state") or "unknown"),
+                gold_state=legacy_gold_state,
+                regime={},
+            )
+            considered = evidence.get("toolbox_considered")
+            considered = considered if isinstance(considered, list) else []
+            marker_surfaces = {
+                str(reason.get("surface") or "")
+                for reason in reasons
+                if isinstance(reason, Mapping)
+            }
+            coverage = [
+                {
+                    "name": str(name),
+                    "category": "legacy_unknown",
+                    "status": "legacy_cycle_view",
+                    "role_this_cycle": (
+                        "directional_marker"
+                        if str(name) in marker_surfaces
+                        else "considered_legacy_context"
+                    ),
+                    "directional_marker_ids": [],
+                    "scoreable_this_cycle": str(name) in marker_surfaces,
+                }
+                for name in considered
+            ]
+            adjusted = apply_learning_to_reasons(reasons=reasons, profiles={})
+            await self._store_environment_and_markers(
+                cycle_view_id=str(row["cycle_view_id"]),
+                environment=environment,
+                reasons=adjusted,
+                toolbox_coverage=coverage,
+            )
+            stats["views_backfilled"] += 1
+
+            realised = str(row.get("realised_direction") or "unknown")
+            resolved_at = row.get("resolved_at_utc")
+            if realised in {"bullish", "bearish", "neutral"} and resolved_at:
+                stats["markers_scored"] += await self._score_marker_results(
+                    cycle_view_id=str(row["cycle_view_id"]),
+                    resolved_at_utc=_utc(str(resolved_at), name="resolved_at_utc"),
+                    realised_direction=realised,
+                    realised_return_bps=_decimal(row.get("return_bps")),
+                )
+        return stats
+
     async def create_next_view(self, *, now_utc: datetime) -> dict[str, Any]:
         now = _utc(now_utc, name="now_utc")
         window_start = _next_window_start(now)
@@ -563,6 +1016,25 @@ class D1GoldCycleMemoryStore:
             observed_state=observed_state,
             sequence_signature=preliminary_signature,
         )
+        regime = inputs.get("regime")
+        regime = regime if isinstance(regime, Mapping) else {}
+        environment = build_environment_fingerprint(
+            session_code=str(snapshot.get("session_code") or "unknown"),
+            observed_state=observed_state,
+            gold_state=gold_state,
+            regime=regime,
+        )
+        raw_reasons = _build_directional_reasons(
+            gold_state=gold_state,
+            movement_investigation=investigation,
+            analogue_summary=analogue,
+        )
+        scopes = environment.get("scopes")
+        scopes = scopes if isinstance(scopes, list) else []
+        profiles = await self._marker_profiles(
+            reasons=raw_reasons,
+            scopes=scopes,
+        )
         payload = build_cycle_view_payload(
             as_of=now,
             window_start=window_start,
@@ -572,6 +1044,8 @@ class D1GoldCycleMemoryStore:
             toolbox_manifest=toolbox,
             prior_observed_states=prior_states,
             analogue_summary=analogue,
+            marker_profiles=profiles,
+            environment_fingerprint=environment,
         )
         cycle_view_id = f"aidy_cycle_{payload['view_digest'][:32]}"
         await self._d1.prepare(
@@ -609,6 +1083,16 @@ class D1GoldCycleMemoryStore:
             _canonical_json(payload["analogue_summary"]),
             payload["view_digest"],
         ).run()
+        coverage = toolbox_cycle_coverage(
+            toolbox_manifest=toolbox,
+            marker_reasons=payload["all_directional_reasons"],
+        )
+        await self._store_environment_and_markers(
+            cycle_view_id=cycle_view_id,
+            environment=environment,
+            reasons=payload["all_directional_reasons"],
+            toolbox_coverage=coverage,
+        )
         return {
             "created": True,
             "cycle_view_id": cycle_view_id,
@@ -752,6 +1236,12 @@ class D1GoldCycleMemoryStore:
                 _canonical_json(outcome),
                 outcome["outcome_digest"],
             ).run()
+            await self._score_marker_results(
+                cycle_view_id=str(row["cycle_view_id"]),
+                resolved_at_utc=now,
+                realised_direction=realised,
+                realised_return_bps=return_bps,
+            )
             stats["resolved"] += 1
         return stats
 
@@ -776,6 +1266,32 @@ class D1GoldCycleMemoryStore:
         scored = [row for row in resolved if row.get("exact_direction_correct") is not None]
         correct = sum(int(row.get("exact_direction_correct") or 0) for row in scored)
         latest = rows[0] if rows else None
+        latest_marker_profiles: list[dict[str, Any]] = []
+        scorebook_count = 0
+        if latest is not None:
+            marker_result = await self._d1.prepare(
+                """
+                SELECT m.surface,m.vote,m.base_weight,m.learned_multiplier,
+                       m.effective_weight,m.selected_score_scope,
+                       m.selected_score_sample_n,m.selected_score_net,
+                       m.selected_score_accuracy
+                FROM aidy_gold_cycle_marker_observations m
+                JOIN aidy_gold_cycle_views v
+                  ON v.cycle_view_id=m.cycle_view_id
+                WHERE v.window_start_utc=?
+                ORDER BY m.surface,m.marker_id
+                """
+            ).bind(str(latest["window_start_utc"])).all()
+            latest_marker_profiles = _results(marker_result)
+        score_row = _row(
+            await self._d1.prepare(
+                """
+                SELECT COUNT(*) AS n
+                FROM aidy_gold_marker_context_scores
+                """
+            ).first()
+        )
+        scorebook_count = int((score_row or {}).get("n") or 0)
 
         sequence = [str(row["observed_state"]) for row in reversed(rows)]
         runs: list[dict[str, Any]] = []
@@ -802,6 +1318,15 @@ class D1GoldCycleMemoryStore:
             ),
             "observed_state_sequence_today": sequence,
             "state_runs_today": runs,
+            "marker_brain": {
+                "version": GOLD_MARKER_BRAIN_VERSION,
+                "context_scorebook_rows": scorebook_count,
+                "latest_marker_profiles": latest_marker_profiles,
+                "impact_score_range": [-2, 2],
+                "large_move_threshold_bps": "5.000000",
+                "research_only": True,
+                "live_money_execution_allowed": False,
+            },
             "latest_view": (
                 None
                 if latest is None
@@ -832,11 +1357,14 @@ async def sync_gold_cycle_memory(
 ) -> dict[str, Any]:
     now = _utc(now_utc, name="now_utc")
     store = D1GoldCycleMemoryStore(d1)
+    backfill = await store.backfill_contextual_learning(now_utc=now)
     resolution = await store.resolve_matured(now_utc=now)
     creation = await store.create_next_view(now_utc=now)
     result = {
         "memory_version": GOLD_CYCLE_MEMORY_VERSION,
         "observed_at_utc": now.isoformat(),
+        "marker_brain_version": GOLD_MARKER_BRAIN_VERSION,
+        "backfill": backfill,
         "resolution": resolution,
         "creation": creation,
         "research_only": True,
