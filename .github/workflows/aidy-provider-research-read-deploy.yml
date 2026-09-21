@@ -16,6 +16,7 @@ on:
       - "src/aidy/gold_movement_investigator.py"
       - "src/aidy/gold_movement_memory.py"
       - "src/aidy/gold_cycle_environment.py"
+      - "src/aidy/gold_environment_contract.py"
       - "src/aidy/gold_cycle_memory.py"
       - "src/aidy/gold_marker_brain.py"
       - "src/aidy/gold_toolbox_registry.py"
@@ -79,7 +80,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_cycle_environment.py src/aidy/gold_cycle_memory.py src/aidy/gold_marker_brain.py src/aidy/gold_toolbox_registry.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_cycle_environment.py src/aidy/gold_environment_contract.py src/aidy/gold_cycle_memory.py src/aidy/gold_marker_brain.py src/aidy/gold_toolbox_registry.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
           uv run python -m compileall -q src tests
           uv run pytest -q \
             tests/test_provider_market_api.py \
