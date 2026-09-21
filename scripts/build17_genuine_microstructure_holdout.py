@@ -20,7 +20,7 @@ from aidy.gc_microstructure import (
     parse_databento_tbbo_jsonl,
     verify_weekday_clock_baseline,
 )
-from aidy.gc_shadow_spine import normalize_databento_api_key
+from aidy.gc_shadow_spine import normalize_databento_api_key, resolve_gc_contract_map
 from aidy.gold_cycle_environment import build_cycle_environment
 from aidy.gold_futures_microstructure_expert import summarise_incremental_holdout
 from aidy.gold_m5_price_structure_expert import build_m5_price_structure_expert
@@ -31,6 +31,7 @@ DATABENTO_DATASET = "GLBX.MDP3"
 DATABENTO_SYMBOL = "GC.n.0"
 DATABENTO_SCHEMA = "tbbo"
 DATABENTO_BASE_URL = "https://hist.databento.com/v0"
+DATABENTO_SYMBOLOGY_URL = "https://hist.databento.com/v0/symbology.resolve"
 EVIDENCE_VERSION = "aidy_build17_genuine_microstructure_holdout_v1"
 TARGET_EPISODES = 64
 TRAIN_EPISODES = 32
@@ -378,6 +379,83 @@ def _download(
     return {"path": str(path), "byte_count": byte_count, "sha256": hasher.hexdigest()}
 
 
+def _symbology_resolve(
+    api_key: str,
+    *,
+    symbols: str,
+    stype_in: str,
+    stype_out: str,
+    start_date: str,
+    end_date: str,
+) -> dict[str, Any]:
+    response = httpx.post(
+        DATABENTO_SYMBOLOGY_URL,
+        auth=httpx.BasicAuth(api_key, ""),
+        timeout=20.0,
+        data={
+            "dataset": DATABENTO_DATASET,
+            "symbols": symbols,
+            "stype_in": stype_in,
+            "stype_out": stype_out,
+            "start_date": start_date,
+            "end_date": end_date,
+        },
+        headers={"User-Agent": "AIDY-Signals/Build17"},
+    )
+    if response.is_error:
+        safe = response.text.replace(api_key, "***")[:1000]
+        raise RuntimeError(
+            f"Databento Build17 symbology failed with HTTP {response.status_code}: {safe}"
+        )
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise TypeError("Databento Build17 symbology returned a non-object payload")
+    return payload
+
+
+def _continuous_instrument_ids(payload: dict[str, Any]) -> list[str]:
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        raise TypeError("Databento continuous resolution lacks a result mapping")
+    entries = result.get(DATABENTO_SYMBOL)
+    if not isinstance(entries, list) or not entries:
+        raise RuntimeError("Databento continuous resolution returned no GC instruments")
+    ids = sorted(
+        {
+            str(entry.get("s"))
+            for entry in entries
+            if isinstance(entry, dict) and str(entry.get("s", "")).isdigit()
+        }
+    )
+    if not ids:
+        raise RuntimeError("Databento continuous resolution returned no numeric instrument IDs")
+    return ids
+
+
+def _resolved_contract_map(api_key: str, *, anchor: datetime) -> dict[int, str]:
+    start_date = anchor.date().isoformat()
+    end_date = (anchor.date() + timedelta(days=1)).isoformat()
+    continuous = _symbology_resolve(
+        api_key,
+        symbols=DATABENTO_SYMBOL,
+        stype_in="continuous",
+        stype_out="instrument_id",
+        start_date=start_date,
+        end_date=end_date,
+    )
+    raw_resolutions: dict[str, dict[str, Any]] = {}
+    for instrument_id in _continuous_instrument_ids(continuous):
+        raw_resolutions[instrument_id] = _symbology_resolve(
+            api_key,
+            symbols=instrument_id,
+            stype_in="instrument_id",
+            stype_out="raw_symbol",
+            start_date=start_date,
+            end_date=end_date,
+        )
+    return resolve_gc_contract_map(continuous, raw_resolutions)
+
+
 def _instrument_contract_map(raw_text: str) -> dict[int, str]:
     result: dict[int, str] = {}
     for raw_line in raw_text.splitlines():
@@ -458,8 +536,11 @@ def main() -> int:
     output_dir = Path(os.environ.get("BUILD17_OUTPUT_DIR", "build17_genuine"))
     output_dir.mkdir(parents=True, exist_ok=True)
     max_total = _decimal(os.environ.get("BUILD17_MAX_SPEND_USD", str(DEFAULT_MAX_TOTAL_USD)))
+    prior_spend = _decimal(os.environ.get("BUILD17_PRIOR_SPEND_USD", "0"))
     if max_total <= 0 or max_total > DEFAULT_MAX_TOTAL_USD:
         raise RuntimeError("Build17 max spend must be >0 and <= owner-approved $150 cap")
+    if prior_spend < 0 or prior_spend > max_total:
+        raise RuntimeError("Build17 prior spend must be within the owner-approved cap")
 
     all_spot = _load_spot_rows()
     selected = _select_candidates(all_spot)
@@ -502,9 +583,9 @@ def main() -> int:
             _canonical_json(quote_evidence) + "\n",
             encoding="utf-8",
         )
-        if total_quote > max_total:
+        if prior_spend + total_quote > max_total:
             raise RuntimeError(
-                f"Build17 total Databento quote {total_quote} exceeds hard cap {max_total}; no download started"
+                f"Build17 prior spend plus total Databento quote exceeds hard cap {max_total}; no download started"
             )
 
         all_minutes_by_anchor: dict[str, list[Any]] = {}
@@ -522,13 +603,15 @@ def main() -> int:
                 raise RuntimeError(
                     f"Databento quote increased for {anchor.isoformat()}; refusing download"
                 )
-            if actual_committed + fresh_cost > max_total:
+            if prior_spend + actual_committed + fresh_cost > max_total:
                 raise RuntimeError("Build17 cumulative fresh quote exceeds hard cap")
             path = raw_dir / f"episode_{index:03d}.jsonl"
             receipt = _download(client, params=params, path=path)
             actual_committed += fresh_cost
             raw_text = path.read_text(encoding="utf-8")
             contract_map = _instrument_contract_map(raw_text)
+            if not contract_map:
+                contract_map = _resolved_contract_map(api_key, anchor=anchor)
             if not contract_map:
                 raise RuntimeError(f"No auditable raw GC symbol map for {anchor.isoformat()}")
             trades = parse_databento_tbbo_jsonl(
@@ -625,6 +708,7 @@ def main() -> int:
         "split_binding": split,
         "cost": {
             "hard_cap_usd": str(max_total),
+            "prior_attempt_spend_usd": str(prior_spend),
             "all_requests_quoted_before_download": True,
             "total_initial_quote_usd": str(
                 sum((_decimal(row["quoted_cost_usd"]) for row in quote_rows), Decimal(0))
