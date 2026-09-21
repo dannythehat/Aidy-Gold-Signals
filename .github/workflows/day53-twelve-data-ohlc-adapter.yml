@@ -37,6 +37,7 @@ on:
       - "src/aidy/gold_volatility_jump_expert.py"
       - "src/aidy/gold_session_participation_expert.py"
       - "src/aidy/gold_macro_event_expert.py"
+      - "src/aidy/gold_rates_usd_cross_asset_expert.py"
       - "migrations/d1/0026_gold_expert_conditional_trust.sql"
       - "src/entry.py"
       - ".github/workflows/aidy-retrospective-m1-backfill.yml"
@@ -68,6 +69,7 @@ on:
       - "tests/test_gold_volatility_jump_expert.py"
       - "tests/test_gold_session_participation_expert.py"
       - "tests/test_gold_macro_event_expert.py"
+      - "tests/test_gold_rates_usd_cross_asset_expert.py"
       - "tests/test_phase_b_forward_restart_guard.py"
       - "tests/test_day4_capture_freshness_watchdog.py"
       - "tests/test_day5_archive_outbox_watchdog.py"
@@ -144,6 +146,7 @@ jobs:
             src/aidy/gold_volatility_jump_expert.py \
             src/aidy/gold_session_participation_expert.py \
             src/aidy/gold_macro_event_expert.py \
+            src/aidy/gold_rates_usd_cross_asset_expert.py \
             scripts/aidy_capture_freshness_watchdog.py \
             scripts/aidy_archive_outbox_watchdog.py \
             tests/test_day4_capture_freshness_watchdog.py \
@@ -191,7 +194,8 @@ jobs:
             tests/test_gold_liquidity_reclaim_expert.py \
             tests/test_gold_volatility_jump_expert.py \
             tests/test_gold_session_participation_expert.py \
-            tests/test_gold_macro_event_expert.py
+            tests/test_gold_macro_event_expert.py \
+            tests/test_gold_rates_usd_cross_asset_expert.py
 
       - name: Full repository regression
         shell: bash

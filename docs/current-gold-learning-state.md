@@ -18,6 +18,23 @@ Updated: 2026-09-21
 
 
 
+
+## Build 16 COMPLETE — Rates / USD / Cross-Asset Expert
+
+Build 16 adds `aidy_gold_rates_usd_cross_asset_expert_v1`.
+
+The expert is context-only and learns relationships instead of hardcoding them. Cash Treasury and real-rate series are retained as PIT-vintaged daily context and explicitly cannot produce 15m/60m reaction claims. Exchange-timestamped futures may contribute intraday changes only when their current observation is fresh and decision-qualified; official daily/fix USD/FX/VIX series remain daily context.
+
+Rolling Gold beta/correlation is estimated inside the current compound regime. This allows a regime where Gold rises with USD or real yields, a regime where those relationships are negative, and a sign-flipping/unstable relationship. Divergence therefore means “opposite to the learned current-regime relationship,” not “opposite to a permanent textbook sign.”
+
+Correlated inputs are dependency-tagged. Rates-curve components are one family, ZQ/SR3 are one policy-path family, broad USD/EURUSD/USDJPY are one USD mechanism, and breadth counts only one representative per dependency group.
+
+Engineering acceptance on PR #219 candidate: semantic PASS, static PASS, focused suite 292 passed, full regression 1544 passed. Positive Gold-with-USD/real-yield history, sign flips, stale daily guards, qualified intraday futures, dependency grouping, group-level breadth, learned-sign divergence and PIT future-row exclusion all pass.
+
+Build 16 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 17 — Futures / Microstructure Expert. Phase A tests whether genuine historical COMEX information adds incremental value beyond spot OHLC experts. Paid live/delayed activation remains a separately approved Phase B only if Phase A earns it.
+
 ## Build 15 COMPLETE — Macro / Event Expert
 
 Build 15 adds `aidy_gold_macro_event_expert_v1`.
