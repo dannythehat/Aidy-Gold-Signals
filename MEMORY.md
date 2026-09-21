@@ -7,6 +7,40 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 5 — M5 Price Structure Expert COMPLETE
+
+Build 5 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_m5_price_structure_expert_v1`
+
+What Build 5 adds:
+- the first real timeframe mini-brain, dedicated to M5 price structure;
+- five separately auditable directional sub-calculators for trend/path quality, confirmed swing structure, breakout acceptance/reclaim, momentum transition and completed-candle pressure;
+- context-only M5 range-location and contradiction diagnostics;
+- an M5-specific mini-environment for conditional learning;
+- Build-3 historical trust lookup for both the overall M5 gate and each scoreable sub-calculator;
+- family-balanced aggregation so correlated calculations cannot gain extra weight merely by being numerous;
+- explicit NEUTRAL / ABSTAIN / UNKNOWN handling when M5 evidence is weak or contradictory;
+- a retained legacy-M5 baseline and chronological replay summary for ablation/comparison.
+
+PIT/no-hindsight properties remain intact: only completed candles enter Build-4 mathematics, the Build-2 expert packet is immutable/auditable, future values are excluded, and historical trust remains separate from current internal conviction.
+
+Acceptance on PR #206:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused acceptance/regression suite: 148 passed;
+- full repository regression: 1400 passed;
+- clean uptrend/downtrend/chop/reversal/missing-data/PIT/chronological-freeze/trust/legacy-comparison cases passed.
+
+Merged to `main`:
+`eaa6f49636ae4ae9f73d6a17db4c9d8f46d8743a`
+
+Build 5 does not replace the legacy live marker brain, alter Super Signals execution, change owner 1% risk, or grant AIDY live-money authority.
+
+**Next:** Build 6 — M15 Price Structure Expert. It will apply the same expert contract independently to M15, with M15-specific horizons/thresholds, explicit 8-bar path and latest-15m momentum/swing/breakout evidence, dependency metadata and the legacy M15 baseline retained for ablation.
+
 ## Build 4 — Common Price Expert Mathematics COMPLETE
 
 Build 4 of the environment-aware expert-gate programme is complete and engineering-proven.
