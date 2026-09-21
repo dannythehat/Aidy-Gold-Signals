@@ -59,6 +59,47 @@ Build 14 remains research/shadow intelligence. It does not replace the live mark
 
 **Next:** Build 15 — Macro / Event Expert. It will turn the existing official event stack into a Gold-specific specialist using event classes, pre-event features, consensus/actual/revisions, Gold-learned event tiers, standardized surprise where valid, clustering, post-release confirmation and historical conditional response, while preserving first-observed timestamps and no-hindsight boundaries.
 
+
+## Build 14 — Session / Participation Expert COMPLETE
+
+Build 14 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_session_participation_expert_v1`
+
+What Build 14 adds:
+- deterministic DST-safe London, New York and Asia regional-session context;
+- explicit active-market list and London/New York overlap state;
+- current completed-M1 15-minute realised-volatility and range activity;
+- exact weekday × UTC 15-minute clock-slot baselines;
+- event-clean historical baselines when enough clean samples exist;
+- explicit event-time confounding so unusual activity is not automatically attributed to the session;
+- qualified genuine GC exchange-volume and pre-trade BBO spread context using the existing GC microstructure baseline;
+- unqualified/incomplete GC participation remains UNKNOWN;
+- ordinary session activity explicitly cannot count as alpha by itself;
+- no hardcoded session-direction rule and no individual-participant identity claim;
+- PIT/no-future chronological freeze and Build-3 conditional trust.
+
+Acceptance on PR #217 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 263 passed;
+- full repository regression: 1515 passed;
+- London DST transition: PASS;
+- New York DST transition: PASS;
+- London/New York overlap and active-market identity: PASS;
+- exact weekday-clock baseline filtering: PASS;
+- event-row exclusion when clean baseline is sufficient: PASS;
+- current event-time confounding: PASS;
+- genuine GC volume/spread descriptive context: PASS;
+- unqualified GC context -> UNKNOWN: PASS;
+- no session-direction rule: PASS;
+- PIT/no-future and chronological freeze: PASS.
+
+Build 14 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 15 — Macro / Event Expert. It will turn the existing official-source event stack into a Gold-specific specialist with pre-event features, first-observed actuals/revisions, standardized surprise where valid, event clustering, post-release confirmation and Gold-learned event tiers based on independent episodes rather than vendor importance labels.
+
 ## Build 13 — Volatility / Jump Expert COMPLETE
 
 Build 13 of the environment-aware expert-gate programme is complete and engineering-proven.
