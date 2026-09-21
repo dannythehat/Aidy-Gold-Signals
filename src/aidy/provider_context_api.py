@@ -319,9 +319,18 @@ async def _context_for_snapshot(d1: Any, *, snapshot: Mapping[str, Any]) -> dict
     packet = dict(packet)
     gold_state = packet.get("gold_state")
     gold_state = dict(gold_state) if isinstance(gold_state, Mapping) else {}
-    gold_state["cycle_memory"] = await D1GoldCycleMemoryStore(d1).context_summary(
-        as_of_utc=_utc_iso(str(packet["context_as_of_utc"]), name="context_as_of_utc")
-    )
+    try:
+        gold_state["cycle_memory"] = await D1GoldCycleMemoryStore(d1).context_summary(
+            as_of_utc=_utc_iso(str(packet["context_as_of_utc"]), name="context_as_of_utc")
+        )
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        gold_state["cycle_memory"] = {
+            "memory_version": "aidy_gold_cycle_memory_v1",
+            "state": "unavailable",
+            "reason": "cycle_memory_not_available_at_context_read",
+            "research_only": True,
+            "live_money_execution_allowed": False,
+        }
     packet["gold_state"] = gold_state
     return packet
 
