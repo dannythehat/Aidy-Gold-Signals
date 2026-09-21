@@ -139,10 +139,10 @@ def test_build4_candle_geometry_has_exact_expected_ratios() -> None:
     rows.append(
         _row(
             7,
-            open_price=Decimal("100"),
-            high=Decimal("110"),
-            low=Decimal("90"),
-            close=Decimal("108"),
+            open_price=Decimal(100),
+            high=Decimal(110),
+            low=Decimal(90),
+            close=Decimal(108),
         )
     )
     geometry = _packet(rows)["timeframes"]["M15"]["primitives"]["candle_geometry"]
@@ -154,11 +154,11 @@ def test_build4_candle_geometry_has_exact_expected_ratios() -> None:
 
 def test_build4_confirmed_swing_requires_right_wing_no_lookahead() -> None:
     rows = [
-        _row(0, close=Decimal("100"), high=Decimal("101"), low=Decimal("99")),
-        _row(1, close=Decimal("101"), high=Decimal("102"), low=Decimal("100")),
-        _row(2, close=Decimal("102"), high=Decimal("105"), low=Decimal("101")),
-        _row(3, close=Decimal("101"), high=Decimal("103"), low=Decimal("100")),
-        _row(4, close=Decimal("100"), high=Decimal("102"), low=Decimal("99")),
+        _row(0, close=Decimal(100), high=Decimal(101), low=Decimal(99)),
+        _row(1, close=Decimal(101), high=Decimal(102), low=Decimal(100)),
+        _row(2, close=Decimal(102), high=Decimal(105), low=Decimal(101)),
+        _row(3, close=Decimal(101), high=Decimal(103), low=Decimal(100)),
+        _row(4, close=Decimal(100), high=Decimal(102), low=Decimal(99)),
     ]
     before_confirmation = _packet(
         rows,
@@ -185,9 +185,9 @@ def test_build4_partial_current_bar_is_excluded() -> None:
     as_of = BASE + STEP * 8
     partial = _row(
         8,
-        close=Decimal("150"),
-        high=Decimal("151"),
-        low=Decimal("99"),
+        close=Decimal(150),
+        high=Decimal(151),
+        low=Decimal(99),
     )
     packet = _packet(completed + [partial], as_of=as_of)
     m15 = packet["timeframes"]["M15"]
@@ -202,13 +202,13 @@ def test_build4_partial_current_bar_is_excluded() -> None:
 
 def test_build4_breakout_acceptance_requires_completed_closes_beyond_swing() -> None:
     rows = [
-        _row(0, close=Decimal("100"), high=Decimal("101"), low=Decimal("99")),
-        _row(1, close=Decimal("102"), high=Decimal("103"), low=Decimal("100")),
-        _row(2, close=Decimal("104"), high=Decimal("105"), low=Decimal("102")),
-        _row(3, close=Decimal("103"), high=Decimal("104"), low=Decimal("101")),
-        _row(4, close=Decimal("102"), high=Decimal("103"), low=Decimal("100")),
-        _row(5, close=Decimal("106"), high=Decimal("107"), low=Decimal("102")),
-        _row(6, close=Decimal("107"), high=Decimal("108"), low=Decimal("104")),
+        _row(0, close=Decimal(100), high=Decimal(101), low=Decimal(99)),
+        _row(1, close=Decimal(102), high=Decimal(103), low=Decimal(100)),
+        _row(2, close=Decimal(104), high=Decimal(105), low=Decimal(102)),
+        _row(3, close=Decimal(103), high=Decimal(104), low=Decimal(101)),
+        _row(4, close=Decimal(102), high=Decimal(103), low=Decimal(100)),
+        _row(5, close=Decimal(106), high=Decimal(107), low=Decimal(102)),
+        _row(6, close=Decimal(107), high=Decimal(108), low=Decimal(104)),
     ]
     high_side = _packet(rows)["timeframes"]["M15"]["primitives"]["breakout_lifecycle"][
         "high_side"
@@ -223,13 +223,13 @@ def test_build4_breakout_acceptance_requires_completed_closes_beyond_swing() -> 
 
 def test_build4_breakout_rejection_is_distinct_from_acceptance() -> None:
     rows = [
-        _row(0, close=Decimal("100"), high=Decimal("101"), low=Decimal("99")),
-        _row(1, close=Decimal("102"), high=Decimal("103"), low=Decimal("100")),
-        _row(2, close=Decimal("104"), high=Decimal("105"), low=Decimal("102")),
-        _row(3, close=Decimal("103"), high=Decimal("104"), low=Decimal("101")),
-        _row(4, close=Decimal("102"), high=Decimal("103"), low=Decimal("100")),
-        _row(5, close=Decimal("104"), high=Decimal("106"), low=Decimal("102")),
-        _row(6, close=Decimal("103"), high=Decimal("104"), low=Decimal("101")),
+        _row(0, close=Decimal(100), high=Decimal(101), low=Decimal(99)),
+        _row(1, close=Decimal(102), high=Decimal(103), low=Decimal(100)),
+        _row(2, close=Decimal(104), high=Decimal(105), low=Decimal(102)),
+        _row(3, close=Decimal(103), high=Decimal(104), low=Decimal(101)),
+        _row(4, close=Decimal(102), high=Decimal(103), low=Decimal(100)),
+        _row(5, close=Decimal(104), high=Decimal(106), low=Decimal(102)),
+        _row(6, close=Decimal(103), high=Decimal(104), low=Decimal(101)),
     ]
     high_side = _packet(rows)["timeframes"]["M15"]["primitives"]["breakout_lifecycle"][
         "high_side"
@@ -244,13 +244,13 @@ def test_build4_breakout_rejection_is_distinct_from_acceptance() -> None:
 def test_build4_range_position_is_a_factual_location_not_a_vote() -> None:
     rows = []
     for index in range(20):
-        close = Decimal("100") + Decimal(index)
+        close = Decimal(100) + Decimal(index)
         rows.append(
             _row(
                 index,
                 close=close,
-                high=close + Decimal("1"),
-                low=close - Decimal("1"),
+                high=close + Decimal(1),
+                low=close - Decimal(1),
             )
         )
     packet = _packet(rows)
