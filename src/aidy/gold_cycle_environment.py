@@ -52,13 +52,13 @@ def _bucket_distance_bps(value: Any) -> str:
     if parsed is None:
         return "unknown"
     distance = abs(parsed)
-    if distance <= Decimal(1):
+    if distance <= Decimal("1"):
         return "at_level_0_1bp"
-    if distance <= Decimal(3):
+    if distance <= Decimal("3"):
         return "near_1_3bp"
-    if distance <= Decimal(8):
+    if distance <= Decimal("8"):
         return "close_3_8bp"
-    if distance <= Decimal(20):
+    if distance <= Decimal("20"):
         return "moderate_8_20bp"
     return "far_gt20bp"
 
@@ -75,7 +75,7 @@ def _bucket_ratio(value: Any) -> str:
         return "lower_middle"
     if parsed < Decimal("0.75"):
         return "upper_middle"
-    if parsed <= Decimal(1):
+    if parsed <= Decimal("1"):
         return "upper_quartile"
     return "above_range"
 
@@ -130,7 +130,9 @@ def _session_timing(*, as_of: datetime, session_code: str) -> dict[str, Any]:
         active_minutes = since_asia
     elif session_code == "london":
         active_minutes = since_london
-    elif session_code in {"new_york", "london_new_york_overlap"}:
+    elif session_code == "new_york":
+        active_minutes = since_new_york
+    elif session_code == "london_new_york_overlap":
         active_minutes = since_new_york
     else:
         active_minutes = None
@@ -375,14 +377,43 @@ def _cross_market_environment(
     series = cross.get("series")
     series = series if isinstance(series, Mapping) else {}
     states: dict[str, str] = {}
+    facts: dict[str, dict[str, Any]] = {}
     for name, payload in series.items():
-        if isinstance(payload, Mapping):
-            states[str(name)] = str(payload.get("state") or "unknown")
+        if not isinstance(payload, Mapping):
+            continue
+        series_id = str(name)
+        state = str(payload.get("state") or "unknown")
+        states[series_id] = state
+        fact = payload.get("fact")
+        fact = fact if isinstance(fact, Mapping) else {}
+        facts[series_id] = {
+            "state": state,
+            "observation_age_days": payload.get("observation_age_days"),
+            "value": fact.get("value"),
+            "unit": fact.get("unit"),
+            "observation_date": fact.get("observation_date"),
+            "first_observed_at": fact.get("first_observed_at"),
+        }
     known = sorted(name for name, state in states.items() if state == "known")
+    age_bands: dict[str, str] = {}
+    for name in known:
+        age = facts.get(name, {}).get("observation_age_days")
+        if not isinstance(age, int):
+            age_bands[name] = "unknown"
+        elif age <= 0:
+            age_bands[name] = "same_day"
+        elif age == 1:
+            age_bands[name] = "one_day"
+        elif age <= 3:
+            age_bands[name] = "two_to_three_days"
+        else:
+            age_bands[name] = "older_than_three_days"
     return {
         "known_series_count": len(known),
         "known_series": known,
         "series_states": states,
+        "series_age_bands": age_bands,
+        "series_facts": facts,
     }
 
 
@@ -471,6 +502,8 @@ def build_cycle_environment(
         "event_timing_state": event["timing_state"],
         "event_proximity": event["next_event_proximity"],
         "cross_market_known_count": cross_market["known_series_count"],
+        "cross_market_known_series": cross_market["known_series"],
+        "cross_market_age_bands": cross_market["series_age_bands"],
         "compound_regime": compound_regime,
     }
 
