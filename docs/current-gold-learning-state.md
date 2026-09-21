@@ -8,6 +8,23 @@ Updated: 2026-09-21
 
 
 
+
+## Build 6 COMPLETE — M15 Price Structure Expert
+
+Build 6 adds `aidy_gold_m15_price_structure_expert_v1`, the second timeframe specialist.
+
+M15 is calibrated independently from M5. Its primary path expert explicitly evaluates the 8-bar / 120-minute path using return, slope/R², persistence, efficiency and volatility-normalised displacement. Latest completed 15-minute momentum is a separate opinion, alongside swing structure, breakout acceptance/reclaim and candle pressure.
+
+Dependency-family and correlation-group metadata are explicit. Correlated observations remain separately scoreable for learning, while family-balanced aggregation prevents duplicated structure or latest-bar evidence from manufacturing current confidence.
+
+The expert carries a 60-minute target horizon, M15-specific decision thresholds, an M15 mini-environment, Build-3 exact/reduced/global trust scopes, explicit NEUTRAL/ABSTAIN/UNKNOWN states, and a retained legacy-M15 ablation baseline.
+
+Engineering acceptance on PR #209 candidate: semantic gate PASS, static checks PASS, focused workflow suite 159 passed, full repository regression 1411 passed. PIT and chronological-freeze tests remain green.
+
+Build 6 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 7 — H1 Price Structure Expert. It will judge true hourly trend quality, swing structure, acceleration and breakout acceptance, explicitly preventing a choppy positive H1 path from being mislabeled as strong bullish and keeping H1 historical trust separate from M15.
+
 ## Build 5 COMPLETE — M5 Price Structure Expert
 
 Build 5 adds `aidy_gold_m5_price_structure_expert_v1`, the first actual timeframe expert in the programme.
