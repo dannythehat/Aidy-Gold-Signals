@@ -281,9 +281,10 @@ def build_cycle_view_payload(
         vote = str(item["vote"])
         if view_direction in {"bullish", "bearish"} and vote == view_direction:
             supporting.append(item)
-        elif view_direction in {"bullish", "bearish"} and vote in {"bullish", "bearish"}:
-            contradicting.append(item)
-        elif view_direction == "neutral":
+        elif (
+            view_direction in {"bullish", "bearish"}
+            and vote in {"bullish", "bearish"}
+        ) or view_direction == "neutral":
             contradicting.append(item)
 
     capabilities = toolbox_manifest.get("capabilities")
