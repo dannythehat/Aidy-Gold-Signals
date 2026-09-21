@@ -4,6 +4,19 @@ Standalone AIDY Signals Gold trading intelligence and Telegram signal-provider p
 
 AIDY and Super Signals are separate systems. AIDY produces signals; Super Signals may later consume the AIDY Telegram group exactly like any other external provider.
 
+## Current live Gold-learning state — 21 September 2026
+
+Before changing AIDY's Gold-learning runtime, read:
+`docs/current-gold-learning-state.md`.
+
+That document is the repo-local handoff for the live cycle/environment/marker-learning
+architecture, why it exists, its scoring rules, permanent safety boundaries and the
+difference between factual environment inputs and directional markers.
+
+The current live market-data path is Twelve Data / public-independent. Older sections
+below that describe the earlier Gold-API phase are retained as historical build context,
+not the current runtime source.
+
 ## Permanent boundaries
 
 - Separate repository and runtime from Super Signals.
