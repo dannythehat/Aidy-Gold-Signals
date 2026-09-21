@@ -311,6 +311,18 @@ def build_d1_context_expert(
     )
     context_decision = "use_context" if usable else "abstain"
 
+    range20 = primitives["range_position"]["windows"]["20_bar"]
+    structure = primitives["confirmed_swing_sequence"].get("combined_structure") or "unknown"
+    structure_available = structure not in {"insufficient", "unknown"}
+    high_state = primitives["breakout_lifecycle"]["high_side"].get("state") or "unknown"
+    low_state = primitives["breakout_lifecycle"]["low_side"].get("state") or "unknown"
+    breakout_available = (
+        structure_available
+        and high_state != "unknown"
+        and low_state != "unknown"
+    )
+    regression = primitives["log_ols_slope"]["windows"]["8_bar"]
+
     observed = _observed_at(d1, as_of) or as_of
     evidence_state = "known" if usable else "unknown"
 
@@ -378,17 +390,6 @@ def build_d1_context_expert(
         ),
     ]
 
-    range20 = primitives["range_position"]["windows"]["20_bar"]
-    structure = primitives["confirmed_swing_sequence"].get("combined_structure") or "unknown"
-    structure_available = structure not in {"insufficient", "unknown"}
-    high_state = primitives["breakout_lifecycle"]["high_side"].get("state") or "unknown"
-    low_state = primitives["breakout_lifecycle"]["low_side"].get("state") or "unknown"
-    breakout_available = (
-        structure_available
-        and high_state != "unknown"
-        and low_state != "unknown"
-    )
-    regression = primitives["log_ols_slope"]["windows"]["8_bar"]
     trend_context = {
         "direction": regression.get("direction"),
         "r_squared": regression.get("r_squared"),
