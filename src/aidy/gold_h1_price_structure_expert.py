@@ -943,6 +943,23 @@ def build_h1_price_structure_expert(
     ]
 
     conclusion, conviction, consensus_audit = _family_balanced_conclusion(calculators)
+    trend_observation = trend.get("observation") or {}
+    eight_bar_return_direction = _direction(
+        primitives["multi_lookback_returns"]["values"]["8_bar"].get("direction")
+    )
+    quality_gate_passed = trend_observation.get("quality_gate_passed")
+    if (
+        conclusion in {"bullish", "bearish"}
+        and quality_gate_passed is False
+        and conclusion == eight_bar_return_direction
+    ):
+        consensus_audit["h1_trend_quality_guard_applied"] = True
+        consensus_audit["pre_quality_guard_conclusion"] = conclusion
+        conclusion = "abstain"
+        conviction = None
+    else:
+        consensus_audit["h1_trend_quality_guard_applied"] = False
+
     mini = _mini_environment(
         global_environment=global_environment,
         primitives=primitives,
