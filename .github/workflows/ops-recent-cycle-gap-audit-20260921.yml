@@ -150,6 +150,18 @@ jobs:
             echo '{"diagnostic":"not_found"}'
           fi
 
+          echo "=== recent_health_events ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT observed_at_utc,status,alert,session_open,scheduler,
+                     latest_scheduled_success_utc,latest_scheduled_request_utc,
+                     latest_scheduled_request_status,latest_scheduled_error_code,reason
+              FROM aidy_data_health_events
+              WHERE observed_at_utc>='2026-09-21T04:45:00+00:00'
+              ORDER BY observed_at_utc DESC LIMIT 80;
+            "
+
           echo "=== recent_snapshots ==="
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
             --config wrangler.research.live.jsonc \
