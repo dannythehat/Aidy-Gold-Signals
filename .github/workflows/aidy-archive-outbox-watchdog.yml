@@ -1,8 +1,6 @@
 name: AIDY Archive Outbox Watchdog
 
 on:
-  schedule:
-    - cron: "8,18,28,38,48,58 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
