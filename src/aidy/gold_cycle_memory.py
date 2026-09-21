@@ -144,31 +144,12 @@ def _reason(
     }
 
 
-def build_cycle_view_payload(
+def _build_directional_reasons(
     *,
-    as_of: datetime,
-    window_start: datetime,
-    session_code: str,
     gold_state: Mapping[str, Any],
     movement_investigation: Mapping[str, Any],
-    toolbox_manifest: Mapping[str, Any],
-    prior_observed_states: list[str],
     analogue_summary: Mapping[str, Any],
-    marker_profiles: Mapping[str, Mapping[str, Any]] | None = None,
-    environment_fingerprint: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Build one frozen and auditable 15-minute Gold research view."""
-
-    if not verify_gold_state_engine(gold_state):
-        raise ValueError("cycle_view_requires_verified_gold_state")
-    if movement_investigation and not verify_gold_movement_investigation(
-        movement_investigation
-    ):
-        raise ValueError("cycle_view_requires_verified_movement_investigation")
-    if not verify_gold_toolbox_manifest(toolbox_manifest):
-        raise ValueError("cycle_view_requires_verified_toolbox_manifest")
-
-    observed_state, observed_return_bps = _observed_state(gold_state)
+) -> list[dict[str, Any]]:
     structure = gold_state.get("market_structure")
     structure = structure if isinstance(structure, Mapping) else {}
     timeframes = structure.get("timeframes")
@@ -195,7 +176,10 @@ def build_cycle_view_payload(
                     observation=f"{timeframe} completed-bar close path is {raw}",
                     vote=vote,
                     weight=weight,
-                    source_path=f"gold_state.market_structure.timeframes.{timeframe}.net_close_direction",
+                    source_path=(
+                        f"gold_state.market_structure.timeframes."
+                        f"{timeframe}.net_close_direction"
+                    ),
                 )
             )
 
@@ -268,7 +252,39 @@ def build_cycle_view_payload(
                         source_path="cycle_analogue_memory.next_state_distribution",
                     )
                 )
+    return reasons
 
+
+def build_cycle_view_payload(
+    *,
+    as_of: datetime,
+    window_start: datetime,
+    session_code: str,
+    gold_state: Mapping[str, Any],
+    movement_investigation: Mapping[str, Any],
+    toolbox_manifest: Mapping[str, Any],
+    prior_observed_states: list[str],
+    analogue_summary: Mapping[str, Any],
+    marker_profiles: Mapping[str, Mapping[str, Any]] | None = None,
+    environment_fingerprint: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build one frozen and auditable 15-minute Gold research view."""
+
+    if not verify_gold_state_engine(gold_state):
+        raise ValueError("cycle_view_requires_verified_gold_state")
+    if movement_investigation and not verify_gold_movement_investigation(
+        movement_investigation
+    ):
+        raise ValueError("cycle_view_requires_verified_movement_investigation")
+    if not verify_gold_toolbox_manifest(toolbox_manifest):
+        raise ValueError("cycle_view_requires_verified_toolbox_manifest")
+
+    observed_state, observed_return_bps = _observed_state(gold_state)
+    reasons = _build_directional_reasons(
+        gold_state=gold_state,
+        movement_investigation=movement_investigation,
+        analogue_summary=analogue_summary,
+    )
     reasons = apply_learning_to_reasons(
         reasons=reasons,
         profiles=marker_profiles or {},
@@ -363,7 +379,7 @@ def build_cycle_view_payload(
         reasoning_summary = "No directional view: connected evidence did not produce a coherent directional case."
     elif view_direction == "neutral":
         reasoning_summary = (
-            f"Neutral 15-minute view: directional evidence is mixed/weak; weighted score={score}/{weight_total}."
+            f"Neutral 15-minute view: directional evidence is mixed/weak; weighted score={_fmt(score)}/{_fmt(weight_total)}."
         )
     else:
         reasoning_summary = (
