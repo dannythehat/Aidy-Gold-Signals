@@ -157,7 +157,8 @@ jobs:
             tests/test_gold_expert_trust.py \
             tests/test_gold_price_expert_math.py \
             tests/test_gold_m5_price_structure_expert.py \
-            tests/test_gold_m15_price_structure_expert.py
+            tests/test_gold_m15_price_structure_expert.py \
+            tests/test_gold_h1_price_structure_expert.py
 
       - name: Full repository regression
         shell: bash
