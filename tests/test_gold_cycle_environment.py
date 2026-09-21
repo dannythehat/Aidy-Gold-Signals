@@ -392,11 +392,6 @@ def test_build1_every_registered_dimension_is_present_or_unknown() -> None:
         regime={},
     )
     dimensions = environment["learning_dimensions"]
-    registered = {
-        row["name"]
-        for row in environment["environment_contract"]["factor_dimension_groups"].values()
-        for _ in ()
-    }
     # The registry count is authoritative; all entries are materialised even when evidence is absent.
     assert len(dimensions) == environment["environment_contract"]["dimension_count"]
     assert all(value is not None and value != "" for value in dimensions.values())
