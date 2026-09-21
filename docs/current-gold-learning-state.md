@@ -19,6 +19,23 @@ Updated: 2026-09-21
 
 
 
+
+## Build 17 IMPLEMENTATION BUILT / ACCEPTANCE WAITING — Futures / Microstructure Expert
+
+Build 17 Phase A adds `aidy_gold_futures_microstructure_expert_v1`.
+
+The implementation is engineering-proven and can represent genuine historical GC TBBO trade volume, known-side aggressor flow, BBO spread, VWAP, clock-normalized state, CME daily OI/roll context, and a frozen purge+embargo holdout comparison against the spot-OHLC baseline.
+
+The module explicitly preserves null, underperformance and insufficient outcomes. Even a positive retrospective holdout result cannot by itself mark the feature statistically validated, promote a gate, grant live weight or authorize a paid feed.
+
+The Build-17 blueprint gate is **still waiting** because existing genuine Day-42 evidence was a five-minute Databento smoke rather than a genuine outcome-linked holdout cohort. Day 42 intentionally ran J2/J3 with no eligible cohort, so its result could validly remain insufficient. The new synthetic acceptance tests prove implementation behavior only and cannot be represented as real historical predictive evidence.
+
+PR #220 candidate engineering checks: semantic PASS, static PASS, focused suite 308 passed, full regression 1560 passed.
+
+No paid/live data activation, formal-forward evidence, execution change, provider change, owner-risk change or live-money authority has been made.
+
+**Next:** stay on Build 17 until genuine retrospective holdout evidence exists. Build 18 does not start before that acceptance gate is satisfied.
+
 ## Build 16 COMPLETE — Rates / USD / Cross-Asset Expert
 
 Build 16 adds `aidy_gold_rates_usd_cross_asset_expert_v1`.
