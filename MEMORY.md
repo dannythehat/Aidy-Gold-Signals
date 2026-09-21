@@ -20,6 +20,51 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+## Build 18 — News / Movement Mechanism Expert COMPLETE
+
+Build 18 adds `aidy_gold_news_movement_mechanism_expert_v1` plus the bounded Finnhub market-news adapter `aidy_finnhub_market_news_adapter_v1`.
+
+What is built and proven:
+- reuses the frozen Gold movement investigator and scheduled-event evidence;
+- bounded Finnhub market-news source contract using `FINNHUB_API_KEY`;
+- publication timestamp and first-observed timestamp enforcement;
+- future news rows are excluded from frozen decisions;
+- explicit source-authority classification;
+- exact/syndicated duplicate-story collapse before agreement scoring;
+- mechanism-tag extraction for Fed policy, inflation, labour/growth, USD/rates, geopolitical risk, trade policy, risk sentiment, energy/inflation and Gold-specific context;
+- scheduled-event versus credible-news agreement;
+- credible-source agreement and disagreement handling;
+- unsupported narratives are retained as unsupported and never admitted as evidence;
+- disagreement remains unresolved instead of being fabricated away;
+- news is context-only and can never automatically create BUY/SELL direction;
+- no causal claim from a single headline;
+- no live-money authority.
+
+Final acceptance:
+- exact tested PR #225 head: `6ca20729e1925dde30d2cfe123648371d437e648`;
+- implementation merge: `5270f17b536d496d39d231b52da76ad391d4a610`;
+- Evidence Semantic Change Gate: PASS — run `35608776114`;
+- Build 18 acceptance workflow: PASS — run `35608776007`;
+- static/compile checks: PASS;
+- focused suite: 61 passed;
+- full repository regression: 1577 passed;
+- scheduled-event fixture: PASS;
+- credible-news fixture: PASS;
+- duplicate-story anti-double-counting: PASS;
+- unsupported-narrative fixture: PASS;
+- UNKNOWN fixture: PASS;
+- credible-source disagreement remains unresolved: PASS;
+- scheduled-event/news agreement without causal claim: PASS;
+- future-news PIT exclusion: PASS;
+- Finnhub response-schema adapter test: PASS;
+- news directional authority: FALSE.
+
+The Finnhub adapter is built and tested against the real response contract, and the user already owns a valid `FINNHUB_API_KEY` on the separate Super Signals Render runtime. Build 18 does not create a Super Signals dependency or copy that secret into AIDY automatically. The optional authenticated live-smoke step remains available when the same key is installed in AIDY's own secret store.
+
+No execution/provider/risk authority changed. Formal-forward and live-money authority remain OFF.
+
+**Next:** Build 19 — Analogue / Episode Expert. It will retrieve comparable historical Gold states without hindsight, using movement episode memory and analogue retrieval with duplicate collapse, environment/gate-state similarity, symmetric counterexamples and continuation/retrace distributions.
+
 ## Build 17 — Futures / Microstructure Expert COMPLETE
 
 Build 17 adds `aidy_gold_futures_microstructure_expert_v1` and has now passed its genuine Phase-A acceptance gate.
