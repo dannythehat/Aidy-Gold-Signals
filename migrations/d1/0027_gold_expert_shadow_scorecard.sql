@@ -2,6 +2,16 @@
 -- Pre-outcome state is immutable and outcome scoring is stored separately.
 -- Research-only. Formal-forward and live-money authority remain OFF.
 
+CREATE TABLE IF NOT EXISTS aidy_gold_expert_shadow_runtime_state (
+    singleton_id INTEGER PRIMARY KEY CHECK (singleton_id = 1),
+    activated_at_utc TEXT NOT NULL,
+    runtime_version TEXT NOT NULL,
+    prospective_only INTEGER NOT NULL DEFAULT 1 CHECK (prospective_only = 1),
+    research_only INTEGER NOT NULL DEFAULT 1 CHECK (research_only = 1),
+    formal_forward_authority INTEGER NOT NULL DEFAULT 0 CHECK (formal_forward_authority = 0),
+    live_money_execution_allowed INTEGER NOT NULL DEFAULT 0 CHECK (live_money_execution_allowed = 0)
+);
+
 CREATE TABLE IF NOT EXISTS aidy_gold_expert_shadow_cycles (
     cycle_view_id TEXT PRIMARY KEY,
     source_snapshot_id TEXT NOT NULL,
