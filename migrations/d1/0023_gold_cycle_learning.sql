@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS aidy_gold_cycle_views (
     view_direction TEXT NOT NULL CHECK (view_direction IN ('bullish','bearish','neutral','unknown')),
     view_confidence TEXT NOT NULL,
     cycle_signature TEXT NOT NULL,
+    reasoning_summary TEXT NOT NULL,
+    supporting_reasons_json TEXT NOT NULL CHECK (json_valid(supporting_reasons_json)),
+    contradicting_reasons_json TEXT NOT NULL CHECK (json_valid(contradicting_reasons_json)),
+    unavailable_evidence_json TEXT NOT NULL CHECK (json_valid(unavailable_evidence_json)),
     evidence_json TEXT NOT NULL CHECK (json_valid(evidence_json)),
     toolbox_manifest_digest TEXT NOT NULL,
     toolbox_considered_json TEXT NOT NULL CHECK (json_valid(toolbox_considered_json)),
@@ -44,6 +48,7 @@ CREATE TABLE IF NOT EXISTS aidy_gold_cycle_outcomes (
     m1_bars_observed INTEGER NOT NULL,
     exact_direction_correct INTEGER
         CHECK (exact_direction_correct IS NULL OR exact_direction_correct IN (0,1)),
+    reasoning_review_json TEXT NOT NULL CHECK (json_valid(reasoning_review_json)),
     outcome_json TEXT NOT NULL CHECK (json_valid(outcome_json)),
     outcome_digest TEXT NOT NULL UNIQUE,
     post_outcome_only INTEGER NOT NULL DEFAULT 1 CHECK (post_outcome_only = 1),
