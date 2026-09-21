@@ -1,5 +1,5 @@
 name: AIDY Build 24 Live D1 Diagnostic
-# Recheck after corrected health deploy.
+# Recheck after corrected health deploy and fresh 17:07 capture.
 
 on:
   pull_request:
