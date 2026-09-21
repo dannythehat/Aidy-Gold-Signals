@@ -104,7 +104,7 @@ jobs:
           set -euo pipefail
           CYCLE='aidy_cycle_260cafe072061252c0799260fba6642f'
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.build24.hotfix.jsonc             --command "
-              SELECT
+              SELECT DISTINCT
                 g.gate_id,
                 g.gate_mode,
                 g.conclusion,
