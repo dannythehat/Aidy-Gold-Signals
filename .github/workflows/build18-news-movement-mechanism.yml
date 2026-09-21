@@ -1,0 +1,81 @@
+name: AIDY Build 18 News Movement Mechanism
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_news_movement_mechanism_expert.py"
+      - "tests/test_gold_news_movement_mechanism_expert.py"
+      - ".github/workflows/build18-news-movement-mechanism.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static Build 18 checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check             src/aidy/gold_news_movement_mechanism_expert.py             tests/test_gold_news_movement_mechanism_expert.py
+          uv run python -m compileall -q             src/aidy/gold_news_movement_mechanism_expert.py             tests/test_gold_news_movement_mechanism_expert.py
+
+      - name: Focused Build 18 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q             tests/test_gold_expert_gate_contract.py             tests/test_gold_expert_trust.py             tests/test_gold_movement_investigator.py             tests/test_gold_macro_event_expert.py             tests/test_gold_news_movement_mechanism_expert.py
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
+
+      - name: Optional real Finnhub market-news smoke
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${FINNHUB_API_KEY:-}" || { echo "FINNHUB_API_KEY secret is missing"; exit 1; }
+          uv run python - <<'PY'
+          import asyncio
+          from datetime import UTC, datetime
+          from aidy.gold_news_movement_mechanism_expert import FinnhubNewsClient
+
+          async def main():
+              rows = await FinnhubNewsClient.from_env().fetch_gold_context(
+                  as_of_utc=datetime.now(UTC)
+              )
+              assert isinstance(rows, list)
+              assert all(row["provider"] == "Finnhub" for row in rows)
+              assert all(row["future_values_used"] is False for row in rows)
+              print({
+                  "ok": True,
+                  "unique_story_n": len(rows),
+                  "provider": "Finnhub",
+                  "categories": ["general", "forex"],
+              })
+
+          asyncio.run(main())
+          PY
