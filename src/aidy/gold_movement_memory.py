@@ -117,7 +117,7 @@ def _forward_window_returns(
         if close is None:
             result[name] = {"return_bps": None}
             continue
-        move_bps = ((close - reference) / reference) * Decimal("10000")
+        move_bps = ((close - reference) / reference) * Decimal(10000)
         result[name] = {"return_bps": str(move_bps.quantize(Decimal("0.000001")))}
     return result
 
@@ -336,7 +336,7 @@ class D1GoldMovementMemoryStore:
             limit=max(limit, min(int(candidate_limit), 100)),
         )
         current_direction = str(investigation.get("move_direction") or "unknown")
-        current_triggers = set(str(x) for x in investigation.get("triggered_by") or [])
+        current_triggers = {str(x) for x in investigation.get("triggered_by") or []}
         current_leading = investigation.get("leading_mechanism")
         current_leading = current_leading if isinstance(current_leading, Mapping) else {}
         current_mechanism = str(current_leading.get("mechanism") or "unknown")
@@ -347,10 +347,10 @@ class D1GoldMovementMemoryStore:
             trigger_at = card.get("trigger_at_utc")
             if trigger_at is not None and _utc(str(trigger_at), name="card.trigger_at_utc") >= as_of:
                 continue
-            score = Decimal("0")
+            score = Decimal(0)
             if str(card.get("initial_move_direction") or "") == current_direction:
-                score += Decimal("2")
-            card_triggers = set(str(x) for x in card.get("triggered_by") or [])
+                score += Decimal(2)
+            card_triggers = {str(x) for x in card.get("triggered_by") or []}
             union = current_triggers | card_triggers
             if union:
                 score += Decimal("2") * Decimal(len(current_triggers & card_triggers)) / Decimal(
@@ -360,9 +360,9 @@ class D1GoldMovementMemoryStore:
             card_leading = card_leading if isinstance(card_leading, Mapping) else {}
             card_mechanism = str(card_leading.get("mechanism") or "unknown")
             if current_mechanism != "unknown" and card_mechanism == current_mechanism:
-                score += Decimal("3")
+                score += Decimal(3)
             if str(card.get("attribution_state") or "") == current_attribution:
-                score += Decimal("1")
+                score += Decimal(1)
             ranked.append((score, card))
 
         ranked.sort(
