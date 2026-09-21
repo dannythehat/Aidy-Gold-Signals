@@ -112,6 +112,26 @@ def _bucket_event_minutes(value: int | None) -> str:
     return "gt120m"
 
 
+def _bucket_liquidity_intensity(proxy_count: int) -> str:
+    if proxy_count <= 0:
+        return "none"
+    if proxy_count == 1:
+        return "low"
+    if proxy_count <= 3:
+        return "medium"
+    return "high"
+
+
+def _bucket_cross_market_coverage(known_count: int) -> str:
+    if known_count <= 0:
+        return "none"
+    if known_count <= 2:
+        return "low"
+    if known_count <= 4:
+        return "medium"
+    return "high"
+
+
 def _session_timing(*, as_of: datetime, session_code: str) -> dict[str, Any]:
     now = _utc(as_of)
     london = now + timedelta(hours=london_utc_offset_hours(now))
@@ -299,6 +319,7 @@ def _liquidity_environment(gold_state: Mapping[str, Any]) -> dict[str, Any]:
 
     return {
         "proxy_count": len(proxies),
+        "intensity": _bucket_liquidity_intensity(len(proxies)),
         "proxy_side_signature": signature,
         "proxy_kinds": sorted(
             {
@@ -494,12 +515,16 @@ def build_cycle_environment(
         "asia_overnight_zone": location["asia_overnight_zone"],
         "active_session_zone": location["active_session_zone"],
         "liquidity_signature": liquidity["proxy_side_signature"],
+        "liquidity_intensity": liquidity["intensity"],
         "prior_day_breakout_state": liquidity["prior_day_breakout_state"],
         "volatility_state": volatility["state"],
         "jump_state": volatility["jump_state"],
         "event_timing_state": event["timing_state"],
         "event_proximity": event["next_event_proximity"],
         "cross_market_known_count": cross_market["known_series_count"],
+        "cross_market_coverage": _bucket_cross_market_coverage(
+            cross_market["known_series_count"]
+        ),
         "cross_market_known_series": cross_market["known_series"],
         "cross_market_age_bands": cross_market["series_age_bands"],
         "compound_regime": compound_regime,

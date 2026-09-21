@@ -170,6 +170,9 @@ def test_cycle_view_is_reasoned_auditable_and_non_executable() -> None:
     assert payload["toolbox_considered"]
     assert "gold_cycle_15m_memory" in payload["toolbox_considered"]
     assert payload["toolbox_manifest_digest"] == toolbox["manifest_digest"]
+    assert len(payload["tool_reasoning_trace"]) == len(payload["toolbox_considered"])
+    assert all(item.get("readable_state") for item in payload["tool_reasoning_trace"])
+    assert all(item.get("reasoning_action") for item in payload["tool_reasoning_trace"])
     assert payload["research_only"] is True
     assert payload["predictive_edge_claimed"] is False
     assert payload["live_money_execution_allowed"] is False
@@ -237,6 +240,19 @@ def test_cycle_runtime_is_wired_to_cron_provider_context_and_deploy_gate() -> No
     assert "test_gold_cycle_environment.py" in deploy
     assert "test_gold_cycle_memory.py" in deploy
     assert "test_gold_marker_brain.py" in deploy
+
+
+def test_resolver_skips_incomplete_old_windows_instead_of_starving_complete_cycles() -> None:
+    source = (ROOT / "src" / "aidy" / "gold_cycle_memory.py").read_text(
+        encoding="utf-8"
+    )
+    resolve = source[source.index("async def resolve_matured"):source.index(
+        "async def context_summary"
+    )]
+    assert "SELECT COUNT(*)" in resolve
+    assert "b.open_time_utc>=v.window_start_utc" in resolve
+    assert "b.open_time_utc<v.window_end_utc" in resolve
+    assert ")>=15" in resolve
 
 
 def test_cycle_versions_and_neutral_band_are_explicit() -> None:

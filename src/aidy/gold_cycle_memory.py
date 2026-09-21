@@ -385,15 +385,16 @@ def build_cycle_view_payload(
 
     capabilities = toolbox_manifest.get("capabilities")
     capabilities = capabilities if isinstance(capabilities, list) else []
-    considered = [
-        str(item.get("name"))
-        for item in capabilities
-        if isinstance(item, Mapping) and item.get("name")
-    ]
+    tool_reasoning_trace = toolbox_cycle_coverage(
+        toolbox_manifest=toolbox_manifest,
+        marker_reasons=reasons,
+        environment=environment_fingerprint,
+    )
+    considered = [str(item.get("name")) for item in tool_reasoning_trace]
     capability_status = {
         str(item.get("name")): str(item.get("status") or "known_unknown")
-        for item in capabilities
-        if isinstance(item, Mapping) and item.get("name")
+        for item in tool_reasoning_trace
+        if item.get("name")
     }
     used = sorted({str(item["surface"]) for item in reasons})
 
@@ -470,6 +471,7 @@ def build_cycle_view_payload(
         "analogue_summary": dict(analogue_summary),
         "toolbox_considered": considered,
         "toolbox_used": used,
+        "tool_reasoning_trace": tool_reasoning_trace,
         "toolbox_manifest_digest": str(toolbox_manifest.get("manifest_digest") or ""),
         "marker_brain_version": GOLD_MARKER_BRAIN_VERSION,
         "environment_fingerprint": dict(environment_fingerprint or {}),
@@ -1090,10 +1092,9 @@ class D1GoldCycleMemoryStore:
             _canonical_json(payload["analogue_summary"]),
             payload["view_digest"],
         ).run()
-        coverage = toolbox_cycle_coverage(
-            toolbox_manifest=toolbox,
-            marker_reasons=payload["all_directional_reasons"],
-        )
+        coverage = [
+            dict(item) for item in payload.get("tool_reasoning_trace") or []
+        ]
         await self._store_environment_and_markers(
             cycle_view_id=cycle_view_id,
             environment=environment,
@@ -1140,6 +1141,12 @@ class D1GoldCycleMemoryStore:
             FROM aidy_gold_cycle_views v
             LEFT JOIN aidy_gold_cycle_outcomes o ON o.cycle_view_id=v.cycle_view_id
             WHERE o.cycle_view_id IS NULL AND v.window_end_utc<=?
+              AND (
+                  SELECT COUNT(*)
+                  FROM twelve_data_decision_admitted_m1_v1 b
+                  WHERE b.open_time_utc>=v.window_start_utc
+                    AND b.open_time_utc<v.window_end_utc
+              )>=15
             ORDER BY v.window_end_utc
             LIMIT ?
             """

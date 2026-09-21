@@ -87,8 +87,14 @@ def toolbox_cycle_coverage(
     *,
     toolbox_manifest: Mapping[str, Any],
     marker_reasons: Sequence[Mapping[str, Any]],
+    environment: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Record all toolbox items and whether they produced a scoreable marker."""
+    """Record every toolbox item, its readable condition and its reasoning role.
+
+    A tool is never silently skipped. Each capability must produce one of:
+    a directional vote, a context observation, an explicit downstream dependency,
+    an explicit not-live-connected state, or an explicit unknown.
+    """
 
     by_surface: dict[str, list[str]] = {}
     for reason in marker_reasons:
@@ -101,6 +107,75 @@ def toolbox_cycle_coverage(
         )
         by_surface.setdefault(surface, []).append(marker)
 
+    environment = environment if isinstance(environment, Mapping) else {}
+    dimensions = environment.get("learning_dimensions")
+    dimensions = dimensions if isinstance(dimensions, Mapping) else {}
+    exact = environment.get("exact_facts")
+    exact = exact if isinstance(exact, Mapping) else {}
+    exact_volatility = exact.get("volatility")
+    exact_volatility = exact_volatility if isinstance(exact_volatility, Mapping) else {}
+
+    def compact_state(payload: Mapping[str, Any]) -> tuple[str, str]:
+        clean = {
+            str(key): value
+            for key, value in payload.items()
+            if value is not None and str(value) != ""
+        }
+        if not clean:
+            clean = {"state": "unknown"}
+        readable = " | ".join(f"{key}={clean[key]}" for key in sorted(clean))
+        return readable, "condition_" + _digest(clean)[:24]
+
+    def condition_for(name: str, status: str) -> tuple[str, str]:
+        common = {
+            "session": dimensions.get("session", "unknown"),
+            "phase": dimensions.get("session_phase", "unknown"),
+        }
+        payloads: dict[str, Mapping[str, Any]] = {
+            "gold_m1_candles": {**common, "movement": dimensions.get("five_minute_distribution_state", "unknown"), "range": dimensions.get("five_minute_range_state", "unknown")},
+            "gold_m5_structure": {**common, "m5": dimensions.get("m5_direction", "unknown")},
+            "gold_m15_structure": {**common, "m15": dimensions.get("m15_direction", "unknown")},
+            "gold_h1_structure": {**common, "h1": dimensions.get("h1_direction", "unknown")},
+            "gold_h4_structure": {**common, "h4": dimensions.get("h4_direction", "unknown")},
+            "gold_d1_context": {**common, "d1": dimensions.get("d1_direction", "unknown")},
+            "session_day_map": common,
+            "price_location_reference_levels": {
+                **common,
+                "reference": dimensions.get("nearest_reference", "unknown"),
+                "side": dimensions.get("nearest_reference_side", "unknown"),
+                "distance": dimensions.get("nearest_reference_distance_band", "unknown"),
+                "prior_day_zone": dimensions.get("prior_day_zone", "unknown"),
+                "session_zone": dimensions.get("active_session_zone", "unknown"),
+            },
+            "liquidity_sweep_reclaim_proxies": {
+                **common,
+                "liquidity": dimensions.get("liquidity_intensity", "unknown"),
+                "side": dimensions.get("liquidity_signature", "unknown"),
+                "breakout": dimensions.get("prior_day_breakout_state", "unknown"),
+                "distance": dimensions.get("nearest_reference_distance_band", "unknown"),
+            },
+            "realized_volatility": {**common, "volatility": dimensions.get("volatility_state", "unknown"), "movement": dimensions.get("five_minute_distribution_state", "unknown")},
+            "jump_vs_continuous_volatility": {**common, "jump": dimensions.get("jump_state", "unknown"), "range": dimensions.get("five_minute_range_state", "unknown")},
+            "scheduled_event_context": {**common, "event": dimensions.get("event_timing_state", "unknown"), "proximity": dimensions.get("event_proximity", "unknown")},
+            "economic_calendar_on_demand": {**common, "event": dimensions.get("event_timing_state", "unknown"), "proximity": dimensions.get("event_proximity", "unknown")},
+            "macro_actual_surprise": {**common, "event": dimensions.get("event_timing_state", "unknown"), "proximity": dimensions.get("event_proximity", "unknown")},
+            "rates_macro_vintages": {**common, "cross_market": dimensions.get("cross_market_coverage", "unknown"), "regime": dimensions.get("compound_regime", "unknown")},
+            "cross_market_backdrop": {**common, "coverage": dimensions.get("cross_market_coverage", "unknown"), "known": ",".join(dimensions.get("cross_market_known_series") or []) or "none"},
+            "intraday_cross_asset_reaction": {**common, "coverage": dimensions.get("cross_market_coverage", "unknown")},
+            "cme_contract_state": {**common, "regime": dimensions.get("compound_regime", "unknown")},
+            "gvz_implied_volatility": {**common, "gvz": exact_volatility.get("gvz_state", "unknown"), "volatility": dimensions.get("volatility_state", "unknown")},
+            "breaking_news_event_search": {**common, "event": dimensions.get("event_timing_state", "unknown"), "movement": dimensions.get("five_minute_distribution_state", "unknown")},
+            "gold_movement_detector": {**common, "movement": dimensions.get("five_minute_distribution_state", "unknown"), "range": dimensions.get("five_minute_range_state", "unknown")},
+            "gold_movement_episode_memory": {**common, "movement": dimensions.get("five_minute_distribution_state", "unknown"), "observed": dimensions.get("observed_15m_state", "unknown")},
+            "gold_movement_analogue_retrieval": {**common, "movement": dimensions.get("five_minute_distribution_state", "unknown"), "regime": dimensions.get("compound_regime", "unknown")},
+            "gold_cycle_15m_memory": {**common, "observed": dimensions.get("observed_15m_state", "unknown"), "regime": dimensions.get("compound_regime", "unknown")},
+            "gold_contextual_marker_brain": {**common, "liquidity": dimensions.get("liquidity_intensity", "unknown"), "volatility": dimensions.get("volatility_state", "unknown"), "regime": dimensions.get("compound_regime", "unknown")},
+            "recent_gold_candles_on_demand": {**common, "movement": dimensions.get("five_minute_distribution_state", "unknown"), "range": dimensions.get("five_minute_range_state", "unknown")},
+        }
+        payload = dict(payloads.get(name) or common)
+        payload["availability"] = status
+        return compact_state(payload)
+
     capabilities = toolbox_manifest.get("capabilities")
     capabilities = capabilities if isinstance(capabilities, list) else []
     result: list[dict[str, Any]] = []
@@ -111,32 +186,31 @@ def toolbox_cycle_coverage(
         status = str(item.get("status") or "known_unknown")
         ids = sorted(set(by_surface.get(name, [])))
         if ids:
-            role = "directional_marker"
-            scoreable = True
+            role, scoreable, reasoning_action = "directional_marker", True, "directional_vote"
         elif status == "live_here":
-            role = "environment_or_context_marker"
-            scoreable = False
+            role, scoreable, reasoning_action = "environment_or_context_marker", False, "context_used"
         elif status == "super_signals_runtime_resolves":
-            role = "downstream_context_not_available_in_standalone_cycle"
-            scoreable = False
+            role, scoreable, reasoning_action = "downstream_context_not_available_in_standalone_cycle", False, "explicit_downstream_dependency"
         elif status == "research_exists_not_live_connected":
-            role = "known_but_not_live_connected"
-            scoreable = False
+            role, scoreable, reasoning_action = "known_but_not_live_connected", False, "explicit_unavailable"
         else:
-            role = "known_unknown"
-            scoreable = False
+            role, scoreable, reasoning_action = "known_unknown", False, "explicit_unknown"
+
+        readable_state, condition_key = condition_for(name, status)
         result.append(
             {
                 "name": name,
                 "category": str(item.get("category") or "unknown"),
                 "status": status,
                 "role_this_cycle": role,
+                "reasoning_action": reasoning_action,
+                "readable_state": readable_state,
+                "condition_key": condition_key,
                 "directional_marker_ids": ids,
                 "scoreable_this_cycle": scoreable,
             }
         )
     return result
-
 
 def learning_multiplier(*, sample_n: int, net_score: int) -> Decimal:
     """Return a small, bounded trust adjustment that strengthens with evidence."""
