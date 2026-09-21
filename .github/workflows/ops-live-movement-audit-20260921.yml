@@ -1,0 +1,106 @@
+name: AIDY Live Movement Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ops-live-movement-audit-20260921.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Audit live Gold movement memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== movement_investigation_summary ==="
+          npx --yes wrangler@4 d1 execute aidy-ops-test --remote --command "
+            SELECT
+              COUNT(*) AS investigation_count,
+              MAX(trigger_at_utc) AS latest_trigger_at_utc,
+              SUM(CASE WHEN move_direction='up' THEN 1 ELSE 0 END) AS up_count,
+              SUM(CASE WHEN move_direction='down' THEN 1 ELSE 0 END) AS down_count,
+              SUM(CASE WHEN move_direction='flat' THEN 1 ELSE 0 END) AS flat_count,
+              COUNT(DISTINCT attribution_state) AS attribution_state_count
+            FROM aidy_gold_movement_investigations;
+          "
+
+          echo "=== latest_movement_investigations ==="
+          npx --yes wrangler@4 d1 execute aidy-ops-test --remote --command "
+            SELECT
+              trigger_at_utc,
+              move_direction,
+              attribution_state,
+              triggered_by_json,
+              investigator_version,
+              research_only,
+              future_values_used,
+              live_money_execution_allowed
+            FROM aidy_gold_movement_investigations
+            ORDER BY trigger_at_utc DESC
+            LIMIT 10;
+          "
+
+          echo "=== movement_learning_summary ==="
+          npx --yes wrangler@4 d1 execute aidy-ops-test --remote --command "
+            SELECT
+              COUNT(*) AS learning_card_count,
+              MAX(available_at_utc) AS latest_learning_available_at_utc,
+              SUM(CASE WHEN path_class='continuation' THEN 1 ELSE 0 END) AS continuation_count,
+              SUM(CASE WHEN path_class='reversal' THEN 1 ELSE 0 END) AS reversal_count,
+              SUM(CASE WHEN path_class='mixed' THEN 1 ELSE 0 END) AS mixed_count,
+              SUM(CASE WHEN path_class='insufficient_forward_path' THEN 1 ELSE 0 END) AS insufficient_count
+            FROM aidy_gold_movement_learning_cards;
+          "
+
+          echo "=== latest_learning_cards ==="
+          npx --yes wrangler@4 d1 execute aidy-ops-test --remote --command "
+            SELECT
+              available_at_utc,
+              initial_move_direction,
+              path_class,
+              attribution_state,
+              learning_card_version,
+              same_episode_retrieval_allowed,
+              active_cohort_tuning_allowed,
+              predictive_rule_created,
+              live_money_execution_allowed
+            FROM aidy_gold_movement_learning_cards
+            ORDER BY available_at_utc DESC
+            LIMIT 10;
+          "
+
+          echo "=== latest_market_snapshots ==="
+          npx --yes wrangler@4 d1 execute aidy-ops-test --remote --command "
+            SELECT
+              captured_at,
+              capture_status,
+              session_code,
+              latest_m1_id IS NOT NULL AS has_m1,
+              latest_m5_id IS NOT NULL AS has_m5,
+              latest_m15_id IS NOT NULL AS has_m15,
+              latest_h1_id IS NOT NULL AS has_h1,
+              latest_h4_id IS NOT NULL AS has_h4,
+              latest_d1_id IS NOT NULL AS has_d1
+            FROM market_snapshots
+            WHERE symbol='XAUUSD' AND market_data_source='twelve_data'
+            ORDER BY captured_at DESC
+            LIMIT 12;
+          "
