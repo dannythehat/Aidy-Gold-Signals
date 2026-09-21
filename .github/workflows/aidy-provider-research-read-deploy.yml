@@ -213,20 +213,20 @@ jobs:
                 json_array_length(unavailable_evidence_json) AS unavailable_evidence_count,
                 json_array_length(v.toolbox_considered_json) AS toolbox_considered_count,
                 json_array_length(v.toolbox_used_json) AS toolbox_used_count,
-                json_array_length(json_extract(v.payload_json,'$.tool_reasoning_trace')) AS tool_trace_count,
+                json_array_length(json_extract(v.evidence_json,'$.tool_reasoning_trace')) AS tool_trace_count,
                 (
                   SELECT COUNT(*)
-                  FROM json_each(json_extract(v.payload_json,'$.tool_reasoning_trace'))
+                  FROM json_each(json_extract(v.evidence_json,'$.tool_reasoning_trace'))
                   WHERE COALESCE(TRIM(json_extract(value,'$.readable_state')),'')=''
                 ) AS tool_trace_missing_readable,
                 (
                   SELECT COUNT(*)
-                  FROM json_each(json_extract(v.payload_json,'$.tool_reasoning_trace'))
+                  FROM json_each(json_extract(v.evidence_json,'$.tool_reasoning_trace'))
                   WHERE COALESCE(TRIM(json_extract(value,'$.reasoning_action')),'')=''
                 ) AS tool_trace_missing_action,
                 (
                   SELECT COUNT(*)
-                  FROM json_each(json_extract(v.payload_json,'$.all_directional_reasons'))
+                  FROM json_each(json_extract(v.evidence_json,'$.all_directional_reasons'))
                   WHERE COALESCE(TRIM(json_extract(value,'$.selected_score_context')),'')=''
                 ) AS reasons_missing_score_context,
                 json_array_length(json_extract(e.environment_json,'$.toolbox_coverage')) AS environment_tool_coverage_count,
