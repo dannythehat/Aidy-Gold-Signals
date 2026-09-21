@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${CLOUDFLARE_API_TOKEN:?CLOUDFLARE_API_TOKEN required}"
 
-REAL_PYTHON="/opt/render/project/python/Python-3.13.15/bin/python"
+REAL_PYTHON="${AIDY_REAL_PYTHON:?AIDY_REAL_PYTHON required}"
 export AIDY_D1_DATABASE_NAME="aidy-ops-test"
 export AIDY_D1_DATABASE_ID="3588d82a-d686-4430-872d-d4c0e62c3d5d"
 export AIDY_R2_BUCKET_NAME="aidy-memory-test"
