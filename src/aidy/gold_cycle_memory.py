@@ -874,6 +874,7 @@ class D1GoldCycleMemoryStore:
         result = await self._d1.prepare(
             """
             SELECT v.cycle_view_id,v.session_code,v.observed_state,v.evidence_json,
+                   v.decided_at_utc,v.window_start_utc,
                    o.resolved_at_utc,o.realised_direction,o.return_bps
             FROM aidy_gold_cycle_views v
             LEFT JOIN aidy_gold_cycle_environments e
@@ -923,9 +924,12 @@ class D1GoldCycleMemoryStore:
                 "scheduled_event_risk": {},
             }
             environment = build_environment_fingerprint(
+                as_of_utc=str(row.get("decided_at_utc")),
+                target_window_start_utc=str(row.get("window_start_utc")),
                 session_code=str(row.get("session_code") or "unknown"),
                 observed_state=str(row.get("observed_state") or "unknown"),
                 gold_state=legacy_gold_state,
+                semantic_context=None,
                 regime={},
             )
             considered = evidence.get("toolbox_considered")
@@ -1019,9 +1023,12 @@ class D1GoldCycleMemoryStore:
         regime = inputs.get("regime")
         regime = regime if isinstance(regime, Mapping) else {}
         environment = build_environment_fingerprint(
+            as_of_utc=now,
+            target_window_start_utc=window_start,
             session_code=str(snapshot.get("session_code") or "unknown"),
             observed_state=observed_state,
             gold_state=gold_state,
+            semantic_context=context,
             regime=regime,
         )
         raw_reasons = _build_directional_reasons(
