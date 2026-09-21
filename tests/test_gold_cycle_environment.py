@@ -72,7 +72,7 @@ def _gold_state(*, reference_distance: str = "2.4") -> dict:
                 },
                 "prior_day_high": {
                     "relative_side": "below",
-                    "distance_bps": "-18.0",
+                    "distance_bps": "-80.0",
                     "level": "4395.1",
                 },
             },
@@ -189,7 +189,12 @@ def test_environment_key_changes_when_market_condition_changes() -> None:
     assert farther["learning_dimensions"]["nearest_reference_distance_band"] == (
         "moderate_8_20bp"
     )
-    assert near["environment_key"] != farther["environment_key"]
+    # The shared core key is intentionally stable; only the location factor changes.
+    assert near["environment_key"] == farther["environment_key"]
+    assert (
+        near["environment_contract"]["factor_keys"]["location"]
+        != farther["environment_contract"]["factor_keys"]["location"]
+    )
 
 
 def test_environment_has_liquidity_location_and_session_scopes() -> None:
