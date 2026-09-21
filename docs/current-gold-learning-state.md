@@ -5,6 +5,34 @@ Authoritative current design note for the AIDY Gold learning runtime.
 Updated: 2026-09-21
 
 
+
+## Build 3 — Conditional Trust & Score Engine v3
+
+Build 3 introduces `aidy_gold_expert_conditional_trust_v3` for the expert-gate programme.
+
+The engine does not use raw win percentage as trust. It maintains separate directional accuracy and impact score, shrinks small environment samples toward broader history, and only lets a more-specific mini-environment win once its configured minimum sample is met.
+
+Trust lookup order is:
+
+`exact gate mini-environment -> gate-declared reduced mini-environment(s) -> global core -> gate global -> neutral prior`
+
+Key safeguards:
+- 8/10 does not automatically outrank 137/200;
+- every gate defines its own reduced-context dimensions instead of the engine guessing them;
+- current/future outcomes are excluded by strict resolved-before-as-of filtering;
+- gate/sub-calculator outcomes use +2/+1/0/-1/-2;
+- unscoreable/UNKNOWN/context-only observations stay 0 rather than becoming fake misses or wins;
+- long-term and recent-window performance are stored separately;
+- Wilson intervals and sample-confidence expose uncertainty;
+- current gate conviction remains separate from historical reliability;
+- scoring is deterministic and outcome resolution has stable identities.
+
+D1 migration `0026_gold_expert_conditional_trust.sql` adds a raw expert-outcome ledger and expert context scorebooks for future gate runtime integration.
+
+Engineering acceptance on PR #203: semantic gate PASS, static checks PASS, focused workflow suite 122 passed, full repository regression 1374 passed.
+
+Build 3 does not yet make M5/M15/H1/H4/D1 smarter and does not change the live legacy marker weights. Build 4 will build the common mathematical toolkit those price experts use internally.
+
 ## Build 2 COMPLETE — Expert Gate Contract v1
 
 The standard expert-gate packet contract is now:
