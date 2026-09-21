@@ -251,6 +251,16 @@ def test_activation_timestamp_is_strictly_pre_outcome_and_restart_safe() -> None
     assert "UPDATE" not in ensure
 
 
+def test_shadow_sync_health_insert_has_exact_bind_arity() -> None:
+    wrapper = (ROOT / "src" / "provider_entry.py").read_text(encoding="utf-8")
+    sync = wrapper[
+        wrapper.index("async def _sync_gold_expert_shadow_best_effort"):
+        wrapper.index("async def _record_health_best_effort")
+    ]
+    assert ") VALUES (1,?,'ok',?,?,?,?,?,?,?,NULL,NULL)" in sync
+    assert ") VALUES (1,?,'ok',?,?,?,?,?,?,?,?,NULL,NULL)" not in sync
+
+
 def test_no_live_money_or_formal_forward_authority_is_created() -> None:
     source = (ROOT / "src" / "aidy" / "gold_expert_shadow.py").read_text(
         encoding="utf-8"
