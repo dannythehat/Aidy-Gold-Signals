@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
+from itertools import pairwise
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -121,7 +122,7 @@ def _contiguity(candles: Sequence[Candle], required: int = 30) -> dict[str, Any]
             "contiguous": False,
         }
     gaps: list[str] = []
-    for left, right in zip(sample, sample[1:], strict=False):
+    for left, right in pairwise(sample):
         if right.open_time_utc - left.open_time_utc != timedelta(minutes=1):
             gaps.append(left.open_time_utc.isoformat())
     return {
@@ -198,11 +199,11 @@ def _competing_distance(
 def _penetration_bucket(value: Decimal | None) -> str:
     if value is None:
         return "unknown"
-    if value <= Decimal("1"):
+    if value <= Decimal(1):
         return "tiny"
-    if value <= Decimal("3"):
+    if value <= Decimal(3):
         return "small"
-    if value <= Decimal("8"):
+    if value <= Decimal(8):
         return "medium"
     return "deep"
 
@@ -670,7 +671,7 @@ def build_liquidity_reclaim_expert(
         ),
         "competing_level_band": (
             "near"
-            if (_decimal(competing.get("distance_bps")) or Decimal("999")) <= Decimal("5")
+            if (_decimal(competing.get("distance_bps")) or Decimal(999)) <= Decimal(5)
             else "far"
         ),
     }
