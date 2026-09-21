@@ -67,3 +67,13 @@ jobs:
               ORDER BY v.window_start_utc DESC
               LIMIT 1;
             "
+          echo "=== cycle_sync_health ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT singleton_id,observed_at_utc,status,creation_created,
+                     creation_reason,view_direction,resolution_resolved,
+                     backfill_views,backfill_markers_scored,error_type,error_message
+              FROM aidy_gold_cycle_sync_health
+              WHERE singleton_id=1;
+            "
