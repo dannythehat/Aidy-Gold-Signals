@@ -56,8 +56,8 @@ jobs:
                 v.window_end_utc,
                 v.view_direction AS legacy_view_direction,
                 o.resolved_at_utc AS outcome_resolved_at,
-                o.realized_direction AS outcome_direction,
-                o.realized_return_bps AS outcome_return_bps,
+                o.realised_direction AS outcome_direction,
+                o.return_bps AS outcome_return_bps,
                 m.resolved_at_utc AS meta_resolved_at,
                 m.frozen_direction,
                 m.realised_direction,
@@ -114,18 +114,18 @@ jobs:
                 g.gate_id,
                 g.gate_mode,
                 g.conclusion,
-                g.internal_conviction,
-                g.runtime_availability,
+                json_extract(g.packet_json,'$.internal_conviction') AS internal_conviction,
+                g.availability_state,
                 COUNT(DISTINCT l.result_id) AS result_rows,
                 MAX(l.score) AS latest_score,
                 MAX(l.correct) AS latest_correct,
-                MAX(l.realized_direction) AS realised_direction,
-                MAX(l.realized_return_bps) AS realised_return_bps
+                MAX(l.realised_direction) AS realised_direction,
+                MAX(l.realised_return_bps) AS realised_return_bps
               FROM aidy_gold_expert_gate_snapshots g
               LEFT JOIN aidy_gold_expert_outcome_ledger l
                 ON l.packet_digest=g.packet_digest
               WHERE g.cycle_view_id='${CYCLE}'
-              GROUP BY g.gate_id,g.gate_mode,g.conclusion,g.internal_conviction,g.runtime_availability
+              GROUP BY g.gate_id,g.gate_mode,g.conclusion,json_extract(g.packet_json,'$.internal_conviction'),g.availability_state
               ORDER BY g.gate_id;
             " > /tmp/gates.json
           cat /tmp/gates.json
