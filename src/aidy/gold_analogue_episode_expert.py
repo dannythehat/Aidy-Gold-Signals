@@ -639,6 +639,45 @@ def build_analogue_episode_expert(
         }
     )
 
+    historical_context = {
+        "state": historical["state"],
+        "candidate_independent_episode_n": historical["candidate_independent_episode_n"],
+        "selected_episode_n": historical["selected_episode_n"],
+        "distribution": historical["distribution"],
+        "selected_case_ids": [
+            item["source_case_id"] for item in historical["matches"]
+        ],
+        "supporting_case_ids": [
+            item["source_case_id"] for item in historical["supporting_analogues"]
+        ],
+        "counterexample_case_ids": [
+            item["source_case_id"] for item in historical["counterexample_analogues"]
+        ],
+        "state_similarity": [
+            {
+                "source_case_id": item["source_case_id"],
+                "score": item["state_similarity"],
+            }
+            for item in historical["matches"]
+        ],
+        "counterexamples_preserved": True,
+        "outcomes_used_for_similarity": False,
+        "future_values_used_for_selection": False,
+    }
+    movement_context = {
+        "state": movement["state"],
+        "candidate_episode_n": movement["candidate_episode_n"],
+        "selected_episode_n": movement["selected_episode_n"],
+        "path_class_counts": dict(movement.get("path_class_counts") or {}),
+        "selected_card_digests": [
+            item["learning_card_digest"]
+            for item in movement.get("analogues") or []
+        ],
+        "counterexamples_preserved": True,
+        "outcomes_used_for_similarity": False,
+        "future_values_used_for_selection": False,
+    }
+
     evidence_inputs = [
         {
             "evidence_id": "analogue_historical_retrieval",
@@ -646,7 +685,7 @@ def build_analogue_episode_expert(
             "path": "analogue_episode.historical_retrieval",
             "observed_at_utc": as_of,
             "state": "known" if historical["state"] == "matches_found" else "unknown",
-            "value": historical,
+            "value": historical_context,
             "provenance": {
                 "v1_v2_v3_stack_reused": True,
                 "duplicate_episode_collapse": True,
@@ -699,7 +738,7 @@ def build_analogue_episode_expert(
             "path": "analogue_episode.movement_memory",
             "observed_at_utc": as_of,
             "state": "known" if movement["state"] == "matches_found" else "unknown",
-            "value": movement,
+            "value": movement_context,
             "provenance": {
                 "learning_cards_available_by_as_of_only": True,
                 "outcomes_used_for_similarity": False,
@@ -713,7 +752,7 @@ def build_analogue_episode_expert(
             calculator_id="analogue_historical_episode_retrieval",
             evidence_ref="analogue_historical_retrieval",
             known=historical["state"] == "matches_found",
-            observation=historical,
+            observation=historical_context,
             explanation=(
                 "Historical v1/v2/v3 analogue representatives are re-ranked only "
                 "with frozen gate-state and environment similarity. Outcomes are "
@@ -746,7 +785,7 @@ def build_analogue_episode_expert(
             calculator_id="analogue_movement_episode_memory",
             evidence_ref="analogue_movement_episode_memory",
             known=movement["state"] == "matches_found",
-            observation=movement,
+            observation=movement_context,
             explanation=(
                 "Prior movement learning cards are eligible only after their own "
                 "available-at timestamp; path outcomes never enter similarity."
