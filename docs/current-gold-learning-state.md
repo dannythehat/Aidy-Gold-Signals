@@ -20,21 +20,48 @@ Updated: 2026-09-21
 
 
 
-## Build 17 IMPLEMENTATION BUILT / ACCEPTANCE WAITING — Futures / Microstructure Expert
+## Build 17 — Futures / Microstructure Expert COMPLETE
 
-Build 17 Phase A adds `aidy_gold_futures_microstructure_expert_v1`.
+Build 17 adds `aidy_gold_futures_microstructure_expert_v1` and has now passed its genuine Phase-A acceptance gate.
 
-The implementation is engineering-proven and can represent genuine historical GC TBBO trade volume, known-side aggressor flow, BBO spread, VWAP, clock-normalized state, CME daily OI/roll context, and a frozen purge+embargo holdout comparison against the spot-OHLC baseline.
+What is built and proven:
+- genuine historical Databento COMEX GC TBBO trade volume;
+- known-side aggressor flow with unknown side preserved as UNKNOWN;
+- pre-trade BBO spread;
+- trade-price/size VWAP plus session/anchored VWAP;
+- matched weekday × clock normalization;
+- official CME daily open-interest / active-contract / roll state;
+- frozen spot-OHLC versus spot+microstructure retrospective comparator;
+- chronological split with purge, embargo and no holdout tuning;
+- explicit null, underperformance and insufficient states;
+- no depth/order-book/L2/L3/MBO/MBP10 claim without depth data;
+- Phase-B paid/live activation remains separate and owner-gated.
 
-The module explicitly preserves null, underperformance and insufficient outcomes. Even a positive retrospective holdout result cannot by itself mark the feature statistically validated, promote a gate, grant live weight or authorize a paid feed.
+Final genuine evidence:
+- implementation PR #220 merge: `f6ac451c90ae49f5bbe795af5a25757b65afb8ce`;
+- genuine holdout PR #223 exact tested head: `ca49a6dd541ec17b09b11b25604722d7ef256b32`;
+- PR #223 merge: `b1e6e2f491c1cf31fdb30a94a88929e4f092fc18`;
+- Evidence Semantic Change Gate: PASS — run `35605952419`;
+- acceptance workflow: PASS — run `35605952385`;
+- focused suite: 313 passed;
+- full repository regression: 1565 passed;
+- valid genuine weekly episodes: 61;
+- normalization episodes: 20;
+- development episodes: 10;
+- embargo episodes: 1;
+- untouched holdout episodes: 30;
+- selected development-only rule: `override_1p5_0p5`;
+- spot-only holdout accuracy: 20.0000%;
+- spot + microstructure holdout accuracy: 23.3333%;
+- genuine incremental accuracy: +3.3333 percentage points;
+- holdout state: `incremental_value_observed`;
+- quoted Databento research spend: $0.148881077766.
 
-The Build-17 blueprint gate is **still waiting** because existing genuine Day-42 evidence was a five-minute Databento smoke rather than a genuine outcome-linked holdout cohort. Day 42 intentionally ran J2/J3 with no eligible cohort, so its result could validly remain insufficient. The new synthetic acceptance tests prove implementation behavior only and cannot be represented as real historical predictive evidence.
+This satisfies the Build-17 blueprint requirement that a genuine retrospective holdout show incremental value beyond the spot-OHLC expert baseline. It does **not** mean the microstructure expert is statistically validated, formally forward-proven, promoted to live gate weight, or authorized for live-money execution.
 
-PR #220 candidate engineering checks: semantic PASS, static PASS, focused suite 308 passed, full regression 1560 passed.
+No paid/live Databento subscription, depth claim, execution change, provider-rule change, owner-risk change, formal-forward authority or live-money authority was created.
 
-No paid/live data activation, formal-forward evidence, execution change, provider change, owner-risk change or live-money authority has been made.
-
-**Next:** stay on Build 17 until genuine retrospective holdout evidence exists. Build 18 does not start before that acceptance gate is satisfied.
+**Next:** Build 18 — News / Movement Mechanism Expert. It must explain abnormal Gold moves using evidence-backed scheduled-event/news mechanisms without inventing causality; unsupported narratives and source disagreement remain UNKNOWN/unresolved, and news context does not automatically become direction.
 
 ## Build 16 COMPLETE — Rates / USD / Cross-Asset Expert
 
