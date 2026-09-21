@@ -167,7 +167,7 @@ jobs:
           assert h.get('gold_movement_investigator_version') == 'aidy_gold_movement_investigator_v1', h
           assert h.get('gold_movement_memory_version') == 'aidy_gold_movement_memory_v1', h
           assert h.get('gold_cycle_memory_version') == 'aidy_gold_cycle_memory_v3', h
-          assert h.get('gold_cycle_environment_version') == 'aidy_gold_cycle_environment_v2', h
+          assert h.get('gold_cycle_environment_version') == 'aidy_gold_cycle_environment_v3', h
           assert h.get('gold_marker_brain_version') == 'aidy_gold_contextual_marker_brain_v2', h
           assert h.get('gold_toolbox_manifest_version') == 'aidy_gold_toolbox_manifest_v1', h
           PY
