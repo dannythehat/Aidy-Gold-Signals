@@ -408,9 +408,7 @@ def build_cycle_view_payload(
                     "reason": "material follow-up evidence was not live/PIT-available",
                 }
             )
-    for item in capabilities:
-        if not isinstance(item, Mapping):
-            continue
+    for item in tool_reasoning_trace:
         if item.get("status") == "research_exists_not_live_connected":
             unavailable.append(
                 {
