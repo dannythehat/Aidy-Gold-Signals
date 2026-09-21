@@ -109,17 +109,18 @@ jobs:
                 g.gate_mode,
                 g.conclusion,
                 g.availability_state,
-                l.score,
-                l.correct,
-                l.impact_class,
-                l.realised_direction,
-                l.realised_return_bps
+                MAX(l.score) AS score,
+                MAX(l.correct) AS correct,
+                MAX(l.impact_class) AS impact_class,
+                MAX(l.realised_direction) AS realised_direction,
+                MAX(l.realised_return_bps) AS realised_return_bps
               FROM aidy_gold_expert_gate_snapshots g
               LEFT JOIN aidy_gold_expert_outcome_ledger l
                 ON l.packet_digest=g.packet_digest
                AND l.subject_type='gate'
                AND l.subject_id=g.gate_id
               WHERE g.cycle_view_id='${CYCLE}'
+              GROUP BY g.gate_id,g.gate_mode,g.conclusion,g.availability_state
               ORDER BY g.gate_id;
             " > /tmp/gate_results.json
           cat /tmp/gate_results.json
