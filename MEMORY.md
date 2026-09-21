@@ -4,6 +4,19 @@ Updated: 2026-09-21
 
 This file is the repo-level handoff entry point for the live AIDY Gold-learning system.
 
+
+## Build 1 — Environment Contract v3 candidate
+
+Build 1 of the environment-aware expert-gate programme is implemented on PR #198.
+
+Candidate contract: `aidy_gold_cycle_environment_v3`.
+
+Build 1 changes the environment spine only. It adds a canonical dimension registry, a factorised global environment, explicit data-quality state, 15-minute UTC clock buckets, weekend/pre/post-weekend state, explicit PIT/hindsight rejection, factor-specific keys and a compact global-core key. It deliberately removes the old monolithic `full_environment` scope so later expert gates can use smaller specialist mini-environments without fragmenting learning into near-unique combinations.
+
+Build 1 does **not** upgrade M5/M15/H1/H4/D1 decision logic. Those expert-gate builds come later after the shared contract and scoring foundations are accepted.
+
+Engineering acceptance on the candidate branch: semantic-change gate PASS; static checks PASS; focused market-data tests PASS; full repository regression PASS after fixture/compatibility corrections. Production verification is still required before this section can be called live.
+
 ## Read first
 
 Authoritative current architecture and rationale:
