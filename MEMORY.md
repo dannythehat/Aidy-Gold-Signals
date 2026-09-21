@@ -12,6 +12,44 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 10 — Momentum / Impulse Expert COMPLETE
+
+Build 10 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_momentum_impulse_expert_v1`
+
+What Build 10 adds:
+- exact completed-M1 backward returns for 1/5/15/30/60 minutes;
+- realised-volatility normalisation for each horizon;
+- 30-minute persistence and path-efficiency quality;
+- recent 5-minute versus prior 5-minute acceleration/deceleration;
+- continuation impulse versus persistent drift versus noisy/unconfirmed movement;
+- single-bar concentration and an explicit exhaustion/reversal hypothesis;
+- a hard guard preventing one oversized final candle from becoming sustained momentum when persistence is poor;
+- multi-horizon agreement and family-balanced aggregation;
+- regime/clock-conditioned trust using volatility state, session, session phase and 15-minute UTC clock bucket;
+- explicit price-expert overlap tags so correlated price-derived influence can be penalised in a later fusion build rather than double-counted;
+- contiguous-M1 requirement and PIT/no-future chronological freeze.
+
+Acceptance on PR #213 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 211 passed;
+- full repository regression: 1463 passed;
+- clean bullish/bearish continuation impulse: PASS;
+- one large final candle does not equal persistent momentum: PASS;
+- noisy/choppy direction rejection: PASS;
+- gapped/insufficient M1 fails closed: PASS;
+- volatility-regime and clock-bucket trust-scope separation: PASS;
+- correlated price-expert influence tagging: PASS;
+- PIT/no-future and chronological freeze: PASS.
+
+Build 10 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 11 — Price Location Expert. It will answer where Gold is relative to prior-day, Asia, active-session and opening-range references, swings, recent extrema and round numbers, with exact distance/priority/confluence logic and no directional vote unless a separately tested location-reaction rule exists.
+
 ## Build 9 — D1 Context Expert COMPLETE
 
 Build 9 of the environment-aware expert-gate programme is complete and engineering-proven.
