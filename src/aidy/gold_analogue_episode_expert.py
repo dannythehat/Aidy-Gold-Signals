@@ -281,7 +281,7 @@ def _source_case_id(
 ) -> str:
     mapping = retrieval_v3.get("derived_to_source_case_ids")
     if not isinstance(mapping, Mapping):
-        raise ValueError("Build 19 requires v3 derived/source case mapping")
+        raise TypeError("Build 19 requires v3 derived/source case mapping")
     source = str(mapping.get(derived_case_id) or "")
     if not source:
         raise ValueError("Build 19 could not bind derived analogue to source case")
@@ -337,7 +337,7 @@ def rerank_independent_analogues(
         raise ValueError("v3 retrieval used outcome values for selection")
     retrieval = historical_retrieval_v3.get("retrieval")
     if not isinstance(retrieval, Mapping):
-        raise ValueError("v3 retrieval payload missing delegated retrieval")
+        raise TypeError("v3 retrieval payload missing delegated retrieval")
     if retrieval.get("outcome_values_used_for_selection") is not False:
         raise ValueError("delegated retrieval used outcomes for selection")
 
