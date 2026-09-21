@@ -75,7 +75,7 @@ def _bucket_ratio(value: Any) -> str:
         return "lower_middle"
     if parsed < Decimal("0.75"):
         return "upper_middle"
-    if parsed <= Decimal("1"):
+    if parsed <= Decimal(1):
         return "upper_quartile"
     return "above_range"
 
