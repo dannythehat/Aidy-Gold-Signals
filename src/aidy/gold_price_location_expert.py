@@ -9,11 +9,15 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN, localcontext
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation, localcontext
 from typing import Any
 
 from aidy.gold_expert_gate_contract import build_expert_gate_packet, verify_expert_gate_packet
-from aidy.gold_expert_trust import build_trust_envelope, build_trust_scopes, select_conditional_trust
+from aidy.gold_expert_trust import (
+    build_trust_envelope,
+    build_trust_scopes,
+    select_conditional_trust,
+)
 from aidy.gold_price_expert_math import verify_price_expert_math_packet
 
 PRICE_LOCATION_EXPERT_VERSION = "aidy_gold_price_location_expert_v1"
