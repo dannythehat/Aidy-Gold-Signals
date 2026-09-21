@@ -11,6 +11,23 @@ Updated: 2026-09-21
 
 
 
+
+## Build 9 COMPLETE — D1 Context Expert
+
+Build 9 adds `aidy_gold_d1_context_expert_v1`.
+
+D1 is context-only by contract. It can describe slow daily trend, structure, macro-location and breakout state, but it cannot emit or force a 15-minute bullish/bearish conclusion. Default next-15m weight is zero.
+
+Freshness and completeness are explicit. Stale, missing or genuinely partial daily evidence causes the usable D1 context decision to ABSTAIN. Confirmed daily swings are treated separately: if they do not yet exist, trend/location context can still be usable while swing/breakout context remains UNKNOWN.
+
+Historical evaluation separates two questions: whether adding D1 context improved another forecast, and whether a direct D1 directional guess was accurate. These are never conflated.
+
+Engineering acceptance on PR #212 candidate: semantic gate PASS, static checks PASS, focused workflow suite 199 passed, full repository regression 1451 passed. Stale/partial abstention, zero 15m direction authority, separate context-vs-direct value, PIT safety and chronological freeze all pass.
+
+Build 9 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 10 — Momentum / Impulse Expert. It distinguishes persistent continuation-quality momentum from noisy direction using multi-horizon returns, volatility-normalised movement, acceleration, persistence, path efficiency, impulse/drift, exhaustion and multi-horizon agreement.
+
 ## Build 8 COMPLETE — H4 Price Structure Expert
 
 Build 8 adds `aidy_gold_h4_price_structure_expert_v1`.
