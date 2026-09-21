@@ -16,6 +16,7 @@ on:
       - "src/aidy/gold_movement_investigator.py"
       - "src/aidy/gold_movement_memory.py"
       - "src/aidy/gold_cycle_environment.py"
+      - "src/aidy/gold_cycle_environment.py"
       - "src/aidy/gold_cycle_memory.py"
       - "src/aidy/gold_marker_brain.py"
       - "src/aidy/gold_toolbox_registry.py"
@@ -30,6 +31,7 @@ on:
       - "migrations/d1/0023_gold_cycle_learning.sql"
       - "migrations/d1/0024_gold_contextual_marker_learning.sql"
       - "tests/test_gold_movement_memory.py"
+      - "tests/test_gold_cycle_environment.py"
       - "tests/test_gold_cycle_environment.py"
       - "tests/test_gold_cycle_memory.py"
       - "tests/test_gold_marker_brain.py"
@@ -86,6 +88,7 @@ jobs:
             tests/test_gold_state_engine.py \
             tests/test_gold_movement_investigator.py \
             tests/test_gold_movement_memory.py \
+            tests/test_gold_cycle_environment.py \
             tests/test_gold_cycle_environment.py \
             tests/test_gold_cycle_memory.py \
             tests/test_gold_marker_brain.py \
