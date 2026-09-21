@@ -523,7 +523,7 @@ class FinnhubNewsClient:
         self.timeout_seconds = float(timeout_seconds)
 
     @classmethod
-    def from_env(cls, **kwargs: Any) -> "FinnhubNewsClient":
+    def from_env(cls, **kwargs: Any) -> FinnhubNewsClient:
         return cls(api_key=os.environ.get(FINNHUB_API_KEY_ENV, ""), **kwargs)
 
     async def fetch_market_news(
@@ -548,7 +548,7 @@ class FinnhubNewsClient:
             response.raise_for_status()
             payload = response.json()
         if not isinstance(payload, list):
-            raise ValueError("Finnhub market-news response must be a list")
+            raise TypeError("Finnhub market-news response must be a list")
         return normalize_finnhub_market_news(
             payload,
             fetched_at_utc=as_of,
@@ -905,12 +905,12 @@ __all__ = [
     "FINNHUB_API_KEY_ENV",
     "FINNHUB_NEWS_ADAPTER_VERSION",
     "FINNHUB_NEWS_CATEGORIES",
-    "FinnhubNewsClient",
     "NEWS_MOVEMENT_MECHANISM_EXPERT_VERSION",
     "NEWS_MOVEMENT_MECHANISM_GATE_ID",
     "NEWS_MOVEMENT_MECHANISM_TARGET_HORIZON_MINUTES",
     "NEWS_MOVEMENT_MECHANISM_TRUST_REDUCED_CONTEXTS",
     "NEWS_SOURCE_CONTRACT_VERSION",
+    "FinnhubNewsClient",
     "build_news_movement_mechanism_expert",
     "collapse_duplicate_news",
     "news_source_contract",
