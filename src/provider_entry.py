@@ -10,6 +10,12 @@ from aidy.data_health import collect_and_record_data_health, collect_data_health
 from aidy.episode_memory_runtime import sync_aidy_episode_memory_runtime
 from aidy.gold_cycle_environment import GOLD_CYCLE_ENVIRONMENT_VERSION
 from aidy.gold_cycle_memory import GOLD_CYCLE_MEMORY_VERSION, sync_gold_cycle_memory
+from aidy.gold_expert_shadow import (
+    GOLD_EXPERT_SCORECARD_VERSION,
+    GOLD_EXPERT_SHADOW_VERSION,
+    ensure_gold_expert_shadow_activation,
+    sync_gold_expert_shadow,
+)
 from aidy.gold_marker_brain import GOLD_MARKER_BRAIN_VERSION
 from aidy.gold_movement_investigator import GOLD_MOVEMENT_INVESTIGATOR_VERSION
 from aidy.gold_movement_memory import (
@@ -115,6 +121,8 @@ async def _public_health_response(env: object):
             "gold_cycle_environment_version": GOLD_CYCLE_ENVIRONMENT_VERSION,
             "gold_marker_brain_version": GOLD_MARKER_BRAIN_VERSION,
             "gold_toolbox_manifest_version": GOLD_TOOLBOX_MANIFEST_VERSION,
+            "gold_expert_shadow_version": GOLD_EXPERT_SHADOW_VERSION,
+            "gold_expert_scorecard_version": GOLD_EXPERT_SCORECARD_VERSION,
             "data_health": health_summary,
         }
     )
@@ -210,6 +218,127 @@ async def _sync_gold_cycle_memory_best_effort(env: object) -> None:
             )
         print(
             "AIDY Gold-cycle memory sync failed: "
+            f"{type(exc).__name__}: {str(exc)[:500]}"
+        )
+
+
+async def _activate_gold_expert_shadow_best_effort(env: object) -> None:
+    """Persist the prospective Build-24 boundary before a new cycle can freeze."""
+
+    try:
+        await ensure_gold_expert_shadow_activation(
+            env.AIDY_OPS,
+            now_utc=datetime.now(UTC),
+        )
+    except Exception as exc:  # noqa: BLE001 - shadow study cannot risk capture
+        print(
+            "AIDY Build-24 activation failed: "
+            f"{type(exc).__name__}: {str(exc)[:500]}"
+        )
+
+
+async def _sync_gold_expert_shadow_best_effort(env: object) -> None:
+    """Persist/score the Build-24 expert shadow without risking market capture."""
+
+    now = datetime.now(UTC)
+    try:
+        result = await sync_gold_expert_shadow(
+            env.AIDY_OPS,
+            now_utc=now,
+        )
+        creation = result.get("creation") or {}
+        scoring = result.get("scoring") or {}
+        try:
+            latest = creation.get("latest") or {}
+            await env.AIDY_OPS.prepare(
+                """
+                INSERT INTO aidy_gold_expert_shadow_sync_health (
+                    singleton_id,observed_at_utc,status,cycles_created,
+                    cycles_scored,latest_cycle_view_id,latest_meta_direction,
+                    expected_gate_n,known_gate_n,explicit_unknown_gate_n,
+                    error_type,error_message
+                ) VALUES (1,?,'ok',?,?,?,?,?,?,?,?,NULL,NULL)
+                ON CONFLICT(singleton_id) DO UPDATE SET
+                    observed_at_utc=excluded.observed_at_utc,
+                    status='ok',
+                    cycles_created=excluded.cycles_created,
+                    cycles_scored=excluded.cycles_scored,
+                    latest_cycle_view_id=COALESCE(
+                        excluded.latest_cycle_view_id,
+                        aidy_gold_expert_shadow_sync_health.latest_cycle_view_id
+                    ),
+                    latest_meta_direction=COALESCE(
+                        excluded.latest_meta_direction,
+                        aidy_gold_expert_shadow_sync_health.latest_meta_direction
+                    ),
+                    expected_gate_n=COALESCE(
+                        excluded.expected_gate_n,
+                        aidy_gold_expert_shadow_sync_health.expected_gate_n
+                    ),
+                    known_gate_n=COALESCE(
+                        excluded.known_gate_n,
+                        aidy_gold_expert_shadow_sync_health.known_gate_n
+                    ),
+                    explicit_unknown_gate_n=COALESCE(
+                        excluded.explicit_unknown_gate_n,
+                        aidy_gold_expert_shadow_sync_health.explicit_unknown_gate_n
+                    ),
+                    error_type=NULL,
+                    error_message=NULL
+                """
+            ).bind(
+                now.isoformat(),
+                int(creation.get("created") or 0),
+                int(scoring.get("scored_cycles") or 0),
+                latest.get("cycle_view_id"),
+                latest.get("meta_direction"),
+                latest.get("expected_gate_n"),
+                latest.get("known_gate_n"),
+                (
+                    None
+                    if latest.get("expected_gate_n") is None
+                    else int(latest.get("expected_gate_n") or 0)
+                    - int(latest.get("known_gate_n") or 0)
+                ),
+            ).run()
+        except Exception as health_exc:  # noqa: BLE001
+            print(
+                "AIDY Build-24 health write failed: "
+                f"{type(health_exc).__name__}: {str(health_exc)[:300]}"
+            )
+        if int(creation.get("created") or 0) or int(scoring.get("scored_cycles") or 0):
+            print(
+                "AIDY Build-24 shadow sync: "
+                f"created={creation.get('created')} "
+                f"scored={scoring.get('scored_cycles')} "
+                f"latest={result.get('latest_cycle_view_id')} "
+                f"direction={result.get('latest_meta_direction')}"
+            )
+    except Exception as exc:  # noqa: BLE001 - shadow study cannot risk capture
+        try:
+            await env.AIDY_OPS.prepare(
+                """
+                INSERT INTO aidy_gold_expert_shadow_sync_health (
+                    singleton_id,observed_at_utc,status,error_type,error_message
+                ) VALUES (1,?,'error',?,?)
+                ON CONFLICT(singleton_id) DO UPDATE SET
+                    observed_at_utc=excluded.observed_at_utc,
+                    status='error',
+                    error_type=excluded.error_type,
+                    error_message=excluded.error_message
+                """
+            ).bind(
+                now.isoformat(),
+                type(exc).__name__,
+                str(exc)[:1000],
+            ).run()
+        except Exception as health_exc:  # noqa: BLE001
+            print(
+                "AIDY Build-24 error-health write failed: "
+                f"{type(health_exc).__name__}: {str(health_exc)[:300]}"
+            )
+        print(
+            "AIDY Build-24 shadow sync failed: "
             f"{type(exc).__name__}: {str(exc)[:500]}"
         )
 
@@ -318,7 +447,9 @@ class Default(CoreDefault):
         finally:
             await _sync_episode_memory_best_effort(self.env)
             await _sync_gold_movement_memory_best_effort(self.env)
+            await _activate_gold_expert_shadow_best_effort(self.env)
             await _sync_gold_cycle_memory_best_effort(self.env)
+            await _sync_gold_expert_shadow_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="direct-cron")
         if not message.acked:
             raise RuntimeError("aidy_direct_cron_capture_not_acknowledged")
@@ -330,5 +461,7 @@ class Default(CoreDefault):
         finally:
             await _sync_episode_memory_best_effort(self.env)
             await _sync_gold_movement_memory_best_effort(self.env)
+            await _activate_gold_expert_shadow_best_effort(self.env)
             await _sync_gold_cycle_memory_best_effort(self.env)
+            await _sync_gold_expert_shadow_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="queue-consumer")
