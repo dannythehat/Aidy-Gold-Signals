@@ -8,7 +8,7 @@ Updated: 2026-09-21
 
 ## Build 3 — Conditional Trust & Score Engine v3
 
-Build 3 introduces `aidy_gold_expert_conditional_trust_v3` for the expert-gate programme.
+Build 3 is complete and production-verified. It introduces `aidy_gold_expert_conditional_trust_v3` for the expert-gate programme.
 
 The engine does not use raw win percentage as trust. It maintains separate directional accuracy and impact score, shrinks small environment samples toward broader history, and only lets a more-specific mini-environment win once its configured minimum sample is met.
 
@@ -31,7 +31,9 @@ D1 migration `0026_gold_expert_conditional_trust.sql` adds a raw expert-outcome 
 
 Engineering acceptance on PR #203: semantic gate PASS, static checks PASS, focused workflow suite 122 passed, full repository regression 1374 passed.
 
-Build 3 does not yet make M5/M15/H1/H4/D1 smarter and does not change the live legacy marker weights. Build 4 will build the common mathematical toolkit those price experts use internally.
+Production deployment run `35580744094` applied D1 migration `0026_gold_expert_conditional_trust.sql`, verified both expert-trust tables on the real D1 database, and deployed Worker version `bb0a1553-5b85-44aa-8ca7-6cba85fad081`. Existing capture cron, environment v3, toolbox coverage, no-hindsight and live-money-disabled checks all remained green.
+
+Build 3 does not yet make M5/M15/H1/H4/D1 smarter and does not change the live legacy marker weights. **Next: Build 4 — Common Price Expert Mathematics**, which will build the shared slope, trend-quality, persistence, path-efficiency, swing, breakout/reclaim, volatility-normalisation and acceleration primitives used by the timeframe mini-brains.
 
 ## Build 2 COMPLETE — Expert Gate Contract v1
 
@@ -55,7 +57,7 @@ Engineering acceptance on PR #202: semantic gate PASS, static checks PASS, focus
 
 Build 2 does not alter the current live marker brain. It provides the mandatory interface that Builds 4+ expert gates will use after Build 3 supplies the conditional trust engine.
 
-**Next build:** Build 3 — Conditional Trust & Score Engine v3.
+**Next build:** Build 4 — Common Price Expert Mathematics.
 
 ## Build 1 COMPLETE — factorised environment contract v3
 

@@ -6,9 +6,9 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
-## Build 3 — Conditional Trust & Score Engine v3 ENGINEERING COMPLETE
+## Build 3 — Conditional Trust & Score Engine v3 COMPLETE
 
-Build 3 of the environment-aware expert-gate programme is engineering-complete on PR #203.
+Build 3 of the environment-aware expert-gate programme is complete, merged and production-verified.
 
 Engine:
 `aidy_gold_expert_conditional_trust_v3`
@@ -34,7 +34,21 @@ Acceptance on PR #203:
 - focused workflow suite: 122 passed;
 - full repository regression: 1374 passed.
 
-The legacy live marker-brain weighting path is intentionally unchanged. Production migration/schema verification is the remaining Build 3 completion step after merge.
+The legacy live marker-brain weighting path is intentionally unchanged.
+
+Production proof:
+- merge commit: `76cbedc410dbb4f298687bdccff754f444048036`;
+- deploy run: `35580744094`;
+- Worker version: `bb0a1553-5b85-44aa-8ca7-6cba85fad081`;
+- D1 migration `0026_gold_expert_conditional_trust.sql`: applied successfully;
+- `aidy_gold_expert_outcome_ledger`: present in production D1;
+- `aidy_gold_expert_context_scores`: present in production D1;
+- minute capture cron: present;
+- existing v3 environment/cycle audit: healthy;
+- future values: 0;
+- live-money authority: 0.
+
+**Next:** Build 4 — Common Price Expert Mathematics.
 
 ## Build 2 — Expert Gate Contract v1 COMPLETE
 
