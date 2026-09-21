@@ -32,6 +32,23 @@ Build 15 is research/shadow only and does not change execution, provider activat
 
 **Next build:** Build 16 — Rates / USD / Cross-Asset Expert. It will model opportunity-cost/risk relationships without permanent sign assumptions, including rolling Gold beta/correlation, relationship stability, divergence and cross-asset agreement, while preventing stale daily series from masquerading as intraday reaction.
 
+
+## Build 15 COMPLETE — Macro / Event Expert
+
+Build 15 adds `aidy_gold_macro_event_expert_v1`.
+
+The expert is context-only. It wraps the already accepted official macro-event stack rather than duplicating it, and adds Gold-specific interpretation around first-observed timing, event clustering, standardized surprise, post-release confirmation, historical conditional response and matched no-news controls.
+
+The timing boundary is strict. Before a release actual's own `first_observed_at`, the expert cannot see it even if the official scheduled release time has already passed by a few seconds. Revision rows remain separate from revision-index-0 first prints, and only the first print can define the surprise used for that release.
+
+Gold event tiers come from independent historical Gold episodes with the preregistered Day-29 minimum sample, not vendor “high impact” labels. Historical response summaries do not use trade P/L and are compared against matched no-news periods so ordinary volatility is not mistaken for event effect.
+
+Engineering acceptance on PR #218 candidate: semantic PASS, static PASS, focused suite 276 passed, full regression 1528 passed. Pre-event no-leakage, first-observed actual timing, first-print/revision separation, standardized surprise, Gold-learned tiering, event clustering, post-release confirmation, historical response, no-news control, PIT safety and chronological freeze all pass.
+
+Build 15 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 16 — Rates / USD / Cross-Asset Expert. It will model Gold's opportunity-cost/risk mechanisms without permanent sign assumptions, using multiple horizons, rolling beta/correlation, stability, divergence and qualified cross-asset breadth.
+
 ## Build 14 COMPLETE — Session / Participation Expert
 
 Build 14 adds `aidy_gold_session_participation_expert_v1`.
