@@ -7,6 +7,36 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 5 — M5 Price Structure Expert COMPLETE
+
+Build 5 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_m5_price_structure_expert_v1`
+
+What Build 5 adds:
+- the first real timeframe mini-brain, specialised for M5;
+- five independently scoreable directional sub-calculators: trend/path quality, confirmed swing structure, breakout acceptance/reclaim, momentum transition and completed-candle pressure;
+- two explicit context-only calculators for M5 range location and Build-4 contradiction diagnostics;
+- an M5-specific repeatable mini-environment covering session/phase, M5/M15/H1 context, volatility, swing regime, trend quality, breakout state, range zone and contradiction state;
+- Build-3 hierarchical trust scopes for exact M5 mini-environment, reduced structure/session/movement contexts, global core and gate-global fallback;
+- historical reliability kept separate from current internal conviction;
+- family-balanced consensus so multiple correlated measurements from one evidence family cannot gain influence merely by being numerous;
+- explicit NEUTRAL / ABSTAIN / UNKNOWN when the M5 evidence is weak or contradictory;
+- a frozen legacy-M5 baseline comparison and chronological replay summary for ablation.
+
+Acceptance on PR #206:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 148 passed;
+- full repository regression: 1400 passed;
+- synthetic acceptance covered clean uptrend/downtrend, chop, reversal/conflict, missing M5, PIT provenance/no-future evidence, as-of mismatch rejection, Build-3 trust attachment, chronological freeze and legacy-M5 comparison.
+
+Build 5 is research/shadow intelligence. It does not replace the current live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 6 — M15 Price Structure Expert. It will use the same expert contract but with independently calibrated M15 horizons/thresholds, separately identifying the M15 8-bar path, latest 15-minute momentum and swing/breakout evidence while retaining correlation/dependency metadata and the legacy M15 baseline for ablation.
+
 ## Build 4 — Common Price Expert Mathematics COMPLETE
 
 Build 4 of the environment-aware expert-gate programme is complete and engineering-proven.
