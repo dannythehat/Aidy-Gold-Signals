@@ -62,7 +62,9 @@ CREATE TABLE IF NOT EXISTS aidy_gold_cycle_marker_results (
 CREATE TABLE IF NOT EXISTS aidy_gold_marker_context_scores (
     scope_key TEXT NOT NULL,
     scope_type TEXT NOT NULL,
+    marker_id TEXT NOT NULL,
     surface TEXT NOT NULL,
+    source_path TEXT NOT NULL,
     horizon_minutes INTEGER NOT NULL,
     sample_n INTEGER NOT NULL DEFAULT 0,
     correct_n INTEGER NOT NULL DEFAULT 0,
@@ -75,8 +77,8 @@ CREATE TABLE IF NOT EXISTS aidy_gold_marker_context_scores (
     research_only INTEGER NOT NULL DEFAULT 1 CHECK (research_only = 1),
     live_money_execution_allowed INTEGER NOT NULL DEFAULT 0
         CHECK (live_money_execution_allowed = 0),
-    PRIMARY KEY(scope_key,surface,horizon_minutes)
+    PRIMARY KEY(scope_key,marker_id,horizon_minutes)
 );
 
 CREATE INDEX IF NOT EXISTS ix_aidy_gold_marker_context_lookup
-    ON aidy_gold_marker_context_scores(surface,horizon_minutes,scope_type,sample_n);
+    ON aidy_gold_marker_context_scores(marker_id,surface,horizon_minutes,scope_type,sample_n);
