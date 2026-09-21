@@ -1,0 +1,77 @@
+name: AIDY H1 Repair Ledger Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ops-h1-repair-ledger-audit-20260921.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_R2_BUCKET_NAME: aidy-memory-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build live config
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python scripts/build_cloudflare_live_config.py
+      - name: Pull H1 repair evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== latest_snapshot_states ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
+            SELECT captured_at,capture_status,
+                   json_extract(data_availability_json,'$.all_timeframes_ready') AS all_ready,
+                   json_extract(data_availability_json,'$.candles.1h.expected_market_minutes') AS h1_expected,
+                   json_extract(data_availability_json,'$.candles.1h.observed_market_minutes') AS h1_observed,
+                   json_extract(data_availability_json,'$.candles.1h.coverage_ratio') AS h1_coverage,
+                   json_extract(data_availability_json,'$.candles.1h.admissible') AS h1_admissible,
+                   latest_h1_id IS NOT NULL AS h1
+            FROM market_snapshots
+            WHERE captured_at>='2026-09-21T06:40:00+00:00'
+            ORDER BY captured_at DESC LIMIT 12;
+          "
+          echo "=== bootstrap_runs ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
+            SELECT id,started_at_utc,completed_at_utc,as_of_utc,planned_windows,
+                   required_m1_minutes,state
+            FROM twelve_data_bootstrap_runs
+            WHERE started_at_utc>='2026-09-21T06:40:00+00:00'
+            ORDER BY started_at_utc DESC LIMIT 20;
+          "
+          echo "=== bootstrap_requests ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
+            SELECT bootstrap_id,window_index,window_start_utc,window_end_utc,
+                   required_m1_minutes,persisted_m1_minutes,state,failure_reason,request_ledger_id
+            FROM twelve_data_bootstrap_requests
+            WHERE rowid IN (
+              SELECT rowid FROM twelve_data_bootstrap_requests ORDER BY rowid DESC LIMIT 20
+            )
+            ORDER BY rowid DESC;
+          "
+          echo "=== request_ledger ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
+            SELECT requested_at_utc,completed_at_utc,request_kind,status,error_code,outputsize
+            FROM twelve_data_request_ledger
+            WHERE requested_at_utc>='2026-09-21T06:40:00+00:00'
+            ORDER BY requested_at_utc DESC LIMIT 30;
+          "
