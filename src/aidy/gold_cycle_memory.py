@@ -164,6 +164,7 @@ def _build_directional_reasons(
         ("M15", 3, "gold_m15_structure"),
         ("H1", 2, "gold_h1_structure"),
         ("H4", 1, "gold_h4_structure"),
+        ("D1", 1, "gold_d1_context"),
     ):
         frame = timeframes.get(timeframe)
         frame = frame if isinstance(frame, Mapping) else {}
@@ -204,6 +205,65 @@ def _build_directional_reasons(
                     source_path=f"gold_state.move_observation.windows.{horizon}",
                 )
             )
+
+    liquidity = gold_state.get("liquidity")
+    liquidity = liquidity if isinstance(liquidity, Mapping) else {}
+    breakout = liquidity.get("prior_day_breakout")
+    breakout = breakout if isinstance(breakout, Mapping) else {}
+    breakout_state = str(breakout.get("state") or "unknown")
+    breakout_vote = {
+        "upside_failed": -1,
+        "downside_failed": 1,
+    }.get(breakout_state, 0)
+    if breakout_vote:
+        reasons.append(
+            _reason(
+                surface="liquidity_sweep_reclaim_proxies",
+                observation=f"prior-day breakout/reclaim proxy is {breakout_state}",
+                vote=breakout_vote,
+                weight=1,
+                source_path="gold_state.liquidity.prior_day_breakout.state",
+            )
+        )
+
+    sweep_proxies = liquidity.get("sweep_reclaim_proxies")
+    sweep_proxies = sweep_proxies if isinstance(sweep_proxies, list) else []
+    high_reclaims = sum(
+        1
+        for item in sweep_proxies
+        if isinstance(item, Mapping) and item.get("side") == "high"
+    )
+    low_reclaims = sum(
+        1
+        for item in sweep_proxies
+        if isinstance(item, Mapping) and item.get("side") == "low"
+    )
+    if high_reclaims > low_reclaims:
+        reasons.append(
+            _reason(
+                surface="liquidity_sweep_reclaim_proxies",
+                observation=(
+                    f"{high_reclaims} high-side reclaim proxy/proxies versus "
+                    f"{low_reclaims} low-side"
+                ),
+                vote=-1,
+                weight=1,
+                source_path="gold_state.liquidity.sweep_reclaim_proxies",
+            )
+        )
+    elif low_reclaims > high_reclaims:
+        reasons.append(
+            _reason(
+                surface="liquidity_sweep_reclaim_proxies",
+                observation=(
+                    f"{low_reclaims} low-side reclaim proxy/proxies versus "
+                    f"{high_reclaims} high-side"
+                ),
+                vote=1,
+                weight=1,
+                source_path="gold_state.liquidity.sweep_reclaim_proxies",
+            )
+        )
 
     if movement_investigation.get("investigation_required") is True:
         raw = str(movement_investigation.get("move_direction") or "unknown")
