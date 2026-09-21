@@ -74,3 +74,7 @@ For the broker-free Gold-API source, the endpoint returns HTTP `200` only when:
 Any failed condition returns HTTP `503` with stable machine-readable failure reasons.
 
 **Day 3 does not pretend that sparse reference-price observations are candles.** Candle integrity is evaluated only once a genuine OHLC research source has been ingested.
+
+## Current Gold learning architecture
+
+Before changing AIDY's Gold cycle learner, toolbox, marker scoring, or movement memory, read [docs/aidy-live-gold-learning-state.md](docs/aidy-live-gold-learning-state.md). It is the repo-local handoff for the live environment-aware learning system and its safety boundaries.
