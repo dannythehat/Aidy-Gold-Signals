@@ -52,12 +52,12 @@ def _row(
 def _candles(*, shock: bool) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     start = AS_OF - timedelta(minutes=130)
-    price = Decimal("4380")
+    price = Decimal(4380)
     for index in range(130):
         opened = start + timedelta(minutes=index)
         delta = Decimal("0.05")
         if shock and index >= 125:
-            delta = Decimal("4")
+            delta = Decimal(4)
         rows.append(_row(timeframe="M1", opened=opened, price=price, close_delta=delta))
         price += delta
 
@@ -69,7 +69,7 @@ def _candles(*, shock: bool) -> list[dict[str, object]]:
                 _row(
                     timeframe=timeframe,
                     opened=start_tf + duration * index,
-                    price=Decimal("4300") + Decimal(index),
+                    price=Decimal(4300) + Decimal(index),
                     close_delta=Decimal("0.5"),
                 )
             )
