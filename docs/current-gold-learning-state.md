@@ -5,9 +5,9 @@ Authoritative current design note for the AIDY Gold learning runtime.
 Updated: 2026-09-21
 
 
-## Build 1 candidate — factorised environment contract v3
+## Build 1 COMPLETE — factorised environment contract v3
 
-The next environment contract is `aidy_gold_cycle_environment_v3`, implemented in PR #198 and pending production verification.
+The live environment contract is `aidy_gold_cycle_environment_v3`. Build 1 is merged, deployed and production-verified.
 
 The v3 contract keeps exact PIT facts for audit but separates learning identity into factor families: time/participation, structure, movement, location, liquidity, volatility, event, cross-market, regime and data quality. The shared `environment_key` is now a compact global-core key rather than a digest of every condition. Each factor also gets its own key. This prevents a single giant cross-product from making most historical environments unique.
 
@@ -22,6 +22,30 @@ New mandatory environment state includes:
 Build 1 also rejects labelled future/outcome fields before environment freeze and preserves UNKNOWN rather than fabricating missing evidence.
 
 The current directional marker logic is intentionally unchanged in Build 1. Expert-gate intelligence begins only after the shared environment and trust foundations pass their own acceptance gates.
+
+## Build 1 production proof
+
+Deployment run `35576676324` passed with Worker version
+`a20dcfe9-cd46-40c2-aef5-5d6c524cc6c1`.
+
+The live D1 audit found a v3 environment on the `2026-09-21T08:15:00+00:00` Gold cycle,
+frozen at `2026-09-21T08:10:56.620000+00:00`, with:
+
+- schema `aidy_gold_environment_contract_schema_v1`;
+- 34 registered environment dimensions;
+- an `envcore_` shared environment key;
+- 0 monolithic full-environment key usage;
+- 0 legacy `full_environment` scopes;
+- 34/34 toolbox trace and environment coverage;
+- 0 missing readable tool states;
+- 0 missing score contexts;
+- 0 future values;
+- 0 live-money authority.
+
+Capture remained enabled, the one-minute cron remained present, market data remained
+Twelve Data/public-independent, and formal-forward remained OFF.
+
+**Next build:** Build 2 — Expert Gate Contract v1.
 
 ## Why this exists
 
@@ -55,7 +79,7 @@ forced into fake bullish/bearish votes.
 ## Canonical cycle-start environment
 
 Environment contract:
-`aidy_gold_cycle_environment_v2`
+`aidy_gold_cycle_environment_v3`
 
 The environment is frozen before the target 15-minute window starts.
 
@@ -121,9 +145,10 @@ share the same environment identity. A real condition change — for example mov
 Marker performance is maintained at multiple levels so AIDY can learn broad patterns
 first and become more specific as evidence grows.
 
-Current scopes:
+Current factorised score scopes:
 
 - global;
+- global core;
 - session;
 - session phase;
 - session + observed 15m state;
@@ -134,8 +159,10 @@ Current scopes:
 - session + movement regime;
 - volatility + movement regime;
 - session + state + event timing;
-- event regime;
-- full environment.
+- event regime.
+
+The old monolithic `full_environment` scope is deliberately removed. Later expert gates will add
+smaller specialist mini-environments instead of one sparse cross-product.
 
 AIDY chooses the most specific sufficiently-sampled scorebook and falls back to broader
 contexts when evidence is thin.
