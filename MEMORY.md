@@ -9,6 +9,36 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 7 — H1 Price Structure Expert COMPLETE
+
+Build 7 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_h1_price_structure_expert_v1`
+
+What Build 7 adds:
+- a genuine hourly trend-quality specialist using 8h/13h return and log-slope/R², path efficiency, close-step persistence and ATR-normalised displacement;
+- an H1 quality gate requiring sufficient R², efficiency, persistence and directional quality before a net hourly move can become a directional trend vote;
+- an H1 trend-quality guard that downgrades a same-direction conclusion to ABSTAIN when the net path is positive/negative but its internal quality fails;
+- separately scoreable H1 swing structure, breakout acceptance/reclaim, acceleration and completed-candle pressure;
+- context-only H1 range location and contradiction diagnostics;
+- explanations that explicitly expose slope, quality, swings/breakout, location and contradictions;
+- H1-specific dependency/correlation metadata and Build-3 conditional trust scopes separate from M15;
+- legacy-H1 baseline and chronological replay retained for ablation.
+
+Acceptance on PR #210 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 172 passed;
+- full repository regression: 1424 passed;
+- explicit positive-first-to-last but choppy H1 path test: PASS;
+- PIT/no-future, chronological freeze, separate H1 trust scope, dependency metadata and legacy comparison: PASS.
+
+Build 7 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 8 — H4 Price Structure Expert. H4 becomes a slow structural expert, but it cannot dominate a next-15m forecast simply because it is a higher timeframe. It must prove incremental conditional value, and conflict with lower timeframes must remain explicit and scoreable.
+
 ## Build 6 — M15 Price Structure Expert COMPLETE
 
 Build 6 of the environment-aware expert-gate programme is complete and engineering-proven.
