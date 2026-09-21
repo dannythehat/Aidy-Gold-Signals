@@ -93,6 +93,32 @@ The live 05:00 UTC cycle audit showed:
 - future values used = 0;
 - live-money execution allowed = 0.
 
+## Canonical Worker deployment ownership
+
+The live Worker `aidy-signals-test` has **one canonical automatic deploy owner**:
+`.github/workflows/aidy-provider-research-read-deploy.yml`.
+
+Calibration/backfill workflows may load D1 research evidence, but they must not deploy or
+replace the canonical Worker.
+
+Incident discovered 2026-09-21:
+- the legacy Day 11 calibration backfill was triggered by `src/provider_entry.py` changes;
+- its push job rebuilt the same Worker config with `crons=[]`;
+- it then ran `pywrangler deploy` against `aidy-signals-test`;
+- this removed scheduled capture and caused fresh Twelve Data progression to stop after
+  the 04:52 UTC successful capture.
+
+Permanent fix:
+- Day 11 no longer deploys the Worker;
+- Day 11 push backfill no longer triggers on provider runtime/API wrapper edits;
+- its D1 config preserves the minute cron defensively;
+- calibration-route code changes are owned by the canonical deploy;
+- regression tests fail if Day 11 regains Worker deployment or an empty cron.
+
+This deployment-ownership rule is part of the Gold-learning safety boundary because the
+brain cannot learn if its market capture is silently removed by an unrelated research
+workflow.
+
 ## Permanent boundaries
 
 Do not silently change:
