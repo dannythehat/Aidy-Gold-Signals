@@ -343,7 +343,12 @@ def _cross_asset_context(
         latest = rows[-1]
         latest_time = _utc(str(latest["observed_at_utc"]))
         fresh = str(latest.get("staleness_state") or "").startswith("fresh")
-        intraday_allowed = series_id in INTRADAY_MARKET_SERIES and fresh
+        decision_eligible = latest.get("decision_input_allowed") is True
+        intraday_allowed = (
+            series_id in INTRADAY_MARKET_SERIES
+            and fresh
+            and decision_eligible
+        )
         item = {
             "state": "known",
             "value": latest.get("value"),
@@ -353,7 +358,12 @@ def _cross_asset_context(
                 Decimal(str((as_of - latest_time).total_seconds() / 60))
             ),
             "staleness_state": latest.get("staleness_state"),
-            "decision_input_allowed": latest.get("decision_input_allowed") is True,
+            "decision_input_allowed": decision_eligible,
+            "qualification": (
+                "decision_eligible"
+                if decision_eligible
+                else "retrospective_research_only"
+            ),
             "source_frequency": source_frequency,
             "intraday_reaction_allowed": intraday_allowed,
             "dependency_group": dependency_group,
