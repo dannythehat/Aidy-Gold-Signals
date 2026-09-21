@@ -14,6 +14,48 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 12 — Liquidity / Reclaim Expert COMPLETE
+
+Build 12 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_liquidity_reclaim_expert_v1`
+
+What Build 12 adds:
+- named high/low reference-level sweep/reclaim proxies from Build-11 location references;
+- exact penetration depth in USD and bps;
+- reclaim speed in completed M1 bars;
+- confirmation-close count;
+- retest and retest-hold detection;
+- reclaim-candle rejection geometry;
+- nearest competing-level distance;
+- session/phase and volatility-conditioned trust;
+- directional proxy votes only for confirmed/retest-hold reclaims;
+- failed/unconfirmed penetrations remain neutral;
+- explicit proxy-not-order-flow language in every event;
+- retrospective genuine GC-flow rows stored in a separate evidence channel that is never used in the OHLC proxy calculation or expert conclusion.
+
+Acceptance on PR #215 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 235 passed;
+- full repository regression: 1487 passed;
+- synthetic high sweep/reclaim/retest: PASS;
+- synthetic low sweep/reclaim: PASS;
+- no-sweep neutral: PASS;
+- failed reclaim not rewarded: PASS;
+- competing-level distance: PASS;
+- session/volatility trust separation: PASS;
+- forbidden fake-order-flow language guard: PASS;
+- retrospective genuine GC flow kept separate: PASS;
+- gapped M1 fails closed: PASS;
+- PIT/no-future and chronological freeze: PASS.
+
+Build 12 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 13 — Volatility / Jump Expert. It will classify clock-normalised volatility, compression/expansion transitions, continuous versus jump behaviour, vol-of-vol and optional IV/RV context when qualified, while remaining direction-neutral.
+
 ## Build 11 — Price Location Expert COMPLETE
 
 Build 11 of the environment-aware expert-gate programme is complete and engineering-proven.
