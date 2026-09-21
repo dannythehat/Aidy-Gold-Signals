@@ -1,0 +1,62 @@
+name: AIDY Build 17 Databento Phase-A Quote
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_futures_microstructure_expert.py"
+      - "tests/test_gold_futures_microstructure_expert.py"
+      - "scripts/build17_databento_phasea_quote.py"
+      - ".github/workflows/build17-databento-phasea-quote.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quote:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static quote-script check
+        run: |
+          set -euo pipefail
+          uv run ruff check scripts/build17_databento_phasea_quote.py
+          uv run python -m compileall -q scripts/build17_databento_phasea_quote.py
+
+      - name: Require existing Databento credential
+        run: |
+          set -euo pipefail
+          test -n "${DATABENTO_API_KEY:-}" || { echo "DATABENTO_API_KEY secret is missing"; exit 1; }
+
+      - name: Quote 40 independent GC TBBO windows without downloading
+        run: |
+          set -euo pipefail
+          uv run python scripts/build17_databento_phasea_quote.py | tee /tmp/build17-quote.json
+          python - <<'PY'
+          import json
+          result=json.load(open('/tmp/build17-quote.json', encoding='utf-8'))
+          assert result['ok'] is True, result
+          assert result['mode'] == 'quote_only_no_download', result
+          assert result['window_count'] == 40, result
+          assert result['independent_weekly_windows'] is True, result
+          assert result['download_performed'] is False, result
+          assert result['paid_activation_performed'] is False, result
+          assert result['recurring_subscription_enabled'] is False, result
+          assert result['owner_approval_required_before_download'] is True, result
+          PY
