@@ -1,8 +1,8 @@
-name: Ops Provider Context Snapshot Diagnostic 20260908
+name: Ops Provider Context Snapshot Diagnostic 20260921
 
 on:
   push:
-    branches: [ops/provider-context-snapshot-repair-20260908]
+    branches: [ops/provider-context-snapshot-diagnostic-20260921]
     paths:
       - ".github/workflows/ops-provider-context-snapshot-diagnostic-20260908.yml"
 
