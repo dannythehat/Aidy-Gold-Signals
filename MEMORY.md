@@ -6,6 +6,43 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 4 — Common Price Expert Mathematics COMPLETE
+
+Build 4 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Library:
+`aidy_gold_price_expert_math_v1`
+
+What Build 4 adds:
+- shared multi-lookback returns across all Gold timeframes;
+- deterministic log-price OLS slope plus R² trend quality;
+- close-step persistence;
+- path efficiency (net displacement / travelled path);
+- ATR(14) and realised-volatility normalisation;
+- recent-vs-prior acceleration/deceleration;
+- deterministic confirmed swing highs/lows with wing-2 confirmation and no look-ahead;
+- swing-sequence structure (HH/HL/LH/LL);
+- close-based structure breaks;
+- breakout lifecycle: penetration, close acceptance, hold, retest-hold and reclaim;
+- 20/50-bar range position;
+- latest completed candle body/wick/close-location geometry;
+- explicit contradiction diagnostics rather than silently averaging conflicting evidence;
+- a unique primitive manifest so one feature family is not counted twice accidentally.
+
+The library uses only completed bars at the frozen as-of time. Partial current candles are excluded. It emits factual mathematics only: no expert vote, no historical trust weight and no live-money action.
+
+Acceptance on PR #205:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 122 passed;
+- full repository regression: 1390 passed;
+- clean synthetic fixtures covered trend, downtrend, chop, reversal, breakout, rejection, partial-bar exclusion and no-lookahead swing confirmation.
+
+Build 4 does not change the current live marker brain. It provides the common mathematics that the first real timeframe mini-brain will consume.
+
+**Next:** Build 5 — M5 Price Structure Expert.
+
 ## Build 3 — Conditional Trust & Score Engine v3 COMPLETE
 
 Build 3 of the environment-aware expert-gate programme is complete, merged and production-verified.
