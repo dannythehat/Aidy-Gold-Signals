@@ -1,0 +1,41 @@
+name: AIDY Build 22 Meta Direction Aggregator
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_meta_direction.py"
+      - "tests/test_gold_meta_direction.py"
+      - ".github/workflows/build22-meta-direction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+      - name: Static
+        run: |
+          uv run ruff check src/aidy/gold_meta_direction.py tests/test_gold_meta_direction.py
+          uv run python -m compileall -q src/aidy/gold_meta_direction.py tests/test_gold_meta_direction.py
+      - name: Focused
+        run: |
+          uv run pytest -q             tests/test_gold_expert_gate_contract.py             tests/test_gold_expert_trust.py             tests/test_gold_evidence_dependency.py             tests/test_gold_environment_gate_selector.py             tests/test_gold_meta_direction.py
+      - name: Dedicated aggregator acceptance
+        run: |
+          uv run pytest -q tests/test_gold_meta_direction.py -k             "strong_high_trust_contradiction or no_magic_confidence or confidence_requires or context_only or current_outcome or deterministic"
+      - name: Full regression
+        run: uv run pytest -q
