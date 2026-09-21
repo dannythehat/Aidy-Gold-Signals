@@ -506,7 +506,7 @@ __all__ = [
     "GOLD_MOVEMENT_INVESTIGATOR_VERSION",
     "GOLD_MOVEMENT_LEARNING_CARD_VERSION",
     "build_gold_movement_investigation",
-    "verify_gold_movement_investigation",
     "build_gold_movement_learning_card",
+    "verify_gold_movement_investigation",
     "verify_gold_movement_learning_card",
 ]
