@@ -5,7 +5,7 @@ import json
 import os
 import subprocess
 from datetime import UTC, date, datetime, time, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -50,12 +50,12 @@ DEV_EPISODES = 10
 EMBARGO_EPISODES = 1
 HOLDOUT_EPISODES = 30
 MAX_CANDIDATE_WEEKS = 90
-MAX_TOTAL_DATABENTO_SPEND_USD = Decimal("75")
+MAX_TOTAL_DATABENTO_SPEND_USD = Decimal(75)
 ANCHOR_HOUR_UTC = 15
 ANCHOR_MINUTE_UTC = 15
 MICRO_MINUTE_OFFSET = -1
 OUTCOME_HORIZON_MINUTES = 15
-OUTCOME_NEUTRAL_BPS = Decimal("1")
+OUTCOME_NEUTRAL_BPS = Decimal(1)
 
 MICRO_RULES = (
     "tie_break_1_0p5",
@@ -82,7 +82,7 @@ def _utc(value: datetime | str) -> datetime:
 def _decimal(value: Any) -> Decimal | None:
     try:
         parsed = Decimal(str(value))
-    except Exception:
+    except (InvalidOperation, TypeError, ValueError):
         return None
     return parsed if parsed.is_finite() else None
 
@@ -111,7 +111,7 @@ def micro_vote(normalized: dict[str, Any], rule_id: str) -> str:
     if signed is None or vwap is None:
         return "neutral"
     if rule_id in {"tie_break_1_0p5", "veto_1_0p5"}:
-        signed_threshold = Decimal("1")
+        signed_threshold = Decimal(1)
         vwap_threshold = Decimal("0.5")
     elif rule_id == "override_1p5_0p5":
         signed_threshold = Decimal("1.5")
@@ -165,10 +165,10 @@ def choose_rule(dev_rows: list[dict[str, Any]]) -> dict[str, Any]:
 def _latest_full_tbbo_day(dataset_range: dict[str, Any]) -> date:
     schema = dataset_range.get("schema")
     if not isinstance(schema, dict):
-        raise RuntimeError("Databento dataset range has no schema map")
+        raise TypeError("Databento dataset range has no schema map")
     tbbo = schema.get("tbbo")
     if not isinstance(tbbo, dict):
-        raise RuntimeError("Databento entitlement has no TBBO range")
+        raise TypeError("Databento entitlement has no TBBO range")
     end = _utc(str(tbbo["end"]))
     target = end.date() - timedelta(days=1)
     while target.weekday() >= 5:
@@ -220,7 +220,7 @@ def _symbology_resolve(
         )
     payload = response.json()
     if not isinstance(payload, dict):
-        raise RuntimeError("Databento symbology returned non-object")
+        raise TypeError("Databento symbology returned non-object")
     return payload
 
 
@@ -295,24 +295,41 @@ def _row_by_open(candles: list[Any], open_time: datetime) -> Any | None:
     return None
 
 
+def _return_row(
+    price_packet: dict[str, Any],
+    timeframe: str,
+    lookback: str,
+) -> dict[str, Any] | None:
+    timeframes = price_packet.get("timeframes")
+    if not isinstance(timeframes, dict):
+        return None
+    payload = timeframes.get(timeframe)
+    if not isinstance(payload, dict):
+        return None
+    primitives = payload.get("primitives")
+    if not isinstance(primitives, dict):
+        return None
+    returns = primitives.get("multi_lookback_returns")
+    if not isinstance(returns, dict):
+        return None
+    values = returns.get("values")
+    if not isinstance(values, dict):
+        return None
+    row = values.get(lookback)
+    return row if isinstance(row, dict) else None
+
+
 def _direction_for_frame(price_packet: dict[str, Any], timeframe: str) -> str:
-    payload = price_packet["timeframes"][timeframe]
-    try:
-        row = payload["primitives"]["multi_lookback_returns"]["values"]["5_bar"]
-        direction = str(row.get("direction") or "unknown")
-    except Exception:
-        return "unknown"
-    return direction
+    row = _return_row(price_packet, timeframe, "5_bar")
+    return str(row.get("direction") or "unknown") if row is not None else "unknown"
 
 
 def _return_for_frame(price_packet: dict[str, Any], timeframe: str) -> str | None:
-    payload = price_packet["timeframes"][timeframe]
-    try:
-        return payload["primitives"]["multi_lookback_returns"]["values"]["1_bar"].get(
-            "return_bps"
-        )
-    except Exception:
+    row = _return_row(price_packet, timeframe, "1_bar")
+    if row is None:
         return None
+    value = row.get("return_bps")
+    return str(value) if value is not None else None
 
 
 def _spot_prediction(
@@ -556,25 +573,17 @@ def main() -> int:
             outcome = _outcome(anchor=anchor, month_candles=month_candles)
             if outcome is None:
                 continue
-            try:
-                spot_prediction, spot_digest = _spot_prediction(
-                    anchor=anchor,
-                    month_candles=month_candles,
-                )
-            except Exception:
-                continue
-            try:
-                minute, spend, purchase = _download_micro_minute(
-                    client=client,
-                    api_key=api_key,
-                    anchor=anchor,
-                    output_dir=raw_dir,
-                    prior_spend=spend,
-                )
-            except RuntimeError:
-                raise
-            except Exception:
-                continue
+            spot_prediction, spot_digest = _spot_prediction(
+                anchor=anchor,
+                month_candles=month_candles,
+            )
+            minute, spend, purchase = _download_micro_minute(
+                client=client,
+                api_key=api_key,
+                anchor=anchor,
+                output_dir=raw_dir,
+                prior_spend=spend,
+            )
             purchases.append(purchase)
             if minute is None:
                 continue
