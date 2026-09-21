@@ -148,9 +148,17 @@ async def run_capture_cycle(
                     if repair.get("repaired") is True:
                         # Re-run the normal scheduled-capture path so the repaired,
                         # first-observed M1 evidence is aggregated into a fresh
-                        # canonical snapshot. This is still fail-closed: if any
-                        # required intraday minute remains missing, status stays partial.
-                        market = await recorder.capture_once()
+                        # canonical snapshot. A failed recapture must not invalidate
+                        # the already-successful first capture.
+                        try:
+                            repaired_market = await recorder.capture_once()
+                        except Exception as exc:  # noqa: BLE001 - preserve first capture
+                            print(
+                                "AIDY post-repair canonical recapture failed: "
+                                f"{type(exc).__name__}: {str(exc)[:500]}"
+                            )
+                        else:
+                            market = repaired_market
         else:
             raise RuntimeError("Unsupported AIDY market-data source.")
 
