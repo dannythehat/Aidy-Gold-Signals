@@ -21,8 +21,8 @@ from aidy.gold_expert_trust import (
 )
 from aidy.macro_vintages import (
     SERIES_DFII10,
-    SERIES_DGS10,
     SERIES_DGS2,
+    SERIES_DGS10,
     SERIES_T10YIE,
     verify_version_record,
 )
@@ -943,11 +943,11 @@ __all__ = [
     "DAILY_RATE_SERIES",
     "DEPENDENCY_GROUPS",
     "INTRADAY_MARKET_SERIES",
-    "RELATIONSHIP_MINIMUM_N",
-    "RELATIONSHIP_WINDOW_N",
     "RATES_CROSS_ASSET_EXPERT_VERSION",
     "RATES_CROSS_ASSET_GATE_ID",
     "RATES_CROSS_ASSET_TARGET_HORIZON_MINUTES",
     "RATES_CROSS_ASSET_TRUST_REDUCED_CONTEXTS",
+    "RELATIONSHIP_MINIMUM_N",
+    "RELATIONSHIP_WINDOW_N",
     "build_rates_usd_cross_asset_expert",
 ]
