@@ -583,7 +583,7 @@ def main() -> int:
                 "spot_plus_microstructure_correct": row["spot_plus_microstructure_correct"],
                 "microstructure_minute_count": len(minutes),
                 "normalized_known_count": sum(item.get("state") == "known" for item in normalized),
-                "contract_symbols": sorted(set(item.contract_symbol for item in minutes)),
+                "contract_symbols": sorted({item.contract_symbol for item in minutes}),
             }
         )
 
