@@ -78,5 +78,7 @@ def test_seed_sql_is_idempotent_and_cannot_promote_history(tmp_path: Path) -> No
     assert "'retrospective_history'" in sql
     assert ",0,1,0)" in sql
     assert "UPDATE " not in sql
+    assert "BEGIN TRANSACTION" not in sql
+    assert "COMMIT;" not in sql
     assert "aidy_gold_cycle_views" not in sql
     assert "aidy_gold_cycle_outcomes" not in sql

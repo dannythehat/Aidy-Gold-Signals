@@ -165,7 +165,6 @@ def write_d1_sql(rows: list[Mapping[str, Any]], destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     lines = [
         "-- Generated retrospective Gold cycle seed. Never PIT/live authority.",
-        "BEGIN TRANSACTION;",
     ]
     batch_size = 200
     columns = (
@@ -214,7 +213,6 @@ def write_d1_sql(rows: list[Mapping[str, Any]], destination: Path) -> None:
                 + ")"
             )
         lines.append(",\n".join(values) + ";")
-    lines.append("COMMIT;")
     destination.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
