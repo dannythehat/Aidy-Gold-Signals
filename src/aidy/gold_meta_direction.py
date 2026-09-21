@@ -326,12 +326,10 @@ def build_meta_direction_view(
             direction in {"bullish", "bearish"}
             and trace["conclusion"] in {"bullish", "bearish"}
             and trace["conclusion"] != direction
+        ) or (
+            direction in {"neutral", "abstain"}
+            and trace["conclusion"] in {"bullish", "bearish"}
         ):
-            contradictions.append(trace)
-        elif direction in {"neutral", "abstain"} and trace["conclusion"] in {
-            "bullish",
-            "bearish",
-        }:
             contradictions.append(trace)
 
     calibration = _latest_meta_calibration(
@@ -436,8 +434,8 @@ def verify_meta_direction_view(value: Mapping[str, Any]) -> bool:
 
 
 __all__ = [
-    "META_DIRECTION_AGGREGATOR_VERSION",
     "META_CALIBRATION_MIN_N",
+    "META_DIRECTION_AGGREGATOR_VERSION",
     "MIN_DIRECTIONAL_WEIGHT",
     "NEUTRAL_MARGIN_RATIO",
     "STRONG_CONTRADICTION_RATIO",
