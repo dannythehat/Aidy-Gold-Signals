@@ -584,8 +584,16 @@ def verify_expert_gate_packet(value: Mapping[str, Any]) -> bool:
 
         assert_no_hindsight_fields(body, path="expert_gate_packet")
 
+        _identifier(body.get("gate_id"), field="gate_id")
+        if not str(body.get("gate_version") or "").strip():
+            return False
         gate_mode = str(body.get("gate_mode") or "")
         if gate_mode not in GATE_MODES:
+            return False
+        horizon = body.get("target_horizon_minutes")
+        if isinstance(horizon, bool) or not isinstance(horizon, int) or horizon <= 0:
+            return False
+        if str(body.get("conclusion") or "") not in GATE_CONCLUSIONS:
             return False
         dependency_family = str(body.get("dependency_family") or "")
         if dependency_family not in DEPENDENCY_FAMILIES:
@@ -633,8 +641,20 @@ def verify_expert_gate_packet(value: Mapping[str, Any]) -> bool:
             evidence_id = _identifier(item.get("evidence_id"), field="evidence_id")
             if evidence_id in evidence_by_id:
                 return False
+            if not str(item.get("source") or "").strip():
+                return False
+            if not str(item.get("path") or "").strip():
+                return False
+            state = str(item.get("state") or "").strip().lower()
+            if state not in EVIDENCE_STATES:
+                return False
             observed = _utc(item.get("observed_at_utc"))
             if observed > as_of:
+                return False
+            value = item.get("value")
+            if state == "known" and (value is None or value == ""):
+                return False
+            if item.get("value_kind") != _value_kind(value, state=state):
                 return False
             expected_value_digest = _digest(
                 {
@@ -659,11 +679,64 @@ def verify_expert_gate_packet(value: Mapping[str, Any]) -> bool:
             )
             if calculator_id in calculator_by_id:
                 return False
+            if not str(item.get("version") or "").strip():
+                return False
+            role = str(item.get("role") or "").strip().lower()
+            if role not in SUBCALCULATOR_ROLES:
+                return False
+            calc_family = str(item.get("dependency_family") or "").strip().lower()
+            if calc_family not in DEPENDENCY_FAMILIES:
+                return False
+            state = str(item.get("state") or "").strip().lower()
+            if state not in SUBCALCULATOR_STATES:
+                return False
+            vote = str(item.get("vote") or "").strip().lower()
+            if role == "context_only":
+                expected_vote = "context_only" if state == "known" else "unknown"
+                if vote != expected_vote:
+                    return False
+            elif state == "known":
+                if vote not in DIRECTIONAL_VOTES - {"unknown"}:
+                    return False
+            elif vote != "unknown":
+                return False
+
             refs = item.get("evidence_refs")
             if not isinstance(refs, list) or not refs:
                 return False
+            if len(refs) != len(set(refs)):
+                return False
             if any(ref not in evidence_by_id for ref in refs):
                 return False
+            if state == "known" and not any(
+                evidence_by_id[ref].get("state") == "known" for ref in refs
+            ):
+                return False
+            observation = item.get("observation")
+            if not isinstance(observation, Mapping) or not observation:
+                return False
+            if not str(item.get("explanation") or "").strip():
+                return False
+            expected_scoreable = (
+                role == "directional"
+                and state == "known"
+                and vote in {"bullish", "bearish"}
+            )
+            if item.get("scoreable") is not expected_scoreable:
+                return False
+            strength = item.get("strength")
+            if expected_scoreable:
+                _probability(
+                    strength,
+                    field=f"subcalculator {calculator_id} strength",
+                    required=True,
+                )
+            elif strength is not None:
+                _probability(
+                    strength,
+                    field=f"subcalculator {calculator_id} strength",
+                    required=False,
+                )
             raw = dict(item)
             supplied_calculator_digest = str(raw.pop("calculator_digest", ""))
             if not supplied_calculator_digest or supplied_calculator_digest != _digest(raw):
