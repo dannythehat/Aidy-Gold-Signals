@@ -38,6 +38,7 @@ XAU_LOOKBACK_MINUTES = 61
 XAU_OUTCOME_MINUTES = 15
 FREE_CREDIT_PHASE_A_CAP_USD = Decimal("1.00")
 DATABENTO_SYMBOLOGY_URL = "https://hist.databento.com/v0/symbology.resolve"
+PHASE_A_STUDY_VERSION = "aidy_build17_genuine_phasea_holdout_v1"
 
 
 def _anchors(start: datetime, count: int) -> list[datetime]:
@@ -399,7 +400,7 @@ def main() -> int:
 
     result = {
         "ok": True,
-        "evidence_version": "aidy_build17_genuine_phasea_holdout_v1",
+        "evidence_version": PHASE_A_STUDY_VERSION,
         "source_provider": "Databento",
         "source_dataset": DATABENTO_DATASET,
         "source_schema": "tbbo",
