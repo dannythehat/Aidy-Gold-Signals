@@ -1,0 +1,76 @@
+name: AIDY Cycle Learning Followup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ops-cycle-learning-followup-20260921.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_R2_BUCKET_NAME: aidy-memory-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build live config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python scripts/build_cloudflare_live_config.py
+      - name: Audit recent cycle learning
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.research.live.jsonc             --command "
+              SELECT
+                v.window_start_utc,
+                v.decided_at_utc,
+                v.observed_state,
+                v.view_direction,
+                v.view_confidence,
+                v.cycle_signature,
+                v.reasoning_summary,
+                v.toolbox_used_json,
+                v.analogue_summary_json,
+                (
+                  SELECT json_group_array(json_object(
+                    'surface', json_extract(j.value,'$.surface'),
+                    'vote', json_extract(j.value,'$.vote'),
+                    'weight', json_extract(j.value,'$.weight')
+                  ))
+                  FROM json_each(v.supporting_reasons_json) j
+                ) AS supporting,
+                (
+                  SELECT json_group_array(json_object(
+                    'surface', json_extract(j.value,'$.surface'),
+                    'vote', json_extract(j.value,'$.vote'),
+                    'weight', json_extract(j.value,'$.weight')
+                  ))
+                  FROM json_each(v.contradicting_reasons_json) j
+                ) AS contradicting,
+                o.resolved_at_utc,
+                o.realised_direction,
+                o.return_bps,
+                o.exact_direction_correct
+              FROM aidy_gold_cycle_views v
+              LEFT JOIN aidy_gold_cycle_outcomes o ON o.cycle_view_id=v.cycle_view_id
+              ORDER BY v.window_start_utc DESC
+              LIMIT 5;
+            "
