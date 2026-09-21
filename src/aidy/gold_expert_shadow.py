@@ -60,13 +60,13 @@ from aidy.gold_liquidity_reclaim_expert import (
     LIQUIDITY_RECLAIM_GATE_ID,
     build_liquidity_reclaim_expert,
 )
-from aidy.gold_m15_price_structure_expert import (
-    M15_GATE_ID,
-    build_m15_price_structure_expert,
-)
 from aidy.gold_m5_price_structure_expert import (
     M5_GATE_ID,
     build_m5_price_structure_expert,
+)
+from aidy.gold_m15_price_structure_expert import (
+    M15_GATE_ID,
+    build_m15_price_structure_expert,
 )
 from aidy.gold_macro_event_expert import (
     MACRO_EVENT_EXPERT_VERSION,
