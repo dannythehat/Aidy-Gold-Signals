@@ -5,17 +5,22 @@ Updated: 2026-09-21
 This file is the repo-level handoff entry point for the live AIDY Gold-learning system.
 
 
-## Build 1 — Environment Contract v3 candidate
+## Build 1 — Environment Contract v3 COMPLETE
 
-Build 1 of the environment-aware expert-gate programme is implemented on PR #198.
+Build 1 of the environment-aware expert-gate programme is complete and production-verified.
 
-Candidate contract: `aidy_gold_cycle_environment_v3`.
+Live contract: `aidy_gold_cycle_environment_v3`.
+
+Merged implementation/verification commits:
+- `2b42c3484254a7fd50508f8a2e201d6d652c353e` — Environment Contract v3;
+- `968909df73eada5bc9603ea45894395b54ca2c9b` — deploy-gate coverage;
+- `3cab838f7f7308bbcd8827220ff68a64ea3352b9` — live v3 verification hardening.
 
 Build 1 changes the environment spine only. It adds a canonical dimension registry, a factorised global environment, explicit data-quality state, 15-minute UTC clock buckets, weekend/pre/post-weekend state, explicit PIT/hindsight rejection, factor-specific keys and a compact global-core key. It deliberately removes the old monolithic `full_environment` scope so later expert gates can use smaller specialist mini-environments without fragmenting learning into near-unique combinations.
 
 Build 1 does **not** upgrade M5/M15/H1/H4/D1 decision logic. Those expert-gate builds come later after the shared contract and scoring foundations are accepted.
 
-Engineering acceptance on the candidate branch: semantic-change gate PASS; static checks PASS; focused market-data tests PASS; full repository regression PASS after fixture/compatibility corrections. Production verification is still required before this section can be called live.
+Engineering acceptance: semantic-change gate PASS; static checks PASS; focused market-data tests PASS; full repository regression PASS (1346 tests). Production deployment and live D1 verification PASS.
 
 ## Read first
 
@@ -36,7 +41,7 @@ That document explains:
 ## Current live environment brain
 
 The live cycle-start environment contract is:
-`aidy_gold_cycle_environment_v2`
+`aidy_gold_cycle_environment_v3`
 
 AIDY freezes the factual market environment before each target 15-minute window and stores:
 - session + session phase;
@@ -87,27 +92,30 @@ specific environment scopes are trusted.
 
 ## Live proof
 
-Final environment-v2 audit observed a live cycle for:
-`2026-09-21T05:45:00+00:00`
+Build 1 production deployment run `35576676324` completed successfully.
 
-The frozen environment showed:
-- environment version: `aidy_gold_cycle_environment_v2`;
-- session: Asia;
-- session phase: late >240m;
-- nearest reference: `asia_opening_30m_low`;
-- Gold below that reference;
-- distance band: 3-8 bps;
-- prior-day zone: lower-middle;
-- liquidity signature: low-side reclaim;
-- H1 bearish;
-- H4 bullish;
-- 4 known cross-market series;
-- 34 toolbox items considered;
-- 13 environment scopes;
+Worker version:
+`a20dcfe9-cd46-40c2-aef5-5d6c524cc6c1`
+
+A real stored Gold cycle for `2026-09-21T08:15:00+00:00`, frozen at
+`2026-09-21T08:10:56.620000+00:00`, proved:
+
+- environment version: `aidy_gold_cycle_environment_v3`;
+- environment key: `envcore_dbc84cde1e97205580e27172f2e1a756`;
+- environment schema: `aidy_gold_environment_contract_schema_v1`;
+- registered environment dimensions: 34;
+- monolithic full-environment key used: 0;
+- legacy `full_environment` scopes: 0;
+- toolbox items considered: 34;
+- toolbox trace count: 34;
+- environment toolbox coverage: 34;
+- missing readable tool states: 0;
+- missing score contexts: 0;
 - future-values used: 0;
 - live-money authority: 0.
 
-Cycle-sync health was also live and `status=ok`.
+The minute capture cron remained present, capture remained enabled, market source remained
+Twelve Data/public-independent, and formal-forward remained OFF.
 
 ## Permanent boundaries
 
