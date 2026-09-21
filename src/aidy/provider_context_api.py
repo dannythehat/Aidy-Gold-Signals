@@ -325,7 +325,7 @@ async def _context_for_snapshot(d1: Any, *, snapshot: Mapping[str, Any]) -> dict
         )
     except (AttributeError, RuntimeError, TypeError, ValueError):
         gold_state["cycle_memory"] = {
-            "memory_version": "aidy_gold_cycle_memory_v2",
+            "memory_version": "aidy_gold_cycle_memory_v3",
             "state": "unavailable",
             "reason": "cycle_memory_not_available_at_context_read",
             "research_only": True,

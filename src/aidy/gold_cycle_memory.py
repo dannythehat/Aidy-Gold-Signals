@@ -30,7 +30,7 @@ from aidy.gold_state_engine import verify_gold_state_engine
 from aidy.gold_toolbox_registry import verify_gold_toolbox_manifest
 from aidy.private_forward_context import build_private_forward_decision_inputs
 
-GOLD_CYCLE_MEMORY_VERSION = "aidy_gold_cycle_memory_v2"
+GOLD_CYCLE_MEMORY_VERSION = "aidy_gold_cycle_memory_v3"
 GOLD_CYCLE_VIEW_VERSION = "aidy_gold_cycle_view_v1"
 GOLD_CYCLE_OUTCOME_VERSION = "aidy_gold_cycle_outcome_v1"
 CYCLE_WINDOW_MINUTES = 15
@@ -874,6 +874,7 @@ class D1GoldCycleMemoryStore:
         result = await self._d1.prepare(
             """
             SELECT v.cycle_view_id,v.session_code,v.observed_state,v.evidence_json,
+                   v.decided_at_utc,v.window_start_utc,
                    o.resolved_at_utc,o.realised_direction,o.return_bps
             FROM aidy_gold_cycle_views v
             LEFT JOIN aidy_gold_cycle_environments e
@@ -923,9 +924,12 @@ class D1GoldCycleMemoryStore:
                 "scheduled_event_risk": {},
             }
             environment = build_environment_fingerprint(
+                as_of_utc=str(row.get("decided_at_utc")),
+                target_window_start_utc=str(row.get("window_start_utc")),
                 session_code=str(row.get("session_code") or "unknown"),
                 observed_state=str(row.get("observed_state") or "unknown"),
                 gold_state=legacy_gold_state,
+                semantic_context=None,
                 regime={},
             )
             considered = evidence.get("toolbox_considered")
@@ -1019,9 +1023,12 @@ class D1GoldCycleMemoryStore:
         regime = inputs.get("regime")
         regime = regime if isinstance(regime, Mapping) else {}
         environment = build_environment_fingerprint(
+            as_of_utc=now,
+            target_window_start_utc=window_start,
             session_code=str(snapshot.get("session_code") or "unknown"),
             observed_state=observed_state,
             gold_state=gold_state,
+            semantic_context=context,
             regime=regime,
         )
         raw_reasons = _build_directional_reasons(
@@ -1267,6 +1274,7 @@ class D1GoldCycleMemoryStore:
         correct = sum(int(row.get("exact_direction_correct") or 0) for row in scored)
         latest = rows[0] if rows else None
         latest_marker_profiles: list[dict[str, Any]] = []
+        latest_environment: dict[str, Any] | None = None
         scorebook_count = 0
         if latest is not None:
             marker_result = await self._d1.prepare(
@@ -1283,6 +1291,40 @@ class D1GoldCycleMemoryStore:
                 """
             ).bind(str(latest["window_start_utc"])).all()
             latest_marker_profiles = _results(marker_result)
+            environment_row = _row(
+                await self._d1.prepare(
+                    """
+                    SELECT e.environment_key,e.environment_version,e.environment_json
+                    FROM aidy_gold_cycle_environments e
+                    JOIN aidy_gold_cycle_views v
+                      ON v.cycle_view_id=e.cycle_view_id
+                    WHERE v.window_start_utc=?
+                    LIMIT 1
+                    """
+                ).bind(str(latest["window_start_utc"])).first()
+            )
+            if environment_row is not None:
+                try:
+                    stored_environment = json.loads(
+                        str(environment_row.get("environment_json") or "{}")
+                    )
+                except json.JSONDecodeError:
+                    stored_environment = {}
+                if isinstance(stored_environment, Mapping):
+                    latest_environment = {
+                        "environment_key": str(
+                            environment_row.get("environment_key") or ""
+                        ),
+                        "environment_version": str(
+                            environment_row.get("environment_version") or ""
+                        ),
+                        "learning_dimensions": dict(
+                            stored_environment.get("learning_dimensions") or {}
+                        ),
+                        "exact_facts": dict(
+                            stored_environment.get("exact_facts") or {}
+                        ),
+                    }
         score_row = _row(
             await self._d1.prepare(
                 """
@@ -1322,6 +1364,7 @@ class D1GoldCycleMemoryStore:
                 "version": GOLD_MARKER_BRAIN_VERSION,
                 "context_scorebook_rows": scorebook_count,
                 "latest_marker_profiles": latest_marker_profiles,
+                "current_environment": latest_environment,
                 "impact_score_range": [-2, 2],
                 "large_move_threshold_bps": "5.000000",
                 "research_only": True,

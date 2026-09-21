@@ -15,6 +15,7 @@ on:
       - "src/aidy/gold_state_engine.py"
       - "src/aidy/gold_movement_investigator.py"
       - "src/aidy/gold_movement_memory.py"
+      - "src/aidy/gold_cycle_environment.py"
       - "src/aidy/gold_cycle_memory.py"
       - "src/aidy/gold_marker_brain.py"
       - "src/aidy/gold_toolbox_registry.py"
@@ -29,6 +30,7 @@ on:
       - "migrations/d1/0023_gold_cycle_learning.sql"
       - "migrations/d1/0024_gold_contextual_marker_learning.sql"
       - "tests/test_gold_movement_memory.py"
+      - "tests/test_gold_cycle_environment.py"
       - "tests/test_gold_cycle_memory.py"
       - "tests/test_gold_marker_brain.py"
       - ".github/workflows/aidy-provider-research-read-deploy.yml"
@@ -76,7 +78,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_cycle_memory.py src/aidy/gold_toolbox_registry.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_cycle_environment.py src/aidy/gold_cycle_memory.py src/aidy/gold_marker_brain.py src/aidy/gold_toolbox_registry.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
           uv run python -m compileall -q src tests
           uv run pytest -q \
             tests/test_provider_market_api.py \
@@ -84,6 +86,7 @@ jobs:
             tests/test_gold_state_engine.py \
             tests/test_gold_movement_investigator.py \
             tests/test_gold_movement_memory.py \
+            tests/test_gold_cycle_environment.py \
             tests/test_gold_cycle_memory.py \
             tests/test_gold_marker_brain.py \
             tests/test_gold_toolbox_registry.py \
@@ -161,8 +164,9 @@ jobs:
           assert h.get('provider_gold_state_version') == 'aidy_provider_gold_state_v2', h
           assert h.get('gold_movement_investigator_version') == 'aidy_gold_movement_investigator_v1', h
           assert h.get('gold_movement_memory_version') == 'aidy_gold_movement_memory_v1', h
-          assert h.get('gold_cycle_memory_version') == 'aidy_gold_cycle_memory_v2', h
-          assert h.get('gold_marker_brain_version') == 'aidy_gold_contextual_marker_brain_v1', h
+          assert h.get('gold_cycle_memory_version') == 'aidy_gold_cycle_memory_v3', h
+          assert h.get('gold_cycle_environment_version') == 'aidy_gold_cycle_environment_v2', h
+          assert h.get('gold_marker_brain_version') == 'aidy_gold_contextual_marker_brain_v2', h
           assert h.get('gold_toolbox_manifest_version') == 'aidy_gold_toolbox_manifest_v1', h
           PY
             then ok=1; break; fi

@@ -17,8 +17,13 @@ from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
-GOLD_MARKER_BRAIN_VERSION = "aidy_gold_contextual_marker_brain_v1"
-ENVIRONMENT_VERSION = "aidy_gold_cycle_environment_v1"
+from aidy.gold_cycle_environment import (
+    GOLD_CYCLE_ENVIRONMENT_VERSION,
+    build_cycle_environment,
+)
+
+GOLD_MARKER_BRAIN_VERSION = "aidy_gold_contextual_marker_brain_v2"
+ENVIRONMENT_VERSION = GOLD_CYCLE_ENVIRONMENT_VERSION
 MARKER_SCORE_HORIZON_MINUTES = 15
 _MIN_MULTIPLIER = Decimal("0.500000")
 _MAX_MULTIPLIER = Decimal("1.500000")
@@ -55,179 +60,27 @@ def marker_id(*, surface: str, source_path: str) -> str:
     return "marker_" + _digest(identity)[:24]
 
 
-def _tf_direction(gold_state: Mapping[str, Any], timeframe: str) -> str:
-    structure = gold_state.get("market_structure")
-    structure = structure if isinstance(structure, Mapping) else {}
-    timeframes = structure.get("timeframes")
-    timeframes = timeframes if isinstance(timeframes, Mapping) else {}
-    frame = timeframes.get(timeframe)
-    frame = frame if isinstance(frame, Mapping) else {}
-    raw = str(frame.get("net_close_direction") or "unknown").lower()
-    return {
-        "up": "bullish",
-        "bullish": "bullish",
-        "down": "bearish",
-        "bearish": "bearish",
-        "flat": "neutral",
-        "neutral": "neutral",
-    }.get(raw, "unknown")
-
-
-def _movement_environment(gold_state: Mapping[str, Any]) -> dict[str, Any]:
-    move = gold_state.get("move_observation")
-    move = move if isinstance(move, Mapping) else {}
-    return {
-        "five_minute_distribution_state": str(
-            move.get("five_minute_distribution_state") or "unknown"
-        ),
-        "five_minute_range_state": str(move.get("five_minute_range_state") or "unknown"),
-        "m5_direction": _window_direction(move, "5m"),
-        "m15_direction": _window_direction(move, "15m"),
-        "m60_direction": _window_direction(move, "60m"),
-    }
-
-
-def _window_direction(move: Mapping[str, Any], horizon: str) -> str:
-    windows = move.get("windows")
-    windows = windows if isinstance(windows, Mapping) else {}
-    payload = windows.get(horizon)
-    payload = payload if isinstance(payload, Mapping) else {}
-    raw = str(payload.get("direction") or "unknown").lower()
-    return {
-        "up": "bullish",
-        "down": "bearish",
-        "flat": "neutral",
-    }.get(raw, raw if raw in {"bullish", "bearish", "neutral"} else "unknown")
-
-
-def _event_environment(gold_state: Mapping[str, Any]) -> dict[str, str]:
-    event = gold_state.get("scheduled_event_risk")
-    event = event if isinstance(event, Mapping) else {}
-    return {
-        "state": str(event.get("state") or "unknown"),
-        "timing_state": str(event.get("timing_state") or "unknown"),
-    }
-
-
-def _volatility_environment(gold_state: Mapping[str, Any]) -> dict[str, Any]:
-    volatility = gold_state.get("volatility")
-    volatility = volatility if isinstance(volatility, Mapping) else {}
-    jump = volatility.get("jump_continuous")
-    jump = jump if isinstance(jump, Mapping) else {}
-    rv = volatility.get("realized_volatility")
-    rv = rv if isinstance(rv, Mapping) else {}
-    gvz = volatility.get("gvz")
-    gvz = gvz if isinstance(gvz, Mapping) else {}
-    return {
-        "state": str(volatility.get("state") or "unknown"),
-        "jump_state": str(jump.get("state") or "unknown"),
-        "realized_volatility_state": str(rv.get("state") or "unknown"),
-        "gvz_state": str(gvz.get("state") or "unknown"),
-    }
-
-
-def _liquidity_environment(gold_state: Mapping[str, Any]) -> dict[str, Any]:
-    liquidity = gold_state.get("liquidity")
-    liquidity = liquidity if isinstance(liquidity, Mapping) else {}
-    proxies = liquidity.get("sweep_reclaim_proxies")
-    proxies = proxies if isinstance(proxies, list) else []
-    breakout = liquidity.get("prior_day_breakout")
-    breakout = breakout if isinstance(breakout, Mapping) else {}
-    return {
-        "proxy_count": len(proxies),
-        "prior_day_breakout_state": str(breakout.get("state") or "unknown"),
-    }
-
-
 def build_environment_fingerprint(
     *,
+    as_of_utc: Any,
+    target_window_start_utc: Any,
     session_code: str,
     observed_state: str,
     gold_state: Mapping[str, Any],
+    semantic_context: Mapping[str, Any] | None,
     regime: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    """Build a deterministic environment and several nested scoring scopes."""
+    """Compatibility wrapper around the canonical cycle-start environment contract."""
 
-    regime = regime if isinstance(regime, Mapping) else {}
-    movement = _movement_environment(gold_state)
-    volatility = _volatility_environment(gold_state)
-    liquidity = _liquidity_environment(gold_state)
-    event = _event_environment(gold_state)
-    h1 = _tf_direction(gold_state, "H1")
-    h4 = _tf_direction(gold_state, "H4")
-    d1 = _tf_direction(gold_state, "D1")
-    compound_regime = str(regime.get("compound_regime_key") or "unknown")
-
-    environment = {
-        "version": ENVIRONMENT_VERSION,
-        "session": session_code,
-        "observed_15m_state": observed_state,
-        "movement": movement,
-        "higher_timeframes": {"H1": h1, "H4": h4, "D1": d1},
-        "volatility": volatility,
-        "liquidity": liquidity,
-        "scheduled_event": event,
-        "compound_regime": compound_regime,
-    }
-    environment_key = "env_" + _digest(environment)[:32]
-
-    scope_payloads = [
-        ("global", {"global": "all"}),
-        ("session", {"session": session_code}),
-        (
-            "session_state",
-            {"session": session_code, "observed_15m_state": observed_state},
-        ),
-        (
-            "higher_timeframe",
-            {"H1": h1, "H4": h4, "D1": d1},
-        ),
-        (
-            "session_move_regime",
-            {
-                "session": session_code,
-                "distribution": movement["five_minute_distribution_state"],
-                "range": movement["five_minute_range_state"],
-            },
-        ),
-        (
-            "session_state_event",
-            {
-                "session": session_code,
-                "observed_15m_state": observed_state,
-                "event_timing": event["timing_state"],
-            },
-        ),
-        (
-            "full_environment",
-            {
-                "session": session_code,
-                "observed_15m_state": observed_state,
-                "movement": movement,
-                "higher_timeframes": {"H1": h1, "H4": h4, "D1": d1},
-                "volatility": volatility,
-                "liquidity": liquidity,
-                "scheduled_event": event,
-                "compound_regime": compound_regime,
-            },
-        ),
-    ]
-    scopes = [
-        {
-            "scope_type": scope_type,
-            "scope_key": f"{scope_type}_" + _digest(payload)[:28],
-            "payload": payload,
-        }
-        for scope_type, payload in scope_payloads
-    ]
-    return {
-        "environment_version": ENVIRONMENT_VERSION,
-        "environment_key": environment_key,
-        "environment": environment,
-        "scopes": scopes,
-        "research_only": True,
-        "live_money_execution_allowed": False,
-    }
+    return build_cycle_environment(
+        as_of_utc=as_of_utc,
+        target_window_start_utc=target_window_start_utc,
+        session_code=session_code,
+        observed_state=observed_state,
+        gold_state=gold_state,
+        semantic_context=semantic_context,
+        regime=regime,
+    )
 
 
 def toolbox_cycle_coverage(
@@ -298,9 +151,15 @@ def learning_multiplier(*, sample_n: int, net_score: int) -> Decimal:
 
 
 _SCOPE_MIN_SAMPLES: tuple[tuple[str, int], ...] = (
-    ("full_environment", 8),
+    ("full_environment", 10),
+    ("liquidity_location", 8),
+    ("location_structure", 8),
+    ("session_liquidity", 7),
     ("session_state_event", 7),
+    ("event_regime", 7),
+    ("volatility_move_regime", 6),
     ("session_move_regime", 6),
+    ("session_phase", 5),
     ("higher_timeframe", 5),
     ("session_state", 5),
     ("session", 4),

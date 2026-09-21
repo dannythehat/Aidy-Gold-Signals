@@ -51,24 +51,32 @@ def _gold_state() -> dict:
 
 def test_environment_fingerprint_is_contextual_and_multi_scope() -> None:
     env = build_environment_fingerprint(
+        as_of_utc="2026-09-21T07:25:00+00:00",
+        target_window_start_utc="2026-09-21T07:30:00+00:00",
         session_code="london",
         observed_state="bearish",
         gold_state=_gold_state(),
+        semantic_context={},
         regime={"compound_regime_key": "trend|normal"},
     )
-    assert env["environment_version"] == "aidy_gold_cycle_environment_v1"
-    assert env["environment"]["session"] == "london"
-    assert env["environment"]["observed_15m_state"] == "bearish"
-    assert env["environment"]["higher_timeframes"]["H4"] == "bullish"
-    assert env["environment"]["movement"]["five_minute_range_state"] == "range_expansion"
+    assert env["environment_version"] == "aidy_gold_cycle_environment_v2"
+    assert env["learning_dimensions"]["session"] == "london"
+    assert env["learning_dimensions"]["observed_15m_state"] == "bearish"
+    assert env["learning_dimensions"]["h4_direction"] == "bullish"
+    assert env["learning_dimensions"]["five_minute_range_state"] == "range_expansion"
     scope_types = {item["scope_type"] for item in env["scopes"]}
     assert {
         "global",
         "session",
         "session_state",
         "higher_timeframe",
+        "liquidity_location",
+        "session_liquidity",
+        "location_structure",
         "session_move_regime",
+        "volatility_move_regime",
         "session_state_event",
+        "event_regime",
         "full_environment",
     }.issubset(scope_types)
 
@@ -197,4 +205,4 @@ def test_toolbox_coverage_records_every_capability_even_when_not_scoreable() -> 
 
 
 def test_brain_version_is_explicit() -> None:
-    assert GOLD_MARKER_BRAIN_VERSION == "aidy_gold_contextual_marker_brain_v1"
+    assert GOLD_MARKER_BRAIN_VERSION == "aidy_gold_contextual_marker_brain_v2"
