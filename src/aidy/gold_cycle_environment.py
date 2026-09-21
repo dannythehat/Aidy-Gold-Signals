@@ -556,6 +556,7 @@ def build_cycle_environment(
             "liquidity_location",
             {
                 "liquidity": liquidity["proxy_side_signature"],
+                "liquidity_intensity": liquidity["intensity"],
                 "reference": learning_dimensions["nearest_reference"],
                 "reference_side": learning_dimensions["nearest_reference_side"],
                 "distance_band": learning_dimensions[
@@ -571,6 +572,7 @@ def build_cycle_environment(
                 "session": session_code,
                 "session_phase": session["active_session_phase"],
                 "liquidity": liquidity["proxy_side_signature"],
+                "liquidity_intensity": liquidity["intensity"],
                 "prior_day_breakout_state": liquidity[
                     "prior_day_breakout_state"
                 ],

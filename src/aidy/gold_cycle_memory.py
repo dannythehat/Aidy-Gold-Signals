@@ -383,8 +383,6 @@ def build_cycle_view_payload(
         ) or view_direction == "neutral":
             contradicting.append(item)
 
-    capabilities = toolbox_manifest.get("capabilities")
-    capabilities = capabilities if isinstance(capabilities, list) else []
     tool_reasoning_trace = toolbox_cycle_coverage(
         toolbox_manifest=toolbox_manifest,
         marker_reasons=reasons,
