@@ -20,6 +20,54 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+## Build 21 — Environment-Aware Gate Selector COMPLETE
+
+Build 21 adds `aidy_gold_environment_gate_selector_v1`.
+
+What is built and proven:
+- consumes frozen Build-2 packets plus Build-3 trust envelopes rather than creating a parallel trust system;
+- uses the exact current environment and exact gate as-of;
+- respects Build-3 exact/reduced/global trust-scope fallback;
+- applies Build-3 hierarchical shrinkage and sample confidence;
+- applies an explicit scope-backoff multiplier;
+- applies historical calibration quality from records observed before the current cycle only;
+- applies recent drift state, with recently-weaker gates reduced and no recency boost above 1;
+- applies Build-20 dependency multipliers at gate level;
+- small-N star performers remain reduced;
+- strong large-N contextual performers can rise to high trust;
+- missing/unknown gates get exactly zero authority;
+- weak gates remain observable with a low non-zero observation weight;
+- context-only gates can remain observable but never receive directional authority;
+- selector input strips full expert results to pre-outcome packet + trust data;
+- current outcome injection fails closed;
+- deterministic replay is invariant to gate-input ordering.
+
+Acceptance evidence:
+- exact tested PR #231 head: `a5f4892909d5eeaffb7143a2d579c0e12eea528d`;
+- implementation merge: `49632b75c773b207f857e23387e4f7ec5428fe52`;
+- Build 21 workflow run: `35613740266` — PASS;
+- Evidence Semantic Change Gate: `35613740343` — PASS;
+- static/compile checks: PASS;
+- focused suite: 84 passed;
+- dedicated selector gate: 6 passed;
+- full repository regression: 1622 passed;
+- small-N suppression: PASS;
+- strong large-N contextual promotion: PASS;
+- unavailable gate zero authority: PASS;
+- weak gate retained for observation: PASS;
+- recently-weaker drift reduction: PASS;
+- historical calibration adjustment: PASS;
+- future calibration exclusion: PASS;
+- Build-20 dependency penalty propagation: PASS;
+- independent liquidity/macro/structure preservation: PASS;
+- context-only zero directional authority: PASS;
+- current outcome injection rejection: PASS;
+- deterministic replay: PASS.
+
+Build 21 selects attention only. It does not create the final Gold direction, change Super Signals execution/provider rules, change owner 1% risk, create formal-forward evidence or grant live-money authority.
+
+**Next:** Build 22 — AIDY Meta Direction Aggregator & Explanation. It will combine the selected gate set into one traceable bullish/bearish/neutral/abstain research view, with contradictions, environment, trust/N, dependency adjustment and a readable why.
+
 ## Build 20 — Evidence Dependency & Double-Counting Engine COMPLETE
 
 Build 20 adds `aidy_gold_evidence_dependency_engine_v1`.
