@@ -14,6 +14,21 @@ Updated: 2026-09-21
 
 
 
+
+## Build 12 COMPLETE — Liquidity / Reclaim Expert
+
+Build 12 adds `aidy_gold_liquidity_reclaim_expert_v1`.
+
+The expert measures OHLC sweep/reclaim behaviour around named reference levels from Build 11. Every event carries level identity, penetration depth, reclaim speed, confirmation closes, retest/retest-hold state, rejection geometry and competing-level distance. Only confirmed or retest-held reclaims can emit a directional proxy vote; no-sweep, unconfirmed penetration and failed reclaim cases remain neutral.
+
+The language boundary is explicit: these are OHLC price-action proxies, not genuine order flow. Any retrospective genuine GC-flow research rows are stored separately with `used_in_ohlc_proxy_calculation=false` and `used_in_expert_conclusion=false`.
+
+Engineering acceptance on PR #215 candidate: semantic gate PASS, static checks PASS, focused workflow suite 235 passed, full repository regression 1487 passed. Synthetic sweep/no-sweep/reclaim/failure, competing-level distance, session/volatility trust separation, fake-order-flow language protection, separate GC-flow storage, gapped-M1 fail-closed, PIT safety and chronological freeze all pass.
+
+Build 12 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 13 — Volatility / Jump Expert. It will classify clock-normalised volatility, compression/expansion transitions, continuous versus jump state, vol-of-vol and optional IV/RV context when qualified, without forcing direction.
+
 ## Build 11 COMPLETE — Price Location Expert
 
 Build 11 adds `aidy_gold_price_location_expert_v1`.
