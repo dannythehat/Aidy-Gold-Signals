@@ -486,7 +486,7 @@ def test_build8_dependency_and_correlation_metadata_are_explicit() -> None:
     assert metadata["h4_trend_quality"]["correlation_group"] == "h4_path_structure"
     assert metadata["h4_acceleration"]["dependency_family"] == "momentum"
     assert metadata["h4_acceleration"]["correlation_group"] == "h4_momentum_transition"
-    assert metadata["h4_lower_timeframe_conflict"]["dependency_family"] == "cross_timeframe"
+    assert metadata["h4_lower_timeframe_conflict"]["dependency_family"] == "cross_market"
     assert (
         metadata["h4_lower_timeframe_conflict"]["correlation_group"]
         == "h4_lower_timeframe_conflict"
