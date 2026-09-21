@@ -113,9 +113,13 @@ def test_learning_multiplier_is_bounded_and_sample_aware() -> None:
 
 def test_score_profile_prefers_specific_only_after_minimum_sample() -> None:
     scopes = [
-        {"scope_type": "global", "scope_key": "global_x"},
-        {"scope_type": "session", "scope_key": "session_x"},
-        {"scope_type": "full_environment", "scope_key": "full_x"},
+        {"scope_type": "global", "scope_key": "global_x", "payload": {"global": "all"}},
+        {"scope_type": "session", "scope_key": "session_x", "payload": {"session": "asia"}},
+        {
+            "scope_type": "full_environment",
+            "scope_key": "full_x",
+            "payload": {"session": "asia", "liquidity_intensity": "low"},
+        },
     ]
     profile = select_score_profile(
         score_rows=[
@@ -141,6 +145,8 @@ def test_score_profile_prefers_specific_only_after_minimum_sample() -> None:
         scopes=scopes,
     )
     assert profile["selected_scope_type"] == "global"
+    assert profile["selected_scope_label"] == "global=all"
+    assert profile["selected_scope_payload"] == {"global": "all"}
     assert profile["sample_n"] == 10
 
 
