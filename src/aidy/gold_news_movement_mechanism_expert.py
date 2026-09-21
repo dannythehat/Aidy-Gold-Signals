@@ -679,7 +679,7 @@ def build_news_movement_mechanism_expert(
             "source": NEWS_MOVEMENT_MECHANISM_EXPERT_VERSION,
             "path": "news_movement_mechanism.resolution",
             "observed_at_utc": as_of,
-            "state": "known" if mechanism["state"] != "unknown" else "unknown",
+            "state": "known",
             "value": {
                 key: mechanism[key]
                 for key in (
