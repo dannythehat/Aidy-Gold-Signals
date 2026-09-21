@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS aidy_gold_cycle_marker_results (
     resolved_at_utc TEXT NOT NULL,
     realised_direction TEXT NOT NULL
         CHECK (realised_direction IN ('bullish','bearish','neutral','unknown')),
-    marker_score INTEGER NOT NULL CHECK (marker_score IN (-1,0,1)),
+    marker_score INTEGER NOT NULL CHECK (marker_score IN (-2,-1,0,1,2)),
     marker_correct INTEGER CHECK (marker_correct IS NULL OR marker_correct IN (0,1)),
     result_digest TEXT NOT NULL,
     research_only INTEGER NOT NULL DEFAULT 1 CHECK (research_only = 1),
