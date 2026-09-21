@@ -20,15 +20,15 @@ from aidy.gold_movement_investigator import (
     build_gold_movement_investigation,
     verify_gold_movement_investigation,
 )
-from aidy.gold_toolbox_registry import (
-    GOLD_TOOLBOX_MANIFEST_VERSION,
-    build_gold_toolbox_manifest,
-    verify_gold_toolbox_manifest,
-)
 from aidy.gold_state_engine import (
     GOLD_STATE_ENGINE_VERSION,
     build_gold_state_engine,
     verify_gold_state_engine,
+)
+from aidy.gold_toolbox_registry import (
+    GOLD_TOOLBOX_MANIFEST_VERSION,
+    build_gold_toolbox_manifest,
+    verify_gold_toolbox_manifest,
 )
 from aidy.historical_case_semantics import build_semantic_pit_case_input
 from aidy.macro_event_intelligence import EVENT_INTELLIGENCE_VERSION
