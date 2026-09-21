@@ -5,6 +5,7 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN, localcontext
 from hashlib import sha256
+from itertools import pairwise
 from typing import Any
 
 from aidy.feature_engine import Candle, normalize_candles
@@ -120,7 +121,7 @@ def _timeframe_state(rows: list[Candle]) -> dict[str, Any]:
     higher = 0
     lower = 0
     flat = 0
-    for left, right in zip(sample, sample[1:], strict=False):
+    for left, right in pairwise(sample):
         if right.close > left.close:
             higher += 1
         elif right.close < left.close:
@@ -197,7 +198,7 @@ def _range_position(*, mid: Decimal, low: Any, high: Any) -> str | None:
 def _nearest_increment(value: Decimal, increment: Decimal) -> Decimal:
     with localcontext() as ctx:
         ctx.prec = 34
-        units = (value / increment).quantize(Decimal("1"), rounding=ROUND_HALF_EVEN)
+        units = (value / increment).quantize(Decimal(1), rounding=ROUND_HALF_EVEN)
         return units * increment
 
 
@@ -304,7 +305,7 @@ def _location(
                 ranges[f"{session}_opening_{window}"] = pos
 
     round_refs: dict[str, Any] = {}
-    for label, increment in (("nearest_10_usd", Decimal("10")), ("nearest_50_usd", Decimal("50"))):
+    for label, increment in (("nearest_10_usd", Decimal(10)), ("nearest_50_usd", Decimal(50))):
         level = _nearest_increment(mid, increment)
         round_refs[label] = {
             "level": _fmt(level),

@@ -15,15 +15,15 @@ from aidy.cme_contract_intelligence import (
 from aidy.context_composer_v2 import digest
 from aidy.context_packet import compute_context_hash
 from aidy.evidence_grading_v2 import build_evidence_report_v2
-from aidy.gold_state_engine import (
-    GOLD_STATE_ENGINE_VERSION,
-    build_gold_state_engine,
-    verify_gold_state_engine,
-)
 from aidy.gold_movement_investigator import (
     GOLD_MOVEMENT_INVESTIGATOR_VERSION,
     build_gold_movement_investigation,
     verify_gold_movement_investigation,
+)
+from aidy.gold_state_engine import (
+    GOLD_STATE_ENGINE_VERSION,
+    build_gold_state_engine,
+    verify_gold_state_engine,
 )
 from aidy.historical_case_semantics import build_semantic_pit_case_input
 from aidy.macro_event_intelligence import EVENT_INTELLIGENCE_VERSION
