@@ -1,0 +1,137 @@
+name: AIDY Build 24 Live D1 Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/build24-live-d1-diagnostic.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build D1 diagnostic config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          json.dump(cfg,open('wrangler.build24.diag.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Query exact Build 24 cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          CYCLE='aidy_cycle_260cafe072061252c0799260fba6642f'
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.build24.diag.jsonc \
+            --command "
+              SELECT
+                s.cycle_view_id,
+                s.decided_at_utc AS shadow_decided_at,
+                s.expected_gate_n,
+                s.known_gate_n,
+                s.explicit_unknown_gate_n,
+                v.window_start_utc,
+                v.window_end_utc,
+                v.view_direction AS legacy_view_direction,
+                o.resolved_at_utc AS outcome_resolved_at,
+                o.realised_direction AS outcome_direction,
+                o.return_bps AS outcome_return_bps,
+                m.resolved_at_utc AS meta_resolved_at,
+                m.frozen_direction,
+                m.realised_direction,
+                m.realised_return_bps,
+                m.score AS meta_score,
+                m.correct AS meta_correct,
+                (SELECT COUNT(*) FROM aidy_gold_expert_gate_snapshots g
+                 WHERE g.cycle_view_id=s.cycle_view_id) AS gate_snapshot_n,
+                (SELECT COUNT(*) FROM aidy_gold_expert_subcalculator_snapshots sc
+                 WHERE sc.cycle_view_id=s.cycle_view_id) AS subcalc_snapshot_n,
+                (SELECT COUNT(DISTINCT l.gate_id)
+                 FROM aidy_gold_expert_outcome_ledger l
+                 JOIN aidy_gold_expert_gate_snapshots g2
+                   ON g2.packet_digest=l.packet_digest
+                 WHERE g2.cycle_view_id=s.cycle_view_id) AS ledger_gate_n,
+                (SELECT COUNT(*) FROM aidy_gold_expert_context_scores) AS scorebook_rows,
+                (SELECT status FROM aidy_gold_expert_shadow_sync_health
+                 WHERE singleton_id=1) AS sync_status,
+                (SELECT error_type FROM aidy_gold_expert_shadow_sync_health
+                 WHERE singleton_id=1) AS sync_error_type,
+                (SELECT error_message FROM aidy_gold_expert_shadow_sync_health
+                 WHERE singleton_id=1) AS sync_error_message,
+                (SELECT observed_at_utc FROM aidy_gold_expert_shadow_sync_health
+                 WHERE singleton_id=1) AS sync_observed_at
+              FROM aidy_gold_expert_shadow_cycles s
+              LEFT JOIN aidy_gold_cycle_views v
+                ON v.cycle_view_id=s.cycle_view_id
+              LEFT JOIN aidy_gold_cycle_outcomes o
+                ON o.cycle_view_id=s.cycle_view_id
+              LEFT JOIN aidy_gold_meta_view_results m
+                ON m.cycle_view_id=s.cycle_view_id
+              WHERE s.cycle_view_id='${CYCLE}'
+              LIMIT 1;
+            " > /tmp/cycle.json
+
+          cat /tmp/cycle.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/cycle.json',encoding='utf-8'))
+          rows=(payload[0] or {}).get('results') or []
+          assert rows, payload
+          print('BUILD24_DIAGNOSTIC='+json.dumps(rows[0],sort_keys=True))
+          PY
+
+      - name: Query gate-by-gate frozen and scored state
+        shell: bash
+        run: |
+          set -euo pipefail
+          CYCLE='aidy_cycle_260cafe072061252c0799260fba6642f'
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.build24.diag.jsonc \
+            --command "
+              SELECT
+                g.gate_id,
+                g.gate_mode,
+                g.conclusion,
+                json_extract(g.packet_json,'$.internal_conviction') AS internal_conviction,
+                g.availability_state,
+                COUNT(DISTINCT l.result_id) AS result_rows,
+                MAX(l.score) AS latest_score,
+                MAX(l.correct) AS latest_correct,
+                MAX(l.realised_direction) AS realised_direction,
+                MAX(l.realised_return_bps) AS realised_return_bps
+              FROM aidy_gold_expert_gate_snapshots g
+              LEFT JOIN aidy_gold_expert_outcome_ledger l
+                ON l.packet_digest=g.packet_digest
+              WHERE g.cycle_view_id='${CYCLE}'
+              GROUP BY g.gate_id,g.gate_mode,g.conclusion,json_extract(g.packet_json,'$.internal_conviction'),g.availability_state
+              ORDER BY g.gate_id;
+            " > /tmp/gates.json
+          cat /tmp/gates.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/gates.json',encoding='utf-8'))
+          rows=(payload[0] or {}).get('results') or []
+          print('BUILD24_GATES='+json.dumps(rows,sort_keys=True))
+          PY

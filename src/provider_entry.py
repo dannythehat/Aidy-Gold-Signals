@@ -257,7 +257,7 @@ async def _sync_gold_expert_shadow_best_effort(env: object) -> None:
                     cycles_scored,latest_cycle_view_id,latest_meta_direction,
                     expected_gate_n,known_gate_n,explicit_unknown_gate_n,
                     error_type,error_message
-                ) VALUES (1,?,'ok',?,?,?,?,?,?,?,?,NULL,NULL)
+                ) VALUES (1,?,'ok',?,?,?,?,?,?,?,NULL,NULL)
                 ON CONFLICT(singleton_id) DO UPDATE SET
                     observed_at_utc=excluded.observed_at_utc,
                     status='ok',

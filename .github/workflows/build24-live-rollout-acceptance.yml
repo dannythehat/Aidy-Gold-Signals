@@ -1,0 +1,253 @@
+name: AIDY Build 24 Live Rollout Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/build24-live-rollout-acceptance.yml"
+
+concurrency:
+  group: aidy-worker-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AIDY_TEST_WORKER_URL: https://aidy-signals-test.dannythehat2.workers.dev
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+
+jobs:
+  live-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Build safe live config
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          cfg['r2_buckets'][0]['bucket_name']=os.environ['AIDY_R2_BUCKET_NAME']
+          cfg['vars']['AIDY_CAPTURE_ENABLED']='true'
+          cfg['vars']['AIDY_MARKET_DATA_SOURCE']='twelve_data'
+          cfg['vars']['AIDY_MARKET_DATA_OWNERSHIP']='public_independent'
+          cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
+          cfg['vars']['AIDY_TWELVE_INTRADAY_SELF_HEAL_ENABLED']='true'
+          cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
+          assert cfg['triggers']['crons']==['* * * * *']
+          assert cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']=='false'
+          json.dump(cfg,open('wrangler.build24.live.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Apply migrations and prove Build 24 schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
+            --config wrangler.build24.live.jsonc
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.build24.live.jsonc \
+            --command "
+              SELECT COUNT(*) AS n
+              FROM sqlite_master
+              WHERE type='table' AND name IN (
+                'aidy_gold_expert_shadow_runtime_state',
+                'aidy_gold_expert_shadow_cycles',
+                'aidy_gold_expert_gate_snapshots',
+                'aidy_gold_expert_subcalculator_snapshots',
+                'aidy_gold_meta_view_results',
+                'aidy_gold_expert_shadow_sync_health'
+              );
+            " > /tmp/schema.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/schema.json',encoding='utf-8'))
+          rows=(payload[0] or {}).get('results') or []
+          assert rows and int(rows[0].get('n') or 0)==6, payload
+          print('build24_schema=true')
+          PY
+
+      - name: Deploy Build 24 Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp wrangler.build24.live.jsonc wrangler.jsonc
+          uv run pywrangler deploy
+
+      - name: Prove Worker health and safety boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in $(seq 1 30); do
+            curl -fsS -H 'Cache-Control: no-cache' \
+              "${AIDY_TEST_WORKER_URL}/health?build24_live=${GITHUB_SHA}-${attempt}" \
+              > /tmp/health.json || true
+            if python - <<'PY'
+          import json
+          h=json.load(open('/tmp/health.json',encoding='utf-8'))
+          assert h.get('capture_enabled') is True, h
+          assert h.get('formal_forward_enabled') is False, h
+          assert h.get('market_data_source')=='twelve_data', h
+          assert h.get('gold_expert_shadow_version')=='aidy_gold_expert_shadow_v1', h
+          assert h.get('gold_expert_scorecard_version')=='aidy_gold_expert_scorecard_v1', h
+          PY
+            then
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          test "$ok" = "1"
+
+      - name: Prove genuine prospective shadow cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          cycle_id=""
+          for attempt in $(seq 1 42); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.build24.live.jsonc \
+              --command "
+                SELECT
+                  r.activated_at_utc,
+                  s.cycle_view_id,
+                  s.decided_at_utc,
+                  s.expected_gate_n,
+                  s.known_gate_n,
+                  s.explicit_unknown_gate_n,
+                  s.future_values_used,
+                  s.formal_forward_authority,
+                  s.live_money_execution_allowed,
+                  (SELECT COUNT(*) FROM aidy_gold_expert_gate_snapshots g
+                   WHERE g.cycle_view_id=s.cycle_view_id) AS gate_n,
+                  (SELECT COUNT(*) FROM aidy_gold_expert_subcalculator_snapshots sc
+                   WHERE sc.cycle_view_id=s.cycle_view_id) AS subcalc_n
+                FROM aidy_gold_expert_shadow_runtime_state r
+                LEFT JOIN aidy_gold_expert_shadow_cycles s
+                  ON s.decided_at_utc>=r.activated_at_utc
+                WHERE r.singleton_id=1
+                ORDER BY s.decided_at_utc DESC
+                LIMIT 1;
+              " > /tmp/cycle.json
+            cycle_id="$(python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/cycle.json',encoding='utf-8'))
+          rows=(payload[0] or {}).get('results') or []
+          if not rows or not rows[0].get('cycle_view_id'):
+              print('')
+              raise SystemExit
+          row=rows[0]
+          assert row['decided_at_utc'] >= row['activated_at_utc'], row
+          assert int(row.get('expected_gate_n') or 0)==15, row
+          assert int(row.get('gate_n') or 0)==15, row
+          assert int(row.get('known_gate_n') or 0)+int(row.get('explicit_unknown_gate_n') or 0)==15, row
+          assert int(row.get('subcalc_n') or 0)>=15, row
+          assert int(row.get('future_values_used') or 0)==0, row
+          assert int(row.get('formal_forward_authority') or 0)==0, row
+          assert int(row.get('live_money_execution_allowed') or 0)==0, row
+          print(row['cycle_view_id'])
+          PY
+            )"
+            if [ -n "$cycle_id" ]; then
+              echo "BUILD24_CYCLE_ID=$cycle_id" >> "$GITHUB_ENV"
+              echo "build24_prospective_cycle=true cycle=$cycle_id"
+              break
+            fi
+            sleep 20
+          done
+          test -n "$cycle_id"
+
+      - name: Prove delayed outcome scoring and permanent scorecard
+        shell: bash
+        run: |
+          set -euo pipefail
+          scored=0
+          for attempt in $(seq 1 70); do
+            npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+              --config wrangler.build24.live.jsonc \
+              --command "
+                SELECT
+                  s.cycle_view_id,
+                  m.resolved_at_utc,
+                  m.frozen_direction,
+                  m.realised_direction,
+                  m.realised_return_bps,
+                  m.score,
+                  m.correct,
+                  (SELECT COUNT(DISTINCT l.gate_id)
+                   FROM aidy_gold_expert_outcome_ledger l
+                   JOIN aidy_gold_expert_gate_snapshots g
+                     ON g.packet_digest=l.packet_digest
+                   WHERE g.cycle_view_id=s.cycle_view_id) AS scored_gate_n,
+                  (SELECT COUNT(*) FROM aidy_gold_expert_context_scores) AS scorebook_rows,
+                  (SELECT status FROM aidy_gold_expert_shadow_sync_health
+                   WHERE singleton_id=1) AS sync_status
+                FROM aidy_gold_expert_shadow_cycles s
+                LEFT JOIN aidy_gold_meta_view_results m
+                  ON m.cycle_view_id=s.cycle_view_id
+                WHERE s.cycle_view_id='${BUILD24_CYCLE_ID}'
+                LIMIT 1;
+              " > /tmp/score.json
+            if python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/score.json',encoding='utf-8'))
+          rows=(payload[0] or {}).get('results') or []
+          if not rows or not rows[0].get('resolved_at_utc'):
+              raise SystemExit(1)
+          row=rows[0]
+          assert int(row.get('scored_gate_n') or 0)==15, row
+          assert int(row.get('scorebook_rows') or 0)>0, row
+          assert row.get('sync_status')=='ok', row
+          assert row.get('frozen_direction') in {'bullish','bearish','neutral','abstain'}, row
+          assert row.get('realised_direction') in {'bullish','bearish','neutral'}, row
+          print(
+              'build24_forward_score=true '
+              f"cycle={row.get('cycle_view_id')} "
+              f"frozen={row.get('frozen_direction')} "
+              f"realised={row.get('realised_direction')} "
+              f"return_bps={row.get('realised_return_bps')} "
+              f"score={row.get('score')} "
+              f"correct={row.get('correct')} "
+              f"scored_gates={row.get('scored_gate_n')} "
+              f"scorebook_rows={row.get('scorebook_rows')}"
+          )
+          PY
+            then
+              scored=1
+              break
+            fi
+            sleep 20
+          done
+          test "$scored" = "1"
