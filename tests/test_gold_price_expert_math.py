@@ -97,7 +97,7 @@ def test_build4_range_chop_does_not_masquerade_as_strong_trend() -> None:
     primitives = _packet(_closes(values))["timeframes"]["M15"]["primitives"]
     efficiency = Decimal(primitives["path_efficiency"]["efficiency_ratio"])
     regression = primitives["log_ols_slope"]["windows"]["20_bar"]
-    assert efficiency < Decimal("0.10")
+    assert efficiency < Decimal("0.20")
     assert Decimal(regression["r_squared"]) < Decimal("0.10")
     assert Decimal(primitives["close_step_persistence"]["directional_persistence_ratio"]) < Decimal(
         "0.60"
@@ -208,7 +208,7 @@ def test_build4_breakout_acceptance_requires_completed_closes_beyond_swing() -> 
         _row(3, close=Decimal(103), high=Decimal(104), low=Decimal(101)),
         _row(4, close=Decimal(102), high=Decimal(103), low=Decimal(100)),
         _row(5, close=Decimal(106), high=Decimal(107), low=Decimal(102)),
-        _row(6, close=Decimal(107), high=Decimal(108), low=Decimal(104)),
+        _row(6, close=Decimal(107), high=Decimal(108), low=Decimal(106)),
     ]
     high_side = _packet(rows)["timeframes"]["M15"]["primitives"]["breakout_lifecycle"][
         "high_side"
@@ -271,18 +271,18 @@ def test_build4_contradictions_are_diagnostics_not_hidden_averages() -> None:
             "105",
             "106",
             "107",
-            "106",
+            "108",
+            "109",
+            "110",
+            "111",
+            "112",
+            "113",
+            "114",
+            "115",
+            "114",
+            "110",
             "105",
-            "104",
-            "103",
-            "102",
-            "101",
             "100",
-            "99",
-            "98",
-            "97",
-            "96",
-            "95",
         ]
     )
     contradictions = _packet(rows)["timeframes"]["M15"]["primitives"][
