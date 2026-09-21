@@ -1266,6 +1266,32 @@ class D1GoldCycleMemoryStore:
         scored = [row for row in resolved if row.get("exact_direction_correct") is not None]
         correct = sum(int(row.get("exact_direction_correct") or 0) for row in scored)
         latest = rows[0] if rows else None
+        latest_marker_profiles: list[dict[str, Any]] = []
+        scorebook_count = 0
+        if latest is not None:
+            marker_result = await self._d1.prepare(
+                """
+                SELECT m.surface,m.vote,m.base_weight,m.learned_multiplier,
+                       m.effective_weight,m.selected_score_scope,
+                       m.selected_score_sample_n,m.selected_score_net,
+                       m.selected_score_accuracy
+                FROM aidy_gold_cycle_marker_observations m
+                JOIN aidy_gold_cycle_views v
+                  ON v.cycle_view_id=m.cycle_view_id
+                WHERE v.window_start_utc=?
+                ORDER BY m.surface,m.marker_id
+                """
+            ).bind(str(latest["window_start_utc"])).all()
+            latest_marker_profiles = _results(marker_result)
+        score_row = _row(
+            await self._d1.prepare(
+                """
+                SELECT COUNT(*) AS n
+                FROM aidy_gold_marker_context_scores
+                """
+            ).first()
+        )
+        scorebook_count = int((score_row or {}).get("n") or 0)
 
         sequence = [str(row["observed_state"]) for row in reversed(rows)]
         runs: list[dict[str, Any]] = []
@@ -1292,6 +1318,15 @@ class D1GoldCycleMemoryStore:
             ),
             "observed_state_sequence_today": sequence,
             "state_runs_today": runs,
+            "marker_brain": {
+                "version": GOLD_MARKER_BRAIN_VERSION,
+                "context_scorebook_rows": scorebook_count,
+                "latest_marker_profiles": latest_marker_profiles,
+                "impact_score_range": [-2, 2],
+                "large_move_threshold_bps": "5.000000",
+                "research_only": True,
+                "live_money_execution_allowed": False,
+            },
             "latest_view": (
                 None
                 if latest is None
