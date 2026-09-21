@@ -1,0 +1,64 @@
+name: AIDY Build 24 Live Forward Shadow Scorecard
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_expert_shadow.py"
+      - "src/aidy/private_forward_context.py"
+      - "src/aidy/provider_context_api.py"
+      - "src/provider_entry.py"
+      - "migrations/d1/0027_gold_expert_shadow_scorecard.sql"
+      - "tests/test_gold_expert_shadow.py"
+      - ".github/workflows/build24-live-forward-shadow.yml"
+  push:
+    branches:
+      - "build24/live-forward-shadow-scorecard-20260921"
+    paths:
+      - "src/aidy/gold_expert_shadow.py"
+      - "src/aidy/private_forward_context.py"
+      - "src/aidy/provider_context_api.py"
+      - "src/provider_entry.py"
+      - "migrations/d1/0027_gold_expert_shadow_scorecard.sql"
+      - "tests/test_gold_expert_shadow.py"
+      - ".github/workflows/build24-live-forward-shadow.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static and compile checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check             src/aidy/gold_expert_shadow.py             src/aidy/private_forward_context.py             src/aidy/provider_context_api.py             src/provider_entry.py             tests/test_gold_expert_shadow.py
+          uv run python -m compileall -q src tests
+
+      - name: Focused Build 24 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q             tests/test_gold_expert_shadow.py             tests/test_gold_expert_gate_contract.py             tests/test_gold_expert_trust.py             tests/test_gold_evidence_dependency.py             tests/test_gold_environment_gate_selector.py             tests/test_gold_meta_direction.py             tests/test_gold_cycle_memory.py             tests/test_provider_context_api.py
+
+      - name: Full repository regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q

@@ -8,6 +8,10 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from aidy.gold_cycle_memory import D1GoldCycleMemoryStore
+from aidy.gold_expert_shadow import (
+    GOLD_EXPERT_SCORECARD_VERSION,
+    D1GoldExpertShadowStore,
+)
 from aidy.gold_movement_investigator import verify_gold_movement_investigation
 from aidy.gold_movement_memory import D1GoldMovementMemoryStore
 from aidy.gold_state_engine import verify_gold_state_engine
@@ -329,6 +333,24 @@ async def _context_for_snapshot(d1: Any, *, snapshot: Mapping[str, Any]) -> dict
             "state": "unavailable",
             "reason": "cycle_memory_not_available_at_context_read",
             "research_only": True,
+            "live_money_execution_allowed": False,
+        }
+    try:
+        gold_state["expert_shadow_scorecard"] = await D1GoldExpertShadowStore(
+            d1
+        ).scorecard_snapshot(
+            as_of_utc=_utc_iso(
+                str(packet["context_as_of_utc"]),
+                name="context_as_of_utc",
+            )
+        )
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        gold_state["expert_shadow_scorecard"] = {
+            "scorecard_version": GOLD_EXPERT_SCORECARD_VERSION,
+            "state": "unavailable",
+            "reason": "expert_shadow_scorecard_not_available_at_context_read",
+            "research_only": True,
+            "formal_forward_authority": False,
             "live_money_execution_allowed": False,
         }
     packet["gold_state"] = gold_state

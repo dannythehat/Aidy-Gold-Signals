@@ -542,6 +542,32 @@ def _episode_id(
     return f"pf_episode_{digest(identity)[:32]}"
 
 
+async def load_private_forward_snapshot_bundle(
+    *, d1: Any, snapshot_id: str
+) -> dict[str, Any]:
+    """Load the exact PIT snapshot and decision-admitted candles used at T.
+
+    Build 24 uses this public helper so the shadow expert layer cannot reconstruct
+    the past from later market data. The returned candle set is bounded by the
+    snapshot's captured_at timestamp and uses the same admission rules as the
+    existing private-forward context adapter.
+    """
+
+    raw_snapshot = await _snapshot(d1, snapshot_id)
+    if raw_snapshot is None:
+        raise KeyError(f"Unknown market snapshot: {snapshot_id}")
+    snapshot = normalize_snapshot_row(raw_snapshot)
+    as_of = _utc(str(snapshot["captured_at"]), name="snapshot.captured_at")
+    candles = await _decision_candles(d1, as_of=as_of)
+    return {
+        "snapshot": snapshot,
+        "as_of_utc": as_of.isoformat(),
+        "candles": candles,
+        "future_values_used": False,
+        "live_money_execution_allowed": False,
+    }
+
+
 async def build_private_forward_decision_inputs(
     *, d1: Any, snapshot_id: str
 ) -> dict[str, Any]:
