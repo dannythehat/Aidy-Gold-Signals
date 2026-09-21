@@ -85,6 +85,7 @@ jobs:
             tests/test_provider_market_api.py \
             tests/test_provider_context_api.py \
             tests/test_day11_calibration_backfill.py \
+            tests/test_worker_deploy_ownership.py \
             tests/test_gold_state_engine.py \
             tests/test_gold_movement_investigator.py \
             tests/test_gold_movement_memory.py \
