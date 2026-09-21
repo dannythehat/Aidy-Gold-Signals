@@ -246,7 +246,8 @@ jobs:
                 v.future_values_used,
                 v.live_money_execution_allowed
               FROM aidy_gold_cycle_views v
-              LEFT JOIN aidy_gold_cycle_environments e ON e.cycle_view_id=v.cycle_view_id
+              JOIN aidy_gold_cycle_environments e ON e.cycle_view_id=v.cycle_view_id
+              WHERE e.environment_version='aidy_gold_cycle_environment_v3'
               ORDER BY v.window_start_utc DESC
               LIMIT 1;
             " > /tmp/cycle-live-audit.json
@@ -278,17 +279,17 @@ jobs:
           deployed=datetime.fromisoformat(__import__('os').environ['AIDY_DEPLOYED_AT_UTC'])
           decided=datetime.fromisoformat(row['decided_at_utc'])
           post_deploy=decided >= deployed
+          assert row.get('environment_version') == 'aidy_gold_cycle_environment_v3', row
+          assert str(row.get('environment_key') or '').startswith('envcore_'), row
+          assert row.get('environment_contract_schema') == 'aidy_gold_environment_contract_schema_v1', row
+          assert int(row.get('environment_dimension_count') or 0) == 34, row
+          assert int(row.get('monolithic_full_environment_key_used') or 0) == 0, row
+          assert int(row.get('full_environment_scope_count') or 0) == 0, row
           if post_deploy:
               assert trace_count == considered, row
               assert int(row.get('tool_trace_missing_readable') or 0) == 0, row
               assert int(row.get('tool_trace_missing_action') or 0) == 0, row
               assert int(row.get('reasons_missing_score_context') or 0) == 0, row
-              assert row.get('environment_version') == 'aidy_gold_cycle_environment_v3', row
-              assert str(row.get('environment_key') or '').startswith('envcore_'), row
-              assert row.get('environment_contract_schema') == 'aidy_gold_environment_contract_schema_v1', row
-              assert int(row.get('environment_dimension_count') or 0) == 34, row
-              assert int(row.get('monolithic_full_environment_key_used') or 0) == 0, row
-              assert int(row.get('full_environment_scope_count') or 0) == 0, row
           else:
               print(
                   'awaiting_first_post_deploy_cycle=true '
