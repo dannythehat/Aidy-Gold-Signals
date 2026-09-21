@@ -7,11 +7,9 @@ revision separation, independent Gold event tiers and matched no-news controls.
 
 from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation, localcontext
-from itertools import pairwise
 from typing import Any
 
 from aidy.feature_engine import Candle, normalize_candles
@@ -339,7 +337,7 @@ def _post_release_confirmation(
     reference = ret_15 if ret_15 is not None else ret_5
     if reference is None:
         state = "forming"
-    elif abs(reference) < Decimal("1"):
+    elif abs(reference) < Decimal(1):
         state = "muted"
     elif reference > 0:
         state = "gold_up"
@@ -403,7 +401,7 @@ def _conditional_response(
     med = _median(values)
     assert med is not None
     positive_share = Decimal(sum(value > 0 for value in values)) / Decimal(len(values))
-    if abs(med) < Decimal("1"):
+    if abs(med) < Decimal(1):
         direction = "muted"
     elif med > 0:
         direction = "gold_up"
