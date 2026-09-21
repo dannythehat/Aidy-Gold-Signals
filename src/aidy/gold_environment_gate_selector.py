@@ -108,7 +108,7 @@ def build_gate_selector_input(expert_result: Mapping[str, Any]) -> dict[str, Any
     if not isinstance(packet, Mapping) or not verify_expert_gate_packet(packet):
         raise ValueError("Build 21 requires a verified expert packet")
     if not isinstance(trust, Mapping):
-        raise ValueError("Build 21 requires the Build-3 trust envelope")
+        raise TypeError("Build 21 requires the Build-3 trust envelope")
 
     assert_no_hindsight_fields(packet, path="expert_packet")
     assert_no_hindsight_fields(trust, path="trust_envelope")
