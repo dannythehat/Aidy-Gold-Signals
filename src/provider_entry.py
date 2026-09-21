@@ -123,13 +123,53 @@ async def _public_health_response(env: object):
 async def _sync_gold_cycle_memory_best_effort(env: object) -> None:
     """Freeze/resolve 15-minute Gold cycle views without risking market capture."""
 
+    now = datetime.now(UTC)
     try:
         result = await sync_gold_cycle_memory(
             env.AIDY_OPS,
-            now_utc=datetime.now(UTC),
+            now_utc=now,
         )
         creation = result.get("creation") or {}
         resolution = result.get("resolution") or {}
+        backfill = result.get("backfill") or {}
+        try:
+            await env.AIDY_OPS.prepare(
+                """
+                INSERT INTO aidy_gold_cycle_sync_health (
+                    singleton_id,observed_at_utc,status,creation_created,
+                    creation_reason,view_direction,resolution_resolved,
+                    backfill_views,backfill_markers_scored,error_type,error_message
+                ) VALUES (1,?,'ok',?,?,?,?,?,?,NULL,NULL)
+                ON CONFLICT(singleton_id) DO UPDATE SET
+                    observed_at_utc=excluded.observed_at_utc,
+                    status='ok',
+                    creation_created=excluded.creation_created,
+                    creation_reason=excluded.creation_reason,
+                    view_direction=excluded.view_direction,
+                    resolution_resolved=excluded.resolution_resolved,
+                    backfill_views=excluded.backfill_views,
+                    backfill_markers_scored=excluded.backfill_markers_scored,
+                    error_type=NULL,
+                    error_message=NULL
+                """
+            ).bind(
+                now.isoformat(),
+                int(bool(creation.get("created"))),
+                str(creation.get("reason") or ""),
+                (
+                    None
+                    if creation.get("view_direction") is None
+                    else str(creation.get("view_direction"))
+                ),
+                int(resolution.get("resolved") or 0),
+                int(backfill.get("views_backfilled") or 0),
+                int(backfill.get("markers_scored") or 0),
+            ).run()
+        except Exception as health_exc:  # noqa: BLE001 - diagnostics cannot risk capture
+            print(
+                "AIDY Gold-cycle sync health write failed: "
+                f"{type(health_exc).__name__}: {str(health_exc)[:300]}"
+            )
         if creation.get("created") or int(resolution.get("resolved") or 0):
             print(
                 "AIDY Gold-cycle memory sync: "
@@ -138,6 +178,36 @@ async def _sync_gold_cycle_memory_best_effort(env: object) -> None:
                 f"resolved={resolution.get('resolved')}"
             )
     except Exception as exc:  # noqa: BLE001 - learning cannot undo successful capture
+        try:
+            await env.AIDY_OPS.prepare(
+                """
+                INSERT INTO aidy_gold_cycle_sync_health (
+                    singleton_id,observed_at_utc,status,creation_created,
+                    creation_reason,view_direction,resolution_resolved,
+                    backfill_views,backfill_markers_scored,error_type,error_message
+                ) VALUES (1,?,'error',NULL,NULL,NULL,NULL,NULL,NULL,?,?)
+                ON CONFLICT(singleton_id) DO UPDATE SET
+                    observed_at_utc=excluded.observed_at_utc,
+                    status='error',
+                    creation_created=NULL,
+                    creation_reason=NULL,
+                    view_direction=NULL,
+                    resolution_resolved=NULL,
+                    backfill_views=NULL,
+                    backfill_markers_scored=NULL,
+                    error_type=excluded.error_type,
+                    error_message=excluded.error_message
+                """
+            ).bind(
+                now.isoformat(),
+                type(exc).__name__,
+                str(exc)[:1000],
+            ).run()
+        except Exception as health_exc:  # noqa: BLE001 - diagnostics cannot risk capture
+            print(
+                "AIDY Gold-cycle sync error health write failed: "
+                f"{type(health_exc).__name__}: {str(health_exc)[:300]}"
+            )
         print(
             "AIDY Gold-cycle memory sync failed: "
             f"{type(exc).__name__}: {str(exc)[:500]}"
