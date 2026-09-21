@@ -5,6 +5,30 @@ Authoritative current design note for the AIDY Gold learning runtime.
 Updated: 2026-09-21
 
 
+## Build 2 COMPLETE — Expert Gate Contract v1
+
+The standard expert-gate packet contract is now:
+`aidy_gold_expert_gate_contract_v1`.
+
+Every later mini-brain must use this contract. It binds the gate to the frozen Environment v3 digest, stores a gate-specific mini-environment, requires timestamped evidence references, records each sub-calculator separately, distinguishes directional gates from context-only gates, and preserves NEUTRAL / ABSTAIN / UNKNOWN rather than forcing a BUY/SELL opinion.
+
+The contract also enforces:
+- evidence timestamps cannot be later than the gate as-of;
+- future/outcome-labelled fields are rejected;
+- known calculations require known evidence;
+- context-only calculations cannot create directional votes;
+- bullish/bearish gate conclusions need a matching scoreable sub-calculator;
+- readable explanations and contradictions must reference actual evidence/calculators;
+- internal conviction is separate from historical reliability;
+- packet/evidence/calculator/mini-environment digests detect mutation;
+- research-only and live-money-disabled safety flags are mandatory.
+
+Engineering acceptance on PR #202: semantic gate PASS, static checks PASS, focused workflow tests 108 passed, full repository regression 1360 passed.
+
+Build 2 does not alter the current live marker brain. It provides the mandatory interface that Builds 4+ expert gates will use after Build 3 supplies the conditional trust engine.
+
+**Next build:** Build 3 — Conditional Trust & Score Engine v3.
+
 ## Build 1 COMPLETE — factorised environment contract v3
 
 The live environment contract is `aidy_gold_cycle_environment_v3`. Build 1 is merged, deployed and production-verified.
