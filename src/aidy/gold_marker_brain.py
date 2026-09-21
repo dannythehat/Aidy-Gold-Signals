@@ -241,6 +241,16 @@ _SCOPE_MIN_SAMPLES: tuple[tuple[str, int], ...] = (
 )
 
 
+def _readable_scope_payload(payload: Mapping[str, Any] | None) -> str:
+    payload = payload if isinstance(payload, Mapping) else {}
+    if not payload:
+        return "bootstrap_prior"
+    return " | ".join(
+        f"{key}={payload[key]}"
+        for key in sorted(payload)
+    )
+
+
 def select_score_profile(
     *,
     score_rows: Sequence[Mapping[str, Any]],
@@ -249,9 +259,14 @@ def select_score_profile(
     """Choose the most specific sufficiently-sampled scorebook, falling back globally."""
 
     by_key = {str(row.get("scope_key")): row for row in score_rows}
-    scopes_by_type = {
-        str(scope.get("scope_type")): str(scope.get("scope_key"))
+    scope_rows_by_type = {
+        str(scope.get("scope_type")): scope
         for scope in scopes
+        if isinstance(scope, Mapping)
+    }
+    scopes_by_type = {
+        scope_type: str(scope.get("scope_key"))
+        for scope_type, scope in scope_rows_by_type.items()
     }
     selected: Mapping[str, Any] | None = None
     selected_type = "bootstrap_prior"
@@ -267,6 +282,8 @@ def select_score_profile(
         return {
             "selected_scope_type": "bootstrap_prior",
             "selected_scope_key": None,
+            "selected_scope_payload": {},
+            "selected_scope_label": "bootstrap_prior",
             "sample_n": 0,
             "correct_n": 0,
             "incorrect_n": 0,
@@ -277,9 +294,14 @@ def select_score_profile(
 
     sample_n = int(selected.get("sample_n") or 0)
     net_score = int(selected.get("net_score") or 0)
+    selected_scope = scope_rows_by_type.get(selected_type) or {}
+    scope_payload = selected_scope.get("payload")
+    scope_payload = dict(scope_payload) if isinstance(scope_payload, Mapping) else {}
     return {
         "selected_scope_type": selected_type,
         "selected_scope_key": str(selected.get("scope_key") or ""),
+        "selected_scope_payload": scope_payload,
+        "selected_scope_label": _readable_scope_payload(scope_payload),
         "sample_n": sample_n,
         "correct_n": int(selected.get("correct_n") or 0),
         "incorrect_n": int(selected.get("incorrect_n") or 0),
@@ -316,6 +338,13 @@ def apply_learning_to_reasons(
                 "effective_weight": _fmt(effective),
                 "selected_score_scope": str(
                     profile.get("selected_scope_type") or "bootstrap_prior"
+                ),
+                "selected_score_scope_key": profile.get("selected_scope_key"),
+                "selected_score_context": str(
+                    profile.get("selected_scope_label") or "bootstrap_prior"
+                ),
+                "selected_score_context_payload": dict(
+                    profile.get("selected_scope_payload") or {}
                 ),
                 "selected_score_sample_n": int(profile.get("sample_n") or 0),
                 "selected_score_net": int(profile.get("net_score") or 0),

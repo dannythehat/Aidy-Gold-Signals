@@ -211,12 +211,30 @@ jobs:
                 json_array_length(supporting_reasons_json) AS supporting_reason_count,
                 json_array_length(contradicting_reasons_json) AS contradicting_reason_count,
                 json_array_length(unavailable_evidence_json) AS unavailable_evidence_count,
-                json_array_length(toolbox_considered_json) AS toolbox_considered_count,
-                json_array_length(toolbox_used_json) AS toolbox_used_count,
-                future_values_used,
-                live_money_execution_allowed
-              FROM aidy_gold_cycle_views
-              ORDER BY window_start_utc DESC
+                json_array_length(v.toolbox_considered_json) AS toolbox_considered_count,
+                json_array_length(v.toolbox_used_json) AS toolbox_used_count,
+                json_array_length(json_extract(v.payload_json,'$.tool_reasoning_trace')) AS tool_trace_count,
+                (
+                  SELECT COUNT(*)
+                  FROM json_each(json_extract(v.payload_json,'$.tool_reasoning_trace'))
+                  WHERE COALESCE(TRIM(json_extract(value,'$.readable_state')),'')=''
+                ) AS tool_trace_missing_readable,
+                (
+                  SELECT COUNT(*)
+                  FROM json_each(json_extract(v.payload_json,'$.tool_reasoning_trace'))
+                  WHERE COALESCE(TRIM(json_extract(value,'$.reasoning_action')),'')=''
+                ) AS tool_trace_missing_action,
+                (
+                  SELECT COUNT(*)
+                  FROM json_each(json_extract(v.payload_json,'$.all_directional_reasons'))
+                  WHERE COALESCE(TRIM(json_extract(value,'$.selected_score_context')),'')=''
+                ) AS reasons_missing_score_context,
+                json_array_length(json_extract(e.environment_json,'$.toolbox_coverage')) AS environment_tool_coverage_count,
+                v.future_values_used,
+                v.live_money_execution_allowed
+              FROM aidy_gold_cycle_views v
+              LEFT JOIN aidy_gold_cycle_environments e ON e.cycle_view_id=v.cycle_view_id
+              ORDER BY v.window_start_utc DESC
               LIMIT 1;
             " > /tmp/cycle-live-audit.json
           cat /tmp/cycle-live-audit.json
@@ -236,7 +254,15 @@ jobs:
           assert rows, payload
           row=rows[0]
           assert row.get('has_reasoning') == 1, row
-          assert int(row.get('toolbox_considered_count') or 0) >= 20, row
+          considered=int(row.get('toolbox_considered_count') or 0)
+          trace_count=int(row.get('tool_trace_count') or 0)
+          coverage_count=int(row.get('environment_tool_coverage_count') or 0)
+          assert considered >= 30, row
+          assert trace_count == considered, row
+          assert coverage_count == considered, row
+          assert int(row.get('tool_trace_missing_readable') or 0) == 0, row
+          assert int(row.get('tool_trace_missing_action') or 0) == 0, row
+          assert int(row.get('reasons_missing_score_context') or 0) == 0, row
           assert int(row.get('toolbox_used_count') or 0) >= 1, row
           assert row.get('future_values_used') == 0, row
           assert row.get('live_money_execution_allowed') == 0, row
@@ -248,6 +274,10 @@ jobs:
               f"supporting={row.get('supporting_reason_count')} "
               f"contradicting={row.get('contradicting_reason_count')} "
               f"unavailable={row.get('unavailable_evidence_count')} "
-              f"toolbox_used={row.get('toolbox_used_count')}"
+              f"toolbox_used={row.get('toolbox_used_count')} "
+              f"tool_trace={row.get('tool_trace_count')} "
+              f"environment_coverage={row.get('environment_tool_coverage_count')} "
+              f"missing_readable={row.get('tool_trace_missing_readable')} "
+              f"missing_score_context={row.get('reasons_missing_score_context')}"
           )
           PY
