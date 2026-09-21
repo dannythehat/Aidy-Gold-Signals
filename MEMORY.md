@@ -8,6 +8,37 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 6 — M15 Price Structure Expert COMPLETE
+
+Build 6 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_m15_price_structure_expert_v1`
+
+What Build 6 adds:
+- the second timeframe mini-brain, specialised for M15;
+- an explicit two-hour M15 8-bar path calculator using the 8-bar return, 8-bar log-slope/R², path efficiency, persistence and ATR/RV-normalised displacement;
+- a separately scoreable latest-completed-15-minute momentum calculator using one-bar return, M15 ATR, candle body and close location;
+- confirmed M15 swing structure and breakout acceptance/reclaim specialists;
+- M15 candle-pressure, range-location and contradiction evidence;
+- explicit dependency families plus correlation groups, so overlapping structure/momentum evidence remains individually learnable without being double-counted in current conviction;
+- an independently calibrated 60-minute target horizon and M15-specific thresholds rather than copied M5 settings;
+- Build-3 conditional trust for the M15 gate and every scoreable M15 sub-calculator;
+- explicit NEUTRAL / ABSTAIN / UNKNOWN handling;
+- retained legacy-M15 baseline and chronological replay comparison for ablation.
+
+Acceptance on PR #209 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 159 passed;
+- full repository regression: 1411 passed;
+- clean uptrend/downtrend/chop/reversal/missing-data/PIT/chronological-freeze/trust/dependency-metadata/legacy-comparison cases passed.
+
+Build 6 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 7 — H1 Price Structure Expert. It will focus on genuine hourly trend quality, swing structure, acceleration and breakout acceptance. A positive first-to-last H1 move will not be enough to call the hour strongly bullish when persistence/quality are poor, and its historical scorebook remains separate from M15.
+
 ## Build 5 — M5 Price Structure Expert COMPLETE
 
 Build 5 of the environment-aware expert-gate programme is complete and engineering-proven.
