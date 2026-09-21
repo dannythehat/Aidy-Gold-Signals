@@ -13,6 +13,44 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 11 — Price Location Expert COMPLETE
+
+Build 11 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_price_location_expert_v1`
+
+What Build 11 adds:
+- a true context-only price-location brain;
+- frozen prior-day, Asia, active-session and opening-range references from the cycle-start environment;
+- confirmed M15/H1 swing references and recent M5/M15 extrema from completed Build-4 bars;
+- deterministic round-number references;
+- exact distance in USD, bps and ATR units for every reference;
+- separate geometric-nearest and structural-priority rankings;
+- fully auditable priority tiers/reasons;
+- multi-category confluence clusters within 0.25 ATR;
+- nearby level bracketing/conflict on both sides within 0.50 ATR;
+- Build-3 location-specific trust scopes;
+- explicit policy that location alone has no directional edge and cannot vote BUY/SELL without a separately tested reaction rule.
+
+Acceptance on PR #214 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 223 passed;
+- full repository regression: 1475 passed;
+- exact nearest-level calculation: PASS;
+- structural priority separated from geometric nearest: PASS;
+- confluence/conflict representation: PASS;
+- round numbers descriptive-only: PASS;
+- ATR-normalised distance: PASS;
+- missing mid fails closed: PASS;
+- PIT/no-future and chronological freeze: PASS.
+
+Build 11 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 12 — Liquidity / Reclaim Expert. It will make sweep/reclaim reasoning measurable through level identity, penetration depth, reclaim speed, confirmation closes, retest, rejection geometry, competing-level distance and session/volatility context, while explicitly keeping OHLC sweep logic as a proxy rather than pretending it is real order flow.
+
 ## Build 10 — Momentum / Impulse Expert COMPLETE
 
 Build 10 of the environment-aware expert-gate programme is complete and engineering-proven.
