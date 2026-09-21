@@ -41,13 +41,14 @@ def test_manifest_lists_the_full_known_gold_arsenal_without_false_live_claims() 
     )
 
     assert manifest["contract_version"] == GOLD_TOOLBOX_MANIFEST_VERSION
-    assert manifest["known_capability_count"] >= 30
+    assert manifest["known_capability_count"] >= 31
     assert verify_gold_toolbox_manifest(manifest)
 
     capabilities = {item["name"]: item for item in manifest["capabilities"]}
     assert capabilities["gold_m1_candles"]["status"] == "live_here"
     assert capabilities["gold_movement_detector"]["status"] == "live_here"
     assert capabilities["gold_movement_episode_memory"]["status"] == "live_here"
+    assert capabilities["gold_cycle_15m_memory"]["status"] == "live_here"
     assert capabilities["economic_calendar_on_demand"]["status"] == (
         "super_signals_runtime_resolves"
     )

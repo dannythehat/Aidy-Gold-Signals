@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from aidy.gold_cycle_memory import D1GoldCycleMemoryStore
 from aidy.gold_movement_investigator import verify_gold_movement_investigation
 from aidy.gold_movement_memory import D1GoldMovementMemoryStore
 from aidy.gold_state_engine import verify_gold_state_engine
@@ -293,24 +294,45 @@ async def _context_for_snapshot(d1: Any, *, snapshot: Mapping[str, Any]) -> dict
     cached = _CONTEXT_CACHE.get(snapshot_id)
     if cached is not None:
         _CONTEXT_CACHE.move_to_end(snapshot_id)
-        return dict(cached)
-    inputs = await build_private_forward_decision_inputs(d1=d1, snapshot_id=snapshot_id)
-    packet = _compact_join_packet(inputs, snapshot=snapshot)
+        packet = dict(cached)
+    else:
+        inputs = await build_private_forward_decision_inputs(d1=d1, snapshot_id=snapshot_id)
+        packet = _compact_join_packet(inputs, snapshot=snapshot)
+        gold_state = packet.get("gold_state")
+        gold_state = gold_state if isinstance(gold_state, dict) else {}
+        investigation = gold_state.get("movement_investigation")
+        if isinstance(investigation, Mapping) and investigation.get("investigation_required") is True:
+            analogues = await D1GoldMovementMemoryStore(d1).analogous_cards(
+                as_of_utc=_utc_iso(str(packet["context_as_of_utc"]), name="context_as_of_utc"),
+                investigation=investigation,
+            )
+            gold_state["movement_analogues"] = analogues
+            packet["gold_state"] = gold_state
+        _CONTEXT_CACHE[snapshot_id] = packet
+        _CONTEXT_CACHE.move_to_end(snapshot_id)
+        while len(_CONTEXT_CACHE) > _CACHE_LIMIT:
+            _CONTEXT_CACHE.popitem(last=False)
+
+    # Cycle memory is queried separately from the immutable snapshot cache because it is
+    # a learning surface that accumulates frozen views/outcomes over time. The as-of guard
+    # inside context_summary prevents future results leaking into historical signal context.
+    packet = dict(packet)
     gold_state = packet.get("gold_state")
-    gold_state = gold_state if isinstance(gold_state, dict) else {}
-    investigation = gold_state.get("movement_investigation")
-    if isinstance(investigation, Mapping) and investigation.get("investigation_required") is True:
-        analogues = await D1GoldMovementMemoryStore(d1).analogous_cards(
-            as_of_utc=_utc_iso(str(packet["context_as_of_utc"]), name="context_as_of_utc"),
-            investigation=investigation,
+    gold_state = dict(gold_state) if isinstance(gold_state, Mapping) else {}
+    try:
+        gold_state["cycle_memory"] = await D1GoldCycleMemoryStore(d1).context_summary(
+            as_of_utc=_utc_iso(str(packet["context_as_of_utc"]), name="context_as_of_utc")
         )
-        gold_state["movement_analogues"] = analogues
-        packet["gold_state"] = gold_state
-    _CONTEXT_CACHE[snapshot_id] = packet
-    _CONTEXT_CACHE.move_to_end(snapshot_id)
-    while len(_CONTEXT_CACHE) > _CACHE_LIMIT:
-        _CONTEXT_CACHE.popitem(last=False)
-    return dict(packet)
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        gold_state["cycle_memory"] = {
+            "memory_version": "aidy_gold_cycle_memory_v1",
+            "state": "unavailable",
+            "reason": "cycle_memory_not_available_at_context_read",
+            "research_only": True,
+            "live_money_execution_allowed": False,
+        }
+    packet["gold_state"] = gold_state
+    return packet
 
 
 async def provider_context_response(request: Any, env: Any, *, now: datetime | None = None) -> Any:
