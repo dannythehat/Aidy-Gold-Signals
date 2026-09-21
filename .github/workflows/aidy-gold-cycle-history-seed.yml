@@ -1,0 +1,137 @@
+name: AIDY Gold Cycle Historical Seed
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/seed_gold_cycle_history.py"
+      - "tests/test_gold_cycle_history_seed.py"
+      - ".github/workflows/aidy-gold-cycle-history-seed.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/seed_gold_cycle_history.py"
+      - ".github/workflows/aidy-gold-cycle-history-seed.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  AIDY_R2_BUCKET_NAME: aidy-memory-test
+  AIDY_BIGQUERY_DATASET: aidy_analytics_test
+  AIDY_BIGQUERY_LOCATION: EU
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Test retrospective cycle seed generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run ruff check scripts/seed_gold_cycle_history.py tests/test_gold_cycle_history_seed.py
+          uv run pytest -q tests/test_gold_cycle_history_seed.py
+
+  seed:
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Require existing credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}"
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          python - <<'PY'
+          import json, os
+          info=json.loads(os.environ["AIDY_GCP_SERVICE_ACCOUNT_JSON"])
+          assert info.get("type") == "service_account"
+          assert info.get("project_id")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as fh:
+              fh.write(f"AIDY_GCP_PROJECT_ID={info['project_id']}\n")
+          PY
+
+      - name: Install bounded research dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Build retrospective 2024-2025 cycle seed
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/seed_gold_cycle_history.py             --start 2024-01-01T00:00:00+00:00             --end 2026-01-01T00:00:00+00:00             --output /tmp/aidy-gold-cycle-history.sql             > /tmp/aidy-gold-cycle-history.json
+          cat /tmp/aidy-gold-cycle-history.json
+          python - <<'PY'
+          import json
+          result=json.load(open("/tmp/aidy-gold-cycle-history.json", encoding="utf-8"))
+          assert result["ok"] is True, result
+          assert result["source_table"] == "research_candles", result
+          assert result["source_provenance"] == "retrospective_history", result
+          assert int(result["source_rows"]) > 10000, result
+          assert int(result["cycle_rows"]) > 10000, result
+          assert result["pit_eligible"] is False, result
+          assert result["research_only"] is True, result
+          assert result["live_money_execution_allowed"] is False, result
+          PY
+
+      - name: Build Cloudflare config and confirm cycle migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/build_cloudflare_live_config.py
+          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote             --config wrangler.research.live.jsonc
+
+      - name: Load retrospective cycle analogues into D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote             --config wrangler.research.live.jsonc             --file /tmp/aidy-gold-cycle-history.sql
+
+      - name: Verify retrospective-only cycle memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote             --config wrangler.research.live.jsonc             --command "
+              SELECT
+                COUNT(*) AS historical_rows,
+                MIN(window_start_utc) AS first_window_utc,
+                MAX(window_start_utc) AS last_window_utc,
+                COUNT(DISTINCT prior_sequence_signature) AS distinct_sequences,
+                COUNT(DISTINCT time_slot_utc) AS distinct_time_slots,
+                SUM(CASE WHEN pit_eligible<>0 THEN 1 ELSE 0 END) AS illegal_pit_rows,
+                SUM(CASE WHEN research_only<>1 THEN 1 ELSE 0 END) AS illegal_research_rows,
+                SUM(CASE WHEN live_money_execution_allowed<>0 THEN 1 ELSE 0 END) AS illegal_live_rows
+              FROM aidy_gold_cycle_historical;
+            " > /tmp/cycle-verify.txt
+          cat /tmp/cycle-verify.txt
+          grep -q '"illegal_pit_rows": 0' /tmp/cycle-verify.txt
+          grep -q '"illegal_research_rows": 0' /tmp/cycle-verify.txt
+          grep -q '"illegal_live_rows": 0' /tmp/cycle-verify.txt
