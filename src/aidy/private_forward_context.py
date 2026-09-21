@@ -25,6 +25,11 @@ from aidy.gold_state_engine import (
     build_gold_state_engine,
     verify_gold_state_engine,
 )
+from aidy.gold_toolbox_registry import (
+    GOLD_TOOLBOX_MANIFEST_VERSION,
+    build_gold_toolbox_manifest,
+    verify_gold_toolbox_manifest,
+)
 from aidy.historical_case_semantics import build_semantic_pit_case_input
 from aidy.macro_event_intelligence import EVENT_INTELLIGENCE_VERSION
 from aidy.macro_vintages import (
@@ -463,6 +468,27 @@ def _architecture_extensions(
     if not verify_gold_movement_investigation(movement_investigation):
         raise RuntimeError("Private-forward Gold movement investigation failed verification.")
 
+    live_source_availability = {
+        "market_structure": "derived_live",
+        "price_liquidity_structure": "derived_live_from_admitted_twelve_candles",
+        "rates_macro_vintages": "unknown_no_operational_day28_vintage_feed",
+        "tiered_macro_events": "unknown_no_operational_day29_schedule_feed",
+        "cme_contract_state": "unknown_no_operational_day30_bulletin_feed",
+        "gvz_implied_volatility": "unknown_no_operational_day31_gvz_feed",
+        "realized_volatility": "derived_when_candle_history_is_sufficient",
+        "gold_movement_investigation": "derived_live_from_verified_gold_state",
+        "cross_market_backdrop": "derived_when_stored_pit_series_are_known",
+        "breaking_news_event_search": "known_capability_not_live_connected",
+        "intraday_cross_asset_reaction": "known_capability_not_live_connected",
+    }
+    toolbox = build_gold_toolbox_manifest(
+        gold_state=gold_state,
+        semantic_context=semantic_context,
+        live_source_availability=live_source_availability,
+    )
+    if not verify_gold_toolbox_manifest(toolbox):
+        raise RuntimeError("Private-forward Gold toolbox manifest failed verification.")
+
     result: dict[str, Any] = {
         "extension_version": ARCHITECTURE_V2_EXTENSION_VERSION,
         "as_of_utc": as_of.isoformat(),
@@ -476,16 +502,8 @@ def _architecture_extensions(
         "volatility_state": volatility,
         "gold_state_engine": gold_state,
         "gold_movement_investigation": movement_investigation,
-        "live_source_availability": {
-            "market_structure": "derived_live",
-            "price_liquidity_structure": "derived_live_from_admitted_twelve_candles",
-            "rates_macro_vintages": "unknown_no_operational_day28_vintage_feed",
-            "tiered_macro_events": "unknown_no_operational_day29_schedule_feed",
-            "cme_contract_state": "unknown_no_operational_day30_bulletin_feed",
-            "gvz_implied_volatility": "unknown_no_operational_day31_gvz_feed",
-            "realized_volatility": "derived_when_candle_history_is_sufficient",
-            "gold_movement_investigation": "derived_live_from_verified_gold_state",
-        },
+        "gold_toolbox_manifest": toolbox,
+        "live_source_availability": live_source_availability,
         "unknown_stays_unknown": True,
         "predictive_edge_claimed_by_adapter": False,
     }
@@ -587,6 +605,7 @@ async def build_private_forward_decision_inputs(
             "volatility_intelligence": VOLATILITY_INTELLIGENCE_VERSION,
             "gold_state_engine": GOLD_STATE_ENGINE_VERSION,
             "gold_movement_investigator": GOLD_MOVEMENT_INVESTIGATOR_VERSION,
+            "gold_toolbox_manifest": GOLD_TOOLBOX_MANIFEST_VERSION,
             "private_forward_context_adapter": PRIVATE_FORWARD_CONTEXT_ADAPTER_VERSION,
         }
     )

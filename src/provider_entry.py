@@ -14,6 +14,7 @@ from aidy.gold_movement_memory import (
     sync_gold_movement_memory,
 )
 from aidy.gold_state_engine import GOLD_STATE_ENGINE_VERSION, PROVIDER_GOLD_STATE_VERSION
+from aidy.gold_toolbox_registry import GOLD_TOOLBOX_MANIFEST_VERSION
 from aidy.provider_calibration_api import calibration_market_ohlc_response
 from aidy.provider_context_api import PROVIDER_CONTEXT_API_VERSION, provider_context_response
 from aidy.provider_data_health_api import provider_data_health_response
@@ -107,6 +108,7 @@ async def _public_health_response(env: object):
             "provider_gold_state_version": PROVIDER_GOLD_STATE_VERSION,
             "gold_movement_investigator_version": GOLD_MOVEMENT_INVESTIGATOR_VERSION,
             "gold_movement_memory_version": GOLD_MOVEMENT_MEMORY_VERSION,
+            "gold_toolbox_manifest_version": GOLD_TOOLBOX_MANIFEST_VERSION,
             "data_health": health_summary,
         }
     )

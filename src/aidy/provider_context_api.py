@@ -10,6 +10,7 @@ from urllib.parse import parse_qs, urlparse
 from aidy.gold_movement_investigator import verify_gold_movement_investigation
 from aidy.gold_movement_memory import D1GoldMovementMemoryStore
 from aidy.gold_state_engine import verify_gold_state_engine
+from aidy.gold_toolbox_registry import verify_gold_toolbox_manifest
 from aidy.private_forward_context import build_private_forward_decision_inputs
 from aidy.twelve_data_market import AIDY_SYMBOL
 
@@ -168,6 +169,12 @@ def _provider_gold_state(
     if movement and not verify_gold_movement_investigation(movement):
         raise RuntimeError("provider_gold_movement_investigation_invalid")
     result["movement_investigation"] = dict(movement)
+
+    toolbox = extensions.get("gold_toolbox_manifest")
+    toolbox = toolbox if isinstance(toolbox, Mapping) else {}
+    if toolbox and not verify_gold_toolbox_manifest(toolbox):
+        raise RuntimeError("provider_gold_toolbox_manifest_invalid")
+    result["toolbox_manifest"] = dict(toolbox)
 
     result["research_surfaces"] = {
         "rates_macro": {
