@@ -212,7 +212,16 @@ jobs:
           cat /tmp/cycle-live-audit.json
           python - <<'PY'
           import json
-          payload=json.load(open('/tmp/cycle-live-audit.json', encoding='utf-8'))
+          text=open('/tmp/cycle-live-audit.json', encoding='utf-8').read()
+          starts=[i for i in range(len(text)) if text.startswith('[', i)]
+          payload=None
+          for start in reversed(starts):
+              try:
+                  payload=json.loads(text[start:])
+                  break
+              except json.JSONDecodeError:
+                  continue
+          assert isinstance(payload, list), text[-2000:]
           rows=(payload[0] or {}).get('results') or []
           assert rows, payload
           row=rows[0]
