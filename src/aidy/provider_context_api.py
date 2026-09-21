@@ -7,12 +7,9 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from aidy.gold_state_engine import (
-    PROVIDER_GOLD_STATE_VERSION,
-    verify_gold_state_engine,
-)
 from aidy.gold_movement_investigator import verify_gold_movement_investigation
 from aidy.gold_movement_memory import D1GoldMovementMemoryStore
+from aidy.gold_state_engine import verify_gold_state_engine
 from aidy.private_forward_context import build_private_forward_decision_inputs
 from aidy.twelve_data_market import AIDY_SYMBOL
 
