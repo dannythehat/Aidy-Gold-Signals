@@ -17,9 +17,6 @@ on:
       - "calibration/day11_reconciliation_windows.json"
       - "migrations/d1/0015_day11_calibration_backfill.sql"
       - "scripts/day11_calibration_backfill.py"
-      - "src/aidy/provider_calibration_api.py"
-      - "src/provider_entry.py"
-      - "tests/test_day11_calibration_backfill.py"
       - ".github/workflows/day11-calibration-backfill.yml"
 
 concurrency:
@@ -59,7 +56,7 @@ jobs:
           uv run pytest -q tests/test_day11_calibration_backfill.py tests/test_provider_market_api.py
           uv run pytest -q
 
-  backfill-and-deploy:
+  backfill-only:
     if: github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
@@ -103,13 +100,14 @@ jobs:
           cfg['vars']['AIDY_MARKET_POLL_SECONDS']='300'
           cfg['vars']['AIDY_FORMAL_FORWARD_ENABLED']='false'
           cfg['vars']['AIDY_TWELVE_DATA_BOOTSTRAP_ENABLED']='false'
-          cfg['triggers']['crons']=[]
+          cfg['triggers']['crons']=['* * * * *']
           settings=AidySettings.from_worker_env(SimpleNamespace(**cfg['vars']))
           assert settings.capture_enabled is True
           assert str(cfg['vars'].get('AIDY_FORMAL_FORWARD_ENABLED','')).lower() == 'false'
           assert settings.market_data_source == 'twelve_data'
           assert settings.market_data_ownership == 'public_independent'
           assert settings.market_poll_seconds >= 300.0
+          assert cfg['triggers']['crons'] == ['* * * * *']
           json.dump(cfg, open('wrangler.day11.calibration.live.jsonc','w',encoding='utf-8'), indent=2)
           PY
 
@@ -155,14 +153,7 @@ jobs:
             --config wrangler.day11.calibration.live.jsonc \
             --command "SELECT COUNT(*) AS bars, SUM(CASE WHEN source_kind='calibration_backfill' AND source_provider='twelve_data' AND pit_eligible=0 AND research_only=1 AND live_money_execution_allowed=0 THEN 1 ELSE 0 END) AS safely_tagged FROM provider_calibration_m1_backfill;"
 
-      - name: Deploy provider Worker without changing formal-forward authority
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp wrangler.day11.calibration.live.jsonc wrangler.jsonc
-          uv run pywrangler deploy
-
-      - name: Verify production safety and route isolation
+      - name: Verify canonical production runtime remains untouched
         shell: bash
         run: |
           set -euo pipefail
