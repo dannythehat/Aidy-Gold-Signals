@@ -150,6 +150,46 @@ def test_score_profile_prefers_specific_only_after_minimum_sample() -> None:
     assert profile["sample_n"] == 10
 
 
+def test_learning_exposes_readable_selected_context() -> None:
+    mid = marker_id(surface="gold_h1_structure", source_path="gold_state.h1")
+    adjusted = apply_learning_to_reasons(
+        reasons=[
+            {
+                "surface": "gold_h1_structure",
+                "source_path": "gold_state.h1",
+                "vote": "bearish",
+                "weight": 2,
+            }
+        ],
+        profiles={
+            mid: {
+                "selected_scope_type": "session_liquidity",
+                "selected_scope_key": "session_liquidity_x",
+                "selected_scope_payload": {
+                    "session": "asia",
+                    "session_phase": "late_gt240m",
+                    "liquidity": "low_side_reclaim",
+                    "liquidity_intensity": "low",
+                },
+                "selected_scope_label": (
+                    "liquidity=low_side_reclaim | liquidity_intensity=low | "
+                    "session=asia | session_phase=late_gt240m"
+                ),
+                "sample_n": 8,
+                "net_score": 5,
+                "accuracy": "0.750000",
+                "learned_multiplier": "1.125000",
+            }
+        },
+    )
+    item = adjusted[0]
+    assert item["selected_score_scope"] == "session_liquidity"
+    assert item["selected_score_scope_key"] == "session_liquidity_x"
+    assert item["selected_score_context_payload"]["liquidity_intensity"] == "low"
+    assert "liquidity_intensity=low" in item["selected_score_context"]
+    assert "session=asia" in item["selected_score_context"]
+
+
 def test_learning_adjusts_each_marker_without_losing_base_weight() -> None:
     mid = marker_id(surface="gold_h4_structure", source_path="gold_state.h4")
     adjusted = apply_learning_to_reasons(
