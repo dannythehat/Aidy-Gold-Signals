@@ -131,7 +131,11 @@ async def run_capture_cycle(
                 market_store=live_gold_history,
             )
             market = await recorder.capture_once()
-            if market.status == "partial" and isinstance(market_gateway, TwelveDataOhlcGateway):
+            if (
+                settings.twelve_intraday_self_heal_enabled
+                and market.status == "partial"
+                and isinstance(market_gateway, TwelveDataOhlcGateway)
+            ):
                 try:
                     repair = await repair_intraday_provider_context_gap(
                         repository=repository,
