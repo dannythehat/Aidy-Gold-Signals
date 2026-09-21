@@ -81,4 +81,6 @@ def test_runtime_retries_canonical_capture_only_after_successful_repair() -> Non
     )
     assert "repair_intraday_provider_context_gap" in runtime
     assert 'if repair.get("repaired") is True:' in runtime
-    assert runtime.count("market = await recorder.capture_once()") == 2
+    assert runtime.count("market = await recorder.capture_once()") == 1
+    assert "repaired_market = await recorder.capture_once()" in runtime
+    assert "market = repaired_market" in runtime
