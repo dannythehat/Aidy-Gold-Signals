@@ -6,7 +6,9 @@ import pytest
 
 from aidy.twelve_data_intraday_repair import (
     MAX_AUTO_REPAIR_MINUTES,
+    MAX_AUTO_REPAIR_SPAN_MINUTES,
     plan_intraday_repair_window,
+    plan_intraday_repair_windows,
 )
 from aidy.twelve_data_market import expected_market_minute_opens, latest_completed_bucket
 
@@ -53,6 +55,39 @@ async def test_one_missing_intraday_minute_gets_one_bounded_repair_window() -> N
 
 
 @pytest.mark.asyncio
+async def test_sparse_h1_gap_splits_into_two_bounded_repair_windows() -> None:
+    as_of = datetime(2026, 9, 10, 12, 2, tzinfo=UTC)
+    required = _required_intraday(as_of)
+    missing = {
+        opened
+        for opened in required
+        if (
+            datetime(2026, 9, 10, 11, 0, tzinfo=UTC)
+            <= opened
+            < datetime(2026, 9, 10, 11, 10, tzinfo=UTC)
+        )
+        or (
+            datetime(2026, 9, 10, 11, 51, tzinfo=UTC)
+            <= opened
+            < datetime(2026, 9, 10, 12, 0, tzinfo=UTC)
+        )
+    }
+    assert len(missing) == 19
+    store = FakeStore(
+        [{"open_time_utc": opened.isoformat()} for opened in required if opened not in missing]
+    )
+
+    windows = await plan_intraday_repair_windows(store, as_of=as_of)
+
+    assert len(windows) == 2
+    assert sum(len(window.required_opens) for window in windows) == 19
+    assert set().union(*(set(window.required_opens) for window in windows)) == missing
+    for window in windows:
+        span_minutes = int((window.end_utc - window.start_utc).total_seconds() // 60)
+        assert span_minutes <= MAX_AUTO_REPAIR_SPAN_MINUTES
+
+
+@pytest.mark.asyncio
 async def test_large_or_widely_spread_gap_fails_closed_instead_of_burning_quota() -> None:
     as_of = datetime(2026, 9, 10, 12, 2, tzinfo=UTC)
     required = _required_intraday(as_of)
@@ -61,6 +96,7 @@ async def test_large_or_widely_spread_gap_fails_closed_instead_of_burning_quota(
         [{"open_time_utc": opened.isoformat()} for opened in required if opened not in missing]
     )
 
+    assert await plan_intraday_repair_windows(store, as_of=as_of) == ()
     assert await plan_intraday_repair_window(store, as_of=as_of) is None
 
 

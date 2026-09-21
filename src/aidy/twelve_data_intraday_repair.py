@@ -23,10 +23,11 @@ from .twelve_data_market import (
 )
 from .twelve_data_storage import D1TwelveDataMarketStore
 
-INTRADAY_REPAIR_VERSION = "aidy_twelve_intraday_self_heal_v1"
+INTRADAY_REPAIR_VERSION = "aidy_twelve_intraday_self_heal_v2"
 _INTRADAY_TIMEFRAMES = ("5m", "15m", "1h", "4h")
 MAX_AUTO_REPAIR_MINUTES = 30
 MAX_AUTO_REPAIR_SPAN_MINUTES = 30
+MAX_AUTO_REPAIR_WINDOWS = 2
 
 
 def _utc(value: datetime) -> datetime:
@@ -35,28 +36,28 @@ def _utc(value: datetime) -> datetime:
     return value.astimezone(UTC)
 
 
-async def plan_intraday_repair_window(
+async def plan_intraday_repair_windows(
     store: D1TwelveDataMarketStore,
     *,
     as_of: datetime,
-) -> BootstrapWindow | None:
-    """Return one tightly bounded repair window or None.
+) -> tuple[BootstrapWindow, ...]:
+    """Return up to two tightly bounded repair windows.
 
-    Only minutes needed by the latest completed M5/M15/H1/H4 buckets are
-    considered. D1 is intentionally excluded because Provider Context already
-    has an explicit observational-only D1-missing state.
+    The total number of missing minutes remains capped. A wider sparse hole may
+    be split into at most two requests, each spanning no more than the existing
+    30-minute safety boundary.
     """
 
     observed_at = _utc(as_of)
     if not gold_session_is_open(observed_at):
-        return None
+        return ()
 
     required: set[datetime] = set()
     for timeframe in _INTRADAY_TIMEFRAMES:
         start, end = latest_completed_bucket(observed_at, timeframe)
         required.update(expected_market_minute_opens(start, end))
     if not required:
-        return None
+        return ()
 
     start = min(required)
     end = max(required) + timedelta(minutes=1)
@@ -68,18 +69,48 @@ async def plan_intraday_repair_window(
     }
     missing = sorted(required - observed)
     if not missing:
-        return None
+        return ()
+    if len(missing) > MAX_AUTO_REPAIR_MINUTES:
+        return ()
 
-    span_minutes = int((missing[-1] - missing[0]).total_seconds() // 60) + 1
-    if len(missing) > MAX_AUTO_REPAIR_MINUTES or span_minutes > MAX_AUTO_REPAIR_SPAN_MINUTES:
-        return None
+    buckets: list[list[datetime]] = []
+    current: list[datetime] = []
+    for opened in missing:
+        if not current:
+            current = [opened]
+            continue
+        span_minutes = int((opened - current[0]).total_seconds() // 60) + 1
+        if span_minutes <= MAX_AUTO_REPAIR_SPAN_MINUTES:
+            current.append(opened)
+            continue
+        buckets.append(current)
+        current = [opened]
+    if current:
+        buckets.append(current)
 
-    return BootstrapWindow(
-        index=0,
-        start_utc=missing[0],
-        end_utc=missing[-1] + timedelta(minutes=1),
-        required_opens=frozenset(missing),
+    if len(buckets) > MAX_AUTO_REPAIR_WINDOWS:
+        return ()
+
+    return tuple(
+        BootstrapWindow(
+            index=index,
+            start_utc=bucket[0],
+            end_utc=bucket[-1] + timedelta(minutes=1),
+            required_opens=frozenset(bucket),
+        )
+        for index, bucket in enumerate(buckets)
     )
+
+
+async def plan_intraday_repair_window(
+    store: D1TwelveDataMarketStore,
+    *,
+    as_of: datetime,
+) -> BootstrapWindow | None:
+    """Backward-compatible single-window planner used by older tests/tools."""
+
+    windows = await plan_intraday_repair_windows(store, as_of=as_of)
+    return windows[0] if len(windows) == 1 else None
 
 
 async def repair_intraday_provider_context_gap(
@@ -92,8 +123,8 @@ async def repair_intraday_provider_context_gap(
     """Repair one small recent gap through the existing PIT-safe bootstrap ledger."""
 
     observed_at = _utc(as_of)
-    window = await plan_intraday_repair_window(store, as_of=observed_at)
-    if window is None:
+    windows = await plan_intraday_repair_windows(store, as_of=observed_at)
+    if not windows:
         return {
             "repair_version": INTRADAY_REPAIR_VERSION,
             "attempted": False,
@@ -101,30 +132,48 @@ async def repair_intraday_provider_context_gap(
             "reason": "no_bounded_intraday_gap",
         }
 
+    required_minutes = sum(len(window.required_opens) for window in windows)
     bootstrap_id = await store.start_bootstrap(
         started_at=datetime.now(UTC),
         as_of=observed_at,
-        planned_windows=1,
-        required_m1_minutes=len(window.required_opens),
+        planned_windows=len(windows),
+        required_m1_minutes=required_minutes,
     )
     service = AidyTwelveDataBootstrapService(
         repository=repository,
         gateway=gateway,
         store=store,
     )
-    result = await service.ingest_window(bootstrap_id=bootstrap_id, window=window)
+    results: list[dict[str, object]] = []
+    for window in windows:
+        results.append(
+            await service.ingest_window(bootstrap_id=bootstrap_id, window=window)
+        )
     complete = await store.finalize_bootstrap(
         bootstrap_id=bootstrap_id,
         completed_at=datetime.now(UTC),
     )
-    repaired = bool(complete and result.get("state") == "succeeded")
+    repaired = bool(
+        complete and all(result.get("state") == "succeeded" for result in results)
+    )
     return {
         "repair_version": INTRADAY_REPAIR_VERSION,
         "attempted": True,
         "repaired": repaired,
-        "required_m1_minutes": len(window.required_opens),
-        "window_start_utc": window.start_utc.isoformat(),
-        "window_end_utc": window.end_utc.isoformat(),
+        "required_m1_minutes": required_minutes,
+        "repair_window_count": len(windows),
+        "window_start_utc": windows[0].start_utc.isoformat(),
+        "window_end_utc": windows[-1].end_utc.isoformat(),
+        "windows": [
+            {
+                "index": window.index,
+                "start_utc": window.start_utc.isoformat(),
+                "end_utc": window.end_utc.isoformat(),
+                "required_m1_minutes": len(window.required_opens),
+                "state": results[index].get("state"),
+            }
+            for index, window in enumerate(windows)
+        ],
         "bootstrap_id": str(bootstrap_id),
-        "state": result.get("state"),
+        "state": "succeeded" if repaired else "failed",
     }
