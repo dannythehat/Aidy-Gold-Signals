@@ -7,6 +7,28 @@ Updated: 2026-09-21
 
 
 
+
+## Build 5 COMPLETE — M5 Price Structure Expert
+
+Build 5 adds `aidy_gold_m5_price_structure_expert_v1`, the first actual timeframe expert mini-brain.
+
+It consumes the Build-4 completed-bar M5 mathematics and emits a Build-2 expert-gate packet with five independently scoreable directional opinions:
+- M5 trend/path quality;
+- confirmed M5 swing structure;
+- breakout acceptance/reclaim;
+- momentum transition;
+- latest completed-candle pressure.
+
+Range location and contradiction diagnostics remain context-only. The final M5 conclusion is family-balanced so correlated calculations cannot manufacture confidence by vote count. Weak/conflicted evidence remains NEUTRAL, ABSTAIN or UNKNOWN.
+
+The expert declares its own repeatable mini-environment, builds Build-3 exact/reduced/global trust scopes, and attaches pre-decision historical reliability separately for the overall gate and each calculator. The legacy M5 direction remains frozen as an ablation baseline; added sophistication does not receive weight automatically.
+
+Engineering acceptance on PR #206: semantic gate PASS, static checks PASS, focused workflow suite 148 passed, full repository regression 1400 passed. PIT tests prove completed-bar-only evidence, future-values=0 and chronological decisions unchanged by later rows.
+
+Build 5 remains research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 6 — M15 Price Structure Expert. It uses the same contract but independently calibrates M15 horizons/thresholds, with explicit M15 8-bar path, latest 15-minute momentum, swing/breakout evidence, dependency metadata and legacy-M15 ablation.
+
 ## Build 4 COMPLETE — Common Price Expert Mathematics
 
 Build 4 adds `aidy_gold_price_expert_math_v1`, the shared deterministic mathematics layer for the future M5/M15/H1/H4/D1 expert gates.
