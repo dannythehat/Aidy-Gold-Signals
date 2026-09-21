@@ -100,9 +100,10 @@ jobs:
   acceptance:
     name: AIDY Day 53 Twelve Data OHLC Adapter / acceptance
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
+      DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@v4
@@ -208,6 +209,43 @@ jobs:
       - name: Full repository regression
         shell: bash
         run: uv run pytest -q
+
+      - name: Build 17 genuine Databento microstructure holdout
+        id: build17_genuine
+        if: github.event_name == 'pull_request' && github.head_ref == 'build17/genuine-holdout-evidence-20260921'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${DATABENTO_API_KEY:-}" || { echo "DATABENTO_API_KEY secret is missing"; exit 1; }
+          uv run python scripts/build17_genuine_microstructure_holdout.py \
+            --output build17_genuine_holdout.json \
+            --raw-dir /tmp/build17_databento \
+            --histdata-cache /tmp/build17_histdata
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          evidence = json.loads(Path("build17_genuine_holdout.json").read_text(encoding="utf-8"))
+          assert evidence["genuine_microstructure"] is True, evidence
+          assert evidence["spot_ohlc_expert_baseline"] is True, evidence
+          assert evidence["holdout_n"] == 30, evidence
+          assert evidence["purge_required"] is True, evidence
+          assert evidence["embargo_required"] is True, evidence
+          assert evidence["holdout_tuning_allowed"] is False, evidence
+          assert evidence["formal_forward_evidence_created"] is False, evidence
+          assert evidence["gate_promoted"] is False, evidence
+          assert evidence["paid_live_feed_activated"] is False, evidence
+          assert evidence["depth_claimed"] is False, evidence
+          assert evidence["order_book_imbalance_claimed"] is False, evidence
+          PY
+
+      - name: Preserve Build 17 genuine holdout evidence
+        if: github.event_name == 'pull_request' && github.head_ref == 'build17/genuine-holdout-evidence-20260921' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-build17-genuine-holdout-${{ github.event.pull_request.head.sha }}
+          path: build17_genuine_holdout.json
+          if-no-files-found: warn
+          retention-days: 90
 
       - name: Manual real adapter run - capture meta credits and freshness
         id: live_adapter
