@@ -115,6 +115,11 @@ def _packet(
                     if state != "known"
                     else conclusion
                 ),
+                **(
+                    {"strength": "0.70"}
+                    if not context_only and state == "known"
+                    else {}
+                ),
                 "evidence_refs": [f"{gate_id}_evidence"],
                 "observation": {"fixture": True},
                 "explanation": "Build 21 selector fixture.",
