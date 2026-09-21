@@ -13,6 +13,7 @@ permissions:
   contents: read
 
 jobs:
+  # Post-merge verification remains mandatory before Build 23 is closed.
   acceptance:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
