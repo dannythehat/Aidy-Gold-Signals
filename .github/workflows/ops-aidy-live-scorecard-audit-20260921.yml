@@ -127,7 +127,7 @@ jobs:
             WITH latest AS (
               SELECT evidence_json FROM aidy_gold_cycle_views ORDER BY window_start_utc DESC LIMIT 1
             )
-            SELECT key,json_type(value) AS value_type
+            SELECT key,type AS value_type
             FROM latest,json_each(latest.evidence_json)
             ORDER BY key;
           "
