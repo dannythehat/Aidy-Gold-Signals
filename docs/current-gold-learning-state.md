@@ -13,6 +13,23 @@ Updated: 2026-09-21
 
 
 
+
+## Build 11 COMPLETE — Price Location Expert
+
+Build 11 adds `aidy_gold_price_location_expert_v1`.
+
+The expert answers where Gold is rather than where it is moving. It combines frozen prior-day, Asia, active-session and opening-range references with confirmed swings, recent extrema and round numbers, then measures every level using exact USD, bps and ATR-normalised distance.
+
+Geometric nearness and structural priority are deliberately separate. The closest level is reported independently from the highest-priority structural reference, and every priority tier/reason is exposed for audit. Nearby levels are clustered for confluence and the expert explicitly records when price is bracketed by nearby references on both sides.
+
+The gate is context-only. Location alone cannot create directional edge, conviction or a BUY/SELL call. A future reaction rule must be separately defined and tested before location can influence direction.
+
+Engineering acceptance on PR #214 candidate: semantic gate PASS, static checks PASS, focused workflow suite 223 passed, full repository regression 1475 passed. Exact distance math, priority auditability, confluence/conflict, descriptive-only round numbers, ATR normalisation, missing-mid fail-closed, PIT safety and chronological freeze all pass.
+
+Build 11 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 12 — Liquidity / Reclaim Expert. It will make sweep/reclaim reasoning measurable and multi-step while explicitly treating OHLC sweep logic as a proxy, not real order flow.
+
 ## Build 10 COMPLETE — Momentum / Impulse Expert
 
 Build 10 adds `aidy_gold_momentum_impulse_expert_v1`.
