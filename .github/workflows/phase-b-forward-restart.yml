@@ -7,8 +7,6 @@ on:
       - "migrations/d1/0020_phase_b_forward_restart_guard.sql"
       - ".github/workflows/phase-b-forward-restart.yml"
       - "tests/test_phase_b_forward_restart_guard.py"
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 concurrency:
