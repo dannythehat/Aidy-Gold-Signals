@@ -20,6 +20,47 @@ Updated: 2026-09-21
 
 
 
+## Build 20 — Evidence Dependency & Double-Counting Engine COMPLETE
+
+Build 20 adds `aidy_gold_evidence_dependency_engine_v1`.
+
+What is built and proven:
+- explicit evidence-family graph with declared parent/child relationships;
+- structure, momentum and location share the `price_action` parent;
+- event, rates/USD, cross-market and news share the `macro_information` parent;
+- liquidity, volatility, participation/microstructure, analogue memory and data quality retain separate roots;
+- exact duplicate evidence adds zero incremental weight;
+- contradictory interpretations of the same evidence are split symmetrically rather than order-biased;
+- same correlation-group signals are damped even before enough empirical history exists;
+- rolling pre-outcome signal correlations use only rows observed before the current as-of;
+- highly correlated signals under the same parent are empirically damped;
+- same-root incremental evidence is capped so five price-derived signals cannot manufacture five votes;
+- independent-root agreement gets only a small bounded bonus and only when at least three genuinely distinct roots align;
+- context-only gates remain observable but receive zero directional weight;
+- no outcome field is allowed into dependency diagnostics.
+
+Acceptance evidence:
+- exact tested PR #229 head: `b5cf46b5751cb9a9f7dc565b88bd08dccf3810d4`;
+- implementation merge: `35de6056cbbbdde2309a2185c07914f7df375797`;
+- Build 20 workflow run: `35611781428` — PASS;
+- Evidence Semantic Change Gate: `35611781415` — PASS;
+- static/compile checks: PASS;
+- focused suite: 144 passed;
+- dedicated double-counting gate: 5 passed;
+- full repository regression: 1607 passed;
+- exact duplicate zero increment: PASS;
+- removing an exact duplicate leaves the dependency-adjusted score unchanged: PASS;
+- highly correlated M5/M15/momentum damping: PASS;
+- five price-derived votes capped at 1.5 leader-equivalents: PASS;
+- independent liquidity + macro + structure preserved as three distinct roots: PASS;
+- future correlation rows excluded: PASS;
+- historical outcome fields rejected: PASS;
+- deterministic input reordering: PASS.
+
+Build 20 is dependency infrastructure for Build 21. It does not independently select live gates, change Super Signals execution/provider rules, change owner 1% risk, create formal-forward evidence or grant live-money authority.
+
+**Next:** Build 21 — Environment-Aware Gate Selector. It will combine contextual trust with Build-20 dependency multipliers, sample shrinkage, calibration and drift so AIDY knows which gates deserve attention in the current environment.
+
 ## Build 19 — Analogue / Episode Expert COMPLETE
 
 Build 19 adds `aidy_gold_analogue_episode_expert_v1`.
