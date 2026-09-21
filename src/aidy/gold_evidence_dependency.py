@@ -500,10 +500,18 @@ def apply_dependency_adjustments(
     )
     adjusted: list[dict[str, Any]] = []
     seen_exact: set[tuple[str, str]] = set()
+    evidence_votes: dict[str, set[str]] = defaultdict(set)
+    for item in ordered:
+        if item["eligible_for_directional_weight"] and item["vote"] in {"bullish", "bearish"}:
+            evidence_votes[str(item["evidence_identity"])].add(str(item["vote"]))
 
     for signal in ordered:
         multiplier = Decimal(1) if signal["eligible_for_directional_weight"] else Decimal(0)
         reasons: list[str] = []
+        distinct_evidence_votes = evidence_votes.get(str(signal["evidence_identity"]), set())
+        if multiplier > 0 and len(distinct_evidence_votes) > 1:
+            multiplier = Decimal(1) / Decimal(len(distinct_evidence_votes))
+            reasons.append("shared_evidence_conflict_split")
         exact_key = (signal["evidence_identity"], signal["vote"])
         if multiplier > 0 and exact_key in seen_exact:
             multiplier = Decimal(0)
@@ -551,6 +559,7 @@ def apply_dependency_adjustments(
         adjusted.append(
             {
                 **signal,
+                "raw_weight": _fmt(signal["raw_weight"]),
                 "dependency_multiplier_pre_parent_cap": _fmt(multiplier),
                 "dependency_multiplier": _fmt(multiplier),
                 "effective_weight": _fmt(signal["raw_weight"] * multiplier),
