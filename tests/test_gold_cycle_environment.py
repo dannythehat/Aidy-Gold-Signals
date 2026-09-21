@@ -151,9 +151,11 @@ def test_cycle_environment_captures_real_start_state() -> None:
     assert dimensions["asia_overnight_zone"] == "lower_quartile"
     assert dimensions["active_session_zone"] == "lower_middle"
     assert dimensions["liquidity_signature"] == "low_side_reclaim"
+    assert dimensions["liquidity_intensity"] == "low"
     assert dimensions["prior_day_breakout_state"] == "downside_failed"
     assert dimensions["event_proximity"] == "within_120m"
     assert dimensions["cross_market_known_count"] == 2
+    assert dimensions["cross_market_coverage"] == "low"
     assert environment["future_values_used"] is False
     assert environment["live_money_execution_allowed"] is False
 

@@ -194,13 +194,29 @@ def test_toolbox_coverage_records_every_capability_even_when_not_scoreable() -> 
     coverage = toolbox_cycle_coverage(
         toolbox_manifest=manifest,
         marker_reasons=reasons,
+        environment={
+            "learning_dimensions": {
+                "session": "london",
+                "session_phase": "opening_15_30m",
+                "h4_direction": "bullish",
+                "volatility_state": "normal",
+            }
+        },
     )
     assert len(coverage) == 3
     by_name = {item["name"]: item for item in coverage}
     assert by_name["gold_h4_structure"]["scoreable_this_cycle"] is True
+    assert by_name["gold_h4_structure"]["reasoning_action"] == "directional_vote"
+    assert "h4=bullish" in by_name["gold_h4_structure"]["readable_state"]
+    assert by_name["gold_h4_structure"]["condition_key"].startswith("condition_")
     assert by_name["realized_volatility"]["scoreable_this_cycle"] is False
+    assert by_name["realized_volatility"]["reasoning_action"] == "context_used"
+    assert "volatility=normal" in by_name["realized_volatility"]["readable_state"]
     assert by_name["breaking_news_event_search"]["role_this_cycle"] == (
         "known_but_not_live_connected"
+    )
+    assert by_name["breaking_news_event_search"]["reasoning_action"] == (
+        "explicit_unavailable"
     )
 
 
