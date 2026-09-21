@@ -1,0 +1,126 @@
+name: AIDY Build 17 Genuine Microstructure Holdout
+
+on:
+  push:
+    branches:
+      - build17/futures-microstructure-expert-20260921
+    paths:
+      - "ops/build17-genuine-trigger.txt"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aidy-build17-genuine-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  genuine-holdout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      BUILD17_MAX_SPEND_USD: "150.00"
+      BUILD17_OUTPUT_DIR: build17_genuine
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install bounded dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${DATABENTO_API_KEY:-}"
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}"
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Static check genuine holdout script
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check scripts/build17_genuine_microstructure_holdout.py
+          uv run python -m compileall -q scripts/build17_genuine_microstructure_holdout.py
+
+      - name: Run cost-capped genuine COMEX holdout
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python scripts/build17_genuine_microstructure_holdout.py > /tmp/build17-genuine-summary.json
+          cat /tmp/build17-genuine-summary.json
+
+      - name: Enforce Build 17 Phase-A boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run python - <<'PY'
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+
+          path = Path("build17_genuine/genuine_holdout_evidence.json")
+          evidence = json.loads(path.read_text(encoding="utf-8"))
+
+          assert evidence["evidence_version"] == "aidy_build17_genuine_microstructure_holdout_v1"
+          assert evidence["source_futures_provider"] == "Databento"
+          assert evidence["source_futures_dataset"] == "GLBX.MDP3"
+          assert evidence["source_futures_schema"] == "tbbo"
+          assert evidence["episode_selection_frozen_before_databento_download"] is True
+          assert evidence["train_episode_count"] == 32
+          assert evidence["holdout_episode_count"] == 32
+
+          cost = evidence["cost"]
+          assert cost["all_requests_quoted_before_download"] is True
+          assert Decimal(cost["hard_cap_usd"]) <= Decimal("150.00")
+          assert Decimal(cost["total_initial_quote_usd"]) <= Decimal("150.00")
+          assert Decimal(cost["total_fresh_committed_quote_usd"]) <= Decimal("150.00")
+          assert cost["paid_live_subscription_activated"] is False
+          assert cost["recurring_subscription_activated"] is False
+
+          holdout = evidence["holdout_summary"]
+          assert holdout["sample_n"] == 32
+          assert holdout["state"] in {
+              "incremental_value_observed",
+              "null_no_incremental_value",
+              "microstructure_underperformed_spot",
+          }
+          assert holdout["retrospective_holdout_only"] is True
+          assert holdout["statistically_validated"] is False
+          assert holdout["gate_promoted"] is False
+          assert holdout["live_weight_granted"] is False
+          assert holdout["paid_feed_activation_allowed"] is False
+
+          assert evidence["depth_claimed"] is False
+          assert evidence["order_book_imbalance_claimed"] is False
+          assert evidence["unknown_aggressor_side_imputed"] is False
+          assert evidence["statistically_validated"] is False
+          assert evidence["formal_forward_evidence_created"] is False
+          assert evidence["gate_promoted"] is False
+          assert evidence["live_weight_granted"] is False
+          assert evidence["paid_feed_activation_allowed_by_this_result"] is False
+          assert evidence["owner_approval_required_for_phase_b"] is True
+
+          raw = Path("build17_genuine/raw")
+          assert not list(raw.glob("*.jsonl")), "licensed raw TBBO must not be uploaded as artifact"
+          PY
+
+      - name: Preserve Build 17 genuine evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-build17-genuine-${{ github.sha }}
+          path: |
+            build17_genuine/cost_quote.json
+            build17_genuine/genuine_holdout_evidence.json
+          if-no-files-found: error
+          retention-days: 90
