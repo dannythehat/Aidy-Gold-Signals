@@ -52,13 +52,13 @@ def _bucket_distance_bps(value: Any) -> str:
     if parsed is None:
         return "unknown"
     distance = abs(parsed)
-    if distance <= Decimal("1"):
+    if distance <= Decimal(1):
         return "at_level_0_1bp"
-    if distance <= Decimal("3"):
+    if distance <= Decimal(3):
         return "near_1_3bp"
-    if distance <= Decimal("8"):
+    if distance <= Decimal(8):
         return "close_3_8bp"
-    if distance <= Decimal("20"):
+    if distance <= Decimal(20):
         return "moderate_8_20bp"
     return "far_gt20bp"
 
@@ -75,7 +75,7 @@ def _bucket_ratio(value: Any) -> str:
         return "lower_middle"
     if parsed < Decimal("0.75"):
         return "upper_middle"
-    if parsed <= Decimal("1"):
+    if parsed <= Decimal(1):
         return "upper_quartile"
     return "above_range"
 
@@ -130,9 +130,7 @@ def _session_timing(*, as_of: datetime, session_code: str) -> dict[str, Any]:
         active_minutes = since_asia
     elif session_code == "london":
         active_minutes = since_london
-    elif session_code == "new_york":
-        active_minutes = since_new_york
-    elif session_code == "london_new_york_overlap":
+    elif session_code in {"new_york", "london_new_york_overlap"}:
         active_minutes = since_new_york
     else:
         active_minutes = None
