@@ -10,6 +10,21 @@ Updated: 2026-09-21
 
 
 
+
+## Build 8 COMPLETE — H4 Price Structure Expert
+
+Build 8 adds `aidy_gold_h4_price_structure_expert_v1`.
+
+H4 is deliberately a slow structural expert, not a privileged vote. Its current packet contains zero automatic timeframe bonus and zero default next-15m weight. Any future influence on a short-horizon forecast must first prove incremental conditional value against the lower-timeframe baseline with enough historical samples.
+
+H4 evaluates slow trend quality using 32h/52h path evidence, slope/R², persistence, efficiency and volatility-normalised displacement, alongside swing structure, breakout acceptance/reclaim, acceleration and candle pressure. Conflict with M5/M15/H1 is emitted as its own scoreable hypothesis so Aidy can learn when the slow timeframe disagreement was useful or harmful.
+
+Engineering acceptance on PR #211 candidate: semantic gate PASS, static checks PASS, focused workflow suite 187 passed, full repository regression 1439 passed. Explicit H4 conflict scoring, zero timeframe-derived next-15m authority, incremental-value gating, PIT safety, chronological freeze, separate H4 trust and legacy-H4 ablation all pass.
+
+Build 8 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 9 — D1 Context Expert. D1 provides slow structural/macro-location context, abstains on stale/partial evidence, never forces 15-minute direction, and must prove context value separately from direct forecast value.
+
 ## Build 7 COMPLETE — H1 Price Structure Expert
 
 Build 7 adds `aidy_gold_h1_price_structure_expert_v1`.
