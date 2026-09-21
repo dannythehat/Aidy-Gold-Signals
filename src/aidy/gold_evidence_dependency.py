@@ -374,7 +374,7 @@ def rolling_dependency_diagnostics(
             state = "moderate_dependency"
         else:
             state = "weak_dependency"
-        key = "|".join((left_id, right_id))
+        key = f"{left_id}|{right_id}"
         item = {
             "pair_id": key,
             "left_signal_id": left_id,
