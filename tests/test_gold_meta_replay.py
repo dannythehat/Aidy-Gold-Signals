@@ -65,8 +65,8 @@ def _rows() -> list[dict]:
                         },
                         "spurious_gate": {
                             "conclusion": spurious,
-                            "authority_weight": "0.25",
-                            "raw_authority_weight": "0.25",
+                            "authority_weight": "0.35",
+                            "raw_authority_weight": "0.35",
                             "classification": "reduced_trust",
                             "gate_mode": "directional",
                         },
