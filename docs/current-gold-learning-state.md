@@ -20,6 +20,38 @@ Updated: 2026-09-21
 
 
 
+## Build 24 — Live Forward Shadow Soak & Permanent Scorecard — ENGINEERING COMPLETE / LIVE PROOF IN PROGRESS
+
+Build 24 adds `aidy_gold_expert_shadow_v1` and `aidy_gold_expert_scorecard_v1`, completing the planned 24-build expert-gate implementation.
+
+What is built and already proven:
+- prospective activation is persisted before any eligible shadow cycle can freeze;
+- only cycles decided at or after that activation can enter the Build-24 programme;
+- the existing 15-minute Gold cycle remains the single clock and point-in-time boundary;
+- every eligible shadow cycle carries all 15 expected expert-gate identities;
+- currently connected price/structure/location/momentum/liquidity/volatility/session experts run from the exact admitted PIT snapshot;
+- currently disconnected macro/event, rates/USD/cross-asset, futures/microstructure, news/mechanism and analogue/episode live sources remain explicit UNKNOWN context gates with zero invented directional authority;
+- Build-20 dependency state, Build-21 selector and Build-22 final AIDY view are frozen before the target window;
+- outcomes are read only from the later `aidy_gold_cycle_outcomes` resolver;
+- gate/subcalculator scores use the existing Build-3 +/-2/+/-1/0 rules and refresh environment-specific trust scorebooks only after resolution;
+- the authenticated Provider Context exposes a permanent scorecard with gate mini-environment, N, raw/shrunk reliability, net score, drift, uncertainty, dependency adjustment, calibration, current trust and last score time;
+- restart/idempotency is structural through persisted activation and conflict-safe immutable inserts;
+- the scorecard is read-only context and is not imported into the private-forward decision-input builder;
+- formal-forward and live-money authority remain OFF.
+
+Engineering acceptance:
+- implementation PR #238 tested head: `a0b8710abc3fe4ea569deed868ea6538294169ad`;
+- implementation merge: `6644892d12be6ae497f07db2a69119eaa58e0d27`;
+- Build 24 acceptance run: `35623113260` — PASS;
+- Evidence Semantic Change Gate: `35623113461` — PASS;
+- Ruff + compile: PASS;
+- focused Build-24/component suite: 103 passed;
+- full repository regression: 1664 passed;
+- Day-53 Twelve Data and live-forward safety workflows: PASS.
+- public Worker health already exposes `aidy_gold_expert_shadow_v1` and `aidy_gold_expert_scorecard_v1`, with capture fresh and formal-forward OFF.
+
+Live completion evidence is being collected by PR #239 / run `35623618474`: schema, deploy, Worker safety and the first genuine prospective 15-minute shadow cycle have passed. The final delayed post-window score/scorecard proof must pass before this section is promoted from LIVE PROOF IN PROGRESS to COMPLETE.
+
 ## Build 23 — Chronological Replay, Ablation & Untouched Holdout COMPLETE
 
 Build 23 adds `aidy_gold_meta_replay_report_v1` and the versioned meta-replay dataset/split/policy contracts.
