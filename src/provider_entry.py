@@ -8,6 +8,7 @@ from workers import Response
 from aidy.config import AidySettings
 from aidy.data_health import collect_and_record_data_health, collect_data_health
 from aidy.episode_memory_runtime import sync_aidy_episode_memory_runtime
+from aidy.gold_cycle_memory import GOLD_CYCLE_MEMORY_VERSION, sync_gold_cycle_memory
 from aidy.gold_movement_investigator import GOLD_MOVEMENT_INVESTIGATOR_VERSION
 from aidy.gold_movement_memory import (
     GOLD_MOVEMENT_MEMORY_VERSION,
@@ -108,10 +109,35 @@ async def _public_health_response(env: object):
             "provider_gold_state_version": PROVIDER_GOLD_STATE_VERSION,
             "gold_movement_investigator_version": GOLD_MOVEMENT_INVESTIGATOR_VERSION,
             "gold_movement_memory_version": GOLD_MOVEMENT_MEMORY_VERSION,
+            "gold_cycle_memory_version": GOLD_CYCLE_MEMORY_VERSION,
             "gold_toolbox_manifest_version": GOLD_TOOLBOX_MANIFEST_VERSION,
             "data_health": health_summary,
         }
     )
+
+
+async def _sync_gold_cycle_memory_best_effort(env: object) -> None:
+    """Freeze/resolve 15-minute Gold cycle views without risking market capture."""
+
+    try:
+        result = await sync_gold_cycle_memory(
+            env.AIDY_OPS,
+            now_utc=datetime.now(UTC),
+        )
+        creation = result.get("creation") or {}
+        resolution = result.get("resolution") or {}
+        if creation.get("created") or int(resolution.get("resolved") or 0):
+            print(
+                "AIDY Gold-cycle memory sync: "
+                f"created={creation.get('created')} "
+                f"direction={creation.get('view_direction')} "
+                f"resolved={resolution.get('resolved')}"
+            )
+    except Exception as exc:  # noqa: BLE001 - learning cannot undo successful capture
+        print(
+            "AIDY Gold-cycle memory sync failed: "
+            f"{type(exc).__name__}: {str(exc)[:500]}"
+        )
 
 
 async def _record_health_best_effort(env: object, *, scheduler: str) -> None:
@@ -218,6 +244,7 @@ class Default(CoreDefault):
         finally:
             await _sync_episode_memory_best_effort(self.env)
             await _sync_gold_movement_memory_best_effort(self.env)
+            await _sync_gold_cycle_memory_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="direct-cron")
         if not message.acked:
             raise RuntimeError("aidy_direct_cron_capture_not_acknowledged")
@@ -229,4 +256,5 @@ class Default(CoreDefault):
         finally:
             await _sync_episode_memory_best_effort(self.env)
             await _sync_gold_movement_memory_best_effort(self.env)
+            await _sync_gold_cycle_memory_best_effort(self.env)
             await _record_health_best_effort(self.env, scheduler="queue-consumer")
