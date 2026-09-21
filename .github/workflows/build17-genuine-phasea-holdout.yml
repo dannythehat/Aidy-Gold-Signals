@@ -1,0 +1,98 @@
+name: AIDY Build 17 Genuine Phase-A Holdout
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_futures_microstructure_expert.py"
+      - "tests/test_gold_futures_microstructure_expert.py"
+      - "scripts/build17_phasea_holdout.py"
+      - ".github/workflows/build17-genuine-phasea-holdout.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  holdout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project and bounded BigQuery dependency
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv pip install 'google-cloud-bigquery>=3.42,<4'
+
+      - name: Static Build 17 real-study check
+        run: |
+          set -euo pipefail
+          uv run ruff check scripts/build17_phasea_holdout.py
+          uv run python -m compileall -q scripts/build17_phasea_holdout.py
+
+      - name: Require existing research credentials
+        run: |
+          set -euo pipefail
+          test -n "${DATABENTO_API_KEY:-}" || { echo "DATABENTO_API_KEY secret is missing"; exit 1; }
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "AIDY_GCP_SERVICE_ACCOUNT_JSON secret is missing"; exit 1; }
+
+      - name: Run genuine free-credit Phase-A holdout
+        run: |
+          set -euo pipefail
+          uv run python scripts/build17_phasea_holdout.py | tee /tmp/build17-phasea.json
+
+      - name: Enforce Build 17 Phase-A acceptance
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from decimal import Decimal
+          result=json.load(open('/tmp/build17-phasea.json', encoding='utf-8'))
+          assert result['ok'] is True, result
+          assert result['source_provider'] == 'Databento', result
+          assert result['source_dataset'] == 'GLBX.MDP3', result
+          assert result['source_schema'] == 'tbbo', result
+          assert result['baseline_window_count'] == 20, result
+          assert result['holdout_window_count'] == 40, result
+          assert result['eligible_holdout_episode_n'] >= 30, result
+          assert result['baseline_outcome_fields_used'] is False, result
+          assert result['ordinary_session_activity_can_count_as_alpha'] is False, result
+          assert result['paid_subscription_enabled'] is False, result
+          assert result['live_subscription_enabled'] is False, result
+          assert result['depth_claimed'] is False, result
+          assert result['order_book_imbalance_claimed'] is False, result
+          assert result['formal_forward_evidence_created'] is False, result
+          assert result['gate_promoted'] is False, result
+          assert result['live_weight_granted'] is False, result
+          assert result['statistically_validated'] is False, result
+          assert result['future_values_used_for_features'] is False, result
+          assert Decimal(result['free_credit_used_usd']) <= Decimal('1.00'), result
+          holdout=result['incremental_holdout']
+          assert holdout['retrospective_holdout_only'] is True, result
+          assert holdout['purge_required'] is True, result
+          assert holdout['embargo_required'] is True, result
+          assert holdout['holdout_tuning_allowed'] is False, result
+          assert holdout['state'] == 'incremental_value_observed', result
+          assert Decimal(holdout['incremental_accuracy']) > 0, result
+          PY
+
+      - name: Preserve genuine Phase-A evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-build17-genuine-phasea-${{ github.event.pull_request.head.sha }}
+          path: /tmp/build17-phasea.json
+          if-no-files-found: error
+          retention-days: 90
