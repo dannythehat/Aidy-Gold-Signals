@@ -1,1 +1,1 @@
-Build 17 genuine Databento/BigQuery holdout trigger attempt 2. Owner-approved hard spend cap: USD 150.00. Static-only attempt 1 spent USD 0.00.
+Build 17 genuine Databento/BigQuery holdout trigger attempt 3. Owner-approved hard spend cap: USD 150.00. Attempts 1-2 stopped at static checks and spent USD 0.00.
