@@ -1,0 +1,57 @@
+name: AIDY Build 19 Analogue Episode Expert
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_analogue_episode_expert.py"
+      - "tests/test_gold_analogue_episode_expert.py"
+      - ".github/workflows/build19-analogue-episode-expert.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static Build 19 checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check             src/aidy/gold_analogue_episode_expert.py             tests/test_gold_analogue_episode_expert.py
+          uv run python -m compileall -q             src/aidy/gold_analogue_episode_expert.py             tests/test_gold_analogue_episode_expert.py
+
+      - name: Focused Build 19 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q             tests/test_gold_expert_gate_contract.py             tests/test_gold_expert_trust.py             tests/test_analogue_retrieval.py             tests/test_day24_independent_retrieval.py             tests/test_day25_market_structure.py             tests/test_pit_integrity_adversarial.py             tests/test_gold_movement_investigator.py             tests/test_day53_semantic_analogue_wrapper.py             tests/test_gold_analogue_episode_expert.py
+
+      - name: Build 19 chronological holdout and counterexample acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_gold_analogue_episode_expert.py -k             "positive_and_counterexample or future_outcome_change or duplicate_overlapping or chronological_holdout or selection_is_deterministic"
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
