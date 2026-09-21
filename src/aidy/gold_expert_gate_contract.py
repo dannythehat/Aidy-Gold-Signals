@@ -12,7 +12,7 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation, ROUND_HALF_EVEN
+from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
@@ -103,7 +103,7 @@ def _probability(value: Any, *, field: str, required: bool) -> str | None:
             raise ValueError(f"{field} is required")
         return None
     if isinstance(value, bool):
-        raise ValueError(f"{field} must be between 0 and 1")
+        raise TypeError(f"{field} must be between 0 and 1")
     try:
         parsed = Decimal(str(value))
     except (InvalidOperation, ValueError) as exc:
