@@ -29,6 +29,7 @@ uv run pytest -q \
   tests/test_gold_movement_memory.py \
   tests/test_twelve_data_intraday_repair.py \
   tests/test_aidy_data_health.py \
+  tests/test_runtime_schedule.py \
   tests/test_twelve_data_retrospective.py
 
 uv run python scripts/build_cloudflare_live_config.py
