@@ -20,50 +20,48 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
-## Build 17 — Futures / Microstructure Expert IMPLEMENTATION BUILT / ACCEPTANCE WAITING
+## Build 17 — Futures / Microstructure Expert COMPLETE
 
-Build 17 Phase A implementation is engineering-proven, but the blueprint acceptance gate is **not yet satisfied**.
+Build 17 adds `aidy_gold_futures_microstructure_expert_v1` and has now passed its genuine Phase-A acceptance gate.
 
-Expert:
-`aidy_gold_futures_microstructure_expert_v1`
-
-What is built:
-- genuine Day-42 Databento GC TBBO feature contract;
-- exchange trade volume;
-- known-side aggressor flow with unknown side left UNKNOWN;
+What is built and proven:
+- genuine historical Databento COMEX GC TBBO trade volume;
+- known-side aggressor flow with unknown side preserved as UNKNOWN;
 - pre-trade BBO spread;
 - trade-price/size VWAP plus session/anchored VWAP;
 - matched weekday × clock normalization;
 - official CME daily open-interest / active-contract / roll state;
-- retrospective holdout comparator: spot OHLC baseline versus spot+microstructure;
-- chronological split / purge / embargo / no-holdout-tuning enforcement;
+- frozen spot-OHLC versus spot+microstructure retrospective comparator;
+- chronological split with purge, embargo and no holdout tuning;
 - explicit null, underperformance and insufficient states;
-- no depth/order-book/L2/L3/MBO/MBP10 claim;
-- Phase-B paid/live activation hard OFF and owner-gated.
+- no depth/order-book/L2/L3/MBO/MBP10 claim without depth data;
+- Phase-B paid/live activation remains separate and owner-gated.
 
-Engineering acceptance on PR #220 candidate:
-- Evidence Semantic Change Gate: PASS;
-- static checks: PASS;
-- focused workflow suite: 308 passed;
-- full repository regression: 1560 passed;
-- synthetic positive incremental holdout: PASS;
-- null holdout retention: PASS;
-- microstructure-underperformance retention: PASS;
-- insufficient holdout remains UNKNOWN: PASS;
-- purge/embargo/no-holdout-tuning enforcement: PASS;
-- entitlement feature boundary: PASS;
-- no-depth boundary: PASS;
-- official CME daily OI/roll semantics: PASS.
+Final genuine evidence:
+- implementation PR #220 merge: `f6ac451c90ae49f5bbe795af5a25757b65afb8ce`;
+- genuine holdout PR #223 exact tested head: `ca49a6dd541ec17b09b11b25604722d7ef256b32`;
+- PR #223 merge: `b1e6e2f491c1cf31fdb30a94a88929e4f092fc18`;
+- Evidence Semantic Change Gate: PASS — run `35605952419`;
+- acceptance workflow: PASS — run `35605952385`;
+- focused suite: 313 passed;
+- full repository regression: 1565 passed;
+- valid genuine weekly episodes: 61;
+- normalization episodes: 20;
+- development episodes: 10;
+- embargo episodes: 1;
+- untouched holdout episodes: 30;
+- selected development-only rule: `override_1p5_0p5`;
+- spot-only holdout accuracy: 20.0000%;
+- spot + microstructure holdout accuracy: 23.3333%;
+- genuine incremental accuracy: +3.3333 percentage points;
+- holdout state: `incremental_value_observed`;
+- quoted Databento research spend: $0.148881077766.
 
-Why Build 17 is not complete:
-- the authoritative blueprint requires a **real retrospective holdout showing incremental value beyond spot OHLC experts**;
-- the genuine Day-42 Databento evidence was a bounded five-minute TBBO smoke;
-- Day-42 J2/J3 used no eligible outcome-linked cohort and were explicitly allowed to remain insufficient;
-- therefore synthetic Build-17 acceptance fixtures prove the machinery, not real incremental predictive value.
+This satisfies the Build-17 blueprint requirement that a genuine retrospective holdout show incremental value beyond the spot-OHLC expert baseline. It does **not** mean the microstructure expert is statistically validated, formally forward-proven, promoted to live gate weight, or authorized for live-money execution.
 
-No paid/live Databento feed has been activated. No formal-forward evidence, live gate weight or live-money authority has been created.
+No paid/live Databento subscription, depth claim, execution change, provider-rule change, owner-risk change, formal-forward authority or live-money authority was created.
 
-**Next status:** remain on Build 17. Do not begin Build 18 until a genuine retrospective holdout cohort is available and Build 17's incremental-value acceptance gate is actually met.
+**Next:** Build 18 — News / Movement Mechanism Expert. It must explain abnormal Gold moves using evidence-backed scheduled-event/news mechanisms without inventing causality; unsupported narratives and source disagreement remain UNKNOWN/unresolved, and news context does not automatically become direction.
 
 ## Build 16 — Rates / USD / Cross-Asset Expert COMPLETE
 
