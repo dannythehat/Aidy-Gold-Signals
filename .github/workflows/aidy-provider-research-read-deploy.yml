@@ -141,6 +141,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo "AIDY_DEPLOYED_AT_UTC=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" >> "$GITHUB_ENV"
           cp wrangler.research.live.jsonc wrangler.jsonc
           uv run pywrangler deploy
 
@@ -205,6 +206,7 @@ jobs:
             --command "
               SELECT
                 window_start_utc,
+                decided_at_utc,
                 observed_state,
                 view_direction,
                 CASE WHEN length(reasoning_summary)>0 THEN 1 ELSE 0 END AS has_reasoning,
@@ -254,17 +256,28 @@ jobs:
           assert rows, payload
           row=rows[0]
           assert row.get('has_reasoning') == 1, row
+          from datetime import datetime
           considered=int(row.get('toolbox_considered_count') or 0)
           trace_count=int(row.get('tool_trace_count') or 0)
           coverage_count=int(row.get('environment_tool_coverage_count') or 0)
           assert considered >= 30, row
-          assert trace_count == considered, row
           assert coverage_count == considered, row
-          assert int(row.get('tool_trace_missing_readable') or 0) == 0, row
-          assert int(row.get('tool_trace_missing_action') or 0) == 0, row
-          assert int(row.get('reasons_missing_score_context') or 0) == 0, row
           assert int(row.get('toolbox_used_count') or 0) >= 1, row
           assert row.get('future_values_used') == 0, row
+          deployed=datetime.fromisoformat(__import__('os').environ['AIDY_DEPLOYED_AT_UTC'])
+          decided=datetime.fromisoformat(row['decided_at_utc'])
+          post_deploy=decided >= deployed
+          if post_deploy:
+              assert trace_count == considered, row
+              assert int(row.get('tool_trace_missing_readable') or 0) == 0, row
+              assert int(row.get('tool_trace_missing_action') or 0) == 0, row
+              assert int(row.get('reasons_missing_score_context') or 0) == 0, row
+          else:
+              print(
+                  'awaiting_first_post_deploy_cycle=true '
+                  f"latest_window={row.get('window_start_utc')} "
+                  f"latest_decided_at={row.get('decided_at_utc')}"
+              )
           assert row.get('live_money_execution_allowed') == 0, row
           print(
               'cycle_reasoning_audit=true '
@@ -278,6 +291,7 @@ jobs:
               f"tool_trace={row.get('tool_trace_count')} "
               f"environment_coverage={row.get('environment_tool_coverage_count')} "
               f"missing_readable={row.get('tool_trace_missing_readable')} "
-              f"missing_score_context={row.get('reasons_missing_score_context')}"
+              f"missing_score_context={row.get('reasons_missing_score_context')} "
+              f"post_deploy_cycle={post_deploy}"
           )
           PY
