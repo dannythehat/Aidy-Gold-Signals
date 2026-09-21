@@ -870,7 +870,7 @@ class D1GoldCycleMemoryStore:
     async def backfill_contextual_learning(self, *, now_utc: datetime) -> dict[str, int]:
         """Materialize marker learning for pre-brain cycle views without rewriting them."""
 
-        now = _utc(now_utc, name="now_utc")
+        _utc(now_utc, name="now_utc")
         result = await self._d1.prepare(
             """
             SELECT v.cycle_view_id,v.session_code,v.observed_state,v.evidence_json,
