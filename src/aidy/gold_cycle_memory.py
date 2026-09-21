@@ -15,12 +15,22 @@ from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
+from aidy.gold_marker_brain import (
+    GOLD_MARKER_BRAIN_VERSION,
+    MARKER_SCORE_HORIZON_MINUTES,
+    apply_learning_to_reasons,
+    build_environment_fingerprint,
+    marker_id,
+    score_marker_vote,
+    select_score_profile,
+    toolbox_cycle_coverage,
+)
 from aidy.gold_movement_investigator import verify_gold_movement_investigation
 from aidy.gold_state_engine import verify_gold_state_engine
 from aidy.gold_toolbox_registry import verify_gold_toolbox_manifest
 from aidy.private_forward_context import build_private_forward_decision_inputs
 
-GOLD_CYCLE_MEMORY_VERSION = "aidy_gold_cycle_memory_v1"
+GOLD_CYCLE_MEMORY_VERSION = "aidy_gold_cycle_memory_v2"
 GOLD_CYCLE_VIEW_VERSION = "aidy_gold_cycle_view_v1"
 GOLD_CYCLE_OUTCOME_VERSION = "aidy_gold_cycle_outcome_v1"
 CYCLE_WINDOW_MINUTES = 15
@@ -144,6 +154,8 @@ def build_cycle_view_payload(
     toolbox_manifest: Mapping[str, Any],
     prior_observed_states: list[str],
     analogue_summary: Mapping[str, Any],
+    marker_profiles: Mapping[str, Mapping[str, Any]] | None = None,
+    environment_fingerprint: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one frozen and auditable 15-minute Gold research view."""
 
@@ -257,18 +269,26 @@ def build_cycle_view_payload(
                     )
                 )
 
+    reasons = apply_learning_to_reasons(
+        reasons=reasons,
+        profiles=marker_profiles or {},
+    )
     score = sum(
-        (1 if item["vote"] == "bullish" else -1) * int(item["weight"])
+        (Decimal(1) if item["vote"] == "bullish" else Decimal(-1))
+        * (Decimal(str(item.get("effective_weight") or "0")))
         for item in reasons
     )
-    weight_total = sum(int(item["weight"]) for item in reasons)
+    weight_total = sum(
+        (Decimal(str(item.get("effective_weight") or "0")) for item in reasons),
+        Decimal(0),
+    )
     if weight_total == 0:
         view_direction = "unknown"
         confidence = Decimal(0)
-    elif score >= 2:
+    elif score >= Decimal(2):
         view_direction = "bullish"
         confidence = Decimal(abs(score)) / Decimal(weight_total)
-    elif score <= -2:
+    elif score <= Decimal(-2):
         view_direction = "bearish"
         confidence = Decimal(abs(score)) / Decimal(weight_total)
     else:
@@ -325,7 +345,10 @@ def build_cycle_view_payload(
                 }
             )
 
-    contradiction_weight = sum(int(item["weight"]) for item in contradicting)
+    contradiction_weight = sum(
+        (Decimal(str(item.get("effective_weight") or "0")) for item in contradicting),
+        Decimal(0),
+    )
     if weight_total and contradiction_weight:
         confidence *= max(
             Decimal("0.40"),
@@ -345,7 +368,7 @@ def build_cycle_view_payload(
     else:
         reasoning_summary = (
             f"{view_direction.title()} 15-minute view: weighted connected evidence "
-            f"score={score}/{weight_total}, with {len(contradicting)} contradictory reason(s) "
+            f"score={_fmt(score)}/{_fmt(weight_total)}, with {len(contradicting)} contradictory reason(s) "
             f"and {len(unavailable)} unavailable evidence item(s)."
         )
 
@@ -372,6 +395,9 @@ def build_cycle_view_payload(
         "toolbox_considered": considered,
         "toolbox_used": used,
         "toolbox_manifest_digest": str(toolbox_manifest.get("manifest_digest") or ""),
+        "marker_brain_version": GOLD_MARKER_BRAIN_VERSION,
+        "environment_fingerprint": dict(environment_fingerprint or {}),
+        "marker_profile_count": len(marker_profiles or {}),
         "neutral_band_bps": _fmt(CYCLE_NEUTRAL_BAND_BPS),
         "research_only": True,
         "predictive_edge_claimed": False,
