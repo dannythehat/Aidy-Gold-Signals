@@ -233,6 +233,16 @@ jobs:
                   WHERE COALESCE(TRIM(json_extract(value,'$.selected_score_context')),'')=''
                 ) AS reasons_missing_score_context,
                 json_array_length(json_extract(e.environment_json,'$.toolbox_coverage')) AS environment_tool_coverage_count,
+                e.environment_version,
+                json_extract(e.environment_json,'$.environment_key') AS environment_key,
+                json_extract(e.environment_json,'$.environment_contract.schema_version') AS environment_contract_schema,
+                json_extract(e.environment_json,'$.environment_contract.dimension_count') AS environment_dimension_count,
+                json_extract(e.environment_json,'$.environment_contract.monolithic_full_environment_key_used') AS monolithic_full_environment_key_used,
+                (
+                  SELECT COUNT(*)
+                  FROM json_each(json_extract(e.environment_json,'$.scopes'))
+                  WHERE json_extract(value,'$.scope_type')='full_environment'
+                ) AS full_environment_scope_count,
                 v.future_values_used,
                 v.live_money_execution_allowed
               FROM aidy_gold_cycle_views v
@@ -273,6 +283,12 @@ jobs:
               assert int(row.get('tool_trace_missing_readable') or 0) == 0, row
               assert int(row.get('tool_trace_missing_action') or 0) == 0, row
               assert int(row.get('reasons_missing_score_context') or 0) == 0, row
+              assert row.get('environment_version') == 'aidy_gold_cycle_environment_v3', row
+              assert str(row.get('environment_key') or '').startswith('envcore_'), row
+              assert row.get('environment_contract_schema') == 'aidy_gold_environment_contract_schema_v1', row
+              assert int(row.get('environment_dimension_count') or 0) == 34, row
+              assert int(row.get('monolithic_full_environment_key_used') or 0) == 0, row
+              assert int(row.get('full_environment_scope_count') or 0) == 0, row
           else:
               print(
                   'awaiting_first_post_deploy_cycle=true '
@@ -291,6 +307,9 @@ jobs:
               f"toolbox_used={row.get('toolbox_used_count')} "
               f"tool_trace={row.get('tool_trace_count')} "
               f"environment_coverage={row.get('environment_tool_coverage_count')} "
+              f"environment_version={row.get('environment_version')} "
+              f"environment_key={row.get('environment_key')} "
+              f"environment_dimensions={row.get('environment_dimension_count')} "
               f"missing_readable={row.get('tool_trace_missing_readable')} "
               f"missing_score_context={row.get('reasons_missing_score_context')} "
               f"post_deploy_cycle={post_deploy}"
