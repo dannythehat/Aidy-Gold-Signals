@@ -1,13 +1,21 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
-from scripts.seed_gold_cycle_history import (
-    SOURCE_PROVENANCE,
-    build_historical_cycle_rows,
-    write_d1_sql,
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = spec_from_file_location(
+    "seed_gold_cycle_history",
+    ROOT / "scripts" / "seed_gold_cycle_history.py",
 )
+assert SPEC is not None and SPEC.loader is not None
+MODULE = module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+
+SOURCE_PROVENANCE = MODULE.SOURCE_PROVENANCE
+build_historical_cycle_rows = MODULE.build_historical_cycle_rows
+write_d1_sql = MODULE.write_d1_sql
 
 
 def _bar(opened: datetime, open_price: str, close_price: str) -> dict[str, object]:
