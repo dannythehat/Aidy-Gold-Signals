@@ -11,8 +11,8 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
-from itertools import pairwise
 from decimal import Decimal, InvalidOperation
+from itertools import pairwise
 from typing import Any
 
 from aidy.feature_engine import Candle, normalize_candles
