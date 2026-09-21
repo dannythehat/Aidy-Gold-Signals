@@ -25,6 +25,7 @@ on:
       - "src/aidy/cross_market_storage.py"
       - "src/aidy/gold_expert_gate_contract.py"
       - "src/aidy/gold_expert_trust.py"
+      - "src/aidy/gold_price_expert_math.py"
       - "migrations/d1/0026_gold_expert_conditional_trust.sql"
       - "src/entry.py"
       - ".github/workflows/aidy-retrospective-m1-backfill.yml"
@@ -44,6 +45,7 @@ on:
       - "tests/test_provider_market_api.py"
       - "tests/test_gold_expert_gate_contract.py"
       - "tests/test_gold_expert_trust.py"
+      - "tests/test_gold_price_expert_math.py"
       - "tests/test_phase_b_forward_restart_guard.py"
       - "tests/test_day4_capture_freshness_watchdog.py"
       - "tests/test_day5_archive_outbox_watchdog.py"
@@ -108,6 +110,7 @@ jobs:
             src/aidy/cross_market_storage.py \
             src/aidy/gold_expert_gate_contract.py \
             src/aidy/gold_expert_trust.py \
+            src/aidy/gold_price_expert_math.py \
             scripts/aidy_capture_freshness_watchdog.py \
             scripts/aidy_archive_outbox_watchdog.py \
             tests/test_day4_capture_freshness_watchdog.py \
@@ -119,7 +122,8 @@ jobs:
             tests/test_day53_live_forward_observer.py \
             tests/test_provider_market_api.py \
             tests/test_gold_expert_gate_contract.py \
-            tests/test_gold_expert_trust.py
+            tests/test_gold_expert_trust.py \
+            tests/test_gold_price_expert_math.py
           uv run ruff check --ignore F401 src/aidy/twelve_data_storage.py
           uv run ruff check --ignore BLE001,S110,RUF100 src/entry.py
           uv run python -m compileall -q src scripts tests
