@@ -107,6 +107,31 @@ jobs:
                 AND open_time_utc<'2026-09-21T05:15:00+00:00';
             "
 
+          echo "=== twelve_quota ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT
+                SUM(CASE WHEN requested_at_utc>='2026-09-21T00:00:00+00:00'
+                         THEN internal_accounted_credits ELSE 0 END) AS utc_day_credits,
+                SUM(CASE WHEN requested_at_utc>=datetime('now','-24 hours')
+                         THEN internal_accounted_credits ELSE 0 END) AS rolling_24h_credits,
+                COUNT(*) AS ledger_rows,
+                MAX(requested_at_utc) AS latest_request_utc
+              FROM twelve_data_request_ledger;
+            "
+          echo "=== recent_twelve_requests ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT requested_at_utc,completed_at_utc,request_kind,status,outputsize,
+                     internal_accounted_credits,provider_credits_request,
+                     provider_minute_credits_used,provider_minute_credits_left,error_code
+              FROM twelve_data_request_ledger
+              WHERE requested_at_utc>='2026-09-21T04:30:00+00:00'
+              ORDER BY requested_at_utc DESC LIMIT 50;
+            "
+
           echo "=== recent_snapshots ==="
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
             --config wrangler.research.live.jsonc \
