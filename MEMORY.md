@@ -61,6 +61,49 @@ Build 15 remains research/shadow intelligence. It does not replace the live mark
 
 **Next:** Build 16 — Rates / USD / Cross-Asset Expert. It will model Gold's opportunity-cost and risk mechanisms using broad USD, DGS2/DGS10/DFII10/T10YIE, policy-path research, and qualified SI/ES/VIX/EURUSD/USDJPY evidence, with rolling beta/correlation, relationship stability, divergence and breadth — while explicitly forbidding permanent sign assumptions and stale daily data masquerading as intraday reaction.
 
+
+## Build 15 — Macro / Event Expert COMPLETE
+
+Build 15 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_macro_event_expert_v1`
+
+What Build 15 adds:
+- a Gold-specific context-only macro/event specialist layered on the accepted official event stack;
+- strict as-of schedule visibility;
+- pre-event Gold features that cannot see actual release values;
+- PIT-known consensus plus immutable first-print surprise;
+- later revisions kept separate from the first print;
+- standardized surprise only when enough independent PIT historical observations exist with the same unit;
+- Gold-learned event tiers from independent Gold episodes, never vendor importance labels;
+- event clustering within 30/60 minutes;
+- post-release Gold confirmation from completed M1 bars;
+- historical conditional Gold response by event class and surprise direction;
+- matched no-news controls;
+- event-versus-no-news comparison;
+- Build-3 conditional trust across event class/tier, surprise/cluster and historical response context.
+
+Acceptance on PR #218 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 276 passed;
+- full repository regression: 1528 passed;
+- pre-event gate cannot see actual: PASS;
+- actual visible only after first_observed_at: PASS;
+- revision separated from first-print surprise: PASS;
+- standardized surprise PIT history only: PASS;
+- Gold event tier from independent episodes, not vendor label: PASS;
+- event clustering: PASS;
+- post-release completed-bar confirmation: PASS;
+- independent historical response: PASS;
+- matched no-news control: PASS;
+- future rows excluded / chronological freeze: PASS.
+
+Build 15 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 16 — Rates / USD / Cross-Asset Expert. It will model Gold opportunity-cost/risk mechanisms using USD, Treasury/real-rate/breakeven series and qualified cross-assets across multiple horizons, with rolling Gold beta/correlation, relationship stability, divergence and cross-asset breadth, while explicitly allowing sign relationships to change by regime.
+
 ## Build 14 — Session / Participation Expert COMPLETE
 
 Build 14 of the environment-aware expert-gate programme is complete and engineering-proven.
