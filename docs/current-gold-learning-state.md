@@ -15,6 +15,23 @@ Updated: 2026-09-21
 
 
 
+
+## Build 13 COMPLETE — Volatility / Jump Expert
+
+Build 13 adds `aidy_gold_volatility_jump_expert_v1`.
+
+The expert is deliberately context-only. It calculates completed-M1 15-minute realised volatility, ranks that against historical observations from the same UTC clock slot, identifies compression/expansion transitions, and combines that with PIT-qualified jump/continuous, vol-of-vol and optional GVZ/IV-RV evidence.
+
+Event proximity is descriptive, not causal. A jump-dominant state near a scheduled event is labelled event-proximate, but the expert explicitly records that no event-causation claim is being made.
+
+Sparse or unqualified GVZ/IV evidence remains UNKNOWN. Retrospective volatility state cannot silently enter PIT context. The earlier simple M15 ATR/RV band is preserved as an ablation baseline, and the richer regime receives no automatic extra influence unless enough historical cases prove incremental value.
+
+Engineering acceptance on PR #216 candidate: semantic gate PASS, static checks PASS, focused workflow suite 249 passed, full repository regression 1501 passed. Direction-neutrality, clock-normalised compression/expansion, continuous-vs-jump distinction, event-proximate jump labeling without causal claims, sparse GVZ/IV UNKNOWN handling, PIT qualification, ATR-vs-rich ablation, no-future safety and chronological freeze all pass.
+
+Build 13 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 14 — Session / Participation Expert. It will quantify likely participation and unusual activity for the current time using DST-safe sessions, overlap, weekday-clock baselines and qualified GC volume/spread history, while representing event-time confounding and forbidding hardcoded session-direction assumptions.
+
 ## Build 12 COMPLETE — Liquidity / Reclaim Expert
 
 Build 12 adds `aidy_gold_liquidity_reclaim_expert_v1`.
