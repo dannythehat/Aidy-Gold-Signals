@@ -104,6 +104,9 @@ jobs:
     env:
       AIDY_TWELVE_DATA_API_KEY: ${{ secrets.AIDY_TWELVE_DATA_API_KEY }}
       DATABENTO_API_KEY: ${{ secrets.DATABENTO_API_KEY }}
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@v4
@@ -217,10 +220,11 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${DATABENTO_API_KEY:-}" || { echo "DATABENTO_API_KEY secret is missing"; exit 1; }
+          uv pip install 'google-cloud-bigquery>=3.42,<4' google-auth
+          test -n "${AIDY_GCP_SERVICE_ACCOUNT_JSON:-}" || { echo "AIDY_GCP_SERVICE_ACCOUNT_JSON secret is missing"; exit 1; }
           uv run python scripts/build17_genuine_microstructure_holdout.py \
             --output build17_genuine_holdout.json \
-            --raw-dir /tmp/build17_databento \
-            --histdata-cache /tmp/build17_histdata
+            --raw-dir /tmp/build17_databento
           python - <<'PY'
           import json
           from pathlib import Path
