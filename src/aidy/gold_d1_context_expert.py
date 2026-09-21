@@ -144,7 +144,6 @@ def _core_completeness(primitives: Mapping[str, Any]) -> dict[str, Any]:
     efficiency = primitives["path_efficiency"]
     range20 = primitives["range_position"]["windows"]["20_bar"]
     geometry = primitives["candle_geometry"]
-    swings = primitives["confirmed_swing_sequence"]
     checks = {
         "eight_bar_return": returns.get("state") == "known",
         "eight_bar_regression": regression.get("state") == "known",
@@ -152,7 +151,6 @@ def _core_completeness(primitives: Mapping[str, Any]) -> dict[str, Any]:
         "path_efficiency": efficiency.get("state") == "known",
         "range_20": range20.get("state") == "known",
         "latest_candle": geometry.get("state") == "known",
-        "confirmed_swings": swings.get("combined_structure") != "insufficient",
     }
     missing = sorted(key for key, value in checks.items() if not value)
     return {
@@ -350,8 +348,8 @@ def build_d1_context_expert(
             evidence_id="d1_structure_context_evidence",
             path="timeframes.D1.primitives.swing_structure",
             observed_at=observed,
-            state=evidence_state,
-            value=structure_value if usable else None,
+            state="known" if usable and structure_available else "unknown",
+            value=structure_value if usable and structure_available else None,
             price_math_packet=price_math_packet,
         ),
         _evidence(
@@ -366,8 +364,8 @@ def build_d1_context_expert(
             evidence_id="d1_breakout_context_evidence",
             path="timeframes.D1.primitives.breakout_lifecycle",
             observed_at=observed,
-            state=evidence_state,
-            value=breakout_value if usable else None,
+            state="known" if usable and breakout_available else "unknown",
+            value=breakout_value if usable and breakout_available else None,
             price_math_packet=price_math_packet,
         ),
         _evidence(
@@ -382,8 +380,14 @@ def build_d1_context_expert(
 
     range20 = primitives["range_position"]["windows"]["20_bar"]
     structure = primitives["confirmed_swing_sequence"].get("combined_structure") or "unknown"
+    structure_available = structure not in {"insufficient", "unknown"}
     high_state = primitives["breakout_lifecycle"]["high_side"].get("state") or "unknown"
     low_state = primitives["breakout_lifecycle"]["low_side"].get("state") or "unknown"
+    breakout_available = (
+        structure_available
+        and high_state != "unknown"
+        and low_state != "unknown"
+    )
     regression = primitives["log_ols_slope"]["windows"]["8_bar"]
     trend_context = {
         "direction": regression.get("direction"),
@@ -412,12 +416,16 @@ def build_d1_context_expert(
             calculator_id="d1_structure_context",
             dependency_family="structure",
             evidence_ref="d1_structure_context_evidence",
-            known=usable,
-            observation={"combined_structure": structure} if usable else {"state": "abstain"},
+            known=usable and structure_available,
+            observation=(
+                {"combined_structure": structure}
+                if usable and structure_available
+                else {"state": "unconfirmed"}
+            ),
             explanation=(
                 f"D1 structure context is {structure}."
-                if usable
-                else "D1 structure context abstains because daily evidence is stale or partial."
+                if usable and structure_available
+                else "D1 structure context remains unknown until daily swings are confirmed."
             ),
         ),
         _context_calculator(
@@ -439,15 +447,19 @@ def build_d1_context_expert(
             calculator_id="d1_breakout_context",
             dependency_family="location",
             evidence_ref="d1_breakout_context_evidence",
-            known=usable,
-            observation={
-                "high_state": high_state,
-                "low_state": low_state,
-            } if usable else {"state": "abstain"},
+            known=usable and breakout_available,
+            observation=(
+                {
+                    "high_state": high_state,
+                    "low_state": low_state,
+                }
+                if usable and breakout_available
+                else {"state": "unconfirmed"}
+            ),
             explanation=(
                 f"D1 breakout context is high={high_state}, low={low_state}."
-                if usable
-                else "D1 breakout context abstains because daily evidence is stale or partial."
+                if usable and breakout_available
+                else "D1 breakout context remains unknown until daily swing levels exist."
             ),
         ),
         _context_calculator(
