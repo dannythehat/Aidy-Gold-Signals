@@ -757,6 +757,24 @@ def _lower_timeframe_conflict(
     h4_reference_vote: str,
 ) -> dict[str, Any]:
     dimensions = global_environment["learning_dimensions"]
+    if h4_reference_vote not in {"bullish", "bearish", "neutral"}:
+        return {
+            "calculator_id": "h4_lower_timeframe_conflict",
+            "version": "h4_lower_timeframe_conflict_v1",
+            "role": "directional",
+            "dependency_family": "cross_timeframe",
+            "state": "insufficient",
+            "vote": "unknown",
+            "evidence_refs": ["h4_lower_timeframe_conflict_evidence"],
+            "observation": {
+                "h4_reference_vote": h4_reference_vote,
+                "conflict": False,
+                "scoreable_when_conflict": True,
+                "correlation_group": "h4_lower_timeframe_conflict",
+            },
+            "explanation": "H4/lower-timeframe conflict cannot be scored without an H4 view.",
+        }
+
     lower = {
         "M5": _direction(dimensions.get("m5_direction")),
         "M15": _direction(dimensions.get("m15_direction")),
