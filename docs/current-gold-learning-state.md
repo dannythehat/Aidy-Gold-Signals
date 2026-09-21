@@ -33,6 +33,23 @@ Build 14 is research/shadow only and does not change execution, provider activat
 
 **Next build:** Build 15 — Macro / Event Expert. It will use the existing official macro/event stack with strict first-observed timestamps, pre-event actual-value blindness, revision separation, Gold-learned event tiers, event clustering, post-release confirmation and no-news controls.
 
+
+## Build 14 COMPLETE — Session / Participation Expert
+
+Build 14 adds `aidy_gold_session_participation_expert_v1`.
+
+The expert is context-only. It identifies which regional markets are plausibly active from deterministic DST-safe rules, records session overlap, and compares current completed-M1 volatility/range only with prior observations from the same weekday and UTC 15-minute clock slot.
+
+Where enough history exists, event-proximate historical rows are excluded from the normal session baseline so event-driven activity does not redefine what “normal London” or “normal New York” means. Current event-time overlap is also exposed as a confounder rather than silently attributed to the session.
+
+The module reuses the existing genuine GC microstructure baseline for exchange trade volume and pre-trade BBO spread. Those inputs are descriptive participation context only: ordinary session activity cannot count as alpha, unqualified GC context remains UNKNOWN, no depth/order-book claims are added, and no session name is mapped to bullish/bearish direction.
+
+Engineering acceptance on PR #217 candidate: semantic PASS, static PASS, focused suite 263 passed, full regression 1515 passed. London and New York DST transitions, overlap identity, matched weekday/clock baselines, event-clean history, current event confounding, qualified/unqualified GC participation, no session-direction rules, PIT safety and chronological freeze all pass.
+
+Build 14 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 15 — Macro / Event Expert. It will make the official event stack Gold-specific while enforcing first-observed actual/revision timing and independent Gold-episode event tiers.
+
 ## Build 13 COMPLETE — Volatility / Jump Expert
 
 Build 13 adds `aidy_gold_volatility_jump_expert_v1`.
