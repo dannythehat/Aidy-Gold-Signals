@@ -77,7 +77,7 @@ def _as_of(rows: list[dict[str, object]]) -> datetime:
     timeframe = str(rows[0]["timeframe"])
     duration = {
         "H1": timedelta(hours=1),
-        "H1": timedelta(hours=1),
+        "H4": timedelta(hours=4),
     }[timeframe]
     return latest + duration
 
@@ -330,7 +330,7 @@ def test_build7_reversal_surfaces_conflict_instead_of_hiding_it() -> None:
 
 def test_build7_missing_h1_stays_unknown() -> None:
     values = [Decimal(2000 + index) for index in range(25)]
-    rows = _rows(values, timeframe="H1")
+    rows = _rows(values, timeframe="H4")
     as_of = _as_of(rows)
     result = build_h1_price_structure_expert(
         global_environment=_environment(as_of, legacy_h1="unknown", observed="unknown"),
@@ -446,8 +446,14 @@ def test_build7_dependency_and_correlation_metadata_are_explicit() -> None:
 def test_build7_h1_trust_scope_is_separate_from_m15() -> None:
     result = _expert(_uptrend())
     assert result["expert_packet"]["gate_id"] == "h1_price_structure_expert"
-    assert all("h1_price_structure_expert" in scope["scope_key"] for scope in result["trust_scopes"])
-    assert all("m15_price_structure_expert" not in scope["scope_key"] for scope in result["trust_scopes"])
+    assert all(
+        scope["payload"]["gate_id"] == "h1_price_structure_expert"
+        for scope in result["trust_scopes"]
+    )
+    assert all(
+        scope["payload"]["gate_id"] != "m15_price_structure_expert"
+        for scope in result["trust_scopes"]
+    )
 
 
 def test_build7_replay_compares_against_legacy_without_awarding_complexity() -> None:
