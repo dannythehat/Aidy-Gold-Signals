@@ -17,6 +17,50 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 15 — Macro / Event Expert COMPLETE
+
+Build 15 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_macro_event_expert_v1`
+
+What Build 15 adds:
+- a context-only Gold macro/event specialist layered on the accepted official event stack;
+- strict point-in-time schedule selection from official-source observations;
+- pre-event Gold structure from closed bars only;
+- PIT-known consensus plus immutable first print for raw surprise;
+- later revisions kept separate and never allowed to replace the first print used for surprise;
+- standardized surprise only when same-class/same-unit PIT history has enough independent episodes;
+- event clustering from PIT-known schedules;
+- post-release Gold confirmation from completed M1 bars;
+- historical conditional Gold response by event class and surprise direction;
+- matched no-news control samples for comparison;
+- Gold-specific event tiers from independent Gold episodes, never vendor importance labels;
+- no trade P/L in tiering or response estimates;
+- Build-3 conditional trust scopes for event tier/timing, surprise/cluster and historical response.
+
+Acceptance on PR #218 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 276 passed;
+- full repository regression: 1528 passed;
+- pre-event boundary cannot see actual first observed seconds later: PASS;
+- actual appears only at/after first_observed_at: PASS;
+- revisions remain separate from first print: PASS;
+- standardized surprise uses PIT historical episodes only: PASS;
+- event tier uses independent Gold episodes, not vendor labels: PASS;
+- event clustering: PASS;
+- post-release confirmation: PASS;
+- historical response versus matched no-news control: PASS;
+- insufficient no-news control remains UNKNOWN: PASS;
+- future historical rows excluded: PASS;
+- PIT/no-future chronological freeze: PASS.
+
+Build 15 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 16 — Rates / USD / Cross-Asset Expert. It will model Gold's opportunity-cost and risk mechanisms using broad USD, DGS2/DGS10/DFII10/T10YIE, policy-path research, and qualified SI/ES/VIX/EURUSD/USDJPY evidence, with rolling beta/correlation, relationship stability, divergence and breadth — while explicitly forbidding permanent sign assumptions and stale daily data masquerading as intraday reaction.
+
 ## Build 14 — Session / Participation Expert COMPLETE
 
 Build 14 of the environment-aware expert-gate programme is complete and engineering-proven.
