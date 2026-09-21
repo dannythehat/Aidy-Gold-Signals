@@ -33,7 +33,7 @@ jobs:
           uv run python -m compileall -q src/aidy/gold_meta_replay.py tests/test_gold_meta_replay.py
       - name: Focused
         run: |
-          uv run pytest -q             tests/test_gold_meta_direction.py             tests/test_gold_meta_replay.py             tests/test_replay_evaluation.py             tests/test_replay_scoring.py
+          uv run pytest -q             tests/test_gold_meta_direction.py             tests/test_gold_meta_replay.py             tests/test_day37_replay_evaluation.py             tests/test_day37_replay_guardrails.py
       - name: Dedicated replay acceptance
         run: |
           uv run pytest -q tests/test_gold_meta_replay.py -k             "spurious_in_sample or large_validation_core or dependency_penalty or holdout_cannot_change or fixture_cannot_be_mislabeled or reproducible"
