@@ -88,7 +88,7 @@ H4_DEPENDENCY_METADATA = {
         "correlation_group": "h4_diagnostics",
     },
     "h4_lower_timeframe_conflict": {
-        "dependency_family": "cross_timeframe",
+        "dependency_family": "cross_market",
         "correlation_group": "h4_lower_timeframe_conflict",
     },
 }
@@ -762,7 +762,7 @@ def _lower_timeframe_conflict(
             "calculator_id": "h4_lower_timeframe_conflict",
             "version": "h4_lower_timeframe_conflict_v1",
             "role": "directional",
-            "dependency_family": "cross_timeframe",
+            "dependency_family": "cross_market",
             "state": "insufficient",
             "vote": "unknown",
             "evidence_refs": ["h4_lower_timeframe_conflict_evidence"],
@@ -817,7 +817,7 @@ def _lower_timeframe_conflict(
         "calculator_id": "h4_lower_timeframe_conflict",
         "version": "h4_lower_timeframe_conflict_v1",
         "role": "directional",
-        "dependency_family": "cross_timeframe",
+        "dependency_family": "cross_market",
         "state": "known",
         "vote": vote,
         "evidence_refs": ["h4_lower_timeframe_conflict_evidence"],
