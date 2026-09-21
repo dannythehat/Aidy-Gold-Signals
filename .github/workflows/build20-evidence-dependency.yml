@@ -1,0 +1,57 @@
+name: AIDY Build 20 Evidence Dependency Engine
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_evidence_dependency.py"
+      - "tests/test_gold_evidence_dependency.py"
+      - ".github/workflows/build20-evidence-dependency.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static Build 20 checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check             src/aidy/gold_evidence_dependency.py             tests/test_gold_evidence_dependency.py
+          uv run python -m compileall -q             src/aidy/gold_evidence_dependency.py             tests/test_gold_evidence_dependency.py
+
+      - name: Focused Build 20 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q             tests/test_gold_expert_gate_contract.py             tests/test_gold_m5_price_structure_expert.py             tests/test_gold_m15_price_structure_expert.py             tests/test_gold_h1_price_structure_expert.py             tests/test_gold_h4_price_structure_expert.py             tests/test_gold_d1_context_expert.py             tests/test_gold_momentum_impulse_expert.py             tests/test_gold_liquidity_reclaim_expert.py             tests/test_gold_macro_event_expert.py             tests/test_gold_rates_usd_cross_asset_expert.py             tests/test_gold_evidence_dependency.py
+
+      - name: Dedicated double-counting acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_gold_evidence_dependency.py -k             "exact_duplicate or highly_correlated or independent_liquidity_macro_structure or removing_exact_duplicate or parent_root_incremental_cap"
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
