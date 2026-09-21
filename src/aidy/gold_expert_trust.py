@@ -20,7 +20,7 @@ from aidy.gold_expert_gate_contract import verify_expert_gate_packet
 EXPERT_TRUST_ENGINE_VERSION = "aidy_gold_expert_conditional_trust_v3"
 TRUST_PRIOR_STRENGTH = 20
 RECENT_WINDOW_SIZE = 20
-LARGE_MOVE_BPS = Decimal("5")
+LARGE_MOVE_BPS = Decimal(5)
 
 _DEFAULT_MINIMUMS = {
     "mini_exact": 12,
