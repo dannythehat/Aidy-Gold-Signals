@@ -68,6 +68,32 @@ jobs:
             )
             ORDER BY rowid DESC;
           "
+          echo "=== latest_cycles ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
+            SELECT v.window_start_utc,v.window_end_utc,v.decided_at_utc,
+                   v.observed_state,v.view_direction,
+                   json_array_length(v.toolbox_considered_json) AS toolbox_considered,
+                   json_array_length(v.toolbox_used_json) AS toolbox_used,
+                   json_array_length(json_extract(v.evidence_json,'$.tool_reasoning_trace')) AS tool_trace,
+                   (
+                     SELECT COUNT(*)
+                     FROM json_each(json_extract(v.evidence_json,'$.tool_reasoning_trace'))
+                     WHERE COALESCE(TRIM(json_extract(value,'$.readable_state')),'')=''
+                   ) AS missing_readable,
+                   (
+                     SELECT COUNT(*)
+                     FROM json_each(json_extract(v.evidence_json,'$.tool_reasoning_trace'))
+                     WHERE COALESCE(TRIM(json_extract(value,'$.reasoning_action')),'')=''
+                   ) AS missing_action,
+                   (
+                     SELECT COUNT(*)
+                     FROM json_each(json_extract(v.evidence_json,'$.all_directional_reasons'))
+                     WHERE COALESCE(TRIM(json_extract(value,'$.selected_score_context')),'')=''
+                   ) AS missing_score_context
+            FROM aidy_gold_cycle_views v
+            ORDER BY v.window_start_utc DESC LIMIT 6;
+          "
+
           echo "=== request_ledger ==="
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
             SELECT requested_at_utc,completed_at_utc,request_kind,status,error_code,outputsize
