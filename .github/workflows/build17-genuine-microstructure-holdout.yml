@@ -24,6 +24,7 @@ jobs:
       AIDY_BIGQUERY_DATASET: aidy_analytics_test
       AIDY_BIGQUERY_LOCATION: EU
       BUILD17_MAX_SPEND_USD: "150.00"
+      BUILD17_PRIOR_SPEND_USD: "0.006527602673"
       BUILD17_OUTPUT_DIR: build17_genuine
 
     steps:
@@ -82,8 +83,12 @@ jobs:
           cost = evidence["cost"]
           assert cost["all_requests_quoted_before_download"] is True
           assert Decimal(cost["hard_cap_usd"]) <= Decimal("150.00")
-          assert Decimal(cost["total_initial_quote_usd"]) <= Decimal("150.00")
-          assert Decimal(cost["total_fresh_committed_quote_usd"]) <= Decimal("150.00")
+          prior = Decimal(cost["prior_attempt_spend_usd"])
+          initial = Decimal(cost["total_initial_quote_usd"])
+          fresh = Decimal(cost["total_fresh_committed_quote_usd"])
+          assert prior == Decimal("0.006527602673")
+          assert prior + initial <= Decimal("150.00")
+          assert prior + fresh <= Decimal("150.00")
           assert cost["paid_live_subscription_activated"] is False
           assert cost["recurring_subscription_activated"] is False
 
