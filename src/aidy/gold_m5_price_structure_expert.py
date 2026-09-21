@@ -298,15 +298,17 @@ def _swing_structure(primitives: Mapping[str, Any]) -> dict[str, Any]:
         base = Decimal("0.70")
     else:
         vote = "neutral"
-        base = Decimal("0")
+        base = Decimal(0)
 
-    if vote == "bullish" and break_state == "close_above_confirmed_swing_high":
+    if (
+        (vote == "bullish" and break_state == "close_above_confirmed_swing_high")
+        or (vote == "bearish" and break_state == "close_below_confirmed_swing_low")
+    ):
         base = Decimal("0.90")
-    elif vote == "bearish" and break_state == "close_below_confirmed_swing_low":
-        base = Decimal("0.90")
-    elif vote == "bullish" and break_state == "close_below_confirmed_swing_low":
-        base = Decimal("0.35")
-    elif vote == "bearish" and break_state == "close_above_confirmed_swing_high":
+    elif (
+        (vote == "bullish" and break_state == "close_below_confirmed_swing_low")
+        or (vote == "bearish" and break_state == "close_above_confirmed_swing_high")
+    ):
         base = Decimal("0.35")
 
     return {
