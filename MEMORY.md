@@ -18,6 +18,48 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 16 — Rates / USD / Cross-Asset Expert COMPLETE
+
+Build 16 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_rates_usd_cross_asset_expert_v1`
+
+What Build 16 adds:
+- PIT-vintaged DGS2/DGS10/DFII10/T10YIE daily context;
+- explicit 1/5/20-observation rate changes;
+- hard guard that daily cash rates cannot masquerade as 15m/60m reactions;
+- qualified Day-44 policy/cross-asset observations;
+- genuinely timestamped futures can carry 15m/60m changes only when fresh and decision-qualified;
+- broad USD/EURUSD/USDJPY/VIX official daily/fix context cannot masquerade as intraday;
+- regime-specific rolling Gold beta/correlation;
+- positive, negative, weak and sign-flipping relationships all representable;
+- relationship-stability state from chronological subwindows;
+- divergence between current Gold and the learned relationship;
+- cross-asset breadth counted once per dependency group rather than once per correlated series;
+- explicit dependency tags for rates curve, policy path, USD mechanism, precious complex and risk state;
+- no permanent Gold/USD or Gold/real-yield sign assumption.
+
+Acceptance on PR #219 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 292 passed;
+- full repository regression: 1544 passed;
+- Gold rising with USD and real yields representable: PASS;
+- relationship sign flip representable: PASS;
+- stale/daily series cannot masquerade as intraday: PASS;
+- fresh exchange-timestamped futures support intraday changes: PASS;
+- retrospective current observations do not become decision-qualified intraday inputs: PASS;
+- same-mechanism series dependency-tagged: PASS;
+- breadth counts dependency groups not raw series: PASS;
+- learned-sign divergence: PASS;
+- future PIT rows excluded: PASS.
+
+Build 16 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 17 — Futures / Microstructure Expert. Phase A will test genuine historical COMEX GC TBBO signed aggressor imbalance, BBO spread, trade volume, VWAP, clock-normalised baselines, roll state and available CME volume/OI for incremental value beyond spot OHLC. Phase B live/delayed paid data remains separately gated by entitlement review and owner approval.
+
 ## Build 15 — Macro / Event Expert COMPLETE
 
 Build 15 of the environment-aware expert-gate programme is complete and engineering-proven.
