@@ -12,6 +12,23 @@ Updated: 2026-09-21
 
 
 
+
+## Build 10 COMPLETE — Momentum / Impulse Expert
+
+Build 10 adds `aidy_gold_momentum_impulse_expert_v1`.
+
+The expert works from exact completed M1 history and calculates 1/5/15/30/60-minute backward returns rather than approximating them from coarser bars. It volatility-normalises each horizon, measures path persistence and efficiency, compares recent and prior 5-minute momentum for acceleration, classifies impulse versus drift versus noise, measures single-bar concentration, and exposes an exhaustion/reversal hypothesis when one bar dominates a weakly persistent path.
+
+A single giant final candle is explicitly prevented from masquerading as sustained momentum. If the move is concentrated in one bar and the path lacks persistence, continuation cannot be promoted merely because all raw horizons point the same way.
+
+Momentum trust is conditioned on volatility regime and clock/session context. Every price-derived calculator is tagged as correlated with the earlier price experts so a later fusion build can penalise overlapping evidence instead of counting it twice.
+
+Engineering acceptance on PR #213 candidate: semantic gate PASS, static checks PASS, focused workflow suite 211 passed, full repository regression 1463 passed. Single-candle veto, noisy-path rejection, gapped-M1 fail-closed, clock/regime trust separation, correlation tags, PIT safety and chronological freeze all pass.
+
+Build 10 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 11 — Price Location Expert. It will know where Gold sits relative to prior day, Asia, active session, opening ranges, swings, recent extrema and round numbers, with auditable nearest-level priority/confluence and no directional vote unless a separately tested reaction rule earns one.
+
 ## Build 9 COMPLETE — D1 Context Expert
 
 Build 9 adds `aidy_gold_d1_context_expert_v1`.
