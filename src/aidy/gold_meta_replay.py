@@ -752,9 +752,18 @@ def build_meta_replay_report(
         "empirical_edge_claimed": False,
     }
 
+    source_identity = str(dataset.get("source_snapshot_identity") or "")
+    source_evidence_class = (
+        "acceptance_fixture"
+        if "fixture" in source_identity.lower()
+        else "retrospective_or_external"
+    )
     body = {
         "report_version": META_REPLAY_REPORT_VERSION,
         "dataset_digest": str(dataset["dataset_digest"]),
+        "source_snapshot_identity": source_identity,
+        "source_evidence_class": source_evidence_class,
+        "real_market_edge_proven": False,
         "split_digest": str(split_manifest["split_digest"]),
         "policy_digest": str(policy["policy_digest"]),
         "split_metrics": split_metrics,
