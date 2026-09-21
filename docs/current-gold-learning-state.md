@@ -41,10 +41,11 @@ What is built and proven:
 - formal-forward OFF and live-money authority OFF.
 
 Acceptance evidence:
-- exact tested PR #235 head: `54c7e7df71c6e97bd18898e712f68657890bf52b`;
-- implementation merge: `12d5f0f17b6678a426890fd8bcd643d3984d1d27`;
-- Build 23 workflow run: `35617356644` — PASS;
-- Evidence Semantic Change Gate: `35617356841` — PASS;
+- implementation merge from PR #235: `12d5f0f17b6678a426890fd8bcd643d3984d1d27`;
+- corrective post-merge verification PR #237 tested head: `0c5e2f2a072e20e1671db13ac90f3ccce88cf11f`;
+- verified main after corrective merge: `5c370ac4182b96a8fb2d06be7927d8de141914a1`;
+- Build 23 verification workflow run: `35619195819` — PASS;
+- Evidence Semantic Change Gate: `35619195958` — PASS;
 - static/compile checks: PASS;
 - focused replay suite: 54 passed;
 - dedicated anti-overfit/holdout suite: 6 passed;
