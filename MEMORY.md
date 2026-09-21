@@ -5,6 +5,37 @@ Updated: 2026-09-21
 This file is the repo-level handoff entry point for the live AIDY Gold-learning system.
 
 
+
+## Build 3 — Conditional Trust & Score Engine v3 ENGINEERING COMPLETE
+
+Build 3 of the environment-aware expert-gate programme is engineering-complete on PR #203.
+
+Engine:
+`aidy_gold_expert_conditional_trust_v3`
+
+What Build 3 adds:
+- separate historical scorebooks for future expert gates and their scoreable sub-calculators;
+- the owner-approved +2/+1/0/-1/-2 outcome rule;
+- exact mini-environment, gate-defined reduced context, global-core and gate-global trust scopes;
+- deterministic hierarchical shrinkage so small samples borrow from broader history;
+- minimum-sample gates before a specific context can override broader evidence;
+- long-term and bounded recent statistics kept separately;
+- Wilson 95% directional-accuracy intervals and explicit uncertainty state;
+- strict pre-decision as-of filtering so current/future outcomes cannot enter trust lookup;
+- stable/idempotent result identities and immutable result digests;
+- a trust envelope that keeps current gate conviction separate from historical reliability;
+- D1 raw outcome ledger and aggregate context-scorebook schema.
+
+A gate-specific reduced environment is never guessed by the generic engine. Each later expert build must explicitly declare which of its mini-environment dimensions survive at each fallback level.
+
+Acceptance on PR #203:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 122 passed;
+- full repository regression: 1374 passed.
+
+The legacy live marker-brain weighting path is intentionally unchanged. Production migration/schema verification is the remaining Build 3 completion step after merge.
+
 ## Build 2 — Expert Gate Contract v1 COMPLETE
 
 Build 2 of the environment-aware expert-gate programme is complete and engineering-proven.

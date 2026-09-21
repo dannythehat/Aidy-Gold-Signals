@@ -20,6 +20,8 @@ on:
       - "src/aidy/gold_cycle_memory.py"
       - "src/aidy/gold_marker_brain.py"
       - "src/aidy/gold_toolbox_registry.py"
+      - "src/aidy/gold_expert_gate_contract.py"
+      - "src/aidy/gold_expert_trust.py"
       - "src/aidy/private_forward_context.py"
       - "src/aidy/twelve_data_intraday_repair.py"
       - "src/aidy/runtime.py"
@@ -31,10 +33,13 @@ on:
       - "migrations/d1/0023_gold_cycle_learning.sql"
       - "migrations/d1/0024_gold_contextual_marker_learning.sql"
       - "migrations/d1/0025_gold_cycle_sync_health.sql"
+      - "migrations/d1/0026_gold_expert_conditional_trust.sql"
       - "tests/test_gold_movement_memory.py"
       - "tests/test_gold_cycle_environment.py"
       - "tests/test_gold_cycle_memory.py"
       - "tests/test_gold_marker_brain.py"
+      - "tests/test_gold_expert_gate_contract.py"
+      - "tests/test_gold_expert_trust.py"
       - ".github/workflows/aidy-provider-research-read-deploy.yml"
   workflow_dispatch:
 
@@ -80,7 +85,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_cycle_environment.py src/aidy/gold_environment_contract.py src/aidy/gold_cycle_memory.py src/aidy/gold_marker_brain.py src/aidy/gold_toolbox_registry.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_cycle_environment.py src/aidy/gold_environment_contract.py src/aidy/gold_cycle_memory.py src/aidy/gold_marker_brain.py src/aidy/gold_toolbox_registry.py src/aidy/gold_expert_gate_contract.py src/aidy/gold_expert_trust.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
           uv run python -m compileall -q src tests
           uv run pytest -q \
             tests/test_provider_market_api.py \
@@ -91,6 +96,8 @@ jobs:
             tests/test_gold_cycle_environment.py \
             tests/test_gold_cycle_memory.py \
             tests/test_gold_marker_brain.py \
+            tests/test_gold_expert_gate_contract.py \
+            tests/test_gold_expert_trust.py \
             tests/test_gold_toolbox_registry.py \
             tests/test_twelve_data_intraday_repair.py \
             tests/test_aidy_data_health.py \
@@ -137,6 +144,24 @@ jobs:
           set -euo pipefail
           npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
             --config wrangler.research.live.jsonc
+
+      - name: Verify Build 3 trust schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT COUNT(*) AS n
+              FROM sqlite_master
+              WHERE type='table'
+                AND name IN (
+                  'aidy_gold_expert_outcome_ledger',
+                  'aidy_gold_expert_context_scores'
+                );
+            " > /tmp/build3_schema.txt
+          grep -q '"n": 2' /tmp/build3_schema.txt
+          echo "build3_expert_trust_schema_present=true"
 
       - name: Deploy
         shell: bash
