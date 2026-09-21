@@ -23,6 +23,7 @@ MARKER_SCORE_HORIZON_MINUTES = 15
 _MIN_MULTIPLIER = Decimal("0.500000")
 _MAX_MULTIPLIER = Decimal("1.500000")
 _FULL_RELIABILITY_SAMPLE = Decimal(20)
+_LARGE_MOVE_BPS = Decimal("5.000000")
 
 
 def _canonical_json(value: object) -> str:
@@ -290,8 +291,9 @@ def learning_multiplier(*, sample_n: int, net_score: int) -> Decimal:
     if sample_n <= 0:
         return Decimal(1)
     mean = Decimal(net_score) / Decimal(sample_n)
+    normalized_mean = mean / Decimal(2)
     reliability = min(Decimal(1), Decimal(sample_n) / _FULL_RELIABILITY_SAMPLE)
-    multiplier = Decimal(1) + (Decimal("0.5") * mean * reliability)
+    multiplier = Decimal(1) + (Decimal("0.5") * normalized_mean * reliability)
     return max(_MIN_MULTIPLIER, min(_MAX_MULTIPLIER, multiplier))
 
 
@@ -391,19 +393,27 @@ def apply_learning_to_reasons(
     return adjusted
 
 
-def score_marker_vote(*, vote: str, realised_direction: str) -> tuple[int, int | None]:
+def score_marker_vote(
+    *,
+    vote: str,
+    realised_direction: str,
+    realised_return_bps: Decimal | None,
+) -> tuple[int, int | None]:
     if realised_direction not in {"bullish", "bearish", "neutral"}:
         return 0, None
     if vote not in {"bullish", "bearish", "neutral"}:
         return 0, None
     correct = int(vote == realised_direction)
-    return (1 if correct else -1), correct
+    magnitude = abs(realised_return_bps or Decimal(0))
+    impact = 2 if magnitude >= _LARGE_MOVE_BPS else 1
+    return (impact if correct else -impact), correct
 
 
 __all__ = [
     "ENVIRONMENT_VERSION",
     "GOLD_MARKER_BRAIN_VERSION",
     "MARKER_SCORE_HORIZON_MINUTES",
+    "_LARGE_MOVE_BPS",
     "apply_learning_to_reasons",
     "build_environment_fingerprint",
     "learning_multiplier",
