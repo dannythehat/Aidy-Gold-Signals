@@ -41,7 +41,7 @@ def test_manifest_lists_the_full_known_gold_arsenal_without_false_live_claims() 
     )
 
     assert manifest["contract_version"] == GOLD_TOOLBOX_MANIFEST_VERSION
-    assert manifest["known_capability_count"] >= 32
+    assert manifest["known_capability_count"] >= 34
     assert verify_gold_toolbox_manifest(manifest)
 
     capabilities = {item["name"]: item for item in manifest["capabilities"]}
