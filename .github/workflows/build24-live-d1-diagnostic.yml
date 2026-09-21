@@ -103,6 +103,32 @@ jobs:
           print('BUILD24_DIAGNOSTIC='+json.dumps(rows[0],sort_keys=True))
           PY
 
+
+      - name: Query Build 24 runtime progression
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.build24.diag.jsonc             --command "
+              SELECT
+                (SELECT activated_at_utc FROM aidy_gold_expert_shadow_runtime_state WHERE singleton_id=1) AS activated_at_utc,
+                (SELECT COUNT(*) FROM aidy_gold_expert_shadow_cycles) AS shadow_cycle_n,
+                (SELECT COUNT(*) FROM aidy_gold_meta_view_results) AS meta_result_n,
+                (SELECT COUNT(*) FROM aidy_gold_expert_outcome_ledger) AS ledger_row_n,
+                (SELECT COUNT(*) FROM aidy_gold_expert_context_scores) AS scorebook_row_n,
+                (SELECT COUNT(*) FROM aidy_gold_expert_shadow_sync_health) AS health_row_n,
+                (SELECT MAX(decided_at_utc) FROM aidy_gold_expert_shadow_cycles) AS latest_shadow_decided_at,
+                (SELECT MAX(resolved_at_utc) FROM aidy_gold_meta_view_results) AS latest_meta_resolved_at,
+                (SELECT MAX(observed_at_utc) FROM aidy_gold_expert_shadow_sync_health) AS health_observed_at;
+            " > /tmp/progression.json
+          cat /tmp/progression.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/progression.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          assert rows, p
+          print('BUILD24_PROGRESSION='+json.dumps(rows[0],sort_keys=True))
+          PY
+
       - name: Query gate-by-gate frozen and scored state
         shell: bash
         run: |
