@@ -17,6 +17,21 @@ Updated: 2026-09-21
 
 
 
+
+## Build 15 COMPLETE — Macro / Event Expert
+
+Build 15 adds `aidy_gold_macro_event_expert_v1`.
+
+The expert is deliberately context-only. It sits on top of the accepted official macro-event contracts rather than replacing them. Schedules remain official/PIT; consensus remains immutable and pre-release; actuals become visible only after their own first-observed timestamp; revision index 0 remains the first print used for surprise and later revisions stay separate.
+
+Build 15 adds Gold-specific specialist logic on top: standardized surprise where enough same-class/same-unit history exists, event clustering, post-release confirmation, historical conditional Gold response and matched no-news controls. Gold event tiers remain based on independent historical Gold episodes rather than vendor importance labels or trade P/L.
+
+Engineering acceptance on PR #218 candidate: semantic PASS, static PASS, focused suite 276 passed, full regression 1528 passed. Timing leakage, first-print/revision separation, standardized-surprise PIT filtering, independent Gold tiering, cluster detection, post-release confirmation, no-news controls, future-history exclusion and chronological freeze all pass.
+
+Build 15 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 16 — Rates / USD / Cross-Asset Expert. It will model opportunity-cost/risk relationships without permanent sign assumptions, including rolling Gold beta/correlation, relationship stability, divergence and cross-asset agreement, while preventing stale daily series from masquerading as intraday reaction.
+
 ## Build 14 COMPLETE — Session / Participation Expert
 
 Build 14 adds `aidy_gold_session_participation_expert_v1`.
