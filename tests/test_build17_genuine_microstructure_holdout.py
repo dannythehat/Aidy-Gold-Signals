@@ -1,11 +1,18 @@
 from __future__ import annotations
 
-from scripts.build17_genuine_microstructure_holdout import (
-    MICRO_RULES,
-    choose_rule,
-    combine_prediction,
-    micro_vote,
-)
+import importlib.util
+from pathlib import Path
+
+_MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "build17_genuine_microstructure_holdout.py"
+_SPEC = importlib.util.spec_from_file_location("build17_genuine_microstructure_holdout", _MODULE_PATH)
+assert _SPEC is not None and _SPEC.loader is not None
+_MODULE = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_MODULE)
+
+MICRO_RULES = _MODULE.MICRO_RULES
+choose_rule = _MODULE.choose_rule
+combine_prediction = _MODULE.combine_prediction
+micro_vote = _MODULE.micro_vote
 
 
 def _normalized(signed: str | None, vwap: str | None) -> dict[str, str | None]:
