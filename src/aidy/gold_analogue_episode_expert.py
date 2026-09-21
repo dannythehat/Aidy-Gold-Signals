@@ -33,6 +33,7 @@ from aidy.gold_movement_investigator import (
     verify_gold_movement_investigation,
     verify_gold_movement_learning_card,
 )
+from aidy.semantic_context_composer import verify_semantic_retrieval_wrapper
 
 ANALOGUE_EPISODE_EXPERT_VERSION = "aidy_gold_analogue_episode_expert_v1"
 ANALOGUE_EPISODE_GATE_ID = "analogue_episode_expert"
@@ -594,6 +595,7 @@ def build_analogue_episode_expert(
     reference_direction: str,
     movement_investigation: Mapping[str, Any] | None = None,
     movement_learning_cards: Sequence[Mapping[str, Any]] = (),
+    semantic_retrieval: Mapping[str, Any] | None = None,
     trust_score_rows_by_subject: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
 ) -> dict[str, Any]:
     exact = global_environment.get("exact_facts")
@@ -610,6 +612,15 @@ def build_analogue_episode_expert(
         candidate_snapshots_by_source_case_id=candidate_snapshots_by_source_case_id,
         reference_direction=reference_direction,
     )
+    semantic = (
+        dict(semantic_retrieval)
+        if semantic_retrieval is not None
+        and verify_semantic_retrieval_wrapper(semantic_retrieval)
+        else None
+    )
+    if semantic_retrieval is not None and semantic is None:
+        raise ValueError("Build 19 received an invalid semantic analogue retrieval")
+
     movement = (
         retrieve_movement_episode_analogues(
             investigation=movement_investigation,
@@ -656,6 +667,33 @@ def build_analogue_episode_expert(
             },
         },
         {
+            "evidence_id": "analogue_semantic_retrieval",
+            "source": "aidy_semantic_analogue_retrieval_v1",
+            "path": "analogue_episode.semantic_retrieval",
+            "observed_at_utc": as_of,
+            "state": "known" if semantic is not None else "unknown",
+            "value": (
+                {
+                    "semantic_retrieval_digest": semantic.get(
+                        "semantic_retrieval_digest"
+                    ),
+                    "semantic_compatible_candidate_count": semantic.get(
+                        "semantic_compatible_candidate_count"
+                    ),
+                    "cross_source_comparison_without_ledger_proven_pass_allowed": semantic.get(
+                        "cross_source_comparison_without_ledger_proven_pass_allowed"
+                    ),
+                }
+                if semantic is not None
+                else {"state": "not_supplied"}
+            ),
+            "provenance": {
+                "semantic_identity_boundary_reused": True,
+                "cross_source_requires_qualified_equivalence": True,
+                "future_values_used": False,
+            },
+        },
+        {
             "evidence_id": "analogue_movement_episode_memory",
             "source": "aidy_gold_movement_memory_v1",
             "path": "analogue_episode.movement_memory",
@@ -680,6 +718,28 @@ def build_analogue_episode_expert(
                 "Historical v1/v2/v3 analogue representatives are re-ranked only "
                 "with frozen gate-state and environment similarity. Outcomes are "
                 "read after selection to describe continuation/retrace."
+            ),
+        ),
+        _context_calculator(
+            calculator_id="analogue_semantic_boundary",
+            evidence_ref="analogue_semantic_retrieval",
+            known=semantic is not None,
+            observation=(
+                {
+                    "semantic_compatible_candidate_count": semantic.get(
+                        "semantic_compatible_candidate_count"
+                    ),
+                    "cross_source_unqualified_allowed": semantic.get(
+                        "cross_source_comparison_without_ledger_proven_pass_allowed"
+                    ),
+                }
+                if semantic is not None
+                else {"state": "not_supplied"}
+            ),
+            explanation=(
+                "Existing semantic analogue work is accepted only when its "
+                "semantic retrieval wrapper verifies; unqualified cross-source "
+                "inheritance remains blocked."
             ),
         ),
         _context_calculator(
@@ -763,6 +823,7 @@ def build_analogue_episode_expert(
                 ),
                 "source_refs": [
                     "calc:analogue_historical_episode_retrieval",
+                    "calc:analogue_semantic_boundary",
                     "calc:analogue_movement_episode_memory",
                 ],
             },
@@ -798,6 +859,7 @@ def build_analogue_episode_expert(
         "expert_packet": packet,
         "historical_analogues": historical,
         "movement_analogues": movement,
+        "semantic_retrieval_state": "known" if semantic is not None else "unknown",
         "trust_scopes": scopes,
         "trust_envelope": trust,
         "counterexamples_preserved": True,
