@@ -7,6 +7,30 @@ Updated: 2026-09-21
 
 
 
+
+## Build 5 COMPLETE — M5 Price Structure Expert
+
+Build 5 adds `aidy_gold_m5_price_structure_expert_v1`, the first actual timeframe expert in the programme.
+
+It consumes the Build-4 completed-bar mathematics and emits one Build-2 auditable M5 expert packet with separately visible sub-calculators for:
+- trend/path quality;
+- confirmed swing structure;
+- breakout acceptance/reclaim;
+- momentum transition;
+- completed-candle pressure;
+- range location (context only);
+- contradiction diagnostics (context only).
+
+The final M5 conclusion is family-balanced rather than calculator-count weighted. Correlated structure or momentum calculations can all be scored and learned from, but they do not multiply current conviction merely because several versions of the same evidence agree. The expert preserves NEUTRAL, ABSTAIN and UNKNOWN when evidence is weak or conflicted.
+
+Build-3 conditional trust is attached separately for the M5 gate and every scoreable sub-calculator using the gate's own M5 mini-environment and reduced fallback contexts. The legacy M5 direction remains an explicit baseline for chronological ablation rather than being silently replaced.
+
+Engineering acceptance on PR #206: semantic gate PASS, static checks PASS, focused suite 148 passed, full repository regression 1400 passed. Merged as `eaa6f49636ae4ae9f73d6a17db4c9d8f46d8743a`.
+
+No Worker deployment was required because Build 5 is not yet wired into live gate weighting. Research/shadow only; owner 1% risk and live-money authority remain unchanged.
+
+**Next build:** Build 6 — M15 Price Structure Expert. It will use the same contract with independently calibrated M15 horizons/thresholds, separate M15 8-bar path, latest 15-minute momentum and swing/breakout features, explicit dependency metadata, and the legacy M15 baseline retained for ablation.
+
 ## Build 4 COMPLETE — Common Price Expert Mathematics
 
 Build 4 adds `aidy_gold_price_expert_math_v1`, the shared deterministic mathematics layer for the future M5/M15/H1/H4/D1 expert gates.
