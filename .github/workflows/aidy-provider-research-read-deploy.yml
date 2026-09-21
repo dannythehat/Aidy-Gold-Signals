@@ -15,6 +15,7 @@ on:
       - "src/aidy/gold_state_engine.py"
       - "src/aidy/gold_movement_investigator.py"
       - "src/aidy/gold_movement_memory.py"
+      - "src/aidy/gold_cycle_memory.py"
       - "src/aidy/gold_toolbox_registry.py"
       - "src/aidy/private_forward_context.py"
       - "src/aidy/twelve_data_intraday_repair.py"
@@ -23,8 +24,10 @@ on:
       - "src/aidy/config.py"
       - "src/provider_entry.py"
       - "migrations/d1/0021_gold_movement_memory.sql"
+      - "migrations/d1/0022_gold_movement_scan_ledger.sql"
+      - "migrations/d1/0023_gold_cycle_learning.sql"
       - "tests/test_gold_movement_memory.py"
-      - "src/provider_entry.py"
+      - "tests/test_gold_cycle_memory.py"
       - ".github/workflows/aidy-provider-research-read-deploy.yml"
   workflow_dispatch:
 
@@ -70,7 +73,7 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check --quiet uv
           uv sync
-          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_toolbox_registry.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
+          uv run ruff check src/aidy/provider_market_api.py src/aidy/provider_context_api.py src/aidy/gold_state_engine.py src/aidy/gold_movement_investigator.py src/aidy/gold_movement_memory.py src/aidy/gold_cycle_memory.py src/aidy/gold_toolbox_registry.py src/aidy/private_forward_context.py src/aidy/twelve_data_intraday_repair.py src/aidy/runtime.py src/aidy/data_health.py src/aidy/config.py src/provider_entry.py
           uv run python -m compileall -q src tests
           uv run pytest -q \
             tests/test_provider_market_api.py \
@@ -154,6 +157,8 @@ jobs:
           assert h.get('provider_gold_state_version') == 'aidy_provider_gold_state_v2', h
           assert h.get('gold_movement_investigator_version') == 'aidy_gold_movement_investigator_v1', h
           assert h.get('gold_movement_memory_version') == 'aidy_gold_movement_memory_v1', h
+          assert h.get('gold_cycle_memory_version') == 'aidy_gold_cycle_memory_v1', h
+          assert h.get('gold_toolbox_manifest_version') == 'aidy_gold_toolbox_manifest_v1', h
           PY
             then ok=1; break; fi
             sleep 10
@@ -182,3 +187,48 @@ jobs:
             "${AIDY_TEST_WORKER_URL}/provider/context?as_of=2026-09-16T00:00:00%2B00:00")"
           test "$context_code" = "401"
           echo "provider_research_routes_live_and_authenticated=true"
+
+          # Prove the autonomous 15-minute Gold learner is writing auditable views.
+          # Do not print the reasoning text itself while the repository is temporarily public.
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT
+                window_start_utc,
+                observed_state,
+                view_direction,
+                CASE WHEN length(reasoning_summary)>0 THEN 1 ELSE 0 END AS has_reasoning,
+                json_array_length(supporting_reasons_json) AS supporting_reason_count,
+                json_array_length(contradicting_reasons_json) AS contradicting_reason_count,
+                json_array_length(unavailable_evidence_json) AS unavailable_evidence_count,
+                json_array_length(toolbox_considered_json) AS toolbox_considered_count,
+                json_array_length(toolbox_used_json) AS toolbox_used_count,
+                future_values_used,
+                live_money_execution_allowed
+              FROM aidy_gold_cycle_views
+              ORDER BY window_start_utc DESC
+              LIMIT 1;
+            " > /tmp/cycle-live-audit.json
+          cat /tmp/cycle-live-audit.json
+          python - <<'PY'
+          import json
+          payload=json.load(open('/tmp/cycle-live-audit.json', encoding='utf-8'))
+          rows=(payload[0] or {}).get('results') or []
+          assert rows, payload
+          row=rows[0]
+          assert row.get('has_reasoning') == 1, row
+          assert int(row.get('toolbox_considered_count') or 0) >= 20, row
+          assert int(row.get('toolbox_used_count') or 0) >= 1, row
+          assert row.get('future_values_used') == 0, row
+          assert row.get('live_money_execution_allowed') == 0, row
+          print(
+              'cycle_reasoning_audit=true '
+              f"window={row.get('window_start_utc')} "
+              f"observed={row.get('observed_state')} "
+              f"view={row.get('view_direction')} "
+              f"supporting={row.get('supporting_reason_count')} "
+              f"contradicting={row.get('contradicting_reason_count')} "
+              f"unavailable={row.get('unavailable_evidence_count')} "
+              f"toolbox_used={row.get('toolbox_used_count')}"
+          )
+          PY
