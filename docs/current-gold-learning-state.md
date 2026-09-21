@@ -20,6 +20,43 @@ Updated: 2026-09-21
 
 
 
+## Build 19 — Analogue / Episode Expert COMPLETE
+
+Build 19 adds `aidy_gold_analogue_episode_expert_v1`.
+
+What is built and proven:
+- reuses the accepted analogue retrieval v1/v2/v3 stack rather than creating a parallel engine;
+- exact PIT state snapshots bind gate/environment similarity to immutable input identity;
+- gate-state similarity and environment similarity are explicit, auditable components;
+- historical v2 overlapping-window episode collapse is preserved before Build 19 re-ranking;
+- semantic analogue retrieval may be attached only when its existing semantic wrapper verifies;
+- movement episode learning cards are eligible only after their own available-at timestamp;
+- continuation/retrace distributions are computed only after analogue selection;
+- positive analogues and symmetric counterexamples are both preserved;
+- changing future outcome content cannot change selected case identity or similarity;
+- chronological holdout requires purge + embargo and forbids holdout tuning;
+- context-only: no automatic BUY/SELL authority.
+
+Acceptance evidence:
+- exact tested PR #227 head: `87a793066af3ac0cb9855399416c0a01f55aa02d`;
+- implementation merge: `aba5ebc275646b31ec8132af3fed7179c1b5046f`;
+- Build 19 workflow run: `35610105516` — PASS;
+- Evidence Semantic Change Gate: `35610105748` — PASS;
+- static/compile checks: PASS;
+- focused suite: 115 passed;
+- dedicated chronological/counterexample gate: 5 passed;
+- full repository regression: 1591 passed;
+- future-outcome mutation selection invariance: PASS;
+- duplicate overlapping episodes collapse: PASS;
+- exact input-digest binding: PASS;
+- positive + counterexample retrieval: PASS;
+- chronological holdout-only boundary: PASS;
+- deterministic candidate reordering: PASS.
+
+Build 19 remains research/shadow intelligence. It does not change Super Signals execution/provider rules, owner 1% risk, formal-forward authority or live-money authority.
+
+**Next:** Build 20 — Evidence Dependency & Double-Counting Engine. It will stop correlated or duplicated evidence from voting multiple times while preserving genuinely independent agreement.
+
 ## Build 18 — News / Movement Mechanism Expert COMPLETE
 
 Build 18 adds `aidy_gold_news_movement_mechanism_expert_v1` plus the bounded Finnhub market-news adapter `aidy_finnhub_market_news_adapter_v1`.
