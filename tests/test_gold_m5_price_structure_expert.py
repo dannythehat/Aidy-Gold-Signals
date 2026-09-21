@@ -234,7 +234,7 @@ def test_build5_clean_m5_downtrend_is_bearish() -> None:
 
 
 def test_build5_chop_does_not_masquerade_as_a_trend() -> None:
-    values = [Decimal("100"), Decimal(101)] * 16
+    values = [Decimal(100), Decimal(101)] * 16
     result = _expert(values, legacy_m5="up")
     packet = result["expert_packet"]
     assert packet["conclusion"] in {"neutral", "abstain"}
