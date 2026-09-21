@@ -1,0 +1,41 @@
+name: AIDY Build 23 Chronological Replay
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_meta_replay.py"
+      - "tests/test_gold_meta_replay.py"
+      - ".github/workflows/build23-meta-replay.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+      - name: Static
+        run: |
+          uv run ruff check src/aidy/gold_meta_replay.py tests/test_gold_meta_replay.py
+          uv run python -m compileall -q src/aidy/gold_meta_replay.py tests/test_gold_meta_replay.py
+      - name: Focused
+        run: |
+          uv run pytest -q             tests/test_gold_meta_direction.py             tests/test_gold_meta_replay.py             tests/test_day37_replay_evaluation.py             tests/test_day37_replay_guardrails.py
+      - name: Dedicated replay acceptance
+        run: |
+          uv run pytest -q tests/test_gold_meta_replay.py -k             "spurious_in_sample or large_validation_core or dependency_penalty or holdout_cannot_change or fixture_cannot_be_mislabeled or reproducible"
+      - name: Full regression
+        run: uv run pytest -q
