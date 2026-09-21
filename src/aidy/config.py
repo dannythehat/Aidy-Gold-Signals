@@ -21,6 +21,7 @@ class AidySettings:
     macro_poll_seconds: float = 900.0
     cross_market_poll_seconds: float = 3600.0
     archive_flush_limit: int = 100
+    twelve_intraday_self_heal_enabled: bool = False
 
     @classmethod
     def _from_getter(cls, getter: ValueGetter) -> AidySettings:
@@ -59,6 +60,9 @@ class AidySettings:
         market_data_source = optional("AIDY_MARKET_DATA_SOURCE").lower() or "gold_api"
         default_market_poll = 300.0 if market_data_source == "twelve_data" else 60.0
         market_poll_seconds = positive_float("AIDY_MARKET_POLL_SECONDS", default_market_poll)
+        twelve_intraday_self_heal_enabled = optional(
+            "AIDY_TWELVE_INTRADAY_SELF_HEAL_ENABLED"
+        ).lower() in {"1", "true", "yes", "on"}
 
         if enabled:
             if market_data_source not in _ALLOWED_MARKET_DATA_SOURCES:
@@ -94,6 +98,7 @@ class AidySettings:
                 "AIDY_CROSS_MARKET_POLL_SECONDS", 3600.0
             ),
             archive_flush_limit=positive_int("AIDY_ARCHIVE_FLUSH_LIMIT", 100),
+            twelve_intraday_self_heal_enabled=twelve_intraday_self_heal_enabled,
         )
 
     @classmethod
