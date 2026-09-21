@@ -1,4 +1,5 @@
 name: AIDY Build 24 Live Rollout Acceptance
+# Final re-verification after health telemetry bind fix.
 
 on:
   pull_request:
