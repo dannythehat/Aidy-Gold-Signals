@@ -1,0 +1,57 @@
+name: AIDY Build 21 Environment Gate Selector
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/aidy/gold_environment_gate_selector.py"
+      - "tests/test_gold_environment_gate_selector.py"
+      - ".github/workflows/build21-environment-gate-selector.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install project dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+
+      - name: Static Build 21 checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run ruff check             src/aidy/gold_environment_gate_selector.py             tests/test_gold_environment_gate_selector.py
+          uv run python -m compileall -q             src/aidy/gold_environment_gate_selector.py             tests/test_gold_environment_gate_selector.py
+
+      - name: Focused Build 21 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q             tests/test_gold_cycle_environment.py             tests/test_gold_expert_gate_contract.py             tests/test_gold_expert_trust.py             tests/test_gold_evidence_dependency.py             tests/test_gold_environment_gate_selector.py
+
+      - name: Dedicated selector acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run pytest -q tests/test_gold_environment_gate_selector.py -k             "small_n_star or strong_large_n or missing_gate or weak_gate or current_outcome or deterministic"
+
+      - name: Full repository regression
+        shell: bash
+        run: uv run pytest -q
