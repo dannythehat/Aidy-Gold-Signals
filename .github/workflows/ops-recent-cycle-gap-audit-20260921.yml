@@ -132,6 +132,24 @@ jobs:
               ORDER BY requested_at_utc DESC LIMIT 50;
             "
 
+          echo "=== cron_error_diagnostic ==="
+          rm -f /tmp/cron-error.json
+          if npx --yes wrangler@4 r2 object get \
+            "aidy-memory-test/diagnostics/day2-queue-consumer-error.json" \
+            --remote --config wrangler.research.live.jsonc --file /tmp/cron-error.json >/dev/null 2>&1; then
+            python - <<'PY'
+          import json
+          p=json.load(open('/tmp/cron-error.json',encoding='utf-8'))
+          print(json.dumps({
+              'observed_at': p.get('observed_at'),
+              'exception_type': p.get('exception_type'),
+              'message': p.get('message'),
+          },sort_keys=True))
+          PY
+          else
+            echo '{"diagnostic":"not_found"}'
+          fi
+
           echo "=== recent_snapshots ==="
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
             --config wrangler.research.live.jsonc \
