@@ -716,7 +716,7 @@ def build_macro_event_expert(
     calculators = [
         _context_calculator(
             calculator_id="macro_event_tier_cluster",
-            dependency_family="macro_event",
+            dependency_family="event",
             evidence_ref="macro_schedule_evidence",
             known=True,
             observation={
@@ -732,7 +732,7 @@ def build_macro_event_expert(
         ),
         _context_calculator(
             calculator_id="macro_event_surprise",
-            dependency_family="macro_event",
+            dependency_family="event",
             evidence_ref="macro_surprise_evidence",
             known=surprise["surprise_state"] == "known",
             observation={
@@ -746,7 +746,7 @@ def build_macro_event_expert(
         ),
         _context_calculator(
             calculator_id="macro_event_pre_event",
-            dependency_family="macro_event",
+            dependency_family="event",
             evidence_ref="macro_pre_event_evidence",
             known=pre_event.get("state") == "known",
             observation=pre_event,
@@ -757,7 +757,7 @@ def build_macro_event_expert(
         ),
         _context_calculator(
             calculator_id="macro_event_response",
-            dependency_family="macro_event",
+            dependency_family="event",
             evidence_ref="macro_response_evidence",
             known=response["state"] == "known",
             observation={
@@ -792,7 +792,7 @@ def build_macro_event_expert(
         gate_id=MACRO_EVENT_GATE_ID,
         gate_version=MACRO_EVENT_EXPERT_VERSION,
         gate_mode="context_only",
-        dependency_family="macro_event",
+        dependency_family="event",
         target_horizon_minutes=MACRO_EVENT_TARGET_HORIZON_MINUTES,
         as_of_utc=as_of,
         global_environment=global_environment,
