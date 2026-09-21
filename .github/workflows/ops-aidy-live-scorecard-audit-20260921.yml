@@ -104,6 +104,33 @@ jobs:
             LEFT JOIN aidy_gold_cycle_outcomes o ON o.cycle_view_id=v.cycle_view_id
             ORDER BY v.window_start_utc DESC LIMIT 12;
           "
+          echo "=== latest_json_shape ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
+            WITH latest AS (
+              SELECT v.cycle_view_id,v.window_start_utc,v.evidence_json,e.environment_json
+              FROM aidy_gold_cycle_views v
+              LEFT JOIN aidy_gold_cycle_environments e ON e.cycle_view_id=v.cycle_view_id
+              ORDER BY v.window_start_utc DESC LIMIT 1
+            )
+            SELECT cycle_view_id,window_start_utc,
+                   json_type(evidence_json,'$.tool_reasoning_trace') AS trace_type,
+                   json_array_length(json_extract(evidence_json,'$.tool_reasoning_trace')) AS trace_count,
+                   json_type(environment_json,'$.toolbox_coverage') AS coverage_type,
+                   json_array_length(json_extract(environment_json,'$.toolbox_coverage')) AS coverage_count,
+                   json_type(environment_json,'$.learning_dimensions') AS dims_type,
+                   json_extract(evidence_json,'$.environment_fingerprint.learning_dimensions.session') AS evidence_session,
+                   json_extract(environment_json,'$.learning_dimensions.session') AS environment_session
+            FROM latest;
+          "
+          echo "=== latest_evidence_keys ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
+            WITH latest AS (
+              SELECT evidence_json FROM aidy_gold_cycle_views ORDER BY window_start_utc DESC LIMIT 1
+            )
+            SELECT key,json_type(value) AS value_type
+            FROM latest,json_each(latest.evidence_json)
+            ORDER BY key;
+          "
           echo "=== global_scorebook ==="
           npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json --config wrangler.research.live.jsonc --command "
             SELECT surface,sample_n,correct_n,incorrect_n,neutral_n,net_score,score_mean,accuracy,last_resolved_at_utc
