@@ -9,6 +9,21 @@ Updated: 2026-09-21
 
 
 
+
+## Build 7 COMPLETE — H1 Price Structure Expert
+
+Build 7 adds `aidy_gold_h1_price_structure_expert_v1`.
+
+H1 now judges genuine hourly trend quality rather than first-close versus last-close. Its trend specialist combines 8h/13h slope and R², persistence, path efficiency and volatility-normalised displacement, then applies an explicit quality gate. A net-positive H1 path with poor persistence/choppy structure cannot become a bullish H1 trend conclusion merely because it finished higher.
+
+H1 also scores confirmed swing structure, breakout acceptance/reclaim, acceleration and completed-candle pressure separately. Its explanations explicitly include slope, quality, swings/breakout, location and contradictions. H1 conditional trust is separate from M15.
+
+Engineering acceptance on PR #210 candidate: semantic gate PASS, static checks PASS, focused workflow suite 172 passed, full repository regression 1424 passed. The blueprint's positive-but-choppy H1 acceptance case passes, as do PIT, chronological-freeze, dependency metadata, separate H1 trust and legacy-H1 ablation tests.
+
+Build 7 is research/shadow only and does not change execution, provider activation, owner 1% risk, formal-forward or live-money authority. No Worker deployment is required for this library-only build.
+
+**Next build:** Build 8 — H4 Price Structure Expert. It is the slow structural expert, but timeframe alone cannot give it dominance. H4 must prove incremental conditional value and any conflict with lower-timeframe experts must remain explicit and scoreable.
+
 ## Build 6 COMPLETE — M15 Price Structure Expert
 
 Build 6 adds `aidy_gold_m15_price_structure_expert_v1`, the second timeframe specialist.
