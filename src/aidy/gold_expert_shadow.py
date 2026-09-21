@@ -18,11 +18,12 @@ from decimal import ROUND_HALF_EVEN, Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
 
-from aidy.gold_d1_context_expert import (
-    D1_CONTEXT_EXPERT_VERSION,
-    D1_GATE_ID,
-    build_d1_context_expert,
+from aidy.gold_analogue_episode_expert import (
+    ANALOGUE_EPISODE_EXPERT_VERSION,
+    ANALOGUE_EPISODE_GATE_ID,
 )
+from aidy.gold_cycle_environment import verify_cycle_environment
+from aidy.gold_d1_context_expert import D1_GATE_ID, build_d1_context_expert
 from aidy.gold_environment_gate_selector import (
     build_environment_aware_gate_selector,
     build_gate_selector_input,
@@ -43,29 +44,28 @@ from aidy.gold_expert_trust import (
     score_expert_packet,
     select_conditional_trust,
 )
+from aidy.gold_futures_microstructure_expert import (
+    FUTURES_MICROSTRUCTURE_EXPERT_VERSION,
+    FUTURES_MICROSTRUCTURE_GATE_ID,
+)
 from aidy.gold_h1_price_structure_expert import (
     H1_GATE_ID,
-    H1_PRICE_STRUCTURE_EXPERT_VERSION,
     build_h1_price_structure_expert,
 )
 from aidy.gold_h4_price_structure_expert import (
     H4_GATE_ID,
-    H4_PRICE_STRUCTURE_EXPERT_VERSION,
     build_h4_price_structure_expert,
 )
 from aidy.gold_liquidity_reclaim_expert import (
-    LIQUIDITY_RECLAIM_EXPERT_VERSION,
     LIQUIDITY_RECLAIM_GATE_ID,
     build_liquidity_reclaim_expert,
 )
 from aidy.gold_m15_price_structure_expert import (
     M15_GATE_ID,
-    M15_PRICE_STRUCTURE_EXPERT_VERSION,
     build_m15_price_structure_expert,
 )
 from aidy.gold_m5_price_structure_expert import (
     M5_GATE_ID,
-    M5_PRICE_STRUCTURE_EXPERT_VERSION,
     build_m5_price_structure_expert,
 )
 from aidy.gold_macro_event_expert import (
@@ -74,7 +74,6 @@ from aidy.gold_macro_event_expert import (
 )
 from aidy.gold_meta_direction import build_meta_direction_view
 from aidy.gold_momentum_impulse_expert import (
-    MOMENTUM_IMPULSE_EXPERT_VERSION,
     MOMENTUM_IMPULSE_GATE_ID,
     build_momentum_impulse_expert,
 )
@@ -84,7 +83,6 @@ from aidy.gold_news_movement_mechanism_expert import (
 )
 from aidy.gold_price_expert_math import build_price_expert_math_packet
 from aidy.gold_price_location_expert import (
-    PRICE_LOCATION_EXPERT_VERSION,
     PRICE_LOCATION_GATE_ID,
     build_price_location_expert,
 )
@@ -92,25 +90,14 @@ from aidy.gold_rates_usd_cross_asset_expert import (
     RATES_CROSS_ASSET_EXPERT_VERSION,
     RATES_CROSS_ASSET_GATE_ID,
 )
-from aidy.gold_futures_microstructure_expert import (
-    FUTURES_MICROSTRUCTURE_EXPERT_VERSION,
-    FUTURES_MICROSTRUCTURE_GATE_ID,
-)
-from aidy.gold_analogue_episode_expert import (
-    ANALOGUE_EPISODE_EXPERT_VERSION,
-    ANALOGUE_EPISODE_GATE_ID,
-)
 from aidy.gold_session_participation_expert import (
-    SESSION_PARTICIPATION_EXPERT_VERSION,
     SESSION_PARTICIPATION_GATE_ID,
     build_session_participation_expert,
 )
 from aidy.gold_volatility_jump_expert import (
-    VOLATILITY_JUMP_EXPERT_VERSION,
     VOLATILITY_JUMP_GATE_ID,
     build_volatility_jump_expert,
 )
-from aidy.gold_cycle_environment import verify_cycle_environment
 from aidy.private_forward_context import load_private_forward_snapshot_bundle
 
 GOLD_EXPERT_SHADOW_VERSION = "aidy_gold_expert_shadow_v1"
@@ -404,7 +391,7 @@ class D1GoldExpertShadowStore:
             raise RuntimeError("Build 24 requires the frozen cycle environment")
         value = _json(row.get("environment_json"), default={})
         if not isinstance(value, dict):
-            raise RuntimeError("stored cycle environment is invalid")
+            raise TypeError("stored cycle environment is invalid")
         # The cycle store adds toolbox_coverage after the verified environment
         # digest is created. Remove that additive display field before contract
         # verification; the immutable environment itself is unchanged.
@@ -1133,7 +1120,7 @@ class D1GoldExpertShadowStore:
                 if not verify_expert_gate_packet(packet):
                     raise RuntimeError("stored Build 24 expert packet failed verification")
                 if not isinstance(scopes, list):
-                    raise RuntimeError("stored Build 24 trust scopes are invalid")
+                    raise TypeError("stored Build 24 trust scopes are invalid")
                 await self._insert_expert_results(
                     packet=packet,
                     scopes=scopes,
