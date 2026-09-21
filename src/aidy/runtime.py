@@ -21,6 +21,7 @@ from .official_macro import OfficialMacroCaptureResult, OfficialMacroGateway
 from .official_macro_recorder import AidyOfficialMacroRecorderService
 from .reference_price_recorder import AidyReferencePriceRecorderService, ReferenceCaptureResult
 from .storage_contracts import AidyMarketRepository, ArchiveFlushResult
+from .twelve_data_intraday_repair import repair_intraday_provider_context_gap
 from .twelve_data_market import TwelveDataOhlcGateway
 from .twelve_data_recorder import AidyTwelveDataRecorderService
 from .twelve_data_storage import D1TwelveDataMarketStore
@@ -124,11 +125,32 @@ async def run_capture_cycle(
                 raise RuntimeError(
                     "Twelve Data capture requires an authenticated gateway and D1 market store."
                 )
-            market = await AidyTwelveDataRecorderService(
+            recorder = AidyTwelveDataRecorderService(
                 repository=repository,
                 gateway=market_gateway,  # type: ignore[arg-type]
                 market_store=live_gold_history,
-            ).capture_once()
+            )
+            market = await recorder.capture_once()
+            if market.status == "partial" and isinstance(market_gateway, TwelveDataOhlcGateway):
+                try:
+                    repair = await repair_intraday_provider_context_gap(
+                        repository=repository,
+                        gateway=market_gateway,
+                        store=live_gold_history,
+                        as_of=datetime.now(UTC),
+                    )
+                except Exception as exc:  # noqa: BLE001 - repair must never undo capture
+                    print(
+                        "AIDY intraday Provider Context self-heal failed: "
+                        f"{type(exc).__name__}: {str(exc)[:500]}"
+                    )
+                else:
+                    if repair.get("repaired") is True:
+                        # Re-run the normal scheduled-capture path so the repaired,
+                        # first-observed M1 evidence is aggregated into a fresh
+                        # canonical snapshot. This is still fail-closed: if any
+                        # required intraday minute remains missing, status stays partial.
+                        market = await recorder.capture_once()
         else:
             raise RuntimeError("Unsupported AIDY market-data source.")
 
