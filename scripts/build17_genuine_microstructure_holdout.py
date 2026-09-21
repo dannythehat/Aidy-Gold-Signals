@@ -33,14 +33,6 @@ from aidy.gold_cycle_environment import build_cycle_environment
 from aidy.gold_futures_microstructure_expert import summarise_incremental_holdout
 from aidy.gold_m5_price_structure_expert import build_m5_price_structure_expert
 from aidy.gold_price_expert_math import build_price_expert_math_packet
-from aidy.historical_backfill import (
-    HistDataArchive,
-    HistDataPeriod,
-    build_research_candles,
-    download_histdata_period,
-    parse_histdata_m1,
-    read_histdata_archive,
-)
 from aidy.market_sessions import session_code_at
 
 DATABENTO_SYMBOLOGY_URL = "https://hist.databento.com/v0/symbology.resolve"
@@ -261,36 +253,107 @@ def _contract_map(api_key: str, day: date) -> dict[int, str]:
     return {int(key): value for key, value in resolved.items()}
 
 
-class HistDataCache:
-    def __init__(self, root: Path) -> None:
-        self.root = root
-        self.archives: dict[tuple[int, int], HistDataArchive] = {}
-        self.candles: dict[tuple[int, int], dict[str, list[Any]]] = {}
+def _bigquery_client() -> tuple[Any, Any, str]:
+    from google.cloud import bigquery
+    from google.oauth2 import service_account
 
-    def month(self, anchor: datetime) -> tuple[HistDataArchive, dict[str, list[Any]]]:
-        key = (anchor.year, anchor.month)
-        if key in self.archives:
-            return self.archives[key], self.candles[key]
-        period = HistDataPeriod(anchor.year, anchor.month)
-        path = download_histdata_period(period, cache_dir=self.root)
-        archive = read_histdata_archive(path, period)
-        bars, _stats = parse_histdata_m1(archive.payload_text)
-        candles = build_research_candles(
-            bars,
-            timeframes=("M1", "M5", "M15", "H1", "H4", "D1"),
-            symbol="XAUUSD",
-            archive=archive,
-            ingested_at=datetime(2026, 9, 21, tzinfo=UTC),
-            backfill_run_id="build17-genuine-holdout",
-        )
-        self.archives[key] = archive
-        self.candles[key] = candles
-        return archive, candles
+    secret = os.environ.get("AIDY_GCP_SERVICE_ACCOUNT_JSON", "")
+    if not secret.strip():
+        raise RuntimeError("AIDY_GCP_SERVICE_ACCOUNT_JSON is required")
+    info = json.loads(secret)
+    project = str(info.get("project_id") or "")
+    if not project:
+        raise RuntimeError("service account project_id is missing")
+    credentials = service_account.Credentials.from_service_account_info(info)
+    location = os.environ.get("AIDY_BIGQUERY_LOCATION", "EU")
+    client = bigquery.Client(
+        project=project,
+        credentials=credentials,
+        location=location,
+    )
+    return client, bigquery, project
 
 
-def _row_by_open(candles: list[Any], open_time: datetime) -> Any | None:
+def _candidate_anchors(
+    client: Any,
+    bigquery: Any,
+    *,
+    project: str,
+    dataset: str,
+) -> list[datetime]:
+    table = f"{project}.{dataset}.research_candles"
+    sql = f"""
+        SELECT DISTINCT TIMESTAMP_ADD(open_time_utc, INTERVAL 1 MINUTE) AS anchor_utc
+        FROM `{table}`
+        WHERE source = 'histdata'
+          AND symbol = 'XAUUSD'
+          AND timeframe = 'M1'
+          AND EXTRACT(DAYOFWEEK FROM TIMESTAMP_ADD(open_time_utc, INTERVAL 1 MINUTE)) = 2
+          AND EXTRACT(HOUR FROM TIMESTAMP_ADD(open_time_utc, INTERVAL 1 MINUTE)) = @hour
+          AND EXTRACT(MINUTE FROM TIMESTAMP_ADD(open_time_utc, INTERVAL 1 MINUTE)) = @minute
+        ORDER BY anchor_utc DESC
+        LIMIT @limit
+    """
+    config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("hour", "INT64", ANCHOR_HOUR_UTC),
+            bigquery.ScalarQueryParameter("minute", "INT64", ANCHOR_MINUTE_UTC),
+            bigquery.ScalarQueryParameter("limit", "INT64", MAX_CANDIDATE_WEEKS),
+        ]
+    )
+    anchors = [_utc(row["anchor_utc"]) for row in client.query(sql, job_config=config).result()]
+    return sorted(anchors)
+
+
+def _research_rows_for_anchor(
+    client: Any,
+    bigquery: Any,
+    *,
+    project: str,
+    dataset: str,
+    anchor: datetime,
+) -> dict[str, list[dict[str, Any]]]:
+    table = f"{project}.{dataset}.research_candles"
+    sql = f"""
+        SELECT research_identity, provenance_class, pit_eligible, symbol, timeframe,
+               open_time_utc, open, high, low, close, source,
+               source_file_sha256, source_payload_sha256, derivation_version
+        FROM `{table}`
+        WHERE source = 'histdata'
+          AND symbol = 'XAUUSD'
+          AND timeframe IN ('M1','M5','M15','H1','H4','D1')
+          AND open_time_utc >= @start
+          AND open_time_utc < @end
+        ORDER BY open_time_utc, timeframe, research_identity
+    """
+    config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter(
+                "start", "TIMESTAMP", anchor - timedelta(hours=8)
+            ),
+            bigquery.ScalarQueryParameter(
+                "end",
+                "TIMESTAMP",
+                anchor + timedelta(minutes=OUTCOME_HORIZON_MINUTES),
+            ),
+        ]
+    )
+    grouped = {name: [] for name in ("M1", "M5", "M15", "H1", "H4", "D1")}
+    for row in client.query(sql, job_config=config).result():
+        value = dict(row.items())
+        value["open_time_utc"] = _utc(value["open_time_utc"]).isoformat()
+        timeframe = str(value.get("timeframe") or "")
+        if timeframe in grouped:
+            grouped[timeframe].append(value)
+    return grouped
+
+
+def _row_by_open(
+    candles: list[dict[str, Any]],
+    open_time: datetime,
+) -> dict[str, Any] | None:
     for candle in candles:
-        if candle.open_time_utc == open_time:
+        if _utc(candle["open_time_utc"]) == open_time:
             return candle
     return None
 
@@ -338,7 +401,7 @@ def _spot_prediction(
     month_candles: dict[str, list[Any]],
 ) -> tuple[str, str]:
     rows = [
-        candle.to_row()
+        dict(candle)
         for timeframe in ("M1", "M5", "M15", "H1", "H4", "D1")
         for candle in month_candles[timeframe]
     ]
@@ -416,8 +479,8 @@ def _outcome(
     )
     if start is None or end is None:
         return None
-    start_close = Decimal(start.close)
-    end_close = Decimal(end.close)
+    start_close = Decimal(str(start["close"]))
+    end_close = Decimal(str(end["close"]))
     if start_close <= 0:
         return None
     value = (end_close / start_close - Decimal(1)) * Decimal(10000)
@@ -543,7 +606,6 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default="build17_genuine_holdout.json")
     parser.add_argument("--raw-dir", default="/tmp/build17_databento")
-    parser.add_argument("--histdata-cache", default="/tmp/build17_histdata")
     args = parser.parse_args()
 
     raw_secret = os.environ.get("DATABENTO_API_KEY", "")
@@ -554,8 +616,15 @@ def main() -> int:
 
     raw_dir = Path(args.raw_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
-    hist = HistDataCache(Path(args.histdata_cache))
     head_sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    bq_client, bigquery, project = _bigquery_client()
+    dataset = os.environ.get("AIDY_BIGQUERY_DATASET", "aidy_analytics_test")
+    candidates = _candidate_anchors(
+        bq_client,
+        bigquery,
+        project=project,
+        dataset=dataset,
+    )
 
     episodes: list[dict[str, Any]] = []
     purchases: list[dict[str, Any]] = []
@@ -563,13 +632,18 @@ def main() -> int:
 
     with DatabentoHistoricalClient.from_env() as client:
         entitlement = client.assert_gc_entitlement()
-        latest_day = _latest_full_tbbo_day(client.dataset_range())
-        candidates = _candidate_mondays(latest_day)
+        client.dataset_range()
 
         for anchor in candidates:
             if len(episodes) >= TARGET_VALID_EPISODES:
                 break
-            _archive, month_candles = hist.month(anchor)
+            month_candles = _research_rows_for_anchor(
+                bq_client,
+                bigquery,
+                project=project,
+                dataset=dataset,
+                anchor=anchor,
+            )
             outcome = _outcome(anchor=anchor, month_candles=month_candles)
             if outcome is None:
                 continue
@@ -620,7 +694,7 @@ def main() -> int:
         "source_provider": "Databento",
         "source_dataset": DATABENTO_DATASET,
         "source_schema": "tbbo",
-        "xau_baseline_source": "HistData_XAUUSD_M1_plus_Build5_M5_expert",
+        "xau_baseline_source": "BigQuery_research_candles_HistData_XAUUSD_plus_Build5_M5_expert",
         "weekly_anchor": "Monday_15:15_UTC",
         "target_valid_episodes": TARGET_VALID_EPISODES,
         "valid_episode_count": len(episodes),
