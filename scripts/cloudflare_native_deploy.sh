@@ -15,6 +15,9 @@ uv run ruff check \
   src/aidy/gold_movement_investigator.py \
   src/aidy/gold_movement_memory.py \
   src/aidy/private_forward_context.py \
+  src/aidy/twelve_data_intraday_repair.py \
+  src/aidy/runtime.py \
+  src/aidy/data_health.py \
   src/provider_entry.py
 
 uv run python -m compileall -q src tests
@@ -24,6 +27,9 @@ uv run pytest -q \
   tests/test_gold_state_engine.py \
   tests/test_gold_movement_investigator.py \
   tests/test_gold_movement_memory.py \
+  tests/test_twelve_data_intraday_repair.py \
+  tests/test_aidy_data_health.py \
+  tests/test_runtime_schedule.py \
   tests/test_twelve_data_retrospective.py
 
 uv run python scripts/build_cloudflare_live_config.py

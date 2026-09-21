@@ -161,6 +161,77 @@ def test_fresh_open_session_is_green_only_with_capture_and_context() -> None:
     assert result.health_version == HEALTH_VERSION
 
 
+
+@pytest.mark.asyncio
+async def test_health_accepts_fresh_partial_snapshot_when_only_d1_is_missing(monkeypatch) -> None:
+    monkeypatch.chdir(ROOT)
+    db = LocalD1()
+    now = datetime(2026, 9, 10, 12, 0, tzinfo=UTC)
+    observed = now - timedelta(minutes=4)
+
+    db.connection.execute(
+        """
+        INSERT INTO twelve_data_request_ledger(
+          id,requested_at_utc,completed_at_utc,endpoint,symbol,interval,outputsize,
+          request_kind,status,internal_accounted_credits
+        ) VALUES (?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            "request-partial",
+            observed.isoformat(),
+            observed.isoformat(),
+            "time_series",
+            "XAU/USD",
+            "1min",
+            30,
+            "scheduled_capture",
+            "succeeded",
+            1,
+        ),
+    )
+    db.connection.execute(
+        """
+        INSERT INTO market_snapshots(
+          id,captured_at,symbol,capture_status,session_code,position_state_json,
+          data_availability_json,event_observation_ids_json,snapshot_digest,archive_key,
+          market_data_source,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,
+          latest_h4_id,latest_d1_id
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """,
+        (
+            "snapshot-partial",
+            observed.isoformat(),
+            "XAUUSD",
+            "partial",
+            "ny",
+            None,
+            '{"request_kind":"scheduled_capture","request_ledger_status":"succeeded","freshness_state":"fresh"}',
+            "[]",
+            "b" * 64,
+            "snapshots/snapshot-partial.json",
+            "twelve_data",
+            "m1",
+            "m5",
+            "m15",
+            "h1",
+            "h4",
+            None,
+        ),
+    )
+    db.connection.commit()
+
+    current = await collect_data_health(
+        db,
+        now=now,
+        capture_enabled=True,
+        market_data_source="twelve_data",
+        scheduler="direct-cron",
+    )
+    assert current.status == "fresh"
+    assert current.alert is False
+    assert current.latest_provider_context_snapshot_utc == observed.isoformat()
+
+
 @pytest.mark.asyncio
 async def test_d1_health_is_append_only_and_hub_readable(monkeypatch) -> None:
     monkeypatch.chdir(ROOT)
@@ -194,8 +265,9 @@ async def test_d1_health_is_append_only_and_hub_readable(monkeypatch) -> None:
         INSERT INTO market_snapshots(
           id,captured_at,symbol,capture_status,session_code,position_state_json,
           data_availability_json,event_observation_ids_json,snapshot_digest,archive_key,
-          market_data_source
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
+          market_data_source,latest_m1_id,latest_m5_id,latest_m15_id,latest_h1_id,
+          latest_h4_id,latest_d1_id
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """,
         (
             "snapshot-1",
@@ -204,11 +276,17 @@ async def test_d1_health_is_append_only_and_hub_readable(monkeypatch) -> None:
             "complete",
             "ny",
             None,
-            '{"request_kind":"scheduled_capture","request_ledger_status":"succeeded"}',
+            '{"request_kind":"scheduled_capture","request_ledger_status":"succeeded","freshness_state":"fresh"}',
             "[]",
             "a" * 64,
             "snapshots/snapshot-1.json",
             "twelve_data",
+            "m1",
+            "m5",
+            "m15",
+            "h1",
+            "h4",
+            "d1",
         ),
     )
     db.connection.commit()

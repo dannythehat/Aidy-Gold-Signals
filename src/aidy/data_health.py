@@ -143,9 +143,15 @@ WITH latest_success AS (
   FROM market_snapshots
   WHERE symbol='XAUUSD'
     AND market_data_source='twelve_data'
-    AND capture_status='complete'
+    AND capture_status IN ('complete','partial')
     AND json_extract(data_availability_json,'$.request_kind')='scheduled_capture'
     AND json_extract(data_availability_json,'$.request_ledger_status')='succeeded'
+    AND json_extract(data_availability_json,'$.freshness_state')='fresh'
+    AND latest_m1_id IS NOT NULL
+    AND latest_m5_id IS NOT NULL
+    AND latest_m15_id IS NOT NULL
+    AND latest_h1_id IS NOT NULL
+    AND latest_h4_id IS NOT NULL
   ORDER BY captured_at DESC,id DESC
   LIMIT 1
 ), archive_stats AS (
@@ -259,7 +265,7 @@ def evaluate_data_health(
 
     status = "fresh"
     alert = False
-    reason = "scheduled market capture and complete Provider Context are fresh"
+    reason = "scheduled market capture and Provider-Context-eligible evidence are fresh"
 
     if not capture_enabled:
         status = "capture_disabled"
@@ -293,7 +299,7 @@ def evaluate_data_health(
         elif latest_context is None or context_lag is None or context_lag > stale_seconds:
             status = "stale_provider_context"
             alert = True
-            reason = "market capture is fresh but complete Provider Context is stale or missing"
+            reason = "market capture is fresh but Provider-Context-eligible evidence is stale or missing"
 
     latest_cross_market = facts.get("latest_cross_market_first_observed_at")
     latest_macro = facts.get("latest_macro_event_first_observed_at")
