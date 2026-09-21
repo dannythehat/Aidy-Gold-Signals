@@ -17,6 +17,28 @@ def test_worker_env_loader_is_keyless_when_capture_disabled() -> None:
     assert settings.archive_flush_limit == 25
 
 
+def test_twelve_intraday_self_heal_requires_explicit_flag() -> None:
+    disabled = AidySettings.from_worker_env(
+        SimpleNamespace(
+            AIDY_CAPTURE_ENABLED="true",
+            AIDY_MARKET_DATA_SOURCE="twelve_data",
+            AIDY_MARKET_DATA_OWNERSHIP="public_independent",
+            AIDY_MARKET_POLL_SECONDS="300",
+        )
+    )
+    enabled = AidySettings.from_worker_env(
+        SimpleNamespace(
+            AIDY_CAPTURE_ENABLED="true",
+            AIDY_MARKET_DATA_SOURCE="twelve_data",
+            AIDY_MARKET_DATA_OWNERSHIP="public_independent",
+            AIDY_MARKET_POLL_SECONDS="300",
+            AIDY_TWELVE_INTRADAY_SELF_HEAL_ENABLED="true",
+        )
+    )
+    assert disabled.twelve_intraday_self_heal_enabled is False
+    assert enabled.twelve_intraday_self_heal_enabled is True
+
+
 def test_worker_env_loader_allows_keyless_public_capture() -> None:
     env = SimpleNamespace(
         AIDY_CAPTURE_ENABLED="true",
