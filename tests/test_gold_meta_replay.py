@@ -30,7 +30,7 @@ def _rows() -> list[dict]:
     for i in range(120):
         as_of = START + timedelta(minutes=15 * i)
         actual = "bullish" if i % 2 == 0 else "bearish"
-        return_bps = Decimal("7") if i % 3 == 0 else Decimal("3")
+        return_bps = Decimal(7) if i % 3 == 0 else Decimal(3)
         if actual == "bearish":
             return_bps = -return_bps
 
@@ -272,7 +272,7 @@ def test_build23_coverage_and_abstention_are_explicit() -> None:
     report = _report()
     validation = report["split_metrics"]["validation"]["full_system_dependency_off"]
 
-    assert Decimal(validation["coverage"]) <= Decimal("1")
+    assert Decimal(validation["coverage"]) <= Decimal(1)
     assert validation["covered_n"] + validation["abstain_n"] == validation["sample_n"]
 
 
