@@ -20,6 +20,34 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+## Build 22 — AIDY Meta Direction Aggregator & Explanation COMPLETE
+
+Build 22 adds `aidy_gold_meta_direction_aggregator_v1`.
+
+What is built and proven:
+- combines Build-21 selected gates into one bullish/bearish/neutral/abstain research view;
+- every contribution binds to the exact selector row and verified expert packet digest;
+- supporting, opposing, context-only and unavailable gates are exposed separately;
+- strong high-trust cross-gate contradiction can force abstention;
+- context-only gates remain unsigned and cannot cast directional votes;
+- readable why text identifies supporting/opposing gates and authority totals;
+- numerical confidence is never invented: it is withheld unless sufficient historical meta-calibration observed before the current cycle exists;
+- small meta-calibration samples and future calibration rows cannot create confidence;
+- current outcome injection into expert inputs fails closed;
+- deterministic replay is invariant to expert-result ordering;
+- research-only, formal-forward OFF, live-money authority OFF.
+
+Acceptance evidence:
+- exact tested PR #233 head: `5eb5a20f7aa5003aec38ccf6a5714f7adf8b559f`;
+- implementation merge: `25be25ddb973e9c419002630a481e2b6c4cb5d05`;
+- Build 22 workflow run: `35615805313` — PASS;
+- Evidence Semantic Change Gate: `35615805343` — PASS;
+- focused suite: 74 passed;
+- dedicated aggregator gate: 6 passed;
+- full repository regression: 1637 passed.
+
+**Next:** Build 23 — Chronological Replay, Ablation & Untouched Holdout.
+
 ## Build 21 — Environment-Aware Gate Selector COMPLETE
 
 Build 21 adds `aidy_gold_environment_gate_selector_v1`.
