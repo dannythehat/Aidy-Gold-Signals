@@ -152,7 +152,6 @@ def _evidence(
             "price_math_packet_digest": price_math_packet["packet_digest"],
             "price_math_mode": price_math_packet["mode"],
             "completed_bars_only": True,
-            "future_values_used": False,
         },
     }
 
