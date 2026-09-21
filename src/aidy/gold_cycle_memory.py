@@ -679,6 +679,7 @@ class D1GoldCycleMemoryStore:
         cycle_view_id: str,
         resolved_at_utc: datetime,
         realised_direction: str,
+        realised_return_bps: Decimal | None,
     ) -> int:
         environment_row = _row(
             await self._d1.prepare(
@@ -725,6 +726,7 @@ class D1GoldCycleMemoryStore:
             score, correct = score_marker_vote(
                 vote=vote,
                 realised_direction=realised_direction,
+                realised_return_bps=realised_return_bps,
             )
             if correct is None:
                 continue
@@ -735,6 +737,7 @@ class D1GoldCycleMemoryStore:
                 "realised_direction": realised_direction,
                 "marker_score": score,
                 "marker_correct": correct,
+                "realised_return_bps": _fmt(realised_return_bps),
             }
             await self._d1.prepare(
                 """
@@ -811,7 +814,7 @@ class D1GoldCycleMemoryStore:
         result = await self._d1.prepare(
             """
             SELECT v.cycle_view_id,v.session_code,v.observed_state,v.evidence_json,
-                   o.resolved_at_utc,o.realised_direction
+                   o.resolved_at_utc,o.realised_direction,o.return_bps
             FROM aidy_gold_cycle_views v
             LEFT JOIN aidy_gold_cycle_environments e
               ON e.cycle_view_id=v.cycle_view_id
@@ -903,6 +906,7 @@ class D1GoldCycleMemoryStore:
                     cycle_view_id=str(row["cycle_view_id"]),
                     resolved_at_utc=_utc(str(resolved_at), name="resolved_at_utc"),
                     realised_direction=realised,
+                    realised_return_bps=_decimal(row.get("return_bps")),
                 )
         return stats
 
@@ -952,6 +956,25 @@ class D1GoldCycleMemoryStore:
             observed_state=observed_state,
             sequence_signature=preliminary_signature,
         )
+        regime = inputs.get("regime")
+        regime = regime if isinstance(regime, Mapping) else {}
+        environment = build_environment_fingerprint(
+            session_code=str(snapshot.get("session_code") or "unknown"),
+            observed_state=observed_state,
+            gold_state=gold_state,
+            regime=regime,
+        )
+        raw_reasons = _build_directional_reasons(
+            gold_state=gold_state,
+            movement_investigation=investigation,
+            analogue_summary=analogue,
+        )
+        scopes = environment.get("scopes")
+        scopes = scopes if isinstance(scopes, list) else []
+        profiles = await self._marker_profiles(
+            reasons=raw_reasons,
+            scopes=scopes,
+        )
         payload = build_cycle_view_payload(
             as_of=now,
             window_start=window_start,
@@ -961,6 +984,8 @@ class D1GoldCycleMemoryStore:
             toolbox_manifest=toolbox,
             prior_observed_states=prior_states,
             analogue_summary=analogue,
+            marker_profiles=profiles,
+            environment_fingerprint=environment,
         )
         cycle_view_id = f"aidy_cycle_{payload['view_digest'][:32]}"
         await self._d1.prepare(
@@ -998,6 +1023,16 @@ class D1GoldCycleMemoryStore:
             _canonical_json(payload["analogue_summary"]),
             payload["view_digest"],
         ).run()
+        coverage = toolbox_cycle_coverage(
+            toolbox_manifest=toolbox,
+            marker_reasons=payload["all_directional_reasons"],
+        )
+        await self._store_environment_and_markers(
+            cycle_view_id=cycle_view_id,
+            environment=environment,
+            reasons=payload["all_directional_reasons"],
+            toolbox_coverage=coverage,
+        )
         return {
             "created": True,
             "cycle_view_id": cycle_view_id,
@@ -1141,6 +1176,12 @@ class D1GoldCycleMemoryStore:
                 _canonical_json(outcome),
                 outcome["outcome_digest"],
             ).run()
+            await self._score_marker_results(
+                cycle_view_id=str(row["cycle_view_id"]),
+                resolved_at_utc=now,
+                realised_direction=realised,
+                realised_return_bps=return_bps,
+            )
             stats["resolved"] += 1
         return stats
 
@@ -1221,11 +1262,14 @@ async def sync_gold_cycle_memory(
 ) -> dict[str, Any]:
     now = _utc(now_utc, name="now_utc")
     store = D1GoldCycleMemoryStore(d1)
+    backfill = await store.backfill_contextual_learning(now_utc=now)
     resolution = await store.resolve_matured(now_utc=now)
     creation = await store.create_next_view(now_utc=now)
     result = {
         "memory_version": GOLD_CYCLE_MEMORY_VERSION,
         "observed_at_utc": now.isoformat(),
+        "marker_brain_version": GOLD_MARKER_BRAIN_VERSION,
+        "backfill": backfill,
         "resolution": resolution,
         "creation": creation,
         "research_only": True,
