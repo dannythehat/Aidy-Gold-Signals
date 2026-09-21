@@ -16,6 +16,9 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_R2_BUCKET_NAME: aidy-memory-test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
