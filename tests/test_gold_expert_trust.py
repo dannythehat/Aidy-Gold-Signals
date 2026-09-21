@@ -343,13 +343,13 @@ def test_build3_scoring_rule_is_exactly_plus2_plus1_zero_minus1_minus2() -> None
 def test_build3_packet_resolution_is_idempotent_and_subject_specific() -> None:
     packet = _packet()
     scopes = _scopes(packet)
-    args = dict(
-        packet=packet,
-        scopes=scopes,
-        resolved_at_utc=AS_OF + timedelta(minutes=20),
-        realised_direction="bearish",
-        realised_return_bps="-7.1",
-    )
+    args = {
+        "packet": packet,
+        "scopes": scopes,
+        "resolved_at_utc": AS_OF + timedelta(minutes=20),
+        "realised_direction": "bearish",
+        "realised_return_bps": "-7.1",
+    }
     first = score_expert_packet(**args)
     second = score_expert_packet(**args)
     assert first == second
