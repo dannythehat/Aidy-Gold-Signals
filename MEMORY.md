@@ -10,6 +10,39 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 8 — H4 Price Structure Expert COMPLETE
+
+Build 8 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_h4_price_structure_expert_v1`
+
+What Build 8 adds:
+- the slow H4 structural mini-brain, independently calibrated for 4-hour bars;
+- H4 trend quality using 32h/52h path evidence, log-slope/R², persistence, efficiency and ATR-normalised displacement;
+- separately scoreable H4 swing structure, breakout acceptance/reclaim, acceleration and candle pressure;
+- explicit lower-timeframe conflict against M5/M15/H1 as a scoreable hypothesis rather than an override;
+- zero automatic higher-timeframe priority bonus;
+- zero default next-15m weight;
+- an incremental-value evaluator that only marks H4 eligible for future next-15m influence when a minimum historical sample exists and accuracy improves versus the lower-timeframe baseline;
+- H4-specific dependency/correlation metadata and Build-3 conditional trust;
+- legacy-H4 comparison and chronological replay retained for ablation.
+
+Acceptance on PR #211 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 187 passed;
+- full repository regression: 1439 passed;
+- H4-vs-lower-timeframe conflict explicit and scoreable: PASS;
+- no automatic next-15m authority/weight from timeframe: PASS;
+- incremental-value proof gate with minimum sample: PASS;
+- PIT/no-future, chronological freeze, separate H4 trust and legacy comparison: PASS.
+
+Build 8 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 9 — D1 Context Expert. D1 is the slowest structural/macro-location context. It must abstain when daily evidence is stale or partial, must not force a 15-minute direction, and historical testing must distinguish context value from direct forecast value.
+
 ## Build 7 — H1 Price Structure Expert COMPLETE
 
 Build 7 of the environment-aware expert-gate programme is complete and engineering-proven.
