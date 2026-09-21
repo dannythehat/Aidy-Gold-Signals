@@ -1,0 +1,123 @@
+name: AIDY Recent Cycle Gap Audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ops-recent-cycle-gap-audit-20260921.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_NAME: aidy-ops-test
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      AIDY_R2_BUCKET_NAME: aidy-memory-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build live config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+          uv run python scripts/build_cloudflare_live_config.py
+
+      - name: Audit recent cycles and outcome bars
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== cycles ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT v.window_start_utc,v.window_end_utc,v.view_direction,v.view_confidence,
+                     o.realised_direction,o.return_bps,o.mfe_bps,o.mae_bps,
+                     o.exact_direction_correct,o.resolved_at_utc,
+                     e.environment_version
+              FROM aidy_gold_cycle_views v
+              LEFT JOIN aidy_gold_cycle_outcomes o ON o.cycle_view_id=v.cycle_view_id
+              LEFT JOIN aidy_gold_cycle_environments e ON e.cycle_view_id=v.cycle_view_id
+              ORDER BY v.window_start_utc DESC LIMIT 8;
+            "
+
+          echo "=== markers_compact ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              WITH recent AS (
+                SELECT cycle_view_id,window_start_utc
+                FROM aidy_gold_cycle_views
+                ORDER BY window_start_utc DESC LIMIT 8
+              )
+              SELECT r.window_start_utc,
+                     json_group_array(json_object(
+                       'surface',m.surface,
+                       'vote',m.vote,
+                       'base',m.base_weight,
+                       'mult',m.learned_multiplier,
+                       'eff',m.effective_weight,
+                       'scope',m.selected_score_scope,
+                       'n',m.selected_score_sample_n,
+                       'net',m.selected_score_net,
+                       'acc',m.selected_score_accuracy,
+                       'score',mr.marker_score,
+                       'correct',mr.marker_correct
+                     )) AS markers
+              FROM recent r
+              JOIN aidy_gold_cycle_marker_observations m ON m.cycle_view_id=r.cycle_view_id
+              LEFT JOIN aidy_gold_cycle_marker_results mr
+                ON mr.cycle_view_id=m.cycle_view_id AND mr.marker_id=m.marker_id
+              GROUP BY r.window_start_utc
+              ORDER BY r.window_start_utc DESC;
+            "
+
+          echo "=== admitted_m1_windows ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT '04:45' AS window,
+                     COUNT(*) AS bars,
+                     MIN(open_time_utc) AS first_bar,
+                     MAX(open_time_utc) AS last_bar,
+                     json_group_array(open_time_utc) AS bar_times
+              FROM twelve_data_decision_admitted_m1_v1
+              WHERE open_time_utc>='2026-09-21T04:45:00+00:00'
+                AND open_time_utc<'2026-09-21T05:00:00+00:00'
+              UNION ALL
+              SELECT '05:00' AS window,
+                     COUNT(*) AS bars,
+                     MIN(open_time_utc) AS first_bar,
+                     MAX(open_time_utc) AS last_bar,
+                     json_group_array(open_time_utc) AS bar_times
+              FROM twelve_data_decision_admitted_m1_v1
+              WHERE open_time_utc>='2026-09-21T05:00:00+00:00'
+                AND open_time_utc<'2026-09-21T05:15:00+00:00';
+            "
+
+          echo "=== recent_snapshots ==="
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.research.live.jsonc \
+            --command "
+              SELECT captured_at,capture_status,session_code,
+                     latest_m1_id IS NOT NULL AS m1,
+                     latest_m5_id IS NOT NULL AS m5,
+                     latest_m15_id IS NOT NULL AS m15,
+                     latest_h1_id IS NOT NULL AS h1,
+                     latest_h4_id IS NOT NULL AS h4
+              FROM market_snapshots
+              WHERE captured_at>='2026-09-21T04:40:00+00:00'
+              ORDER BY captured_at DESC LIMIT 25;
+            "
