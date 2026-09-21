@@ -267,7 +267,7 @@ def test_build11_round_numbers_are_descriptive_and_ranked_low() -> None:
     result = _result()
     refs = {item["reference"]: item for item in result["references"]}
     assert refs["round_nearest_10_usd"]["level"] == "2430.000000"
-    assert refs["round_nearest_50_usd"]["level"] == "2400.000000"
+    assert refs["round_nearest_50_usd"]["level"] == "2450.000000"
     assert refs["round_nearest_10_usd"]["priority_tier"] == 5
     assert refs["round_nearest_50_usd"]["priority_tier"] == 5
     assert result["reaction_rule_policy"]["directional_vote_allowed"] is False
