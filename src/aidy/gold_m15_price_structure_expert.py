@@ -1097,11 +1097,11 @@ def summarise_m15_chronological_replay(
 
 
 __all__ = [
+    "M15_DEPENDENCY_METADATA",
     "M15_GATE_ID",
     "M15_PRICE_STRUCTURE_EXPERT_VERSION",
     "M15_TARGET_HORIZON_MINUTES",
     "M15_TRUST_REDUCED_CONTEXTS",
-    "M15_DEPENDENCY_METADATA",
     "build_m15_price_structure_expert",
     "summarise_m15_chronological_replay",
 ]
