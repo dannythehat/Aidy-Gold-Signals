@@ -30,7 +30,7 @@ META_REPLAY_REPORT_VERSION = "aidy_gold_meta_replay_report_v1"
 
 _SPLITS = ("development", "validation", "holdout")
 _DIRECTIONS = {"bullish", "bearish", "neutral", "abstain"}
-_SCORE_LARGE_MOVE_BPS = Decimal("5")
+_SCORE_LARGE_MOVE_BPS = Decimal(5)
 
 
 def _canonical_json(value: object) -> str:
