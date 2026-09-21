@@ -15,6 +15,46 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+
+## Build 13 — Volatility / Jump Expert COMPLETE
+
+Build 13 of the environment-aware expert-gate programme is complete and engineering-proven.
+
+Expert:
+`aidy_gold_volatility_jump_expert_v1`
+
+What Build 13 adds:
+- a direction-neutral volatility context brain;
+- exact completed-M1 15-minute realised volatility;
+- clock-normalised volatility percentile using prior observations from the same UTC 15-minute clock bucket;
+- compression, expansion and compression-to-expansion transitions;
+- qualified PIT jump-versus-continuous state;
+- event-proximate jump classification without claiming the event caused the move;
+- qualified vol-of-vol context;
+- optional GVZ and IV/RV context only when evidence is PIT-qualified;
+- sparse or unqualified GVZ/IV remains UNKNOWN;
+- simple M15 ATR/RV band retained as the explicit ablation baseline;
+- richer-regime complexity earns no automatic influence and must beat the simple ATR baseline on sufficient historical samples;
+- Build-3 conditional trust scopes for clock-volatility, jump regime and richer volatility regime.
+
+Acceptance on PR #216 candidate:
+- Evidence Semantic Change Gate: PASS;
+- static checks: PASS;
+- focused workflow suite: 249 passed;
+- full repository regression: 1501 passed;
+- no forced direction: PASS;
+- clock-normalised compression-to-expansion detection: PASS;
+- continuous expansion distinguished from jump: PASS;
+- event-proximate jump distinguished without causal claim: PASS;
+- sparse GVZ/IV remains UNKNOWN: PASS;
+- retrospective/unqualified volatility state rejected from PIT context: PASS;
+- simple ATR versus richer-regime ablation retained: PASS;
+- PIT/no-future and chronological freeze: PASS.
+
+Build 13 remains research/shadow intelligence. It does not replace the live marker brain, change Super Signals execution/provider rules, alter the owner 1% risk directive, or grant live-money authority. No Worker deployment is required for this expert library alone.
+
+**Next:** Build 14 — Session / Participation Expert. It will quantify who is likely active and whether current activity is unusual for this time using DST-safe sessions, session phase/overlap, weekday-clock volatility/range baselines, and historical GC volume/spread baselines where available, with event-time confounding represented explicitly and no hardcoded session-direction rule.
+
 ## Build 12 — Liquidity / Reclaim Expert COMPLETE
 
 Build 12 of the environment-aware expert-gate programme is complete and engineering-proven.
