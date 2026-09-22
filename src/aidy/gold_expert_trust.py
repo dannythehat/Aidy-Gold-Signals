@@ -28,6 +28,19 @@ _DEFAULT_MINIMUMS = {
     "gate_global": 1,
 }
 
+# Reusable broad context. Exact weekday and 15-minute clock bucket remain in
+# the frozen environment for audit, but must not make every trust scope unique.
+_TRUST_GLOBAL_CORE_DIMENSIONS = (
+    "session",
+    "session_phase",
+    "week_transition_state",
+    "market_calendar_state",
+    "observed_15m_state",
+    "volatility_state",
+    "event_proximity",
+    "data_quality_state",
+)
+
 
 def _canonical_json(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
@@ -140,7 +153,6 @@ def build_trust_scopes(
     gate_version = str(packet["gate_version"])
     mini = packet["mini_environment"]["dimensions"]
     global_dimensions = packet["global_environment_dimensions"]
-    global_ref = packet["global_environment_ref"]
 
     scopes: list[dict[str, Any]] = []
     exact_payload = {
@@ -199,7 +211,10 @@ def build_trust_scopes(
     core_payload = {
         "gate_id": gate_id,
         "gate_version": gate_version,
-        "environment_key": global_ref["environment_key"],
+        "global_core": {
+            field: global_dimensions.get(field, "unknown")
+            for field in _TRUST_GLOBAL_CORE_DIMENSIONS
+        },
     }
     scopes.append(
         {
