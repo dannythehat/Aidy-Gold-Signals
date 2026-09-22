@@ -224,7 +224,14 @@ class AidyTwelveDataRecorderService:
             latest_close = latest_vendor_m1.close
             latest_close_time = latest_vendor_m1.open_time_utc + timedelta(minutes=1)
 
-        all_timeframes_ready = all(timeframe in current_ids for timeframe in _SNAPSHOT_CANDLE_KEYS)
+        all_timeframes_ready = all(
+            timeframe in current_ids
+            or (
+                isinstance(candle_states.get(timeframe), dict)
+                and bool(candle_states[timeframe].get("not_applicable"))
+            )
+            for timeframe in _SNAPSHOT_CANDLE_KEYS
+        )
         fresh = fetch.freshness_state == "fresh"
         status = "complete" if fresh and all_timeframes_ready else "partial"
         availability: dict[str, object] = {
