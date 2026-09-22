@@ -1,7 +1,7 @@
 name: AIDY Provider Research Read Deploy
 
 # This workflow owns safe deployment of the read-only provider research surfaces.
-# Public-runner retrigger marker: 2026-09-21 after test-fixture cleanup.
+# Public-runner retrigger marker: 2026-09-22 restore full Gold brain to provider context.
 # It must deploy changes to either the raw market-read endpoint or the canonical
 # Provider Context endpoint, and it must never strip scheduled capture or arm formal
 # forward authority while doing so.
