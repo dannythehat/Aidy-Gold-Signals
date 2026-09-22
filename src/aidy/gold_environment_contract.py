@@ -32,6 +32,12 @@ FORBIDDEN_HINDSIGHT_KEYS = frozenset(
         "mfe",
         "mae",
         "subsequent_price",
+        "realised_direction",
+        "realized_direction",
+        "realised_return_bps",
+        "realized_return_bps",
+        "correct",
+        "impact_class",
     }
 )
 

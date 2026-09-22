@@ -226,6 +226,7 @@ def completeness(
         "unexpected_or_off_session_minutes": len(actual_times - expected_set),
         "coverage_ratio": str(ratio.quantize(Decimal("0.000001"))),
         "minimum_coverage_ratio": str(threshold),
+        "not_applicable": not bool(expected),
         "admissible": bool(expected) and ratio >= threshold,
         "session_calendar_version": SESSION_CALENDAR_VERSION,
     }

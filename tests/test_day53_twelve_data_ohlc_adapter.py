@@ -14,6 +14,7 @@ from aidy.twelve_data_market import (
     MAX_OPEN_SESSION_LAG_SECONDS,
     TwelveDataOhlcGateway,
     aggregate_m1,
+    completeness,
     day53_twelve_data_market_manifest,
     expected_market_minute_opens,
     latest_completed_d1_bucket,
@@ -136,6 +137,31 @@ def test_real_iana_timezone_moves_1700_new_york_close_across_dst() -> None:
     assert summer_start == datetime(2026, 7, 1, 22, 0, tzinfo=UTC)
     assert winter_close == datetime(2026, 1, 2, 22, 0, tzinfo=UTC)
     assert winter_start == datetime(2026, 1, 1, 23, 0, tzinfo=UTC)
+
+
+def test_daily_maintenance_only_bucket_is_not_applicable_not_failed() -> None:
+    start = datetime(2026, 9, 2, 21, 0, tzinfo=UTC)
+    end = datetime(2026, 9, 2, 22, 0, tzinfo=UTC)
+    state = completeness(
+        [],
+        start_utc=start,
+        end_utc=end,
+        timeframe="1h",
+    )
+    assert state["expected_market_minutes"] == 0
+    assert state["observed_market_minutes"] == 0
+    assert state["not_applicable"] is True
+    assert state["admissible"] is False
+
+    candle, aggregate_state = aggregate_m1(
+        [],
+        timeframe="1h",
+        start_utc=start,
+        end_utc=end,
+        first_observed_at=end,
+    )
+    assert candle is None
+    assert aggregate_state["not_applicable"] is True
 
 
 def test_session_calendar_not_arithmetic_denominator_for_h4_spanning_daily_break() -> None:

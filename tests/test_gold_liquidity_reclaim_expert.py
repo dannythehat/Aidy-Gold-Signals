@@ -382,6 +382,73 @@ def test_build12_retrospective_genuine_gc_flow_is_stored_separately() -> None:
     assert stored["separate_from_ohlc_proxy"] is True
 
 
+def test_build12_empty_location_references_fail_closed_unknown() -> None:
+    bars = _baseline_bars()
+    m1 = _m1_rows(bars)
+    packet = _price_packet()
+    environment = build_cycle_environment(
+        as_of_utc=AS_OF,
+        target_window_start_utc=AS_OF + timedelta(minutes=15),
+        session_code="london",
+        observed_state="neutral",
+        gold_state={
+            "market_structure": {
+                "timeframes": {
+                    "M5": {"net_close_direction": "flat", "state": "known"},
+                    "M15": {"net_close_direction": "flat", "state": "known"},
+                    "H1": {"net_close_direction": "up", "state": "known"},
+                    "H4": {"net_close_direction": "up", "state": "known"},
+                    "D1": {"net_close_direction": "up", "state": "known"},
+                }
+            },
+            "move_observation": {
+                "five_minute_distribution_state": "within_recent_distribution",
+                "five_minute_range_state": "normal_range",
+                "windows": {
+                    "5m": {"direction": "flat", "return_bps": "0"},
+                    "15m": {"direction": "flat", "return_bps": "0"},
+                    "60m": {"direction": "up", "return_bps": "2"},
+                },
+            },
+            "location": {"state": "unknown"},
+            "volatility": {
+                "state": "normal",
+                "jump_continuous": {"state": "continuous_dominant"},
+            },
+            "scheduled_event_risk": {
+                "state": "known",
+                "timing_state": "outside_near_event_window",
+            },
+        },
+        semantic_context={
+            "data_quality": {
+                "quote_state": "known",
+                "quote_freshness": "fresh",
+                "spread_state": "unknown",
+            },
+            "cross_market": {"series": {}},
+        },
+        regime={"compound_regime_key": "range|normal"},
+    )
+    location = build_price_location_expert(
+        global_environment=environment,
+        price_math_packet=packet,
+    )
+    assert location["references"] == []
+
+    result = build_liquidity_reclaim_expert(
+        global_environment=environment,
+        price_math_packet=packet,
+        price_location_result=location,
+        m1_candle_rows=m1,
+    )
+    assert result["events"] == []
+    assert result["continuity"]["contiguous"] is True
+    assert result["expert_packet"]["conclusion"] == "unknown"
+    assert result["expert_packet"]["gate_scoreable"] is False
+    assert verify_expert_gate_packet(result["expert_packet"])
+
+
 def test_build12_gapped_m1_fails_closed() -> None:
     bars = _high_reclaim_bars()
     m1 = _m1_rows(bars)

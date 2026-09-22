@@ -643,7 +643,10 @@ def build_liquidity_reclaim_expert(
     )
 
     conclusion, conviction, audit = _conclusion(calculators)
-    if not usable:
+    if not usable or not events:
+        # With usable M1 but zero location references there is no directional
+        # calculator at all. UNKNOWN is the only contract-valid fail-closed
+        # state; NEUTRAL would fabricate a directional observation.
         conclusion, conviction = "unknown", None
 
     active_events = [

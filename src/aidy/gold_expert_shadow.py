@@ -44,6 +44,7 @@ from aidy.gold_expert_trust import (
     score_expert_packet,
     select_conditional_trust,
 )
+from aidy.gold_family_meta_direction import build_family_meta_direction_view
 from aidy.gold_futures_microstructure_expert import (
     FUTURES_MICROSTRUCTURE_EXPERT_VERSION,
     FUTURES_MICROSTRUCTURE_GATE_ID,
@@ -72,7 +73,6 @@ from aidy.gold_macro_event_expert import (
     MACRO_EVENT_EXPERT_VERSION,
     MACRO_EVENT_GATE_ID,
 )
-from aidy.gold_meta_direction import build_meta_direction_view
 from aidy.gold_momentum_impulse_expert import (
     MOMENTUM_IMPULSE_GATE_ID,
     build_momentum_impulse_expert,
@@ -685,6 +685,113 @@ class D1GoldExpertShadowStore:
             )
         ]
 
+    async def _subcalculator_commitment_history(
+        self,
+        *,
+        as_of: datetime,
+    ) -> list[dict[str, Any]]:
+        """Reconstruct historical sub-calculator commitments at decision time.
+
+        The outcome ledger is one row per scope, so DISTINCT collapses each
+        logical result. Prediction and decision time come from the immutable
+        pre-outcome snapshots rather than being inferred from the outcome.
+        """
+        result = await self._d1.prepare(
+            """
+            SELECT DISTINCT
+                   l.result_id,l.packet_digest,l.gate_id,l.subject_id,
+                   l.subject_version,g.decided_at_utc AS decision_time_utc,
+                   s.vote AS predicted_class,l.resolved_at_utc,
+                   l.realised_direction,l.correct
+            FROM aidy_gold_expert_outcome_ledger l
+            JOIN aidy_gold_expert_gate_snapshots g
+              ON g.packet_digest=l.packet_digest
+             AND g.gate_id=l.gate_id
+            JOIN aidy_gold_expert_subcalculator_snapshots s
+              ON s.cycle_view_id=g.cycle_view_id
+             AND s.gate_id=l.gate_id
+             AND s.calculator_id=l.subject_id
+             AND s.calculator_version=l.subject_version
+            WHERE l.subject_type='subcalculator'
+              AND l.resolved_at_utc<?
+              AND g.decided_at_utc<l.resolved_at_utc
+            ORDER BY g.decided_at_utc,l.result_id
+            """
+        ).bind(as_of.isoformat()).all()
+        return _results(result)
+
+    async def _resolved_outcome_history(
+        self,
+        *,
+        as_of: datetime,
+    ) -> list[dict[str, Any]]:
+        result = await self._d1.prepare(
+            """
+            SELECT resolved_at_utc,realised_direction
+            FROM aidy_gold_cycle_outcomes
+            WHERE resolved_at_utc<?
+            ORDER BY resolved_at_utc,cycle_view_id
+            """
+        ).bind(as_of.isoformat()).all()
+        return _results(result)
+
+    async def _gate_calibration_rows(
+        self,
+        *,
+        as_of: datetime,
+    ) -> list[dict[str, Any]]:
+        """Derive PIT gate calibration error from frozen trust vs correctness."""
+        result = await self._d1.prepare(
+            """
+            SELECT DISTINCT
+                   l.result_id,l.gate_id,l.correct,l.resolved_at_utc,
+                   g.trust_json
+            FROM aidy_gold_expert_outcome_ledger l
+            JOIN aidy_gold_expert_gate_snapshots g
+              ON g.packet_digest=l.packet_digest
+             AND g.gate_id=l.gate_id
+            WHERE l.subject_type='gate'
+              AND l.correct IN (0,1)
+              AND l.resolved_at_utc<?
+            ORDER BY l.resolved_at_utc,l.result_id
+            """
+        ).bind(as_of.isoformat()).all()
+        grouped: dict[str, list[tuple[Decimal, int, str]]] = defaultdict(list)
+        for row in _results(result):
+            gate_id = str(row["gate_id"])
+            trust = _json(row.get("trust_json"), default={})
+            profile = _gate_profile(trust, gate_id)
+            probability_raw = profile.get("shrunk_accuracy")
+            if probability_raw is None:
+                continue
+            probability = _decimal(
+                probability_raw,
+                name="gate_calibration.shrunk_accuracy",
+            )
+            if probability < 0 or probability > 1:
+                continue
+            grouped[gate_id].append(
+                (
+                    abs(probability - Decimal(int(row["correct"]))),
+                    int(row["correct"]),
+                    str(row["resolved_at_utc"]),
+                )
+            )
+        output: list[dict[str, Any]] = []
+        for gate_id, rows in sorted(grouped.items()):
+            if not rows:
+                continue
+            mean_error = sum((item[0] for item in rows), Decimal(0)) / Decimal(len(rows))
+            output.append(
+                {
+                    "gate_id": gate_id,
+                    "observed_at_utc": rows[-1][2],
+                    "sample_n": len(rows),
+                    "mean_absolute_calibration_error": _fmt(mean_error),
+                }
+            )
+        return output
+
     async def _build_shadow_bundle(
         self,
         *,
@@ -717,13 +824,16 @@ class D1GoldExpertShadowStore:
             expected_gate_ids=EXPECTED_GATES,
             gate_inputs=[build_gate_selector_input(item) for item in experts],
             dependency_engine=dependency,
-            calibration_rows=(),
+            calibration_rows=await self._gate_calibration_rows(as_of=as_of),
         )
-        meta_view = build_meta_direction_view(
+        meta_view = build_family_meta_direction_view(
             global_environment=environment,
-            selector=selector,
             expert_results=experts,
-            meta_calibration_rows=(),
+            dependency_engine=dependency,
+            historical_subcalculator_rows=await self._subcalculator_commitment_history(
+                as_of=as_of,
+            ),
+            resolved_outcome_rows=await self._resolved_outcome_history(as_of=as_of),
         )
         body = {
             "shadow_version": GOLD_EXPERT_SHADOW_VERSION,
