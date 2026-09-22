@@ -1,0 +1,49 @@
+name: AIDY Shadow Loop Watchdog
+
+# The Build-24 learning loop can stop producing cycles silently: the singleton
+# health row is overwritten on every sync, so a stall or a raised expert
+# builder leaves no durable trace. Every other AIDY watchdog is
+# workflow_dispatch/push only, so nothing was actually watching. This is
+# scheduled.
+#
+# Hourly rather than every 15 minutes: it still catches the multi-hour stalls
+# that matter, and keeps Actions credit use low (24 runs/day).
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/aidy-shadow-loop-watchdog.yml"
+      - "scripts/aidy_shadow_loop_watchdog.py"
+      - "tests/test_aidy_shadow_loop_watchdog.py"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  SHADOW_MAX_CYCLE_AGE_MINUTES: "180"
+  SHADOW_MAX_HEALTH_AGE_MINUTES: "30"
+  SHADOW_EXPECTED_GATE_N: "15"
+
+jobs:
+  shadow-loop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout watchdog code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Query live shadow loop health (read-only)
+        run: python scripts/aidy_shadow_loop_watchdog.py

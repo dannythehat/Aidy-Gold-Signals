@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
+from typing import Any
 from urllib.parse import urlparse
 
 from workers import Response
@@ -237,6 +239,97 @@ async def _activate_gold_expert_shadow_best_effort(env: object) -> None:
         )
 
 
+async def _append_shadow_health_history(
+    env: object,
+    *,
+    now: datetime,
+    status: str,
+    creation: Mapping[str, Any] | None = None,
+    scoring: Mapping[str, Any] | None = None,
+    latest: Mapping[str, Any] | None = None,
+    error_type: str | None = None,
+    error_message: str | None = None,
+) -> None:
+    """Append-only shadow health trace.
+
+    The singleton health row is overwritten on every sync, so a degradation
+    leaves no record: the 2026-09-21 135-minute gap had to be reconstructed
+    from market_snapshots, and a raised expert builder loses a whole cycle
+    behind a transient error the next success erases. This keeps the trace,
+    and records the gap since the previous cycle so a stall is visible in
+    telemetry itself. Never raises - health must not endanger capture.
+    """
+    creation = creation or {}
+    scoring = scoring or {}
+    latest = latest or {}
+    try:
+        decided_at = latest.get("decided_at_utc")
+        gap_minutes = None
+        previous = await env.AIDY_OPS.prepare(
+            """
+            SELECT latest_cycle_decided_at_utc
+            FROM aidy_gold_expert_shadow_health_history
+            WHERE latest_cycle_decided_at_utc IS NOT NULL
+            ORDER BY observed_at_utc DESC
+            LIMIT 1
+            """
+        ).all()
+        rows = getattr(previous, "results", None) or (
+            previous.get("results") if isinstance(previous, dict) else None
+        ) or []
+        if decided_at and rows:
+            prior_raw = rows[0].get("latest_cycle_decided_at_utc")
+            if prior_raw:
+                prior = datetime.fromisoformat(str(prior_raw))
+                current = datetime.fromisoformat(str(decided_at))
+                if prior.tzinfo is None:
+                    prior = prior.replace(tzinfo=UTC)
+                if current.tzinfo is None:
+                    current = current.replace(tzinfo=UTC)
+                delta = (current - prior).total_seconds() / 60.0
+                if delta > 0:
+                    gap_minutes = f"{delta:.1f}"
+
+        expected_n = latest.get("expected_gate_n")
+        known_n = latest.get("known_gate_n")
+        unknown_n = (
+            None
+            if expected_n is None
+            else int(expected_n or 0) - int(known_n or 0)
+        )
+        await env.AIDY_OPS.prepare(
+            """
+            INSERT INTO aidy_gold_expert_shadow_health_history (
+                observed_at_utc,status,cycles_created,cycles_scored,
+                latest_cycle_view_id,latest_cycle_decided_at_utc,
+                latest_meta_direction,expected_gate_n,known_gate_n,
+                explicit_unknown_gate_n,minutes_since_previous_cycle,
+                error_type,error_message
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(observed_at_utc) DO NOTHING
+            """
+        ).bind(
+            now.isoformat(),
+            status,
+            int(creation.get("created") or 0),
+            int(scoring.get("scored_cycles") or 0),
+            latest.get("cycle_view_id"),
+            decided_at,
+            latest.get("meta_direction"),
+            expected_n,
+            known_n,
+            unknown_n,
+            gap_minutes,
+            error_type,
+            error_message,
+        ).run()
+    except Exception as history_exc:  # noqa: BLE001
+        print(
+            "AIDY Build-24 health history append failed: "
+            f"{type(history_exc).__name__}: {str(history_exc)[:300]}"
+        )
+
+
 async def _sync_gold_expert_shadow_best_effort(env: object) -> None:
     """Persist/score the Build-24 expert shadow without risking market capture."""
 
@@ -306,6 +399,14 @@ async def _sync_gold_expert_shadow_best_effort(env: object) -> None:
                 "AIDY Build-24 health write failed: "
                 f"{type(health_exc).__name__}: {str(health_exc)[:300]}"
             )
+        await _append_shadow_health_history(
+            env,
+            now=now,
+            status="ok",
+            creation=creation,
+            scoring=scoring,
+            latest=creation.get("latest") or {},
+        )
         if int(creation.get("created") or 0) or int(scoring.get("scored_cycles") or 0):
             print(
                 "AIDY Build-24 shadow sync: "
@@ -337,6 +438,13 @@ async def _sync_gold_expert_shadow_best_effort(env: object) -> None:
                 "AIDY Build-24 error-health write failed: "
                 f"{type(health_exc).__name__}: {str(health_exc)[:300]}"
             )
+        await _append_shadow_health_history(
+            env,
+            now=now,
+            status="error",
+            error_type=type(exc).__name__,
+            error_message=str(exc)[:1000],
+        )
         print(
             "AIDY Build-24 shadow sync failed: "
             f"{type(exc).__name__}: {str(exc)[:500]}"
