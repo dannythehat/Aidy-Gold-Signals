@@ -343,7 +343,6 @@ def test_global_core_trust_scope_repeats_across_adjacent_clock_buckets() -> None
         "realized_direction",
         "realised_return_bps",
         "realized_return_bps",
-        "score",
         "correct",
         "impact_class",
     ],
