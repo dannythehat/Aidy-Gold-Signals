@@ -107,6 +107,58 @@ jobs:
           print('OVERNIGHT_CYCLES='+json.dumps(rows,sort_keys=True))
           PY
 
+      - name: Legacy vs realised aggregate
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.build24.report.jsonc \
+            --command "
+              SELECT
+                COUNT(*) AS resolved_n,
+                SUM(CASE WHEN v.view_direction=o.realised_direction THEN 1 ELSE 0 END) AS legacy_correct,
+                SUM(CASE WHEN v.view_direction!=o.realised_direction THEN 1 ELSE 0 END) AS legacy_incorrect,
+                SUM(CASE WHEN v.view_direction='neutral' THEN 1 ELSE 0 END) AS legacy_neutral_calls,
+                SUM(CASE WHEN v.view_direction='bullish' THEN 1 ELSE 0 END) AS legacy_bullish_calls,
+                SUM(CASE WHEN v.view_direction='bearish' THEN 1 ELSE 0 END) AS legacy_bearish_calls,
+                ROUND(1.0*SUM(CASE WHEN v.view_direction=o.realised_direction THEN 1 ELSE 0 END)/COUNT(*),6) AS legacy_accuracy
+              FROM aidy_gold_expert_shadow_cycles s
+              JOIN aidy_gold_cycle_views v ON v.cycle_view_id=s.cycle_view_id
+              JOIN aidy_gold_cycle_outcomes o ON o.cycle_view_id=s.cycle_view_id;
+            " > /tmp/legacy.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/legacy.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          print('OVERNIGHT_LEGACY='+json.dumps(rows[0] if rows else {},sort_keys=True))
+          PY
+
+      - name: Cycle gap audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.build24.report.jsonc \
+            --command "
+              WITH ordered AS (
+                SELECT decided_at_utc,
+                       LAG(decided_at_utc) OVER (ORDER BY decided_at_utc) AS prev_at
+                FROM aidy_gold_expert_shadow_cycles
+              )
+              SELECT prev_at,decided_at_utc,
+                     ROUND((julianday(decided_at_utc)-julianday(prev_at))*24*60,1) AS gap_minutes
+              FROM ordered
+              WHERE prev_at IS NOT NULL
+                AND (julianday(decided_at_utc)-julianday(prev_at))*24*60 > 20
+              ORDER BY decided_at_utc;
+            " > /tmp/gaps.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/gaps.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          print('OVERNIGHT_GAPS='+json.dumps(rows,sort_keys=True))
+          PY
+
       - name: Gate scorebook snapshot
         shell: bash
         run: |
