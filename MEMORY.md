@@ -20,6 +20,80 @@ This file is the repo-level handoff entry point for the live AIDY Gold-learning 
 
 
 
+## Build 24 — Live Forward Shadow Soak & Permanent Scorecard COMPLETE
+
+Build 24 adds `aidy_gold_expert_shadow_v1` and `aidy_gold_expert_scorecard_v1`, completing the planned 24-build expert-gate programme.
+
+What is built and live:
+- prospective activation is persisted before eligible shadow cycles can freeze;
+- only post-activation cycles can enter the Build-24 programme;
+- the existing 15-minute Gold cycle remains the single point-in-time clock;
+- all 15 expected expert-gate identities are stored every eligible cycle;
+- connected price/structure/location/momentum/liquidity/volatility/session experts run from the exact admitted PIT snapshot;
+- macro/event, rates/USD/cross-asset, futures/microstructure, news/mechanism and analogue/episode remain explicit UNKNOWN until their live source contract is connected;
+- Build-20 dependency state, Build-21 selector and Build-22 final AIDY research view are frozen before the outcome window;
+- later scoring reads only the resolved `aidy_gold_cycle_outcomes` row;
+- gate/subcalculator outcomes use the existing Build-3 +/-2/+/-1/0 scoring system;
+- permanent environment-specific trust scorebooks are refreshed after resolution;
+- Provider Context exposes the permanent scorecard read-only;
+- restarts/retries are idempotent;
+- formal-forward authority remains OFF;
+- live-money execution authority remains OFF.
+
+Engineering acceptance:
+- implementation PR #238 tested head: `a0b8710abc3fe4ea569deed868ea6538294169ad`;
+- implementation merge: `6644892d12be6ae497f07db2a69119eaa58e0d27`;
+- health-telemetry fix merge: `c472d761b25f7c7a91880e2de99d27189bbf43f8`;
+- Build-24 acceptance run `35623113260`: PASS;
+- semantic gate run `35623113461`: PASS;
+- focused/component suite: 103 passed before the final telemetry regression; corrected head reran green under the Build-24/Day-53/semantic gates;
+- full repository regression: 1664 passed on the Build-24 implementation acceptance.
+
+Final live acceptance:
+- rollout run `35630952162`: PASS;
+- live D1 diagnostic run `35630952252`: PASS;
+- health-hotfix deploy run `35630952178`: PASS;
+- semantic verification run `35630952012`: PASS;
+- remote Build-24 schema: PASS;
+- corrected Worker deploy: PASS;
+- Worker health/safety: PASS;
+- first genuine post-activation shadow cycle: PASS;
+- delayed outcome scoring: PASS;
+- all 15 gate identities represented in the outcome ledger: PASS;
+- permanent context scorebook: PASS;
+- sync health: PASS / no error.
+
+Overnight prospective evidence as of 2026-09-22 03:42 UTC:
+- activation: 2026-09-21 16:06:57 UTC;
+- 39 prospective shadow cycles frozen;
+- 36 outcomes resolved and meta-score rows written;
+- 3 latest cycles still inside/past the normal resolution lag at the report cut;
+- AIDY final view: 39 abstentions, 0 bullish, 0 bearish, 0 neutral;
+- reason on all current final views: insufficient directional authority;
+- realised outcomes among the 36 resolved cycles: 20 bearish, 11 bullish, 5 neutral;
+- one 135.2-minute cycle gap occurred between 20:55 and 23:10 UTC; the loop recovered automatically and health is currently OK;
+- latest health row: status OK, 15 expected gates, 10 live-known gates, 5 explicit UNKNOWN gates, no error, research-only.
+
+Initial gate-global learning (small-N, not promotion evidence):
+- H1 Price Structure: N=4, 75.0%, net +3;
+- H4 Price Structure: N=7, 57.14%, net +2;
+- Liquidity/Reclaim: N=15, 40.0%, net -4;
+- M15 Price Structure: N=12, 41.67%, net -5;
+- M5 Price Structure: N=22, 31.82%, net -15;
+- Momentum/Impulse: N=12, 41.67%, net -4;
+- remaining gates are currently context-only, unavailable or unscoreable at gate level.
+
+The old/simple 15-minute view on the same 36 resolved cycles was correct 13 times and incorrect 23 times: 36.11% exact-direction accuracy. AIDY's new final layer did not take those low-trust directional calls; it abstained on all 39 prospective cycles while evidence accumulates.
+
+Important interpretation:
+- Build 24 is COMPLETE and the permanent prospective learning programme is running.
+- The overnight run proves the machinery is capturing, resolving, scoring and learning without hindsight.
+- It does not yet prove profitable predictive edge.
+- AIDY is behaving conservatively because the high-trust selector does not yet have enough reliable directional N.
+- Owner 1% risk and Super Signals execution/provider rules remain unchanged.
+
+**Programme state: BUILDS 1-24 COMPLETE / PROSPECTIVE SHADOW LEARNING ACTIVE.**
+
 ## Build 23 — Chronological Replay, Ablation & Untouched Holdout COMPLETE
 
 Build 23 adds `aidy_gold_meta_replay_report_v1` and the versioned meta-replay dataset/split/policy contracts.
