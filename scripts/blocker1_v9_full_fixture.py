@@ -20,7 +20,7 @@ from blocker1_v9_fixture_probe import (
     AS_OF,
     aggregate,
     env,
-    inject_low_reclaim,
+    inject_bullish_recovery_with_low_reclaim,
     m1_spine,
     prior_day_low,
 )
@@ -144,7 +144,7 @@ def build_connected_state() -> tuple[dict, list[dict], dict[str, Any]]:
     spine = m1_spine(45)
     preliminary = aggregate(spine)
     pdl = prior_day_low(preliminary)
-    inject_low_reclaim(spine, pdl)
+    inject_bullish_recovery_with_low_reclaim(spine, pdl)
 
     decision_rows = spine[-2880:]
     aggs = aggregate(spine)
