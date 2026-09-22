@@ -1,0 +1,1335 @@
+{
+  "assertions": {
+    "correctness_derived_not_independent": true,
+    "decision_time_explicit_on_every_commitment": true,
+    "five_unknown_availability_sentinels_separated_from_learned_manifest": true,
+    "learned_subject_n_70": true,
+    "mathematics_untouched": true,
+    "new_path_bullish": true,
+    "new_path_executes_same_state": true,
+    "old_path_abstains": true,
+    "old_path_executed_not_estimated": true,
+    "production_untouched": true,
+    "real_15_packet_pipeline": true,
+    "two_or_more_qualifying_root_families": true
+  },
+  "combined_fixture_digest": "0c9034382593506c409c9efcfbfa9e4782410d298efb7c90e06baf571f2d7274",
+  "fixture_version": "blocker1_t1_real_fixture_v9",
+  "new_path": {
+    "S": "1.533659732",
+    "W": "1.533659732",
+    "bearish_qualifying_families": [],
+    "bullish_qualifying_families": [
+      "liquidity_mechanism",
+      "price_action"
+    ],
+    "decision_reason": "bullish_independent_family_evidence",
+    "direction": "bullish",
+    "eligible_signal_ids": [
+      "h1_price_structure_expert:h1_breakout_acceptance",
+      "h4_price_structure_expert:h4_acceleration",
+      "liquidity_reclaim_expert:liquidity_confirmed_h1_swing_low",
+      "liquidity_reclaim_expert:liquidity_confirmed_m15_swing_low",
+      "liquidity_reclaim_expert:liquidity_prior_day_low",
+      "m15_price_structure_expert:m15_breakout_acceptance",
+      "m5_price_structure_expert:m5_candle_pressure",
+      "momentum_impulse_expert:momentum_acceleration"
+    ],
+    "excluded_signals": {
+      "analogue_episode_expert:analogue_episode_expert_availability": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "unavailable",
+        "vote": "unknown"
+      },
+      "d1_context_expert:d1_breakout_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "d1_context_expert:d1_data_quality": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "d1_context_expert:d1_location_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "d1_context_expert:d1_structure_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "d1_context_expert:d1_trend_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "futures_microstructure_expert:futures_microstructure_expert_availability": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "unavailable",
+        "vote": "unknown"
+      },
+      "h1_price_structure_expert:h1_acceleration": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "h1_price_structure_expert:h1_candle_pressure": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "h1_price_structure_expert:h1_price_diagnostics": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "h1_price_structure_expert:h1_range_location": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "h1_price_structure_expert:h1_swing_structure": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "h1_price_structure_expert:h1_trend_quality": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "h4_price_structure_expert:h4_breakout_acceptance": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "h4_price_structure_expert:h4_candle_pressure": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "h4_price_structure_expert:h4_lower_timeframe_conflict": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "h4_price_structure_expert:h4_price_diagnostics": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "h4_price_structure_expert:h4_range_location": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "h4_price_structure_expert:h4_swing_structure": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "h4_price_structure_expert:h4_trend_quality": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_confirmed_h1_swing_high": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_confirmed_m15_swing_high": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_prior_day_high": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m15_20_bar_high": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m15_20_bar_low": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m15_50_bar_high": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m15_50_bar_low": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m5_20_bar_high": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m5_20_bar_low": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m5_50_bar_high": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_recent_m5_50_bar_low": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "liquidity_reclaim_expert:liquidity_session_volatility_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "m15_price_structure_expert:m15_8_bar_path": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "m15_price_structure_expert:m15_candle_pressure": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "m15_price_structure_expert:m15_latest_15m_momentum": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "m15_price_structure_expert:m15_price_diagnostics": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "m15_price_structure_expert:m15_range_location": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "m15_price_structure_expert:m15_swing_structure": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "m5_price_structure_expert:m5_breakout_acceptance": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "m5_price_structure_expert:m5_momentum_transition": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "m5_price_structure_expert:m5_price_diagnostics": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "m5_price_structure_expert:m5_range_location": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "m5_price_structure_expert:m5_swing_structure": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "m5_price_structure_expert:m5_trend_path": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "bearish"
+      },
+      "macro_event_expert:macro_event_expert_availability": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "unavailable",
+        "vote": "unknown"
+      },
+      "momentum_impulse_expert:momentum_clock_regime_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "momentum_impulse_expert:momentum_exhaustion": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "momentum_impulse_expert:momentum_impulse_drift": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "momentum_impulse_expert:momentum_multi_horizon": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "momentum_impulse_expert:momentum_persistence_efficiency": {
+        "n": 180,
+        "reliability": "0.000000000",
+        "role": "directional",
+        "state": "known",
+        "vote": "neutral"
+      },
+      "news_movement_mechanism_expert:news_movement_mechanism_expert_availability": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "unavailable",
+        "vote": "unknown"
+      },
+      "price_location_expert:location_bracket_conflict": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "price_location_expert:location_confluence": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "price_location_expert:location_nearest_reference": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "price_location_expert:location_range_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "price_location_expert:location_structural_priority": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "rates_usd_cross_asset_expert:rates_usd_cross_asset_expert_availability": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "unavailable",
+        "vote": "unknown"
+      },
+      "session_participation_expert:session_active_markets": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "session_participation_expert:session_event_confounding": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "session_participation_expert:session_gc_volume_spread": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "insufficient",
+        "vote": "unknown"
+      },
+      "session_participation_expert:session_matched_clock_activity": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "insufficient",
+        "vote": "unknown"
+      },
+      "volatility_jump_expert:volatility_clock_percentile": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "insufficient",
+        "vote": "unknown"
+      },
+      "volatility_jump_expert:volatility_iv_rv_context": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "insufficient",
+        "vote": "unknown"
+      },
+      "volatility_jump_expert:volatility_jump_continuous": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "insufficient",
+        "vote": "unknown"
+      },
+      "volatility_jump_expert:volatility_simple_atr_baseline": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "known",
+        "vote": "context_only"
+      },
+      "volatility_jump_expert:volatility_transition": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "insufficient",
+        "vote": "unknown"
+      },
+      "volatility_jump_expert:volatility_vol_of_vol": {
+        "n": 0,
+        "reliability": "0.000000000",
+        "role": "context_only",
+        "state": "insufficient",
+        "vote": "unknown"
+      }
+    },
+    "families": {
+      "liquidity_mechanism": {
+        "bear_mass": "0.000000000",
+        "bull_mass": "0.766834984",
+        "component_count": 1,
+        "components": [
+          {
+            "members": [
+              "liquidity_reclaim_expert:liquidity_confirmed_h1_swing_low",
+              "liquidity_reclaim_expert:liquidity_confirmed_m15_swing_low",
+              "liquidity_reclaim_expert:liquidity_prior_day_low"
+            ],
+            "slot_count": 3,
+            "winner_sets": [
+              [
+                "liquidity_reclaim_expert:liquidity_prior_day_low"
+              ],
+              [
+                "liquidity_reclaim_expert:liquidity_confirmed_m15_swing_low"
+              ],
+              [
+                "liquidity_reclaim_expert:liquidity_confirmed_h1_swing_low"
+              ]
+            ]
+          }
+        ],
+        "eligible_signal_ids": [
+          "liquidity_reclaim_expert:liquidity_confirmed_h1_swing_low",
+          "liquidity_reclaim_expert:liquidity_confirmed_m15_swing_low",
+          "liquidity_reclaim_expert:liquidity_prior_day_low"
+        ],
+        "family_balance": "1.000000000",
+        "family_reliability": "0.766834984",
+        "family_signed_evidence": "0.766834984",
+        "family_strength": "0.766834984",
+        "neutral_share": "0.000000000"
+      },
+      "price_action": {
+        "bear_mass": "0.000000000",
+        "bull_mass": "0.766824748",
+        "component_count": 1,
+        "components": [
+          {
+            "members": [
+              "h1_price_structure_expert:h1_breakout_acceptance",
+              "h4_price_structure_expert:h4_acceleration",
+              "m15_price_structure_expert:m15_breakout_acceptance",
+              "m5_price_structure_expert:m5_candle_pressure",
+              "momentum_impulse_expert:momentum_acceleration"
+            ],
+            "slot_count": 5,
+            "winner_sets": [
+              [
+                "m5_price_structure_expert:m5_candle_pressure"
+              ],
+              [
+                "m15_price_structure_expert:m15_breakout_acceptance"
+              ],
+              [
+                "h1_price_structure_expert:h1_breakout_acceptance"
+              ],
+              [
+                "h4_price_structure_expert:h4_acceleration"
+              ],
+              [
+                "momentum_impulse_expert:momentum_acceleration"
+              ]
+            ]
+          }
+        ],
+        "eligible_signal_ids": [
+          "h1_price_structure_expert:h1_breakout_acceptance",
+          "h4_price_structure_expert:h4_acceleration",
+          "m15_price_structure_expert:m15_breakout_acceptance",
+          "m5_price_structure_expert:m5_candle_pressure",
+          "momentum_impulse_expert:momentum_acceleration"
+        ],
+        "family_balance": "1.000000000",
+        "family_reliability": "0.766824748",
+        "family_signed_evidence": "0.766824748",
+        "family_strength": "0.766824748",
+        "neutral_share": "0.000000000"
+      }
+    },
+    "meta_balance": "1.000000000",
+    "qualifying_families": [
+      "liquidity_mechanism",
+      "price_action"
+    ],
+    "qualifying_family_count": 2,
+    "weights": {
+      "h1_price_structure_expert:h1_breakout_acceptance": "0.200000000000",
+      "h4_price_structure_expert:h4_acceleration": "0.200000000000",
+      "liquidity_reclaim_expert:liquidity_confirmed_h1_swing_low": "0.333333333333",
+      "liquidity_reclaim_expert:liquidity_confirmed_m15_swing_low": "0.333333333333",
+      "liquidity_reclaim_expert:liquidity_prior_day_low": "0.333333333333",
+      "m15_price_structure_expert:m15_breakout_acceptance": "0.200000000000",
+      "m5_price_structure_expert:m5_candle_pressure": "0.200000000000",
+      "momentum_impulse_expert:momentum_acceleration": "0.200000000000"
+    }
+  },
+  "old_path": {
+    "bearish": "0.006242",
+    "bullish": "0.042804",
+    "decision_reason": "insufficient_directional_authority",
+    "dependency_effective_weight_total": "4.000000",
+    "direction": "abstain",
+    "directional_total": "0.049046",
+    "meta_view_digest": "95ab39333fbc162d67a6090f9820794da516d2be41fad341fd315085c09d67e7",
+    "neutral": "0.004994",
+    "selector_gate_rows": [
+      {
+        "availability_state": "unavailable",
+        "classification": "unavailable",
+        "context_label": "unavailable",
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "analogue_episode_expert",
+        "observation_weight": "0.000000",
+        "reasons": [
+          "gate_has_no_current_known_evidence"
+        ],
+        "sample_n": 0,
+        "trust_score": "0.000000"
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "neutral_prior",
+        "current_conclusion": "context_only",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 0,
+          "effective_weight_total": "0.000000",
+          "multiplier": "1.000000",
+          "raw_weight_total": "0.000000",
+          "state": "context_only_no_directional_penalty"
+        },
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "d1_context_expert",
+        "gate_mode": "context_only",
+        "gate_version": "aidy_gold_d1_context_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "75807ec8051889c3ac02754ded6fe7acab73e0b506ef0f12ea83714e21e0d17b",
+        "reasons": [
+          "calibration:unknown",
+          "dependency:context_only_no_directional_penalty",
+          "recency:insufficient_recent",
+          "sample_n_below_high_trust_minimum",
+          "scope_backoff:neutral_prior",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "0.900000",
+          "recent_accuracy": null,
+          "recent_sample_n": 0,
+          "state": "insufficient_recent"
+        },
+        "sample_confidence": "0.000000",
+        "sample_n": 0,
+        "scope_backoff": {
+          "context_label": "neutral_prior",
+          "multiplier": "0.500000",
+          "scope_type": "neutral_prior",
+          "selected_scope_payload": {},
+          "state": "neutral_prior"
+        },
+        "shrunk_accuracy": "0.500000",
+        "trust_score": "0.000000",
+        "uncertainty_state": "no_qualified_history",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "unavailable",
+        "classification": "unavailable",
+        "context_label": "unavailable",
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "futures_microstructure_expert",
+        "observation_weight": "0.000000",
+        "reasons": [
+          "gate_has_no_current_known_evidence"
+        ],
+        "sample_n": 0,
+        "trust_score": "0.000000"
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "mini_exact",
+        "current_conclusion": "abstain",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 5,
+          "effective_weight_total": "1.203125",
+          "multiplier": "0.240625",
+          "raw_weight_total": "5.000000",
+          "state": "known"
+        },
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "h1_price_structure_expert",
+        "gate_mode": "directional",
+        "gate_version": "aidy_gold_h1_price_structure_expert_v1",
+        "observation_weight": "0.096130",
+        "packet_digest": "768768a4e9886849abb761409f320ee86187c0d46acd63ef21e7e4410d0bd750",
+        "reasons": [
+          "calibration:unknown",
+          "dependency_penalty_applied",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "1.000000",
+          "recent_accuracy": "0.550000",
+          "recent_sample_n": 20,
+          "state": "stable"
+        },
+        "sample_confidence": "0.900000",
+        "sample_n": 180,
+        "scope_backoff": {
+          "context_label": "mini_exact",
+          "multiplier": "1.000000",
+          "scope_type": "mini_exact",
+          "selected_scope_payload": {
+            "gate_id": "h1_price_structure_expert",
+            "gate_version": "aidy_gold_h1_price_structure_expert_v1",
+            "mini_environment": {
+              "breakout_state": "high:none|low:reclaimed_inside",
+              "contradiction_state": "none",
+              "h1_global_direction": "bullish",
+              "h4_direction": "bullish",
+              "m15_direction": "bullish",
+              "m5_direction": "bullish",
+              "range_zone": "low_extreme",
+              "session": "london_new_york_overlap",
+              "session_phase": "middle_90_240m",
+              "structure_regime": "mixed_structure",
+              "timeframe": "H1",
+              "trend_regime": "neutral|quality:poor",
+              "volatility_state": "normal"
+            }
+          },
+          "state": "exact_context"
+        },
+        "shrunk_accuracy": "0.522222",
+        "trust_score": "0.096130",
+        "uncertainty_state": "lower",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "mini_exact",
+        "current_conclusion": "abstain",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 6,
+          "effective_weight_total": "1.078125",
+          "multiplier": "0.179688",
+          "raw_weight_total": "6.000000",
+          "state": "known"
+        },
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "h4_price_structure_expert",
+        "gate_mode": "directional",
+        "gate_version": "aidy_gold_h4_price_structure_expert_v1",
+        "observation_weight": "0.071785",
+        "packet_digest": "c5136c2d53518435ce011f7b2dcd1e882a03655b5a10afc33374ee38141e19a9",
+        "reasons": [
+          "calibration:unknown",
+          "dependency_penalty_applied",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "1.000000",
+          "recent_accuracy": "0.550000",
+          "recent_sample_n": 20,
+          "state": "stable"
+        },
+        "sample_confidence": "0.900000",
+        "sample_n": 180,
+        "scope_backoff": {
+          "context_label": "mini_exact",
+          "multiplier": "1.000000",
+          "scope_type": "mini_exact",
+          "selected_scope_payload": {
+            "gate_id": "h4_price_structure_expert",
+            "gate_version": "aidy_gold_h4_price_structure_expert_v1",
+            "mini_environment": {
+              "breakout_state": "high:reclaimed_inside|low:no_post_confirmation_bars",
+              "contradiction_state": "present",
+              "h1_direction": "bullish",
+              "h4_global_direction": "bullish",
+              "m15_direction": "bullish",
+              "m5_direction": "bullish",
+              "range_zone": "middle",
+              "session": "london_new_york_overlap",
+              "session_phase": "middle_90_240m",
+              "structure_regime": "mixed_structure",
+              "timeframe": "H4",
+              "trend_regime": "neutral|quality:poor",
+              "volatility_state": "normal"
+            }
+          },
+          "state": "exact_context"
+        },
+        "shrunk_accuracy": "0.522222",
+        "trust_score": "0.071785",
+        "uncertainty_state": "lower",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "mini_exact",
+        "current_conclusion": "bullish",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 14,
+          "effective_weight_total": "1.500000",
+          "multiplier": "0.107143",
+          "raw_weight_total": "14.000000",
+          "state": "known"
+        },
+        "directional_authority_weight": "0.042804",
+        "future_values_used": false,
+        "gate_id": "liquidity_reclaim_expert",
+        "gate_mode": "directional",
+        "gate_version": "aidy_gold_liquidity_reclaim_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "b9b0dcd5ca66109c001f420a8526803e41fccdd53df9d94731676aab9a1e19cf",
+        "reasons": [
+          "calibration:unknown",
+          "dependency_penalty_applied",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "1.000000",
+          "recent_accuracy": "0.550000",
+          "recent_sample_n": 20,
+          "state": "stable"
+        },
+        "sample_confidence": "0.900000",
+        "sample_n": 180,
+        "scope_backoff": {
+          "context_label": "mini_exact",
+          "multiplier": "1.000000",
+          "scope_type": "mini_exact",
+          "selected_scope_payload": {
+            "gate_id": "liquidity_reclaim_expert",
+            "gate_version": "aidy_gold_liquidity_reclaim_expert_v1",
+            "mini_environment": {
+              "competing_level_band": "near",
+              "level_category": "prior_day",
+              "penetration_bucket": "medium",
+              "proxy_state": "reclaim_retest_hold",
+              "reclaim_speed_bucket": "same_bar",
+              "retest_state": "retest_hold",
+              "session": "london_new_york_overlap",
+              "session_phase": "middle_90_240m",
+              "volatility_state": "normal"
+            }
+          },
+          "state": "exact_context"
+        },
+        "shrunk_accuracy": "0.522222",
+        "trust_score": "0.042804",
+        "uncertainty_state": "lower",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "mini_exact",
+        "current_conclusion": "abstain",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 5,
+          "effective_weight_total": "0.078125",
+          "multiplier": "0.015625",
+          "raw_weight_total": "5.000000",
+          "state": "known"
+        },
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "m15_price_structure_expert",
+        "gate_mode": "directional",
+        "gate_version": "aidy_gold_m15_price_structure_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "bd4052dd98ea84fe540d17a4bbc3fe74609b9555be5e8534b0f78569d1afc182",
+        "reasons": [
+          "calibration:unknown",
+          "dependency_penalty_applied",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "1.000000",
+          "recent_accuracy": "0.550000",
+          "recent_sample_n": 20,
+          "state": "stable"
+        },
+        "sample_confidence": "0.900000",
+        "sample_n": 180,
+        "scope_backoff": {
+          "context_label": "mini_exact",
+          "multiplier": "1.000000",
+          "scope_type": "mini_exact",
+          "selected_scope_payload": {
+            "gate_id": "m15_price_structure_expert",
+            "gate_version": "aidy_gold_m15_price_structure_expert_v1",
+            "mini_environment": {
+              "breakout_state": "high:none|low:reclaimed_inside",
+              "contradiction_state": "present",
+              "h1_direction": "bullish",
+              "h4_direction": "bullish",
+              "m15_global_direction": "bullish",
+              "m5_direction": "bullish",
+              "range_zone": "low_extreme",
+              "session": "london_new_york_overlap",
+              "session_phase": "middle_90_240m",
+              "structure_regime": "bearish_structure",
+              "timeframe": "M15",
+              "trend_regime": "bearish|quality:high",
+              "volatility_state": "normal"
+            }
+          },
+          "state": "exact_context"
+        },
+        "shrunk_accuracy": "0.522222",
+        "trust_score": "0.006242",
+        "uncertainty_state": "lower",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "mini_exact",
+        "current_conclusion": "bearish",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 5,
+          "effective_weight_total": "0.078125",
+          "multiplier": "0.015625",
+          "raw_weight_total": "5.000000",
+          "state": "known"
+        },
+        "directional_authority_weight": "0.006242",
+        "future_values_used": false,
+        "gate_id": "m5_price_structure_expert",
+        "gate_mode": "directional",
+        "gate_version": "aidy_gold_m5_price_structure_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "4a90de31104aea40c6e56814b1c251f6be1af7b8be8f685996985760576d19e6",
+        "reasons": [
+          "calibration:unknown",
+          "dependency_penalty_applied",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "1.000000",
+          "recent_accuracy": "0.550000",
+          "recent_sample_n": 20,
+          "state": "stable"
+        },
+        "sample_confidence": "0.900000",
+        "sample_n": 180,
+        "scope_backoff": {
+          "context_label": "mini_exact",
+          "multiplier": "1.000000",
+          "scope_type": "mini_exact",
+          "selected_scope_payload": {
+            "gate_id": "m5_price_structure_expert",
+            "gate_version": "aidy_gold_m5_price_structure_expert_v1",
+            "mini_environment": {
+              "breakout_state": "high:no_post_confirmation_bars|low:accepted_hold",
+              "contradiction_state": "none",
+              "h1_direction": "bullish",
+              "m15_direction": "bullish",
+              "m5_global_direction": "bullish",
+              "range_zone": "low_extreme",
+              "session": "london_new_york_overlap",
+              "session_phase": "middle_90_240m",
+              "structure_regime": "mixed_structure",
+              "timeframe": "M5",
+              "trend_regime": "bearish|quality:low",
+              "volatility_state": "normal"
+            }
+          },
+          "state": "exact_context"
+        },
+        "shrunk_accuracy": "0.522222",
+        "trust_score": "0.006242",
+        "uncertainty_state": "lower",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "unavailable",
+        "classification": "unavailable",
+        "context_label": "unavailable",
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "macro_event_expert",
+        "observation_weight": "0.000000",
+        "reasons": [
+          "gate_has_no_current_known_evidence"
+        ],
+        "sample_n": 0,
+        "trust_score": "0.000000"
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "mini_exact",
+        "current_conclusion": "neutral",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 5,
+          "effective_weight_total": "0.062500",
+          "multiplier": "0.012500",
+          "raw_weight_total": "5.000000",
+          "state": "known"
+        },
+        "directional_authority_weight": "0.004994",
+        "future_values_used": false,
+        "gate_id": "momentum_impulse_expert",
+        "gate_mode": "directional",
+        "gate_version": "aidy_gold_momentum_impulse_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "28035494d0060091318b17f97bc9f8fa616baa92141254bc55f112c3a9895504",
+        "reasons": [
+          "calibration:unknown",
+          "dependency_penalty_applied",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "1.000000",
+          "recent_accuracy": "0.550000",
+          "recent_sample_n": 20,
+          "state": "stable"
+        },
+        "sample_confidence": "0.900000",
+        "sample_n": 180,
+        "scope_backoff": {
+          "context_label": "mini_exact",
+          "multiplier": "1.000000",
+          "scope_type": "mini_exact",
+          "selected_scope_payload": {
+            "gate_id": "momentum_impulse_expert",
+            "gate_version": "aidy_gold_momentum_impulse_expert_v1",
+            "mini_environment": {
+              "five_minute_distribution_state": "normal",
+              "five_minute_range_state": "normal",
+              "h1_direction": "bullish",
+              "m15_direction": "bullish",
+              "m5_direction": "bullish",
+              "momentum_state": "noisy_or_unconfirmed",
+              "session": "london_new_york_overlap",
+              "session_phase": "middle_90_240m",
+              "utc_clock_bucket_15m": "14:00",
+              "volatility_state": "normal"
+            }
+          },
+          "state": "exact_context"
+        },
+        "shrunk_accuracy": "0.522222",
+        "trust_score": "0.004994",
+        "uncertainty_state": "lower",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "unavailable",
+        "classification": "unavailable",
+        "context_label": "unavailable",
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "news_movement_mechanism_expert",
+        "observation_weight": "0.000000",
+        "reasons": [
+          "gate_has_no_current_known_evidence"
+        ],
+        "sample_n": 0,
+        "trust_score": "0.000000"
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "neutral_prior",
+        "current_conclusion": "context_only",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 0,
+          "effective_weight_total": "0.000000",
+          "multiplier": "1.000000",
+          "raw_weight_total": "0.000000",
+          "state": "context_only_no_directional_penalty"
+        },
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "price_location_expert",
+        "gate_mode": "context_only",
+        "gate_version": "aidy_gold_price_location_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "72f2cbe4da4e298add789dcb092868362c919bbd26632476a193af30391424e3",
+        "reasons": [
+          "calibration:unknown",
+          "dependency:context_only_no_directional_penalty",
+          "recency:insufficient_recent",
+          "sample_n_below_high_trust_minimum",
+          "scope_backoff:neutral_prior",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "0.900000",
+          "recent_accuracy": null,
+          "recent_sample_n": 0,
+          "state": "insufficient_recent"
+        },
+        "sample_confidence": "0.000000",
+        "sample_n": 0,
+        "scope_backoff": {
+          "context_label": "neutral_prior",
+          "multiplier": "0.500000",
+          "scope_type": "neutral_prior",
+          "selected_scope_payload": {},
+          "state": "neutral_prior"
+        },
+        "shrunk_accuracy": "0.500000",
+        "trust_score": "0.000000",
+        "uncertainty_state": "no_qualified_history",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "unavailable",
+        "classification": "unavailable",
+        "context_label": "unavailable",
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "rates_usd_cross_asset_expert",
+        "observation_weight": "0.000000",
+        "reasons": [
+          "gate_has_no_current_known_evidence"
+        ],
+        "sample_n": 0,
+        "trust_score": "0.000000"
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "neutral_prior",
+        "current_conclusion": "context_only",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 0,
+          "effective_weight_total": "0.000000",
+          "multiplier": "1.000000",
+          "raw_weight_total": "0.000000",
+          "state": "context_only_no_directional_penalty"
+        },
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "session_participation_expert",
+        "gate_mode": "context_only",
+        "gate_version": "aidy_gold_session_participation_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "4848bee07a1c67813c0d7dcb38b399329824e60de1da62884f777078e1cdb90a",
+        "reasons": [
+          "calibration:unknown",
+          "dependency:context_only_no_directional_penalty",
+          "recency:insufficient_recent",
+          "sample_n_below_high_trust_minimum",
+          "scope_backoff:neutral_prior",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "0.900000",
+          "recent_accuracy": null,
+          "recent_sample_n": 0,
+          "state": "insufficient_recent"
+        },
+        "sample_confidence": "0.000000",
+        "sample_n": 0,
+        "scope_backoff": {
+          "context_label": "neutral_prior",
+          "multiplier": "0.500000",
+          "scope_type": "neutral_prior",
+          "selected_scope_payload": {},
+          "state": "neutral_prior"
+        },
+        "shrunk_accuracy": "0.500000",
+        "trust_score": "0.000000",
+        "uncertainty_state": "no_qualified_history",
+        "weak_gate_remains_observable": true
+      },
+      {
+        "availability_state": "available",
+        "calibration_adjustment": {
+          "excluded_current_or_future_n": 0,
+          "mean_absolute_calibration_error": null,
+          "multiplier": "0.850000",
+          "sample_n": 0,
+          "state": "unknown"
+        },
+        "classification": "reduced_trust",
+        "context_label": "neutral_prior",
+        "current_conclusion": "context_only",
+        "current_outcome_visible": false,
+        "dependency_adjustment": {
+          "covered_signal_n": 0,
+          "effective_weight_total": "0.000000",
+          "multiplier": "1.000000",
+          "raw_weight_total": "0.000000",
+          "state": "context_only_no_directional_penalty"
+        },
+        "directional_authority_weight": "0.000000",
+        "future_values_used": false,
+        "gate_id": "volatility_jump_expert",
+        "gate_mode": "context_only",
+        "gate_version": "aidy_gold_volatility_jump_expert_v1",
+        "observation_weight": "0.050000",
+        "packet_digest": "688357c217e52010929f57fa5b531020d1e3460882015dfee62e2dd3c6a51cf5",
+        "reasons": [
+          "calibration:unknown",
+          "dependency:context_only_no_directional_penalty",
+          "recency:insufficient_recent",
+          "sample_n_below_high_trust_minimum",
+          "scope_backoff:neutral_prior",
+          "shrunk_reliability_below_high_trust_floor"
+        ],
+        "recency_adjustment": {
+          "boost_above_one_allowed": false,
+          "multiplier": "0.900000",
+          "recent_accuracy": null,
+          "recent_sample_n": 0,
+          "state": "insufficient_recent"
+        },
+        "sample_confidence": "0.000000",
+        "sample_n": 0,
+        "scope_backoff": {
+          "context_label": "neutral_prior",
+          "multiplier": "0.500000",
+          "scope_type": "neutral_prior",
+          "selected_scope_payload": {},
+          "state": "neutral_prior"
+        },
+        "shrunk_accuracy": "0.500000",
+        "trust_score": "0.000000",
+        "uncertainty_state": "no_qualified_history",
+        "weak_gate_remains_observable": true
+      }
+    ]
+  },
+  "source_aidy_sha": "47ffe131b9a8d2180c8d78ba3c1dc1b9253b9e4a"
+}
