@@ -1,0 +1,24 @@
+{
+  "record_version": "aidy_evidence_semantic_change_v1",
+  "recorded_head_sha": "9304fd79c9b0945a9526f00b75ed6f269f866d24",
+  "base_sha": "47ffe131b9a8d2180c8d78ba3c1dc1b9253b9e4a",
+  "protected_diff_sha256": "0f0cb2fbaec3b46693582d634437f98358860f24661604925ff9b8c498b95153",
+  "classification": "transport-only",
+  "cohort_action": "preserve",
+  "preserve_existing_cohort": true,
+  "rationale": "Zero-market-minute maintenance buckets can never contain admissible market evidence. The repair only prevents an impossible calendar bucket from marking the whole snapshot partial; raw M1 admission, aggregate OHLC, PIT timestamps, revisions and all non-empty bucket semantics are unchanged.",
+  "deterministic_equivalence_proof": {
+    "invariants": [
+      "For every bucket with one or more expected market minutes, completeness ratio and admissibility semantics are unchanged.",
+      "aggregate_m1 still emits no candle for a zero-market-minute bucket before and after this repair.",
+      "No raw M1 row, aggregate OHLC value, revision lineage, first_observed_at timestamp, or PIT admission rule changes.",
+      "The only behavioral change is snapshot readiness: a calendar bucket containing zero possible market minutes is classified not_applicable instead of falsely making the capture partial."
+    ],
+    "test_commands": [
+      "uv run pytest -q tests/test_day53_twelve_data_ohlc_adapter.py",
+      "uv run pytest -q"
+    ],
+    "result": "pass",
+    "evidence_digest": "ce7457ef14eb33b1e472d8b7a76c7205bed111e8c17eb06f973a4bba302b4929"
+  }
+}
