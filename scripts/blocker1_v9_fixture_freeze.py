@@ -223,8 +223,21 @@ MIN_FAMILIES = 2
 MIN_FAMILY_STRENGTH = D("0.20")
 BALANCED_ABSTAIN_BAND = D("0.20")
 
+def _json_default(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, D):
+        return str(value)
+    raise TypeError(f"unsupported canonical JSON value: {type(value).__name__}")
+
 def canonical(value):
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        default=_json_default,
+    )
 
 def digest(value):
     return sha256(canonical(value).encode()).hexdigest()
@@ -972,8 +985,8 @@ def main():
             "production_untouched": True,
         },
     }
-    open("blocker1_t1_v9_fixture.json", "w").write(json.dumps(fixture, sort_keys=True, indent=2) + "\n")
-    open("blocker1_t1_v9_execution.json", "w").write(json.dumps(execution, sort_keys=True, indent=2) + "\n")
+    open("blocker1_t1_v9_fixture.json", "w").write(json.dumps(fixture, sort_keys=True, indent=2, default=_json_default) + "\n")
+    open("blocker1_t1_v9_execution.json", "w").write(json.dumps(execution, sort_keys=True, indent=2, default=_json_default) + "\n")
     print("V9_FIXTURE_COMBINED_DIGEST", combined)
     print("COUNTS", fixture["counts"])
     print("OLD_PATH", execution["old_path"]["direction"], execution["old_path"]["decision_reason"], execution["old_path"]["directional_total"])
