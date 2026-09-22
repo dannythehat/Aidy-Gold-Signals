@@ -314,7 +314,7 @@ def _window_market_open(start):
     return all(gold_open(start + timedelta(minutes=i)) for i in range(15))
 
 def historical_cycle_times(count):
-    cursor = AS_OF - timedelta(minutes=15)
+    cursor = AS_OF - timedelta(minutes=30)
     out = []
     while len(out) < count:
         if (
