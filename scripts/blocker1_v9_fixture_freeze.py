@@ -311,7 +311,7 @@ def build_real_fixture_state():
     }
 
 def _window_market_open(start):
-    return all(market_open(start + timedelta(minutes=i)) for i in range(15))
+    return all(gold_open(start + timedelta(minutes=i)) for i in range(15))
 
 def historical_cycle_times(count):
     cursor = AS_OF - timedelta(minutes=15)
