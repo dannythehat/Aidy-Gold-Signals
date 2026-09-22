@@ -1,0 +1,153 @@
+name: AIDY Build 24 Overnight Report
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/build24-overnight-report.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build D1 report config
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          json.dump(cfg,open('wrangler.build24.report.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+
+      - name: Overnight cycle summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.build24.report.jsonc             --command "
+              SELECT
+                r.activated_at_utc,
+                COUNT(DISTINCT s.cycle_view_id) AS shadow_cycles,
+                COUNT(DISTINCT o.cycle_view_id) AS resolved_outcomes,
+                COUNT(DISTINCT m.cycle_view_id) AS meta_scores,
+                SUM(CASE WHEN json_extract(s.meta_view_json,'$.direction')='bullish' THEN 1 ELSE 0 END) AS bullish_calls,
+                SUM(CASE WHEN json_extract(s.meta_view_json,'$.direction')='bearish' THEN 1 ELSE 0 END) AS bearish_calls,
+                SUM(CASE WHEN json_extract(s.meta_view_json,'$.direction')='neutral' THEN 1 ELSE 0 END) AS neutral_calls,
+                SUM(CASE WHEN json_extract(s.meta_view_json,'$.direction')='abstain' THEN 1 ELSE 0 END) AS abstain_calls,
+                SUM(CASE WHEN o.realised_direction='bullish' THEN 1 ELSE 0 END) AS bullish_outcomes,
+                SUM(CASE WHEN o.realised_direction='bearish' THEN 1 ELSE 0 END) AS bearish_outcomes,
+                MIN(s.decided_at_utc) AS first_cycle_at,
+                MAX(s.decided_at_utc) AS latest_cycle_at,
+                MAX(o.resolved_at_utc) AS latest_resolved_at
+              FROM aidy_gold_expert_shadow_runtime_state r
+              LEFT JOIN aidy_gold_expert_shadow_cycles s
+                ON s.decided_at_utc>=r.activated_at_utc
+              LEFT JOIN aidy_gold_cycle_outcomes o
+                ON o.cycle_view_id=s.cycle_view_id
+              LEFT JOIN aidy_gold_meta_view_results m
+                ON m.cycle_view_id=s.cycle_view_id
+              WHERE r.singleton_id=1;
+            " > /tmp/summary.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/summary.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          print('OVERNIGHT_SUMMARY='+json.dumps(rows[0] if rows else {},sort_keys=True))
+          PY
+
+      - name: Overnight cycle details
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.build24.report.jsonc             --command "
+              SELECT
+                s.cycle_view_id,
+                s.decided_at_utc,
+                v.view_direction AS legacy_view,
+                json_extract(s.meta_view_json,'$.direction') AS aidy_view,
+                json_extract(s.meta_view_json,'$.decision_reason') AS aidy_reason,
+                s.known_gate_n,
+                s.explicit_unknown_gate_n,
+                o.realised_direction,
+                o.return_bps,
+                m.score AS meta_score,
+                m.correct AS meta_correct,
+                m.resolved_at_utc
+              FROM aidy_gold_expert_shadow_cycles s
+              LEFT JOIN aidy_gold_cycle_views v
+                ON v.cycle_view_id=s.cycle_view_id
+              LEFT JOIN aidy_gold_cycle_outcomes o
+                ON o.cycle_view_id=s.cycle_view_id
+              LEFT JOIN aidy_gold_meta_view_results m
+                ON m.cycle_view_id=s.cycle_view_id
+              ORDER BY s.decided_at_utc;
+            " > /tmp/cycles.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/cycles.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          print('OVERNIGHT_CYCLES='+json.dumps(rows,sort_keys=True))
+          PY
+
+      - name: Gate scorebook snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.build24.report.jsonc             --command "
+              SELECT
+                gate_id,
+                sample_n,
+                correct_n,
+                incorrect_n,
+                unscoreable_n,
+                net_score,
+                accuracy,
+                recent_sample_n,
+                recent_correct_n,
+                recent_net_score,
+                recent_accuracy,
+                last_resolved_at_utc
+              FROM aidy_gold_expert_context_scores
+              WHERE subject_type='gate' AND scope_type='gate_global'
+              ORDER BY gate_id;
+            " > /tmp/gates.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/gates.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          print('OVERNIGHT_GATE_SCOREBOOK='+json.dumps(rows,sort_keys=True))
+          PY
+
+      - name: Sync health
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json             --config wrangler.build24.report.jsonc             --command "
+              SELECT *
+              FROM aidy_gold_expert_shadow_sync_health
+              WHERE singleton_id=1;
+            " > /tmp/health.json
+          python - <<'PY'
+          import json
+          p=json.load(open('/tmp/health.json',encoding='utf-8'))
+          rows=(p[0] or {}).get('results') or []
+          print('OVERNIGHT_HEALTH='+json.dumps(rows[0] if rows else {},sort_keys=True))
+          PY
