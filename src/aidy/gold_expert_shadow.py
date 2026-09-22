@@ -1283,6 +1283,76 @@ class D1GoldExpertShadowStore:
             "gate_packets_scored": gate_packets_scored,
         }
 
+    async def _outcome_baselines(
+        self,
+        *,
+        as_of: datetime,
+    ) -> dict[str, Any]:
+        """Reference baselines every accuracy figure must be read against.
+
+        Without these an accuracy number is uninterpretable. On the first live
+        sample, always answering "bearish" scored 57.9 per cent while the legacy
+        view scored 36.11 per cent and M5 31.82 per cent, so both were below a
+        trivial constant guess as well as below 3-class chance. Strictly
+        pre-decision: only outcomes resolved before as_of are counted.
+        """
+        rows = _results(
+            await self._d1.prepare(
+                """
+                SELECT realised_direction
+                FROM aidy_gold_cycle_outcomes
+                WHERE resolved_at_utc<?
+                  AND realised_direction IN ('bullish','bearish','neutral')
+                ORDER BY resolved_at_utc,cycle_view_id
+                """
+            ).bind(as_of.isoformat()).all()
+        )
+        labels = [str(row["realised_direction"]) for row in rows]
+        total = len(labels)
+        if not total:
+            return {
+                "state": "no_resolved_outcomes_yet",
+                "sample_n": 0,
+                "majority_class": None,
+                "majority_class_accuracy": None,
+                "persistence_accuracy": None,
+                "uniform_random_accuracy": _fmt(Decimal(1) / Decimal(3)),
+                "class_counts": {},
+            }
+
+        counts: dict[str, int] = {}
+        for label in labels:
+            counts[label] = counts.get(label, 0) + 1
+        majority = max(sorted(counts), key=lambda key: counts[key])
+
+        # Persistence: predict that the next outcome repeats the previous one.
+        persistence_hits = sum(
+            1 for index in range(1, total) if labels[index] == labels[index - 1]
+        )
+        persistence_n = total - 1
+
+        return {
+            "state": "known",
+            "sample_n": total,
+            "majority_class": majority,
+            "majority_class_accuracy": _fmt(
+                Decimal(counts[majority]) / Decimal(total)
+            ),
+            "persistence_accuracy": (
+                _fmt(Decimal(persistence_hits) / Decimal(persistence_n))
+                if persistence_n > 0
+                else None
+            ),
+            "persistence_sample_n": persistence_n,
+            "uniform_random_accuracy": _fmt(Decimal(1) / Decimal(3)),
+            "class_counts": dict(sorted(counts.items())),
+            "reading_note": (
+                "Any gate or meta accuracy at or below these baselines carries no "
+                "demonstrated skill. Promotion reasoning must clear them."
+            ),
+            "future_values_used": False,
+        }
+
     async def scorecard_snapshot(
         self,
         *,
@@ -1307,6 +1377,7 @@ class D1GoldExpertShadowStore:
                 "as_of_utc": as_of.isoformat(),
                 "state": "no_prospective_shadow_cycle_yet",
                 "gates": [],
+                "outcome_baselines": await self._outcome_baselines(as_of=as_of),
                 "research_only": True,
                 "formal_forward_authority": False,
                 "live_money_execution_allowed": False,
@@ -1404,6 +1475,7 @@ class D1GoldExpertShadowStore:
             "environment_key": str(cycle["environment_key"]),
             "gate_count": len(gates),
             "gates": gates,
+            "outcome_baselines": await self._outcome_baselines(as_of=as_of),
             "latest_aidy_view": {
                 "direction": meta.get("direction"),
                 "confidence_state": meta.get("confidence_state"),
