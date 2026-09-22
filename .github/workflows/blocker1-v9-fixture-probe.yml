@@ -7,6 +7,11 @@ on:
     paths:
       - "scripts/blocker1_v9_liquidity_probe.py"
       - ".github/workflows/blocker1-v9-fixture-probe.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/blocker1_v9_liquidity_probe.py"
+      - ".github/workflows/blocker1-v9-fixture-probe.yml"
   workflow_dispatch:
 
 permissions:
