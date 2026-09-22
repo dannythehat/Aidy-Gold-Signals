@@ -1,0 +1,30 @@
+name: Blocker 1 v9 Fixture Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/blocker1_v9_fixture_probe.py"
+      - ".github/workflows/blocker1-v9-fixture-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install
+        run: |
+          python -m pip install --disable-pip-version-check --quiet uv
+          uv sync
+      - name: Compile probe
+        run: uv run python -m compileall -q scripts/blocker1_v9_fixture_probe.py
+      - name: Execute real expert pipeline probe
+        run: uv run python scripts/blocker1_v9_fixture_probe.py
