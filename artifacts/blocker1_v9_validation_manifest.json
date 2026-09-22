@@ -1,23 +1,23 @@
 {
-  "combined_manifest_digest": "53e691f0e70308030beda0fd1101f0cd032b51875ecfe2c834aacff507150ba6",
+  "combined_manifest_digest": "cf9e44df2965ebbe2b8cbc4e1c21d2e6682dfe978466feb5f3686978bc70e1cd",
   "component_manifest": {
     "connected_subject_count": 70,
-    "current_packet_digests_digest": "4c934db5f0f690dd0e34b754de2d0e8f385f51bdcfc6d07503157853cedc09cb",
+    "current_packet_digests_digest": "9c1a716480b4ce9bf0b64c0531deb1a96407aa205de45af7b376fab3cb7cfd33",
     "dependency_history_digest": "697fa6afe0ccb4a86fff0d9266994d80b40343d1891e8a914753ac7090d7f992",
-    "environment_digest": "ab00214382e74b2bc428814ce22094fa9eeb3f241a34a6a5637ec301ddad86c8",
-    "fixture_sha256": "74e92fe4a7d38e803da8469262e9339e795d3b9d1f3d7c9594a599560c3e3c4e",
-    "gate_trust_history_digest": "c82e18444d95790b1b61b03e078b3606e559206c528e8f653adb09914cfd78ec",
+    "environment_digest": "78047e25f6d159e56e7085eabc4056c27dda758a5f74fe44944efd4e3f804449",
+    "fixture_sha256": "5d99b3db701df696c5325b1146af5942319db70e05e1c8a2fe130f3e23281960",
+    "gate_trust_history_digest": "3f1d9d149ec164ce6738ab9cd4c6c1a28705d243e46533284990ab57e5760125",
     "outcome_history_digest": "b7ca63589314deb00cc78c11900bcb66a2f6d902c868b74960e3e664aad389ed",
     "packet_count": 15,
-    "subject_history_digest": "8266bcbcbce3238e275b926193bdfba92eaa5e5c00f4e94fe72873f649b2144f",
+    "subject_history_digest": "ce306f1d56c230ce6a4d2ec06a89c7ea89a7ada1e06308331235d34c347de9e0",
     "subject_ids_digest": "2e827dd5d0df0b218d122542e9ddd364beb5fed34be232dad33d4df3f94278b9"
   },
   "fixture_path": "artifacts/blocker1_v9_full_fixture.json",
-  "fixture_sha256": "74e92fe4a7d38e803da8469262e9339e795d3b9d1f3d7c9594a599560c3e3c4e",
+  "fixture_sha256": "5d99b3db701df696c5325b1146af5942319db70e05e1c8a2fe130f3e23281960",
   "formal_forward_authority": false,
   "liquidity_gate": {
     "conclusion": "bullish",
-    "packet_digest": "f25cb18a46d48370603e08896530ef1b5e7928da8e2e1839993166295675df20"
+    "packet_digest": "5214f69583808e0c96e84f44a4d02da8aec7420f69cc6586c22589246dec7c57"
   },
   "live_money_execution_allowed": false,
   "mathematics_changed": false,
@@ -999,15 +999,15 @@
     ]
   },
   "old_path": {
-    "bearish_authority": "0.026486",
-    "bullish_authority": "0.048538",
+    "bearish_authority": "0.000000",
+    "bullish_authority": "0.152785",
     "decision_reason": "insufficient_directional_authority",
-    "dependency_digest": "5c716d07b9afda46864396a07fb0b22db831f528097b9af9d17668bd91758398",
+    "dependency_digest": "1ba5e686952dddcc8272dd4df6f139916a75065c775bde44628fd660c8e0dad9",
     "direction": "abstain",
-    "directional_total": "0.075024",
-    "meta_view_digest": "2e12cb192b23f27fd5ad45200308cb50956b4c816a4abfd4a9b0242f87735267",
-    "neutral_authority": "0.000000",
-    "selector_digest": "f9ad6e671cc3ab2e12ec77137798e8d4f4ba12a419d96493cdbad74ddea73a44"
+    "directional_total": "0.152785",
+    "meta_view_digest": "8604f13e062b84cf41ca9ddca13177172d0fdd5684ecb87871ca3b8a5e90867a",
+    "neutral_authority": "0.006250",
+    "selector_digest": "9683feca206da075f987c6d1665acc134e1fe991366fcfb7f401f88a7e2e6253"
   },
   "pit_assertions": {
     "all_commitments_decide_before_resolution": true,
