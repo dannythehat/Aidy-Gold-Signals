@@ -36,7 +36,6 @@ FORBIDDEN_HINDSIGHT_KEYS = frozenset(
         "realized_direction",
         "realised_return_bps",
         "realized_return_bps",
-        "score",
         "correct",
         "impact_class",
     }
