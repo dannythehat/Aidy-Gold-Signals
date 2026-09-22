@@ -32,7 +32,6 @@ from aidy.gold_evidence_dependency import (
     build_evidence_dependency_engine,
     extract_dependency_signals,
 )
-from aidy.gold_family_meta_direction import build_family_meta_direction_view
 from aidy.gold_expert_gate_contract import (
     build_expert_gate_packet,
     verify_expert_gate_packet,
@@ -45,6 +44,7 @@ from aidy.gold_expert_trust import (
     score_expert_packet,
     select_conditional_trust,
 )
+from aidy.gold_family_meta_direction import build_family_meta_direction_view
 from aidy.gold_futures_microstructure_expert import (
     FUTURES_MICROSTRUCTURE_EXPERT_VERSION,
     FUTURES_MICROSTRUCTURE_GATE_ID,
