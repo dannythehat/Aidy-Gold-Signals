@@ -1,0 +1,61 @@
+name: AIDY Directional Skill Report
+
+# Does any expert's directional call carry information, and in which polarity?
+#
+# Raw accuracy cannot answer that: an expert answering into a window that resolved
+# bearish 48.5% of the time scores 48.5% knowing nothing, and an expert that is
+# reliably wrong carries just as much information as one reliably right while raw
+# accuracy files it next to the noise.
+#
+# Daily rather than hourly. An agreement rate over the full ledger moves slowly, the
+# join is the heaviest read AIDY runs, and there is a D1 read budget alert for a
+# reason. One run a day is enough to watch a verdict approach.
+#
+# Reports only. Changes no expert polarity, no trading behaviour, nothing.
+
+on:
+  schedule:
+    - cron: "40 5 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/aidy-directional-skill-report.yml"
+      - "scripts/aidy_directional_skill_report.py"
+      - "src/aidy/gold_expert_directional_skill.py"
+      - "tests/test_gold_expert_directional_skill.py"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+  SKILL_SCOPE_TYPE: gate_global
+  SKILL_REPORT_PATH: artifacts/aidy-directional-skill.json
+
+jobs:
+  directional-skill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Measure directional skill (read-only)
+        run: python scripts/aidy_directional_skill_report.py
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-directional-skill-${{ github.run_id }}
+          path: artifacts/aidy-directional-skill.json
+          if-no-files-found: ignore
