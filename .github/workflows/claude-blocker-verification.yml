@@ -1,0 +1,150 @@
+name: AIDY Claude Blocker Verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/claude-blocker-verification.yml"
+
+permissions:
+  contents: read
+
+env:
+  AIDY_D1_DATABASE_NAME: aidy-ops-test
+  AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build read-only D1 config
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          cfg=json.load(open('wrangler.test.example.jsonc',encoding='utf-8'))
+          cfg['d1_databases'][0]['database_name']=os.environ['AIDY_D1_DATABASE_NAME']
+          cfg['d1_databases'][0]['database_id']=os.environ['AIDY_D1_DATABASE_ID']
+          json.dump(cfg,open('wrangler.audit.jsonc','w',encoding='utf-8'),indent=2)
+          PY
+      - name: Verify live blockers
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.audit.jsonc \
+            --command "
+              WITH first41 AS (
+                SELECT *
+                FROM aidy_gold_expert_shadow_cycles
+                ORDER BY decided_at_utc
+                LIMIT 41
+              )
+              SELECT
+                COUNT(*) AS cycles,
+                COUNT(DISTINCT environment_key) AS distinct_environment_keys,
+                MAX(CAST(json_extract(meta_view_json,'$.authority_totals.directional_total') AS REAL)) AS max_directional_total,
+                MIN(CAST(json_extract(meta_view_json,'$.authority_totals.directional_total') AS REAL)) AS min_directional_total,
+                AVG(CAST(json_extract(meta_view_json,'$.authority_totals.directional_total') AS REAL)) AS avg_directional_total,
+                SUM(CASE WHEN json_extract(meta_view_json,'$.direction')='abstain' THEN 1 ELSE 0 END) AS abstain_n
+              FROM first41;
+            " > /tmp/core.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.audit.jsonc \
+            --command "
+              WITH first41 AS (
+                SELECT selector_json
+                FROM aidy_gold_expert_shadow_cycles
+                ORDER BY decided_at_utc
+                LIMIT 41
+              ), gates AS (
+                SELECT
+                  json_extract(j.value,'$.gate_id') AS gate_id,
+                  json_extract(j.value,'$.context_label') AS context_label,
+                  json_extract(j.value,'$.dependency_adjustment.multiplier') AS dep_multiplier,
+                  json_extract(j.value,'$.calibration_adjustment.state') AS calibration_state,
+                  json_extract(j.value,'$.directional_authority_weight') AS authority
+                FROM first41 f, json_each(f.selector_json,'$.all_gates') j
+              )
+              SELECT
+                context_label,
+                COUNT(*) AS n
+              FROM gates
+              GROUP BY context_label
+              ORDER BY n DESC;
+            " > /tmp/context.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.audit.jsonc \
+            --command "
+              WITH first41 AS (
+                SELECT selector_json
+                FROM aidy_gold_expert_shadow_cycles
+                ORDER BY decided_at_utc
+                LIMIT 41
+              ), gates AS (
+                SELECT
+                  json_extract(j.value,'$.gate_id') AS gate_id,
+                  CAST(json_extract(j.value,'$.dependency_adjustment.multiplier') AS REAL) AS dep_multiplier,
+                  json_extract(j.value,'$.calibration_adjustment.state') AS calibration_state,
+                  CAST(json_extract(j.value,'$.directional_authority_weight') AS REAL) AS authority
+                FROM first41 f, json_each(f.selector_json,'$.all_gates') j
+              )
+              SELECT
+                gate_id,
+                COUNT(*) AS n,
+                ROUND(AVG(dep_multiplier),6) AS avg_dep_multiplier,
+                ROUND(MIN(dep_multiplier),6) AS min_dep_multiplier,
+                ROUND(MAX(dep_multiplier),6) AS max_dep_multiplier,
+                SUM(CASE WHEN calibration_state='unknown' THEN 1 ELSE 0 END) AS calibration_unknown_n,
+                ROUND(MAX(authority),6) AS max_authority
+              FROM gates
+              GROUP BY gate_id
+              ORDER BY gate_id;
+            " > /tmp/gates.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.audit.jsonc \
+            --command "
+              WITH first41 AS (
+                SELECT cycle_view_id
+                FROM aidy_gold_expert_shadow_cycles
+                ORDER BY decided_at_utc
+                LIMIT 41
+              )
+              SELECT
+                g.gate_id,
+                g.conclusion,
+                COUNT(*) AS n
+              FROM aidy_gold_expert_gate_snapshots g
+              JOIN first41 f ON f.cycle_view_id=g.cycle_view_id
+              WHERE g.gate_id IN ('h1_price_structure_expert','h4_price_structure_expert','m5_price_structure_expert')
+              GROUP BY g.gate_id,g.conclusion
+              ORDER BY g.gate_id,g.conclusion;
+            " > /tmp/conclusions.json
+          npx --yes wrangler@4 d1 execute AIDY_OPS --remote --json \
+            --config wrangler.audit.jsonc \
+            --command "
+              SELECT timeframe,
+                     COUNT(DISTINCT open_time_utc) AS bars,
+                     MIN(open_time_utc) AS first_bar,
+                     MAX(open_time_utc) AS last_bar
+              FROM market_candles
+              WHERE source='twelve_data_session_aggregate_v1'
+                AND timeframe IN ('1h','4h','1d')
+              GROUP BY timeframe
+              ORDER BY timeframe;
+            " > /tmp/depth.json
+          python - <<'PY'
+          import json
+          for name in ('core','context','gates','conclusions','depth'):
+              p=json.load(open('/tmp/'+name+'.json',encoding='utf-8'))
+              rows=(p[0] or {}).get('results') or []
+              print('VERIFY_'+name.upper()+'='+json.dumps(rows,sort_keys=True))
+          PY
