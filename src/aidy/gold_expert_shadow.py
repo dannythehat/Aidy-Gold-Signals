@@ -73,7 +73,6 @@ from aidy.gold_macro_event_expert import (
     MACRO_EVENT_EXPERT_VERSION,
     MACRO_EVENT_GATE_ID,
 )
-from aidy.gold_meta_direction import build_meta_direction_view
 from aidy.gold_momentum_impulse_expert import (
     MOMENTUM_IMPULSE_GATE_ID,
     build_momentum_impulse_expert,
