@@ -7,8 +7,6 @@ Runs the frozen source state through the REAL 15-gate production path:
 Run from the Aidy-Gold-Signals repo root:  uv run python <this file>
 Touches no production state. Emits the real manifest for the pre-registration.
 """
-"""v8 discovery: run all 15 REAL expert builders and emit the true subcalculator manifest.
-Session-aware Gold timeline. Read-only."""
 from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
