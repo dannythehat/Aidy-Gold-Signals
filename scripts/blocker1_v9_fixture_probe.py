@@ -128,18 +128,63 @@ def prior_day_low(aggs: list[dict]) -> D:
     return D(d1[-2]["low"])
 
 
-def inject_low_reclaim(spine: list[dict], level: D) -> None:
-    # Five completed M1 bars. Bar 2 sweeps below the frozen prior-day low and
-    # closes back above it; bars 3-4 retest/hold; bar 5 confirms.
-    values = [
-        (level + D("0.52"), level + D("0.75"), level + D("0.17"), level + D("0.39")),
-        (level + D("0.39"), level + D("0.49"), level - D("0.55"), level + D("0.27")),
-        (level + D("0.27"), level + D("0.52"), level - D("0.03"), level + D("0.35")),
-        (level + D("0.35"), level + D("0.63"), level - D("0.04"), level + D("0.43")),
-        (level + D("0.43"), level + D("0.69"), level + D("0.15"), level + D("0.58")),
+def inject_bullish_recovery_with_low_reclaim(spine: list[dict], level: D) -> None:
+    """Create a real bullish structure/momentum path plus a genuine low reclaim.
+
+    The final 120 completed M1 bars rise deterministically around the frozen
+    prior-day low. A single bar 20 minutes before AS_OF sweeps below that level
+    and closes back above it; subsequent bars retest/hold and continue higher.
+    """
+    window = spine[-120:]
+    start = level - D("4.00")
+    finish = level + D("4.00")
+    step = (finish - start) / D(len(window) - 1)
+    previous_close = start
+    for i, row in enumerate(window):
+        close = (start + step * D(i)).quantize(D("0.01"))
+        open_ = previous_close
+        row["open"] = str(open_)
+        row["high"] = str(max(open_, close) + D("0.12"))
+        row["low"] = str(min(open_, close) - D("0.12"))
+        row["close"] = str(close)
+        previous_close = close
+
+    sweep_i = len(window) - 20
+    sweep = window[sweep_i]
+    sweep["open"] = str(level + D("2.75"))
+    sweep["high"] = str(level + D("2.90"))
+    sweep["low"] = str(level - D("0.55"))
+    sweep["close"] = str(level + D("0.28"))
+
+    # Retest/hold, then resume the rising path strongly enough that the live
+    # M5/M15/momentum builders see the recovery rather than a one-bar spike.
+    recovery = [
+        (D("0.28"), D("0.62"), D("-0.04"), D("0.42")),
+        (D("0.42"), D("0.78"), D("-0.03"), D("0.58")),
+        (D("0.58"), D("0.92"), D("0.20"), D("0.76")),
+        (D("0.76"), D("1.10"), D("0.48"), D("0.94")),
+        (D("0.94"), D("1.28"), D("0.67"), D("1.12")),
     ]
-    for row, (o, h, l, c) in zip(spine[-5:], values, strict=True):
-        row["open"], row["high"], row["low"], row["close"] = map(str, (o, h, l, c))
+    for offset, (o, h, l, cl) in enumerate(recovery, start=1):
+        row = window[sweep_i + offset]
+        row["open"] = str(level + o)
+        row["high"] = str(level + h)
+        row["low"] = str(level + l)
+        row["close"] = str(level + cl)
+
+    remaining = window[sweep_i + 1 + len(recovery):]
+    if remaining:
+        start2 = level + D("1.12")
+        finish2 = level + D("4.00")
+        step2 = (finish2 - start2) / D(len(remaining))
+        prev = start2
+        for i, row in enumerate(remaining, start=1):
+            close = (start2 + step2 * D(i)).quantize(D("0.01"))
+            row["open"] = str(prev)
+            row["high"] = str(max(prev, close) + D("0.12"))
+            row["low"] = str(min(prev, close) - D("0.12"))
+            row["close"] = str(close)
+            prev = close
 
 
 def env(spine: list[dict], aggs: list[dict]) -> dict:
@@ -237,7 +282,7 @@ def main() -> int:
     spine = m1_spine(45)
     preliminary = aggregate(spine)
     frozen_pdl = prior_day_low(preliminary)
-    inject_low_reclaim(spine, frozen_pdl)
+    inject_bullish_recovery_with_low_reclaim(spine, frozen_pdl)
 
     rows = spine[-2880:]
     aggs = aggregate(spine)
