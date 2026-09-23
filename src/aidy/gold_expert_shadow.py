@@ -87,8 +87,8 @@ from aidy.gold_price_location_expert import (
     build_price_location_expert,
 )
 from aidy.gold_rates_usd_cross_asset_expert import (
-    RATES_CROSS_ASSET_EXPERT_VERSION,
     RATES_CROSS_ASSET_GATE_ID,
+    build_rates_usd_cross_asset_expert,
 )
 from aidy.gold_session_participation_expert import (
     SESSION_PARTICIPATION_GATE_ID,
@@ -99,6 +99,7 @@ from aidy.gold_volatility_jump_expert import (
     build_volatility_jump_expert,
 )
 from aidy.private_forward_context import load_private_forward_snapshot_bundle
+from aidy.treasury_rate_vintages import build_treasury_rate_records
 
 GOLD_EXPERT_SHADOW_VERSION = "aidy_gold_expert_shadow_v1"
 GOLD_EXPERT_SCORECARD_VERSION = "aidy_gold_expert_scorecard_v1"
@@ -125,10 +126,6 @@ EXPECTED_GATES = (
 
 _DISCONNECTED_CONTEXT_GATES = {
     MACRO_EVENT_GATE_ID: (MACRO_EVENT_EXPERT_VERSION, "event"),
-    RATES_CROSS_ASSET_GATE_ID: (
-        RATES_CROSS_ASSET_EXPERT_VERSION,
-        "rates_usd",
-    ),
     FUTURES_MICROSTRUCTURE_GATE_ID: (
         FUTURES_MICROSTRUCTURE_EXPERT_VERSION,
         "futures_microstructure",
@@ -521,6 +518,29 @@ class D1GoldExpertShadowStore:
             trust_rows_by_subject=rows,
         )
 
+    async def _treasury_rate_rows(
+        self,
+        *,
+        as_of: datetime,
+    ) -> list[dict[str, Any]]:
+        """Treasury curve rows we could already have held at `as_of`.
+
+        `first_observed_at` is when the row entered this database, so filtering on it is
+        what stops a cycle reading a curve we had not yet fetched. The adapter applies
+        the conservative publication bound on top; this is the other half of the same
+        guarantee.
+        """
+        rows = await self._d1.prepare(
+            """
+            SELECT series_id,observation_date,value,revision_index,
+                   first_observed_at,source,source_url,source_document_digest
+            FROM cross_market_observations
+            WHERE source='us_treasury' AND first_observed_at<=?
+            ORDER BY series_id,observation_date,revision_index
+            """
+        ).bind(as_of.isoformat()).all()
+        return [dict(item) for item in _results(rows)]
+
     async def _build_experts(
         self,
         *,
@@ -550,6 +570,10 @@ class D1GoldExpertShadowStore:
             for item in candles
             if str(item.get("timeframe") or "").upper() == "M1"
         ]
+
+        rate_records = build_treasury_rate_records(
+            await self._treasury_rate_rows(as_of=as_of)
+        )
 
         common = {
             "global_environment": environment,
@@ -607,6 +631,21 @@ class D1GoldExpertShadowStore:
                     "m1_candle_rows": m1_rows,
                     "clock_volatility_history": (),
                     "qualified_volatility_state": None,
+                },
+                as_of=as_of,
+            )
+        )
+        results.append(
+            await self._build_with_history(
+                builder=build_rates_usd_cross_asset_expert,
+                kwargs={
+                    "global_environment": environment,
+                    "rates_version_records": rate_records,
+                    # Build 17 returned NO-GO, so no intraday cross-asset feed is stored
+                    # and no relationship history exists yet. The expert reports those
+                    # blocks unknown rather than being handed invented rows.
+                    "cross_asset_observations": (),
+                    "relationship_history_rows": (),
                 },
                 as_of=as_of,
             )

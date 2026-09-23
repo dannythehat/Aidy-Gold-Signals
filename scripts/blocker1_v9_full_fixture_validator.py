@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal as D
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from blocker1_v9_fixture_probe import (
     AS_OF,
@@ -24,19 +25,19 @@ from blocker1_v9_fixture_probe import (
     m1_spine,
     prior_day_low,
 )
+
 from aidy.gold_d1_context_expert import build_d1_context_expert
-from aidy.gold_evidence_dependency import (
-    FAMILY_PARENT,
-    build_evidence_dependency_engine,
-    extract_dependency_signals,
-)
 from aidy.gold_environment_gate_selector import (
     build_environment_aware_gate_selector,
     build_gate_selector_input,
 )
+from aidy.gold_evidence_dependency import (
+    build_evidence_dependency_engine,
+    extract_dependency_signals,
+)
 from aidy.gold_expert_shadow import (
-    EXPECTED_GATES,
     _DISCONNECTED_CONTEXT_GATES,
+    EXPECTED_GATES,
     _unknown_context_result,
 )
 from aidy.gold_expert_trust import (
@@ -47,14 +48,18 @@ from aidy.gold_expert_trust import (
 from aidy.gold_h1_price_structure_expert import build_h1_price_structure_expert
 from aidy.gold_h4_price_structure_expert import build_h4_price_structure_expert
 from aidy.gold_liquidity_reclaim_expert import build_liquidity_reclaim_expert
-from aidy.gold_m15_price_structure_expert import build_m15_price_structure_expert
 from aidy.gold_m5_price_structure_expert import build_m5_price_structure_expert
+from aidy.gold_m15_price_structure_expert import build_m15_price_structure_expert
 from aidy.gold_meta_direction import build_meta_direction_view
 from aidy.gold_momentum_impulse_expert import build_momentum_impulse_expert
 from aidy.gold_price_expert_math import build_price_expert_math_packet
 from aidy.gold_price_location_expert import (
     PRICE_LOCATION_GATE_ID,
     build_price_location_expert,
+)
+from aidy.gold_rates_usd_cross_asset_expert import (
+    RATES_CROSS_ASSET_EXPERT_VERSION,
+    RATES_CROSS_ASSET_GATE_ID,
 )
 from aidy.gold_session_participation_expert import build_session_participation_expert
 from aidy.gold_volatility_jump_expert import build_volatility_jump_expert
@@ -242,9 +247,23 @@ def build_connected_state() -> tuple[dict, list[dict], dict[str, Any]]:
     return environment, connected, market_state
 
 
+#: Gates this fixture holds at `unknown`. It is keyed off the live disconnected set plus
+#: any context gate the fixture deliberately does not build. The rates gate is connected
+#: in production as of 2026-09-23 but stays unknown here: this scenario exists to test
+#: directional family independence, and a context_only gate carries no directional mass,
+#: so building it would add fixture surface without changing what is under test.
+_FIXTURE_UNKNOWN_GATES = {
+    **_DISCONNECTED_CONTEXT_GATES,
+    RATES_CROSS_ASSET_GATE_ID: (RATES_CROSS_ASSET_EXPERT_VERSION, "rates_usd"),
+}
+
+
 def add_unknowns(environment: Mapping[str, Any], connected: list[dict]) -> list[dict]:
     results = list(connected)
-    for gate_id, (version, family) in _DISCONNECTED_CONTEXT_GATES.items():
+    built = {str(item["expert_packet"]["gate_id"]) for item in connected}
+    for gate_id, (version, family) in _FIXTURE_UNKNOWN_GATES.items():
+        if gate_id in built:
+            continue
         results.append(
             _unknown_context_result(
                 gate_id=gate_id,

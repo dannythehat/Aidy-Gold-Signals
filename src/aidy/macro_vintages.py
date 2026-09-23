@@ -18,6 +18,11 @@ DAY28_VERSION = "aidy_macro_vintages_v1"
 RATES_DECOMPOSITION_VERSION = "aidy_us_rates_decomposition_v1"
 REVISION_INTELLIGENCE_VERSION = "aidy_macro_revision_intelligence_v1"
 SOURCE_ALFRED = "fred_alfred"
+#: US Treasury publishes the daily yield curve itself, and `cross_market.py` has been
+#: storing it all along. Admitting it as a source is what lets the rates expert read
+#: real data instead of nothing; see `treasury_rate_vintages`.
+SOURCE_US_TREASURY = "us_treasury"
+SUPPORTED_SOURCES = frozenset({SOURCE_ALFRED, SOURCE_US_TREASURY})
 ALFRED_BASE = "https://alfred.stlouisfed.org/graph/alfredgraph.csv"
 
 SERIES_DGS2 = "DGS2"
@@ -393,7 +398,8 @@ def verify_version_record(record: Mapping[str, Any]) -> bool:
     supplied = str(body.pop("version_identity", ""))
     if not supplied or supplied != _digest(body):
         return False
-    if body.get("series_id") not in SERIES or body.get("source") != SOURCE_ALFRED:
+    source = body.get("source")
+    if body.get("series_id") not in SERIES or source not in SUPPORTED_SOURCES:
         return False
     if body.get("publication_time_precision") != PUBLICATION_TIME_PRECISION:
         return False
@@ -404,7 +410,18 @@ def verify_version_record(record: Mapping[str, Any]) -> bool:
         available = _utc(str(body["pit_available_after_utc"]))
     except (KeyError, ValueError):
         return False
-    return available == conservative_available_after(vintage)
+    conservative = conservative_available_after(vintage)
+    if source == SOURCE_ALFRED:
+        return available == conservative
+    #: A Treasury record may declare availability LATER than the conservative rule, and
+    #: never earlier. The daily curve is published on the vintage date itself (about
+    #: 19:30-22:00 UTC), so midnight UTC the following day is already conservative for
+    #: it - but rows backfilled from Treasury's yearly XML were not in our hands until
+    #: the moment we fetched them, and claiming otherwise would be lookahead in any
+    #: replay. Allowing a later timestamp lets the adapter carry whichever is later.
+    #: Moving availability later can only withhold evidence the system might have used;
+    #: it can never manufacture knowledge the system did not have.
+    return available >= conservative
 
 
 def reconstruct_series_as_of(

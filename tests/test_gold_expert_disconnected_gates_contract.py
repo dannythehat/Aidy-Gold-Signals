@@ -1,4 +1,4 @@
-"""The five stubbed experts, declared rather than silently absent.
+"""The stubbed experts, declared rather than silently absent.
 
 `gold_expert_shadow` holds `_DISCONNECTED_CONTEXT_GATES`: five fully built, fully
 tested experts whose real builders the live shadow loop never calls. It emits
@@ -30,9 +30,12 @@ _SRC = Path(__file__).resolve().parents[1] / "src" / "aidy"
 
 #: Gate id -> the module that owns the expert. Spelled out so that adding a gate to the
 #: disconnected set without deciding what owns it fails here.
+#:
+#: rates_usd_cross_asset_expert was one of these until 2026-09-23. It is now connected:
+#: `treasury_rate_vintages` adapts the Treasury curve AIDY already stored into the
+#: records it asks for. Four remain.
 _OWNING_MODULE = {
     "macro_event_expert": "gold_macro_event_expert.py",
-    "rates_usd_cross_asset_expert": "gold_rates_usd_cross_asset_expert.py",
     "futures_microstructure_expert": "gold_futures_microstructure_expert.py",
     "news_movement_mechanism_expert": "gold_news_movement_mechanism_expert.py",
     "analogue_episode_expert": "gold_analogue_episode_expert.py",
@@ -55,9 +58,9 @@ def _declares_context_only(module_name: str) -> bool:
     )
 
 
-def test_the_disconnected_set_is_exactly_the_five_known_stubs() -> None:
-    """Pinned so that disconnecting a sixth expert - or reconnecting one of these -
-    is a deliberate change a reviewer sees, not a one-line edit nobody notices."""
+def test_the_disconnected_set_is_exactly_the_known_stubs() -> None:
+    """Pinned so that disconnecting another expert - or reconnecting one of these - is a
+    deliberate change a reviewer sees, not a one-line edit nobody notices."""
     assert set(_DISCONNECTED_CONTEXT_GATES) == set(_OWNING_MODULE)
 
 
