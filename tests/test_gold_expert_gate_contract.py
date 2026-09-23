@@ -10,6 +10,9 @@ from aidy.gold_expert_gate_contract import (
     build_expert_gate_packet,
     verify_expert_gate_packet,
 )
+from aidy.gold_expert_gate_contract import (
+    subcalculator_is_scoreable as contract_is_scoreable,
+)
 
 AS_OF = datetime(2026, 9, 21, 8, 10, tzinfo=UTC)
 TARGET = datetime(2026, 9, 21, 8, 15, tzinfo=UTC)
@@ -433,3 +436,87 @@ def test_build2_direction_requires_matching_scoreable_subcalculator() -> None:
     calculators[1]["vote"] = "bullish"
     with pytest.raises(ValueError, match="matching scoreable"):
         _build(subcalculators=calculators, conclusion="bearish")
+
+
+def _neutral_calculators() -> list[dict]:
+    """Both directional subcalculators vote neutral with no strength.
+
+    This is exactly what the live experts emit: gold_h1_price_structure_expert
+    writes `"strength": _fmt(base if vote in {"bullish","bearish"} else None)`.
+    """
+    calculators = _known_calculators()
+    for item in calculators:
+        item["vote"] = "neutral"
+        item["strength"] = None
+    return calculators
+
+
+def test_build2_a_neutral_vote_is_scoreable_evidence() -> None:
+    """A neutral vote is a falsifiable claim - "no meaningful move" - and the rest
+    of the system already scores it. Only this contract used to disagree, which
+    threw away 30 per cent of every directional expert's output."""
+    packet = _build(
+        subcalculators=_neutral_calculators(),
+        conclusion="neutral",
+        internal_conviction=None,
+    )
+    assert verify_expert_gate_packet(packet)
+    votes = {item["calculator_id"]: item for item in packet["subcalculators"]}
+    for item in votes.values():
+        assert item["vote"] == "neutral"
+        assert item["scoreable"] is True, "a neutral vote must become evidence"
+
+
+def test_build2_a_neutral_vote_does_not_require_strength() -> None:
+    """Experts emit strength=None beside a neutral vote. Tying the strength
+    requirement to scoreability would raise on every one of them and take the
+    whole shadow loop down."""
+    packet = _build(
+        subcalculators=_neutral_calculators(),
+        conclusion="neutral",
+        internal_conviction=None,
+    )
+    for item in packet["subcalculators"]:
+        assert item["strength"] is None
+    assert verify_expert_gate_packet(packet)
+
+
+def test_build2_a_committed_direction_still_requires_strength() -> None:
+    calculators = _known_calculators()
+    for item in calculators:
+        item["strength"] = None
+    with pytest.raises(ValueError, match="strength"):
+        _build(subcalculators=calculators)
+
+
+def test_build2_construction_and_verification_share_one_scoreable_rule() -> None:
+    """The rule was written out twice - once when building the packet, once when
+    verifying it - and changing only the first silently failed every expert with
+    "packet failed Build-2 verification". One definition now, used by both.
+    """
+    import inspect
+
+    from aidy import gold_expert_gate_contract as contract
+
+    source = inspect.getsource(contract)
+    builder = source.index("def build_expert_gate_packet(")
+    verifier = source.index("def verify_expert_gate_packet(")
+
+    # Neither half may re-spell the rule; both must call the shared helper.
+    for half in (source[builder:verifier], source[verifier:]):
+        assert 'vote in {"bullish", "bearish"}' not in half, (
+            "the scoreable rule must not be written out again; "
+            "call subcalculator_is_scoreable()"
+        )
+    assert source.count("def subcalculator_is_scoreable(") == 1
+
+
+def test_build2_abstain_and_unknown_remain_unscoreable() -> None:
+    """Only a committed claim can be checked. An abstention makes none."""
+    for vote in ("abstain", "unknown"):
+        assert (
+            contract_is_scoreable(role="directional", state="known", vote=vote) is False
+        )
+    assert contract_is_scoreable(role="directional", state="known", vote="neutral")
+    assert contract_is_scoreable(role="directional", state="unknown", vote="neutral") is False
+    assert contract_is_scoreable(role="context_only", state="known", vote="neutral") is False
