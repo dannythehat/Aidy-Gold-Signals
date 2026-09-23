@@ -19,7 +19,20 @@ from typing import Any
 from aidy.gold_cycle_environment import verify_cycle_environment
 from aidy.gold_environment_contract import assert_no_hindsight_fields
 
-EXPERT_GATE_CONTRACT_VERSION = "aidy_gold_expert_gate_contract_v1"
+#: The version the builder emits. v2 scores neutral subcalculator votes; v1 did not.
+#: The rule is part of the packet's meaning, so changing it without a new version left
+#: 1,785 stored v1 packets unverifiable and wedged the shadow loop for five hours.
+EXPERT_GATE_CONTRACT_VERSION = "aidy_gold_expert_gate_contract_v2"
+
+#: Packets written before neutral votes became scoreable. Still verifiable, still
+#: scored, never rewritten - their calculator_digest seals `scoreable`, so amending a
+#: stored packet to match a newer rule would mean breaking the seal that makes it
+#: evidence. The packet declares its rule; verification honours it.
+LEGACY_EXPERT_GATE_CONTRACT_VERSION = "aidy_gold_expert_gate_contract_v1"
+
+SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS = frozenset(
+    {EXPERT_GATE_CONTRACT_VERSION, LEGACY_EXPERT_GATE_CONTRACT_VERSION}
+)
 
 GATE_MODES = frozenset({"directional", "context_only"})
 GATE_CONCLUSIONS = frozenset(
@@ -345,8 +358,19 @@ COMMITTED_DIRECTION_VOTES = frozenset({"bullish", "bearish"})
 SCOREABLE_VOTES = frozenset({"bullish", "bearish", "neutral"})
 
 
-def subcalculator_is_scoreable(*, role: str, state: str, vote: str) -> bool:
+def subcalculator_is_scoreable(
+    *,
+    role: str,
+    state: str,
+    vote: str,
+    contract_version: str = EXPERT_GATE_CONTRACT_VERSION,
+) -> bool:
     """Can this subcalculator vote be checked against a realised outcome?
+
+    `contract_version` is the rule the packet was built under, and it defaults to the
+    current one so building always uses the newest rule. Verification passes the
+    packet's own declared version, because a stored packet must be judged by the rule
+    in force when it was written - not the rule that happens to be deployed now.
 
     A neutral vote is a falsifiable claim - "no meaningful move" - and the rest of
     the system already treats it as one: `score_directional_outcome` accepts
@@ -366,7 +390,11 @@ def subcalculator_is_scoreable(*, role: str, state: str, vote: str) -> bool:
     scarcest resource here, labelled evidence, from discarded into usable, and it
     lets trust finally see an over-neutral expert.
     """
-    return role == "directional" and state == "known" and vote in SCOREABLE_VOTES
+    if role != "directional" or state != "known":
+        return False
+    if contract_version == LEGACY_EXPERT_GATE_CONTRACT_VERSION:
+        return vote in COMMITTED_DIRECTION_VOTES
+    return vote in SCOREABLE_VOTES
 
 
 def subcalculator_strength_required(*, role: str, state: str, vote: str) -> bool:
@@ -616,7 +644,8 @@ def verify_expert_gate_packet(value: Mapping[str, Any]) -> bool:
         supplied = str(body.pop("packet_digest", ""))
         if not supplied or supplied != _digest(body):
             return False
-        if body.get("contract_version") != EXPERT_GATE_CONTRACT_VERSION:
+        packet_contract_version = str(body.get("contract_version") or "")
+        if packet_contract_version not in SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS:
             return False
         if body.get("research_only") is not True:
             return False
@@ -759,7 +788,10 @@ def verify_expert_gate_packet(value: Mapping[str, Any]) -> bool:
             if not str(item.get("explanation") or "").strip():
                 return False
             expected_scoreable = subcalculator_is_scoreable(
-                role=role, state=state, vote=vote
+                role=role,
+                state=state,
+                vote=vote,
+                contract_version=packet_contract_version,
             )
             if item.get("scoreable") is not expected_scoreable:
                 return False
@@ -850,6 +882,8 @@ __all__ = [
     "EXPERT_GATE_CONTRACT_VERSION",
     "GATE_CONCLUSIONS",
     "GATE_MODES",
+    "LEGACY_EXPERT_GATE_CONTRACT_VERSION",
+    "SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS",
     "build_expert_gate_packet",
     "verify_expert_gate_packet",
 ]
