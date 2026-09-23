@@ -1,6 +1,6 @@
 const DATA_URL='/data/public-performance.json';
 const API='/account-api';
-const PUBLIC_LIVE_URL=`${API}/account/mt5/dashboard/public-performance`;
+const PUBLIC_LIVE_URL=`${API}/account/mt5/dashboard/public-performance-calendar`;
 const PUBLIC_CACHE_KEY='smart-signals-public-performance-v10';
 const LIVE_REFRESH_MS=5000;
 const LIVE_FETCH_TIMEOUT_MS=8000;

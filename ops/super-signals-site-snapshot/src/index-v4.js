@@ -57,7 +57,7 @@ function unavailableResponse() {
 }
 
 async function fetchLivePublicPerformance() {
-  const upstream = new URL('/account/mt5/dashboard/public-performance', ACCOUNT_API_ORIGIN);
+  const upstream = new URL('/account/mt5/dashboard/public-performance-calendar', ACCOUNT_API_ORIGIN);
   upstream.searchParams.set('worker_live', String(Date.now()));
   const delays = [0, 180, 550];
 

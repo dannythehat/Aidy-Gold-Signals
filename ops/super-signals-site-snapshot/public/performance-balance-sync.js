@@ -52,20 +52,11 @@
 
   function applyDashboardToPerformance(dashboard,role){
     if(!dashboard||!roleAllowed(role))return false;
-    try{
-      if(typeof data==='undefined'||!data||typeof mergeOwnerDaily!=='function'||typeof latestRecord!=='function')return false;
-      mergeOwnerDaily(dashboard);
-      const latest=latestRecord();
-      if(latest&&typeof visible!=='undefined'){
-        const [year,month]=String(latest.date).split('-').map(Number);
-        visible={year,month};
-      }
-      if(typeof renderSummary==='function')renderSummary();
-      if(typeof renderCalendar==='function')renderCalendar();
-      if(typeof renderTable==='function')renderTable();
-      if(latest&&typeof renderDay==='function')renderDay(latest);
-      return true;
-    }catch{return false;}
+    // The public 21:00-Sofia equity feed is the only calendar authority.
+    // Signed-in dashboard refreshes may update the headline account value, but must
+    // never overwrite calendar days with the dashboard's different aggregation path.
+    updateBalance(dashboard);
+    return true;
   }
 
   function applyWhenReady(dashboard,role,attempt=0){
