@@ -1,0 +1,213 @@
+/* Smart Signals launch depth — shared visual system across public and member pages. */
+:root {
+  --launch-cyan: 53,214,232;
+  --launch-green: 34,224,107;
+  --launch-blue: 74,144,255;
+  --launch-gold: 232,163,61;
+  --launch-violet: 142,104,255;
+  --launch-panel: rgba(6,20,29,.94);
+}
+
+body {
+  background:
+    radial-gradient(circle at 8% 2%, rgba(var(--launch-cyan),.10), transparent 24%),
+    radial-gradient(circle at 94% 22%, rgba(var(--launch-green),.075), transparent 26%),
+    radial-gradient(circle at 14% 72%, rgba(var(--launch-blue),.055), transparent 28%),
+    linear-gradient(180deg,#050d14 0%,#07131b 48%,#050c13 100%) !important;
+}
+
+.site-header .nav-shell,
+.join-header,
+.member-header,
+.performance-header,
+.guide-header {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    inset 0 -1px 0 rgba(var(--launch-cyan),.07),
+    0 10px 0 rgba(1,8,12,.28),
+    0 28px 58px -38px rgba(var(--launch-cyan),.34) !important;
+}
+
+/* ---------- Homepage: every major section is visibly its own layer ---------- */
+body:not(.explainer-page) .content-section,
+.canonical-home-onboarding {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: auto;
+  margin: 18px clamp(10px,2vw,24px) !important;
+  border: 1px solid rgba(var(--launch-cyan),.16) !important;
+  border-radius: clamp(24px,3vw,34px) !important;
+  background:
+    radial-gradient(circle at 94% 2%,rgba(var(--launch-cyan),.09),transparent 31%),
+    linear-gradient(145deg,rgba(8,29,39,.94),rgba(4,14,22,.97)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 0 rgba(0,0,0,.58),
+    0 7px 0 rgba(0,0,0,.34),
+    0 34px 78px -48px rgba(0,0,0,.98),
+    0 28px 68px -55px rgba(var(--launch-cyan),.50) !important;
+}
+
+body:not(.explainer-page) .content-section::after,
+.canonical-home-onboarding::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:-1;
+  border-radius:inherit;
+  background:linear-gradient(112deg,rgba(255,255,255,.045),transparent 21%,transparent 72%,rgba(255,255,255,.012));
+}
+
+#what-we-do { --section-accent: var(--launch-cyan); }
+.smart-trading { --section-accent: var(--launch-blue); }
+.results-section { --section-accent: var(--launch-green); }
+.how-section { --section-accent: var(--launch-violet); }
+#trust { --section-accent: var(--launch-gold); }
+#faq { --section-accent: var(--launch-cyan); }
+
+body:not(.explainer-page) .content-section {
+  border-color: rgba(var(--section-accent,var(--launch-cyan)),.25) !important;
+  background:
+    radial-gradient(circle at 94% 3%,rgba(var(--section-accent,var(--launch-cyan)),.15),transparent 34%),
+    radial-gradient(circle at 5% 100%,rgba(var(--section-accent,var(--launch-cyan)),.055),transparent 38%),
+    linear-gradient(145deg,rgba(8,28,38,.95),rgba(4,14,22,.98)) !important;
+}
+
+.value-card,.trading-card,.result-card,.step-card,.trust-card,.faq-item,
+.canonical-step {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    inset 0 -1px 0 rgba(0,0,0,.50),
+    0 5px 0 rgba(0,0,0,.31),
+    0 24px 52px -38px rgba(0,0,0,.95) !important;
+}
+
+.hero-button,.copy-link,.canonical-step__button,
+.home-auth-login,.home-auth-signup,.home-auth-account,
+.mobile-header-login,.mobile-header-signup,.mobile-header-account {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    inset 0 -1px 0 rgba(0,0,0,.22),
+    0 5px 0 rgba(1,18,24,.68),
+    0 18px 30px -22px rgba(var(--launch-cyan),.62) !important;
+}
+
+.canonical-onboarding-price--link {
+  cursor:pointer;
+  text-decoration:none;
+  transition:transform .15s ease,box-shadow .15s ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.15),
+    0 5px 0 rgba(5,65,38,.68),
+    0 20px 34px -24px rgba(var(--launch-green),.70) !important;
+}
+.canonical-onboarding-price--link::after {
+  content:"Activate →";
+  color:#d9ffe6;
+  font:700 .62rem "JetBrains Mono",monospace;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.canonical-onboarding-price--link:active { transform:translateY(3px); }
+
+/* ---------- Join/setup: stronger stages, no flat stacked sheets ---------- */
+.setup-content { gap:22px !important; }
+.setup-hero,
+.setup-card {
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  border-width:1px !important;
+  border-radius:28px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    inset 0 -1px 0 rgba(0,0,0,.58),
+    0 8px 0 rgba(1,8,12,.44),
+    0 38px 78px -48px rgba(0,0,0,.98) !important;
+}
+.setup-hero {
+  border-color:rgba(var(--launch-cyan),.40) !important;
+  background:
+    radial-gradient(circle at 92% 4%,rgba(var(--launch-green),.22),transparent 33%),
+    radial-gradient(circle at 2% 98%,rgba(var(--launch-cyan),.20),transparent 38%),
+    linear-gradient(145deg,rgba(9,50,56,.91),rgba(5,20,30,.96)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 8px 0 rgba(3,38,42,.66),0 36px 78px -46px rgba(var(--launch-cyan),.48) !important;
+}
+.setup-card--account { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(4,44,49,.62),0 36px 74px -48px rgba(var(--launch-cyan),.52) !important; }
+.setup-card--vantage { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(61,42,12,.62),0 36px 74px -48px rgba(var(--launch-gold),.48) !important; }
+.setup-card--mt5 { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(13,40,76,.62),0 36px 74px -48px rgba(var(--launch-blue),.50) !important; }
+.setup-card--accounts,.setup-card--mode { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(36,26,75,.62),0 36px 74px -48px rgba(var(--launch-violet),.50) !important; }
+.setup-card--subscription { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(7,58,34,.64),0 36px 74px -48px rgba(var(--launch-green),.54) !important; }
+.setup-card--ready { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(38,28,76,.62),0 36px 74px -48px rgba(var(--launch-violet),.48) !important; }
+
+.setup-card h2,.setup-hero h2 { color:#fff !important;text-shadow:0 2px 0 rgba(0,0,0,.78),0 10px 24px rgba(0,0,0,.38) !important; }
+.setup-lead,.setup-hero>p:not(.eyebrow),.explain-grid p,.mt5-help-card p { color:#d7e1e3 !important; }
+.account-form input,.mt5-connect-form input { box-shadow:inset 0 3px 10px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.05) !important; }
+.primary-action,.mt5-connect-action,.payment-copy-all,.vantage-signup-card,.account-choice {
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 6px 0 rgba(0,0,0,.38),0 22px 38px -28px currentColor !important;
+}
+
+/* ---------- My account: stronger visual hierarchy ---------- */
+.member-shell > section {
+  border-radius:28px !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(0,0,0,.38),0 36px 76px -48px rgba(0,0,0,.98) !important;
+}
+.balance-panel { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(5,50,31,.66),0 36px 76px -48px rgba(var(--launch-green),.56) !important; }
+.today-panel { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(4,42,50,.64),0 36px 76px -48px rgba(var(--launch-cyan),.54) !important; }
+.trades-panel { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(10,34,66,.64),0 36px 76px -48px rgba(var(--launch-blue),.50) !important; }
+.trades-panel--recent { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(57,38,12,.64),0 36px 76px -48px rgba(var(--launch-gold),.46) !important; }
+.performance-panel { box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 0 rgba(37,27,73,.64),0 36px 76px -48px rgba(var(--launch-violet),.50) !important; }
+.balance-card,.today-grid article,.performance-grid article,.trade-row,.empty-state,.action-card { box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 5px 0 rgba(0,0,0,.32),0 20px 42px -32px rgba(0,0,0,.94) !important; }
+
+/* ---------- Public performance: each module stands apart ---------- */
+.ledger-hero,.performance-summary,.history-section,.calculator-section,.challenge-section,.method-section {
+  position:relative;
+  overflow:hidden;
+  border-radius:30px !important;
+  border:1px solid rgba(var(--launch-cyan),.22) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 8px 0 rgba(0,0,0,.34),0 36px 78px -50px rgba(0,0,0,.98) !important;
+}
+.ledger-hero { background:radial-gradient(circle at 94% 4%,rgba(var(--launch-cyan),.16),transparent 34%),linear-gradient(145deg,rgba(8,38,49,.94),rgba(4,15,23,.97)) !important; }
+.performance-summary { border-color:rgba(var(--launch-green),.27)!important;background:radial-gradient(circle at 94% 4%,rgba(var(--launch-green),.15),transparent 34%),linear-gradient(145deg,rgba(8,36,30,.91),rgba(4,15,23,.97))!important; }
+.history-section { border-color:rgba(var(--launch-blue),.28)!important;background:radial-gradient(circle at 94% 4%,rgba(var(--launch-blue),.15),transparent 34%),linear-gradient(145deg,rgba(9,29,52,.91),rgba(4,15,23,.97))!important; }
+.calculator-section { border-color:rgba(var(--launch-violet),.28)!important;background:radial-gradient(circle at 94% 4%,rgba(var(--launch-violet),.16),transparent 34%),linear-gradient(145deg,rgba(31,25,59,.90),rgba(4,15,23,.97))!important; }
+.challenge-section { border-color:rgba(var(--launch-gold),.28)!important;background:radial-gradient(circle at 94% 4%,rgba(var(--launch-gold),.16),transparent 34%),linear-gradient(145deg,rgba(50,34,15,.87),rgba(4,15,23,.97))!important; }
+.method-section { border-color:rgba(var(--launch-cyan),.24)!important;background:radial-gradient(circle at 94% 4%,rgba(var(--launch-cyan),.12),transparent 34%),linear-gradient(145deg,rgba(8,31,40,.92),rgba(4,15,23,.97))!important; }
+.metric-card,.calendar-panel,.day-detail,.calculator-card,.challenge-board,.method-grid article,.publish-card { box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 5px 0 rgba(0,0,0,.31),0 22px 46px -34px rgba(0,0,0,.96) !important; }
+
+/* ---------- How we work: visible section boundaries ---------- */
+.explainer-page .guide-hero,
+.explainer-page .guide-section,
+.explainer-page .guide-cta {
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  margin-top:18px !important;
+  margin-bottom:18px !important;
+  border:1px solid rgba(var(--launch-green),.24) !important;
+  border-radius:30px !important;
+  background:radial-gradient(circle at 94% 3%,rgba(var(--launch-green),.12),transparent 34%),linear-gradient(145deg,rgba(7,32,29,.93),rgba(4,14,20,.98)) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 8px 0 rgba(3,32,22,.46),0 38px 78px -50px rgba(var(--launch-green),.32) !important;
+}
+.explainer-page .guide-section:nth-of-type(3n+2) { border-color:rgba(var(--launch-cyan),.25)!important;background:radial-gradient(circle at 94% 3%,rgba(var(--launch-cyan),.13),transparent 34%),linear-gradient(145deg,rgba(7,30,39,.93),rgba(4,14,20,.98))!important; }
+.explainer-page .guide-section:nth-of-type(3n+3) { border-color:rgba(var(--launch-blue),.25)!important;background:radial-gradient(circle at 94% 3%,rgba(var(--launch-blue),.13),transparent 34%),linear-gradient(145deg,rgba(9,25,46,.93),rgba(4,14,20,.98))!important; }
+.process-row,.audit-column,.life-node,.guide-status,.guide-principle { box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 5px 0 rgba(0,0,0,.30),0 22px 46px -34px rgba(0,0,0,.96) !important; }
+
+/* ---------- Mobile launch rules ---------- */
+@media (max-width:980px) {
+  .setup-rail { display:none !important; }
+  .join-shell { grid-template-columns:1fr !important;padding-top:14px !important; }
+  .setup-content { width:100% !important;max-width:none !important;gap:17px !important; }
+  .setup-hero,.setup-card { border-radius:24px !important; }
+}
+
+@media (max-width:680px) {
+  body:not(.explainer-page) .content-section,.canonical-home-onboarding { margin:12px 8px !important;border-radius:24px !important; }
+  .setup-content { gap:15px !important; }
+  .setup-hero,.setup-card { border-radius:22px !important;box-shadow:inset 0 1px 0 rgba(255,255,255,.11),0 5px 0 rgba(0,0,0,.40),0 26px 56px -40px rgba(0,0,0,.96) !important; }
+  .canonical-onboarding-price--link { width:100%;justify-content:space-between; }
+  .explainer-page .guide-hero,.explainer-page .guide-section,.explainer-page .guide-cta { margin:12px 8px !important;border-radius:24px !important; }
+  .ledger-hero,.performance-summary,.history-section,.calculator-section,.challenge-section,.method-section { border-radius:24px !important; }
+}

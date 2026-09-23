@@ -1,0 +1,386 @@
+/* Smart Signals premium v2 — launch visual system.
+   Designed to sit after existing page styles and launch-depth.css. */
+
+:root {
+  --p-cyan: 69, 222, 238;
+  --p-green: 49, 231, 132;
+  --p-blue: 92, 157, 255;
+  --p-gold: 242, 184, 84;
+  --p-violet: 157, 124, 255;
+  --p-ink: 3, 12, 19;
+}
+
+html { background: #040b11; }
+body {
+  background:
+    radial-gradient(900px 560px at 5% 4%, rgba(var(--p-cyan), .13), transparent 62%),
+    radial-gradient(850px 520px at 96% 22%, rgba(var(--p-green), .10), transparent 64%),
+    radial-gradient(850px 560px at 9% 70%, rgba(var(--p-blue), .075), transparent 65%),
+    radial-gradient(760px 520px at 95% 91%, rgba(var(--p-violet), .075), transparent 66%),
+    linear-gradient(180deg, #050d14 0%, #06111a 42%, #040b12 100%) !important;
+  color: #f7fbfb;
+}
+
+/* Header should feel like a floating control bar, not a flat strip. */
+.nav-shell,
+.join-header,
+.member-header,
+.performance-header,
+.guide-header {
+  border-color: rgba(var(--p-cyan), .20) !important;
+  background: linear-gradient(180deg, rgba(9, 27, 38, .94), rgba(4, 15, 23, .91)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -1px 0 rgba(var(--p-cyan),.08),
+    0 7px 0 rgba(0,0,0,.24),
+    0 28px 58px -34px rgba(0,0,0,.88),
+    0 20px 52px -42px rgba(var(--p-cyan),.52) !important;
+  backdrop-filter: blur(24px) saturate(155%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(155%) !important;
+}
+
+/* Major public-site sections become individual illuminated surfaces. */
+.content-section,
+.canonical-home-onboarding,
+.ledger-hero,
+.performance-summary,
+.history-section,
+.calculator-section,
+.challenge-section,
+.method-section,
+.guide-hero,
+.guide-section,
+.guide-cta,
+.setup-hero,
+.setup-card,
+.member-shell > section:not(.member-actions) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.content-section,
+.canonical-home-onboarding {
+  margin: 22px clamp(10px, 2.2vw, 28px) !important;
+  border-radius: clamp(26px, 3vw, 38px) !important;
+  border: 1px solid rgba(var(--section-accent, var(--p-cyan)), .30) !important;
+  background:
+    radial-gradient(600px 360px at 93% 4%, rgba(var(--section-accent, var(--p-cyan)), .18), transparent 68%),
+    radial-gradient(520px 340px at 4% 100%, rgba(var(--section-accent, var(--p-cyan)), .07), transparent 70%),
+    linear-gradient(145deg, rgba(9, 31, 42, .95), rgba(3, 13, 20, .985)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    inset 0 -1px 0 rgba(0,0,0,.62),
+    0 8px 0 rgba(0,0,0,.32),
+    0 38px 84px -48px rgba(0,0,0,.98),
+    0 30px 76px -58px rgba(var(--section-accent, var(--p-cyan)), .72) !important;
+}
+
+#what-we-do { --section-accent: var(--p-cyan); }
+.smart-trading { --section-accent: var(--p-blue); }
+.results-section { --section-accent: var(--p-green); }
+.how-section { --section-accent: var(--p-violet); }
+#trust { --section-accent: var(--p-gold); }
+#faq { --section-accent: var(--p-cyan); }
+
+.content-section::before,
+.canonical-home-onboarding::before,
+.setup-hero::before,
+.setup-card::before,
+.member-shell > section:not(.member-actions)::before,
+.ledger-hero::before,
+.performance-summary::before,
+.history-section::before,
+.calculator-section::before,
+.challenge-section::before,
+.method-section::before,
+.guide-hero::before,
+.guide-section::before,
+.guide-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(118deg, rgba(255,255,255,.07), transparent 18%, transparent 73%, rgba(255,255,255,.018));
+}
+
+/* Typography: bright enough to feel premium and deliberate. */
+.section-head h2,
+.split-copy h2,
+.final-cta h2,
+.setup-card h2,
+.setup-hero h2,
+.member-hero h1,
+.panel-head h2,
+.guide-hero h1,
+.guide-section h2,
+.ledger-hero h1,
+.performance-summary h2,
+.history-section h2,
+.calculator-section h2,
+.challenge-section h2,
+.method-section h2 {
+  color: #fbfefd !important;
+  text-shadow: 0 2px 0 rgba(0,0,0,.54), 0 14px 30px rgba(0,0,0,.38);
+}
+
+.section-lead,
+.split-copy > p,
+.value-card p,
+.trading-card p,
+.result-card p,
+.step-card p,
+.trust-card p,
+.faq-item p,
+.setup-lead,
+.member-hero p,
+.guide-hero__lead,
+.guide-section p,
+.ledger-intro {
+  color: #bdccd1 !important;
+}
+
+.section-kicker,
+.member-kicker,
+.panel-kicker,
+.guide-eyebrow,
+.eyebrow {
+  text-shadow: 0 0 22px currentColor;
+}
+
+/* Inner cards should visibly sit above their parent section. */
+.value-card,
+.trading-card,
+.result-card,
+.step-card,
+.trust-card,
+.faq-item,
+.canonical-step,
+.balance-card,
+.today-grid article,
+.performance-grid article,
+.trade-row,
+.empty-state,
+.action-card,
+.metric-card,
+.calendar-panel,
+.day-detail,
+.calculator-card,
+.challenge-board,
+.method-grid article,
+.publish-card,
+.explain-grid article,
+.trust-banner,
+.mt5-help-card,
+.broker-balance-card,
+.payment-copy-card,
+.payment-summary__item,
+.ready-checklist > div {
+  border-color: rgba(255,255,255,.13) !important;
+  background-color: rgba(7, 23, 32, .72) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    inset 0 -1px 0 rgba(0,0,0,.52),
+    0 5px 0 rgba(0,0,0,.34),
+    0 22px 46px -30px rgba(0,0,0,.96) !important;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.value-card:nth-child(1), .step-card:nth-child(1) { border-color: rgba(var(--p-cyan), .26) !important; background: radial-gradient(circle at 90% 0, rgba(var(--p-cyan),.11), transparent 40%), rgba(7,23,32,.76) !important; }
+.value-card:nth-child(2), .step-card:nth-child(2) { border-color: rgba(var(--p-green), .25) !important; background: radial-gradient(circle at 90% 0, rgba(var(--p-green),.10), transparent 40%), rgba(7,23,32,.76) !important; }
+.value-card:nth-child(3), .step-card:nth-child(3) { border-color: rgba(var(--p-blue), .26) !important; background: radial-gradient(circle at 90% 0, rgba(var(--p-blue),.11), transparent 40%), rgba(7,23,32,.76) !important; }
+.step-card:nth-child(4) { border-color: rgba(var(--p-violet), .26) !important; background: radial-gradient(circle at 90% 0, rgba(var(--p-violet),.11), transparent 40%), rgba(7,23,32,.76) !important; }
+
+/* Homepage results need to look like a flagship data product. */
+.result-card {
+  border-color: rgba(var(--p-green),.24) !important;
+  background:
+    radial-gradient(560px 280px at 96% 0, rgba(var(--p-green),.12), transparent 70%),
+    linear-gradient(145deg, rgba(8, 37, 31, .78), rgba(5, 19, 27, .90)) !important;
+}
+.metric-row {
+  border-top-color: rgba(var(--p-green), .13) !important;
+}
+.calendar-day {
+  border-color: rgba(255,255,255,.09) !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 5px 12px -10px rgba(0,0,0,.95);
+}
+.calendar-day--reference {
+  border-color: rgba(var(--p-cyan),.34) !important;
+  background: radial-gradient(circle at 90% 0, rgba(var(--p-cyan),.14), transparent 55%), rgba(var(--p-cyan),.045) !important;
+}
+
+/* Trading stack: cards should genuinely float above one another. */
+.trading-stack::before {
+  opacity: 1 !important;
+  filter: blur(26px) !important;
+}
+.trading-card {
+  border-color: rgba(var(--p-blue),.26) !important;
+  background:
+    radial-gradient(circle at 90% 0, rgba(var(--p-blue),.13), transparent 42%),
+    linear-gradient(145deg, rgba(13, 38, 61, .88), rgba(5, 19, 29, .94)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    0 7px 0 rgba(5,21,39,.70),
+    0 30px 54px -34px rgba(var(--p-blue),.52),
+    0 40px 80px -55px rgba(0,0,0,.98) !important;
+}
+
+/* Onboarding: every stage gets its own colour identity. */
+.setup-hero,
+.setup-card {
+  border-radius: 30px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -1px 0 rgba(0,0,0,.56),
+    0 8px 0 rgba(0,0,0,.34),
+    0 38px 84px -50px rgba(0,0,0,.98) !important;
+}
+.setup-hero {
+  border-color: rgba(var(--p-cyan),.42) !important;
+  background: radial-gradient(circle at 92% 3%, rgba(var(--p-green),.20), transparent 36%), radial-gradient(circle at 2% 100%, rgba(var(--p-cyan),.16), transparent 40%), linear-gradient(145deg, rgba(10,49,58,.94), rgba(4,17,26,.98)) !important;
+}
+.setup-card--account { border-color: rgba(var(--p-cyan),.34) !important; }
+.setup-card--vantage { border-color: rgba(var(--p-gold),.34) !important; }
+.setup-card--mt5 { border-color: rgba(var(--p-blue),.34) !important; }
+.setup-card--accounts, .setup-card--mode { border-color: rgba(var(--p-violet),.32) !important; }
+.setup-card--subscription { border-color: rgba(var(--p-green),.36) !important; }
+.setup-card--ready { border-color: rgba(var(--p-violet),.34) !important; }
+
+/* Member dashboard: visible hierarchy by function. */
+.member-shell { gap: 22px !important; }
+.member-shell > section:not(.member-actions) {
+  border-radius: 30px !important;
+  border-width: 1px !important;
+}
+.member-hero { border-color: rgba(var(--p-cyan), .33) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 8px 0 rgba(4,40,48,.62), 0 38px 82px -48px rgba(var(--p-cyan),.47) !important; }
+.balance-panel { border-color: rgba(var(--p-green), .34) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 8px 0 rgba(5,51,31,.62), 0 38px 82px -48px rgba(var(--p-green),.48) !important; }
+.today-panel { border-color: rgba(var(--p-cyan), .31) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 8px 0 rgba(4,42,50,.62), 0 38px 82px -48px rgba(var(--p-cyan),.45) !important; }
+.trades-panel { border-color: rgba(var(--p-blue), .30) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 8px 0 rgba(9,34,66,.62), 0 38px 82px -48px rgba(var(--p-blue),.43) !important; }
+.trades-panel--recent { border-color: rgba(var(--p-gold), .29) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 8px 0 rgba(57,39,13,.62), 0 38px 82px -48px rgba(var(--p-gold),.39) !important; }
+.performance-panel { border-color: rgba(var(--p-violet), .30) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.13), 0 8px 0 rgba(38,28,76,.62), 0 38px 82px -48px rgba(var(--p-violet),.42) !important; }
+
+/* Performance page modules. */
+.ledger-hero,
+.performance-summary,
+.history-section,
+.calculator-section,
+.challenge-section,
+.method-section {
+  margin: 22px auto !important;
+  border-radius: 32px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 0 rgba(0,0,0,.34), 0 40px 86px -52px rgba(0,0,0,.98) !important;
+}
+.performance-summary { border-color: rgba(var(--p-green),.32) !important; }
+.history-section { border-color: rgba(var(--p-blue),.31) !important; }
+.calculator-section { border-color: rgba(var(--p-violet),.31) !important; }
+.challenge-section { border-color: rgba(var(--p-gold),.31) !important; }
+.method-section { border-color: rgba(var(--p-cyan),.31) !important; }
+
+/* How it works page: stop it reading like one continuous dark document. */
+.explainer-page .guide-hero,
+.explainer-page .guide-section,
+.explainer-page .guide-cta {
+  border-radius: 32px !important;
+  border-color: rgba(var(--p-green),.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 0 rgba(4,39,26,.46), 0 38px 82px -50px rgba(var(--p-green),.34) !important;
+}
+
+/* Real 3D buttons across the site. */
+.hero-button,
+.copy-link,
+.home-auth-login,
+.home-auth-signup,
+.home-auth-account,
+.mobile-header-login,
+.mobile-header-signup,
+.mobile-header-account,
+.primary-action,
+.mt5-connect-action,
+.refresh-button,
+.payment-copy-all,
+.vantage-brand-card,
+.action-card {
+  transform: translateY(0);
+  transition: transform .14s ease, filter .14s ease, box-shadow .14s ease !important;
+}
+.hero-button--primary,
+.home-auth-signup,
+.mobile-header-signup,
+.primary-action,
+.mt5-connect-action {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.52),
+    inset 0 -2px 0 rgba(0,0,0,.18),
+    0 6px 0 rgba(5,92,67,.92),
+    0 18px 34px -18px rgba(var(--p-green),.70) !important;
+}
+.hero-button--secondary,
+.copy-link,
+.home-auth-login,
+.mobile-header-login,
+.home-auth-account,
+.mobile-header-account,
+.refresh-button {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.16),
+    0 5px 0 rgba(2,25,34,.86),
+    0 17px 30px -22px rgba(var(--p-cyan),.58) !important;
+}
+.hero-button:active,
+.copy-link:active,
+.home-auth-login:active,
+.home-auth-signup:active,
+.home-auth-account:active,
+.mobile-header-login:active,
+.mobile-header-signup:active,
+.mobile-header-account:active,
+.primary-action:active,
+.mt5-connect-action:active,
+.refresh-button:active,
+.payment-copy-all:active,
+.vantage-brand-card:active,
+.action-card:active {
+  transform: translateY(4px) !important;
+}
+
+@media (max-width: 760px) {
+  .content-section,
+  .canonical-home-onboarding {
+    margin: 14px 8px !important;
+    border-radius: 24px !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.10),
+      0 5px 0 rgba(0,0,0,.30),
+      0 26px 58px -38px rgba(0,0,0,.98),
+      0 24px 54px -46px rgba(var(--section-accent,var(--p-cyan)),.54) !important;
+  }
+  .section-shell { padding-top: 70px !important; padding-bottom: 70px !important; }
+  .setup-content, .member-shell { gap: 15px !important; }
+  .setup-hero, .setup-card, .member-shell > section:not(.member-actions) { border-radius: 23px !important; }
+  .ledger-hero, .performance-summary, .history-section, .calculator-section, .challenge-section, .method-section,
+  .explainer-page .guide-hero, .explainer-page .guide-section, .explainer-page .guide-cta { border-radius: 24px !important; }
+  .value-card, .result-card, .step-card, .trust-card, .faq-item, .trading-card { box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 4px 0 rgba(0,0,0,.30), 0 20px 38px -28px rgba(0,0,0,.94) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-button,
+  .copy-link,
+  .home-auth-login,
+  .home-auth-signup,
+  .home-auth-account,
+  .mobile-header-login,
+  .mobile-header-signup,
+  .mobile-header-account,
+  .primary-action,
+  .mt5-connect-action,
+  .refresh-button,
+  .payment-copy-all,
+  .vantage-brand-card,
+  .action-card { transition: none !important; }
+}

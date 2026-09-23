@@ -1,0 +1,375 @@
+.proof-section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(92px, 10vw, 150px) 0 clamp(96px, 11vw, 168px);
+  background: var(--void);
+  border-top: 1px solid rgba(232,239,242,0.055);
+}
+
+.proof-glow {
+  position: absolute;
+  z-index: -2;
+  width: min(1040px, 92vw);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.proof-glow img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: blur(18px);
+}
+
+.proof-section::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(6,13,20,0.28), rgba(6,13,20,0.82) 74%, var(--void));
+}
+
+.proof-inner {
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.proof-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(300px, 0.55fr);
+  align-items: end;
+  gap: clamp(28px, 6vw, 90px);
+  margin-bottom: clamp(40px, 5vw, 64px);
+}
+
+.section-eyebrow {
+  margin: 0 0 16px;
+  color: var(--cyan);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.proof-heading h2 {
+  max-width: 790px;
+  margin: 0;
+  color: var(--bone);
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: clamp(2.65rem, 5.2vw, 5.35rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+
+.proof-heading__note {
+  max-width: 390px;
+  margin: 0 0 5px;
+  color: #98abb7;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.proof-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr) minmax(0, 0.75fr);
+  grid-template-rows: auto auto;
+  gap: 14px;
+}
+
+.proof-card {
+  position: relative;
+  min-height: 186px;
+  padding: 26px 26px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  background: rgba(8,19,27,0.42);
+  border-color: rgba(232,239,242,0.09);
+}
+
+.proof-card--rejection {
+  grid-row: 1 / span 2;
+  min-height: 386px;
+  padding: clamp(30px, 4vw, 48px);
+  background: rgba(8,19,27,0.48);
+  border-color: rgba(34,224,107,0.20);
+}
+
+.proof-card--months {
+  grid-column: 2 / span 2;
+  min-height: 156px;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 28px;
+}
+
+.proof-label {
+  color: #8da0ad;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.69rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.proof-value {
+  display: block;
+  margin: 18px 0 8px;
+  color: var(--bone);
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(3rem, 5vw, 5rem);
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: -0.065em;
+  font-variant-numeric: tabular-nums;
+}
+
+.proof-card--rejection .proof-value {
+  margin: 26px 0 18px;
+  font-size: clamp(6.2rem, 12vw, 10.4rem);
+  color: var(--signal);
+  text-shadow: 0 0 38px rgba(34,224,107,0.16);
+}
+
+.proof-card--months .proof-value {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: clamp(3.2rem, 6vw, 5.6rem);
+}
+
+.proof-card p {
+  max-width: 430px;
+  margin: 0;
+  color: #8699a6;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.proof-card--rejection p {
+  max-width: 470px;
+  color: #9fb2bd;
+  font-size: 0.96rem;
+}
+
+.proof-source {
+  margin: 18px 2px 0;
+  color: #556b79;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.64rem;
+  letter-spacing: 0.035em;
+  line-height: 1.55;
+}
+
+.what-we-are {
+  margin-top: clamp(88px, 11vw, 160px);
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(340px, 0.68fr);
+  gap: clamp(48px, 9vw, 126px);
+  align-items: start;
+}
+
+.what-we-are h3 {
+  margin: 0;
+  max-width: 680px;
+  color: var(--bone);
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: clamp(2.45rem, 4.6vw, 4.6rem);
+  line-height: 1.01;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.what-we-are__copy {
+  padding-top: 7px;
+}
+
+.what-we-are__copy p {
+  margin: 0;
+  color: #a0b1bc;
+  font-size: clamp(1rem, 1.3vw, 1.12rem);
+  line-height: 1.75;
+}
+
+.what-we-are__copy p + p {
+  margin-top: 22px;
+}
+
+.day4-future-anchors {
+  position: relative;
+  height: 1px;
+  overflow: visible;
+  background: var(--void);
+}
+
+.day4-future-anchors .anchor-target {
+  top: -120px;
+}
+
+@media (max-width: 900px) {
+  .proof-inner {
+    width: min(100% - 34px, 720px);
+  }
+
+  .proof-heading,
+  .what-we-are {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-heading {
+    gap: 24px;
+  }
+
+  .proof-heading__note {
+    max-width: 600px;
+  }
+
+  .proof-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .proof-card--rejection {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 310px;
+  }
+
+  .proof-card--months {
+    grid-column: 1 / -1;
+  }
+
+  .what-we-are {
+    gap: 28px;
+  }
+
+  .what-we-are__copy {
+    max-width: 660px;
+  }
+}
+
+@media (max-width: 560px) {
+  .proof-section {
+    padding-top: 76px;
+    padding-bottom: 92px;
+  }
+
+  .proof-inner {
+    width: calc(100% - 26px);
+  }
+
+  .proof-heading {
+    margin-bottom: 30px;
+  }
+
+  .proof-heading h2 {
+    font-size: clamp(2.55rem, 12vw, 3.65rem);
+  }
+
+  .proof-heading__note {
+    font-size: 0.94rem;
+  }
+
+  .proof-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .proof-card {
+    min-height: 154px;
+    padding: 19px 17px;
+    border-radius: 18px;
+  }
+
+  .proof-card--rejection {
+    min-height: 270px;
+    padding: 26px 22px;
+  }
+
+  .proof-card--rejection .proof-value {
+    font-size: clamp(6rem, 29vw, 8.4rem);
+    margin: 18px 0 14px;
+  }
+
+  .proof-value {
+    font-size: clamp(2.8rem, 14vw, 4rem);
+  }
+
+  .proof-card p {
+    font-size: 0.78rem;
+  }
+
+  .proof-card--rejection p {
+    font-size: 0.88rem;
+  }
+
+  .proof-card--months {
+    min-height: 146px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: end;
+    gap: 16px;
+  }
+
+  .proof-card--months .proof-label {
+    grid-column: 1 / -1;
+  }
+
+  .proof-card--months .proof-value {
+    font-size: clamp(3rem, 15vw, 4.4rem);
+  }
+
+  .proof-source {
+    margin-top: 14px;
+    font-size: 0.58rem;
+  }
+
+  .what-we-are {
+    margin-top: 84px;
+  }
+
+  .what-we-are h3 {
+    font-size: clamp(2.35rem, 11.5vw, 3.4rem);
+  }
+
+  .what-we-are__copy p {
+    font-size: 0.98rem;
+    line-height: 1.68;
+  }
+
+  .proof-glow {
+    width: 135vw;
+    top: 28%;
+    opacity: 0.58;
+  }
+}
+
+@media (max-width: 390px) {
+  .proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-card--rejection,
+  .proof-card--months {
+    grid-column: auto;
+  }
+
+  .proof-card--months {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proof-glow img {
+    filter: blur(18px);
+  }
+}

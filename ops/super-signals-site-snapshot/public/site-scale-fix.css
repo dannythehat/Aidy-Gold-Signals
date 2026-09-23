@@ -1,0 +1,310 @@
+/* Smart Signals scale correction — keeps every page compact, readable and mobile-first. */
+
+/* Hidden auth controls must stay hidden even when component styles set display. */
+.home-auth-actions [hidden],
+.mobile-header-auth [hidden],
+#mobile-menu [hidden],
+.mobile-menu [hidden] { display:none !important; }
+
+/* Moderate desktop scale. */
+body.premium-v3 .section-shell,
+body.premium-v3 .guide-section,
+body.premium-v3 .guide-hero,
+body.premium-v3 .guide-cta,
+body.premium-v3 .perf-shell,
+body.premium-v3 .shell,
+body.premium-v3 .member-shell { max-width:1120px !important; }
+
+.page-home .section-head h2,
+.page-home .split-copy h2,
+.page-home .database-copy h2 { font-size:clamp(2rem,3.5vw,3.55rem) !important; line-height:1.02 !important; }
+.page-home .section-shell { padding:clamp(44px,5.5vw,72px) 0 !important; }
+.page-home .content-section,
+.page-home .canonical-home-onboarding,
+.page-home .onboarding-section { border-radius:26px !important; }
+
+@media (max-width:900px) {
+  html { font-size:15px; }
+
+  body.premium-v3 h1,
+  body.premium-v3 h2,
+  body.premium-v3 h3 { text-wrap:balance; }
+
+  /* Homepage header */
+  .page-home .nav-shell {
+    width:calc(100% - 16px) !important;
+    min-height:74px !important;
+    margin-top:8px !important;
+    padding:6px 8px 6px 10px !important;
+    border-radius:18px !important;
+    grid-template-columns:minmax(0,1fr) auto auto !important;
+    column-gap:6px !important;
+  }
+  .page-home .brand-logo { width:min(150px,42vw) !important; }
+  .page-home .menu-toggle { width:36px !important; height:36px !important; padding:7px 5px !important; }
+  .page-home .menu-toggle span { width:23px !important; }
+  .page-home .mobile-header-auth { display:flex !important; gap:5px !important; }
+  .page-home .mobile-header-login,
+  .page-home .mobile-header-signup,
+  .page-home .mobile-header-account {
+    min-height:35px !important;
+    padding:0 10px !important;
+    font-size:.68rem !important;
+    box-shadow:0 2px 0 rgba(0,0,0,.45) !important;
+  }
+  .page-home .mobile-header-login { display:none !important; }
+
+  /* Gold ticker */
+  .live-gold-wrap { width:calc(100% - 20px) !important; margin:8px auto 0 !important; }
+  .live-gold-bar {
+    min-height:44px !important;
+    grid-template-columns:auto minmax(95px,1fr) auto !important;
+    gap:9px !important;
+    padding:7px 10px !important;
+    border-radius:14px !important;
+  }
+  .live-gold-symbol { font-size:.64rem !important; }
+  .live-gold-price { font-size:1rem !important; }
+  .live-gold-detail { display:none !important; }
+  .live-gold-state { padding:5px 7px !important; font-size:.54rem !important; }
+
+  /* Homepage hero */
+  .page-home .hero { min-height:0 !important; }
+  .page-home .hero-inner {
+    width:calc(100% - 24px) !important;
+    min-height:0 !important;
+    padding:154px 0 30px !important;
+    grid-template-columns:1fr !important;
+    grid-template-rows:auto 220px !important;
+    gap:16px !important;
+  }
+  .page-home .hero-copy { padding-bottom:0 !important; }
+  .page-home .hero-eyebrow { margin-bottom:10px !important; font-size:.66rem !important; letter-spacing:.12em !important; }
+  .page-home .hero h1 {
+    max-width:520px !important;
+    font-size:clamp(2.15rem,8.7vw,2.75rem) !important;
+    line-height:1.01 !important;
+    letter-spacing:-.045em !important;
+  }
+  .page-home .hero-sub {
+    max-width:520px !important;
+    margin-top:14px !important;
+    font-size:0 !important;
+    line-height:1.5 !important;
+  }
+  .page-home .hero-sub::after {
+    content:"We audit Gold signal providers. Only proven performers reach Smart Signals Trading.";
+    display:block;
+    font-size:.92rem;
+    line-height:1.5;
+    color:#a9bcc4;
+  }
+  .page-home .hero-actions { margin-top:18px !important; gap:8px !important; }
+  .page-home .hero-button { min-height:43px !important; padding:0 14px !important; font-size:.78rem !important; }
+  .page-home .gate-stage { min-height:210px !important; max-height:230px !important; border-radius:20px !important; }
+
+  /* Homepage sections */
+  .page-home .content-section,
+  .page-home .canonical-home-onboarding,
+  .page-home .onboarding-section,
+  #what-we-do,
+  #smart-signals-trading,
+  #results,
+  #how-it-works,
+  #trust,
+  #faq {
+    margin:10px 8px 18px !important;
+    border-radius:20px !important;
+    border-bottom-width:2px !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 34px -28px rgba(0,0,0,.9) !important;
+  }
+  .page-home .section-shell,
+  .canonical-onboarding-shell { width:calc(100% - 28px) !important; padding:34px 0 !important; }
+  .page-home .section-head { margin-bottom:20px !important; }
+  .page-home .section-head h2,
+  .page-home .split-copy h2,
+  .page-home .database-copy h2,
+  #how-it-works #how-title::after {
+    font-size:clamp(1.85rem,7vw,2.25rem) !important;
+    line-height:1.03 !important;
+    letter-spacing:-.04em !important;
+  }
+  .page-home .section-lead,
+  .page-home .split-copy>p,
+  .page-home .database-copy>p { margin-top:10px !important; font-size:.88rem !important; line-height:1.5 !important; }
+  .page-home .section-kicker { font-size:.64rem !important; margin-bottom:8px !important; }
+
+  /* Compact all homepage cards */
+  .page-home .value-card,
+  .page-home .trading-card,
+  .page-home .result-card,
+  .page-home .trust-card,
+  .page-home .step-card,
+  .page-home .faq-item,
+  .page-home .performance-teaser-card,
+  .page-home .onboarding-step,
+  .page-home .database-point,
+  .page-home .database-mobile-card,
+  .canonical-step,
+  .canonical-onboarding-final {
+    min-height:0 !important;
+    padding:16px !important;
+    border-radius:16px !important;
+    border-bottom-width:1px !important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 24px -22px rgba(0,0,0,.9) !important;
+  }
+  .page-home .value-card h3,
+  .page-home .step-card h3,
+  .page-home .trading-card h3,
+  .page-home .performance-teaser-card h3,
+  .page-home .onboarding-step h3,
+  .page-home .database-mobile-card h3,
+  .canonical-step h3 { margin:10px 0 6px !important; font-size:1.14rem !important; line-height:1.12 !important; }
+  .page-home .value-card p,
+  .page-home .step-card p,
+  .page-home .trading-card p,
+  .page-home .performance-teaser-card p,
+  .page-home .onboarding-step p,
+  .page-home .database-mobile-card p,
+  .canonical-step p { margin-bottom:10px !important; font-size:.82rem !important; line-height:1.45 !important; }
+
+  .page-home .database-intro { gap:18px !important; }
+  .page-home .database-points { gap:8px !important; }
+  .page-home .database-point { padding:12px !important; }
+  .page-home .database-mobile-flow { gap:10px !important; }
+  .page-home .database-section .database-visual::before {
+    margin:24px 0 14px !important;
+    padding-top:20px !important;
+    font-size:1.55rem !important;
+    line-height:1.08 !important;
+  }
+
+  /* Trading section */
+  .page-home #smart-signals-trading .section-shell { min-height:0 !important; }
+  .page-home .trading-stack { min-height:250px !important; }
+  .page-home .trading-card { padding:14px !important; }
+
+  /* How it works — remove giant legacy timeline */
+  body #how-it-works.how-section { padding:30px 0 !important; }
+  body #how-it-works .section-head { margin:0 auto 20px !important; text-align:left !important; }
+  body #how-it-works #how-title::after { content:"How Smart Signals works." !important; }
+  body #how-it-works .section-lead { margin:10px 0 0 !important; font-size:0 !important; }
+  body #how-it-works .section-lead::after {
+    content:"Providers are tracked, tested, approved and reviewed again every month." !important;
+    font-size:.88rem !important;
+    line-height:1.5 !important;
+  }
+  body #how-it-works .section-head::after { display:none !important; }
+  body #how-it-works .home-steps {
+    grid-template-columns:1fr !important;
+    grid-template-rows:auto !important;
+    gap:9px !important;
+    margin:0 !important;
+  }
+  body #how-it-works .home-steps::before { display:none !important; }
+  body #how-it-works .step-card {
+    grid-column:1 !important;
+    grid-row:auto !important;
+    min-height:0 !important;
+    padding:16px !important;
+  }
+  body #how-it-works .step-card::before,
+  body #how-it-works .step-card::after { display:none !important; }
+  body #how-it-works .step-card h3::after { font-size:1.12rem !important; line-height:1.15 !important; }
+  body #how-it-works .step-card p::after { font-size:.81rem !important; line-height:1.42 !important; }
+  body #how-it-works .copy-link {
+    grid-template-columns:1fr !important;
+    gap:9px !important;
+    margin-top:9px !important;
+    padding-left:0 !important;
+  }
+  body #how-it-works .copy-link::before,
+  body #how-it-works .copy-link::after {
+    min-height:0 !important;
+    padding:15px !important;
+    border-radius:15px !important;
+    font-size:.81rem !important;
+    line-height:1.42 !important;
+  }
+  body #how-it-works .copy-link::before {
+    content:"05 · EXECUTED FAST\A\ASignals are placed and managed automatically." !important;
+  }
+  body #how-it-works .copy-link::after {
+    content:"06 · REVIEWED MONTHLY\A\AProviders must keep earning their place." !important;
+  }
+
+  /* Results / onboarding */
+  .page-home .performance-teaser-grid,
+  .page-home .onboarding-track,
+  .canonical-onboarding-grid { grid-template-columns:1fr !important; gap:9px !important; margin-top:18px !important; }
+  .page-home .performance-teaser-actions { gap:8px !important; margin-top:14px !important; }
+  .page-home .performance-teaser-button,
+  .page-home .onboarding-button,
+  .canonical-step__button,
+  .canonical-onboarding-final a { min-height:42px !important; padding:0 12px !important; font-size:.78rem !important; }
+  .canonical-step::before { font-size:3rem !important; }
+  .canonical-onboarding-final { display:grid !important; gap:10px !important; }
+  .canonical-onboarding-final a { width:100% !important; }
+
+  /* Performance page */
+  .page-performance .perf-shell { width:calc(100% - 16px) !important; padding:12px 0 40px !important; }
+  .page-performance .hero { padding:22px 16px !important; }
+  .page-performance .hero h1 { font-size:clamp(2rem,8vw,2.45rem) !important; line-height:1 !important; }
+  .page-performance .section { padding:17px 13px !important; margin-top:10px !important; }
+  .page-performance .section-head h2 { font-size:1.65rem !important; }
+  .page-performance .summary-grid { gap:8px !important; }
+  .page-performance .stat { padding:14px 12px !important; border-radius:15px !important; }
+  .page-performance .stat strong { font-size:1.35rem !important; }
+
+  /* How-it-works page */
+  .page-guide .guide-hero,
+  .page-guide .guide-section,
+  .page-guide .guide-cta { width:calc(100% - 16px) !important; margin:9px auto !important; border-radius:20px !important; }
+  .page-guide .guide-hero { padding:28px 18px !important; }
+  .page-guide .guide-hero h1 { font-size:clamp(2rem,8vw,2.6rem) !important; line-height:1 !important; }
+  .page-guide .guide-section { padding:22px 16px !important; }
+  .page-guide .guide-section__head h2 { font-size:1.75rem !important; }
+  .page-guide .process-row,
+  .page-guide .audit-column,
+  .page-guide .life-node { padding:15px !important; border-radius:15px !important; }
+
+  /* Join */
+  .page-join .shell { width:calc(100% - 16px) !important; margin:10px auto 40px !important; gap:10px !important; padding:0 !important; }
+  .page-join .card { border-radius:18px !important; }
+  .page-join .hero,
+  .page-join .step,
+  .page-join .ready { padding:20px 15px !important; }
+  .page-join h1 { font-size:clamp(2rem,8vw,2.5rem) !important; }
+  .page-join h2 { font-size:1.65rem !important; }
+  .page-join .hero>p:not(.eyebrow),
+  .page-join .lead { font-size:.88rem !important; line-height:1.48 !important; }
+  .page-join .step-no { font-size:2.8rem !important; }
+  .page-join .plans { gap:8px !important; margin:14px 0 !important; }
+  .page-join .plan { padding:13px !important; border-radius:14px !important; }
+  .page-join .plan strong { font-size:1.45rem !important; }
+  .page-join input { min-height:44px !important; }
+  .page-join .primary { min-height:45px !important; }
+
+  /* Member account */
+  .page-account .member-shell { width:calc(100% - 16px) !important; margin:10px auto 40px !important; }
+  .page-account .member-hero,
+  .page-account .member-panel { padding:18px 15px !important; border-radius:18px !important; }
+  .page-account .member-hero h1 { font-size:clamp(2rem,8vw,2.5rem) !important; line-height:1 !important; }
+}
+
+@media (max-width:420px) {
+  .page-home .nav-shell { min-height:68px !important; }
+  .page-home .brand-logo { width:132px !important; }
+  .page-home .mobile-header-signup,
+  .page-home .mobile-header-account { min-height:33px !important; padding:0 9px !important; font-size:.64rem !important; }
+  .page-home .hero-inner { padding-top:142px !important; grid-template-rows:auto 190px !important; }
+  .page-home .hero h1 { font-size:2.05rem !important; }
+  .page-home .hero-actions { grid-template-columns:1fr 1fr !important; }
+  .page-home .hero-button { min-height:41px !important; }
+  .page-home .section-shell,
+  .canonical-onboarding-shell { width:calc(100% - 22px) !important; padding:29px 0 !important; }
+  .page-home .section-head h2,
+  .page-home .split-copy h2,
+  .page-home .database-copy h2,
+  #how-it-works #how-title::after { font-size:1.72rem !important; }
+}

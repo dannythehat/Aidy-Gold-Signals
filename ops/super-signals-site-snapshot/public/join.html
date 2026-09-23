@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#061017" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Create your Smart Signals account, open Vantage, connect MT5, activate your subscription and finish setup in one place." />
+  <title>Join Smart Signals</title>
+  <style>html,body{background:#061017}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet" />
+  <link rel="icon" href="/assets/logo/smart-signals-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/join.css" />
+  <link rel="stylesheet" href="/join-v2.css" />
+  <link rel="stylesheet" href="/join-payment.css" />
+  <script src="/join.js" defer></script>
+  <script src="/join-v2.js" defer></script>
+  <script src="/join-payment.js" defer></script>
+</head>
+<body>
+  <header class="join-header">
+    <a class="join-brand" href="/" aria-label="Smart Signals home">
+      <picture>
+        <source srcset="/assets/logo/smart-signals-approved.webp" type="image/webp" />
+        <img src="/assets/logo/smart-signals-logo.svg" alt="Smart Signals" />
+      </picture>
+    </a>
+    <div class="join-header__actions">
+      <span class="secure-pill"><i></i> Secure setup</span>
+      <a href="/">Back to site</a>
+    </div>
+  </header>
+
+  <main class="join-shell">
+    <aside class="setup-rail" aria-label="Smart Signals setup progress">
+      <div class="setup-rail__intro">
+        <p class="eyebrow">One setup. Everywhere.</p>
+        <h1>Set up Smart Signals once.</h1>
+        <p>Create your account here, connect your trading setup, then use the same login in the app. You should not have to enter everything twice.</p>
+      </div>
+
+      <div class="progress-list" data-progress-list>
+        <button class="progress-step is-current" type="button" data-jump="account">
+          <span>01</span><div><strong>Account</strong><small>Email + password</small></div><b data-progress="account">Start</b>
+        </button>
+        <button class="progress-step" type="button" data-jump="vantage">
+          <span>02</span><div><strong>Vantage</strong><small>Your broker</small></div><b data-progress="vantage">Next</b>
+        </button>
+        <button class="progress-step" type="button" data-jump="accounts">
+          <span>03</span><div><strong>Trading account</strong><small>Paper or real</small></div><b data-progress="accounts">Next</b>
+        </button>
+        <button class="progress-step" type="button" data-jump="subscription">
+          <span>04</span><div><strong>Subscription</strong><small>€99/month</small></div><b data-progress="subscription">Next</b>
+        </button>
+        <button class="progress-step" type="button" data-jump="ready">
+          <span>05</span><div><strong>Ready</strong><small>Open Smart Signals</small></div><b data-progress="ready">Finish</b>
+        </button>
+      </div>
+
+      <div class="rail-trust">
+        <strong>Your money stays with your broker.</strong>
+        <p>Smart Signals does not hold or withdraw your trading funds. Account connections are used only to place and manage trades through the broker connection you authorise.</p>
+      </div>
+    </aside>
+
+    <div class="setup-content">
+      <section class="setup-hero">
+        <p class="eyebrow">Join Smart Signals</p>
+        <h2>One account. One setup. Ready everywhere.</h2>
+        <p>Create your Smart Signals login, connect Vantage and choose the account you want to trade. When you later sign into the app, your setup follows you.</p>
+        <div class="setup-hero__chips"><span>Website + app</span><span>Vantage</span><span>MT5</span><span>€99/month</span></div>
+      </section>
+
+      <section class="setup-card setup-card--account" id="account" data-stage="account" aria-labelledby="account-title">
+        <div class="setup-card__number">01</div>
+        <div class="setup-card__head">
+          <div>
+            <p class="eyebrow">Your Smart Signals login</p>
+            <h2 id="account-title">Create your account.</h2>
+          </div>
+          <span class="stage-state" data-account-state>Not signed in</span>
+        </div>
+        <p class="setup-lead">Use one email and password for the website and the Smart Signals app. Set it up once here and you will not need to repeat the same setup inside the app.</p>
+
+        <div class="auth-switch" role="tablist" aria-label="Account access">
+          <button class="is-active" type="button" data-auth-tab="signup">Create account</button>
+          <button type="button" data-auth-tab="login">Already have an account</button>
+        </div>
+
+        <div class="auth-panel" data-auth-panel="signup">
+          <form class="account-form" data-signup-form autocomplete="on">
+            <label>Your name<input name="display_name" autocomplete="name" maxlength="120" placeholder="Your name" required /></label>
+            <label>Email<input name="email" type="email" autocomplete="email" maxlength="320" placeholder="you@example.com" required /></label>
+            <label>Password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="At least 12 characters" required /></label>
+            <label>Confirm password<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" placeholder="Repeat password" required /></label>
+            <button class="primary-action" type="submit">Create my Smart Signals account</button>
+          </form>
+        </div>
+
+        <div class="auth-panel is-hidden" data-auth-panel="login">
+          <form class="account-form" data-login-form autocomplete="on">
+            <label>Email<input name="email" type="email" autocomplete="email" maxlength="320" placeholder="you@example.com" required /></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="Your password" required /></label>
+            <button class="primary-action" type="submit">Sign in</button>
+          </form>
+        </div>
+
+        <div class="auth-success is-hidden" data-auth-success>
+          <div class="success-mark">✓</div>
+          <div><strong data-auth-name>Smart Signals account ready</strong><span data-auth-email></span></div>
+          <button type="button" data-signout>Sign out</button>
+        </div>
+        <div class="form-notice is-hidden" data-auth-notice role="status"></div>
+      </section>
+
+      <section class="setup-card setup-card--vantage" id="vantage" data-stage="vantage" aria-labelledby="vantage-title">
+        <div class="setup-card__number">02</div>
+        <div class="setup-card__head">
+          <div>
+            <p class="eyebrow">Your broker</p>
+            <h2 id="vantage-title">Open or use your Vantage account.</h2>
+          </div>
+          <span class="stage-state stage-state--gold">Vantage</span>
+        </div>
+        <p class="setup-lead">Vantage is where your trading account and money are held. Smart Signals connects to the trading account, but your funds stay with your broker.</p>
+
+        <div class="explain-grid">
+          <article><span>Vantage</span><strong>Your broker holds your money</strong><p>Deposits, withdrawals and your trading balance stay inside your Vantage account.</p></article>
+          <article><span>Smart Signals</span><strong>We manage signal trades</strong><p>Our authorised API connection can place and manage trades. It is not a withdrawal connection.</p></article>
+        </div>
+
+        <div class="trust-banner"><span>✓</span><div><strong>Smart Signals cannot withdraw your funds.</strong><p>Your broker account remains yours. We only use the authorised trading connection needed to follow and manage Smart Signals trades.</p></div></div>
+
+        <div class="vantage-action vantage-action--visual">
+          <div class="vantage-image-placeholder" aria-hidden="true"><span>V</span></div>
+          <div class="vantage-action__copy"><span>Don't have Vantage yet?</span><strong>Sign up through Smart Signals.</strong><p>Your Vantage image and affiliate signup link will be added here.</p></div>
+          <span class="pending-action">Signup link coming</span>
+        </div>
+      </section>
+
+      <section class="setup-card setup-card--accounts" id="accounts" data-stage="accounts" aria-labelledby="accounts-title">
+        <div class="setup-card__number">03</div>
+        <div class="setup-card__head">
+          <div>
+            <p class="eyebrow">Choose where Smart Signals trades</p>
+            <h2 id="accounts-title">Paper or real. You choose one.</h2>
+          </div>
+          <span class="stage-state stage-state--blue" data-account-choice-state>Choose one</span>
+        </div>
+        <p class="setup-lead">You can connect a paper account or a funded real account. Only <strong>one can trade with Smart Signals at a time</strong>. Selecting one automatically switches the other off.</p>
+
+        <div class="exclusive-note"><span>1</span><div><strong>One active trading account at a time</strong><p>You can switch later, but paper and real trading can never be active together.</p></div></div>
+
+        <div class="account-choice-grid account-choice-grid--two" role="radiogroup" aria-label="Choose the account Smart Signals will trade">
+          <button class="account-choice account-choice--paper" type="button" role="radio" aria-checked="false" aria-pressed="false" data-account-choice="demo">
+            <span class="account-choice__icon">P</span>
+            <span class="account-choice__eyebrow">Practice safely</span>
+            <strong>Connect Paper Account</strong>
+            <small>Use virtual funds to see Smart Signals operate without risking real money.</small>
+            <i class="account-choice__switch"><b></b><em>OFF</em></i>
+          </button>
+          <button class="account-choice account-choice--live" type="button" role="radio" aria-checked="false" aria-pressed="false" data-account-choice="live">
+            <span class="account-choice__icon">$</span>
+            <span class="account-choice__eyebrow">Trade real balance</span>
+            <strong>Connect Real Trading Account</strong>
+            <small>Connect your funded Vantage MT5 account when you are ready to trade real money.</small>
+            <i class="account-choice__switch"><b></b><em>OFF</em></i>
+          </button>
+        </div>
+
+        <div class="account-mode-status" data-account-mode-status aria-live="polite">
+          <span>Choose your trading mode</span>
+          <strong>Neither account is active yet.</strong>
+        </div>
+
+        <div class="mt5-explainer">
+          <div class="mt5-badge">MT5</div>
+          <div><strong>What is MT5?</strong><p>MT5 is the trading account inside Vantage. To connect it we will ask for your MT5 account number, exact Vantage server and MT5 trading password. The trading password is used to establish the connection and is not stored by Smart Signals.</p></div>
+        </div>
+
+        <div class="connection-preview">
+          <div class="connection-preview__top"><span>Next step</span><strong data-selected-account-label>Select Paper or Real above</strong></div>
+          <div class="connection-fields" aria-hidden="true"><span>MT5 account number</span><span>Vantage server</span><span>MT5 trading password</span></div>
+          <p>Once the secure account connection is switched on, these details will be entered here and saved against your Smart Signals login so the app recognises the same setup.</p>
+        </div>
+      </section>
+
+      <section class="setup-card setup-card--subscription" id="subscription" data-stage="subscription" aria-labelledby="subscription-title">
+        <div class="setup-card__number">04</div>
+        <div class="setup-card__head">
+          <div>
+            <p class="eyebrow">Activate Smart Signals</p>
+            <h2 id="subscription-title">€99 per month.</h2>
+          </div>
+          <span class="stage-state stage-state--green">USDC · SOLANA</span>
+        </div>
+        <p class="setup-lead">Activate Smart Signals with USDC. Payments must be sent on the <strong>Solana network only</strong>. Tap any payment detail below to copy it.</p>
+
+        <div class="payment-summary">
+          <div class="payment-summary__item"><span>Monthly subscription</span><strong>€99.00</strong></div>
+          <div class="payment-summary__item"><span>Payment asset</span><strong>USDC</strong></div>
+        </div>
+
+        <div class="payment-wallet" aria-label="Smart Signals USDC payment details">
+          <button class="payment-copy-card payment-copy-card--address" type="button" data-copy-value="3x2NNMLoNs7uNbTx424ueEhEkGP1n6eDdc5iTXU4iFTF" data-copy-label="Wallet address copied">
+            <span class="payment-copy-card__label">USDC wallet address</span>
+            <strong class="payment-wallet-address">3x2NNMLoNs7uNbTx424ueEhEkGP1n6eDdc5iTXU4iFTF</strong>
+            <span class="payment-copy-card__action">Tap to copy address <b>COPY</b></span>
+          </button>
+
+          <button class="payment-copy-card payment-copy-card--network" type="button" data-copy-value="Solana" data-copy-label="Solana network copied">
+            <span class="payment-copy-card__label">Network</span>
+            <strong>Solana</strong>
+            <span class="payment-copy-card__action">Tap to copy network <b>COPY</b></span>
+          </button>
+        </div>
+
+        <button class="payment-copy-all" type="button" data-copy-value="Smart Signals subscription: €99 per month. Pay in USDC on the Solana network only. Wallet: 3x2NNMLoNs7uNbTx424ueEhEkGP1n6eDdc5iTXU4iFTF" data-copy-label="All payment details copied">
+          <span>Copy all payment details</span><strong>COPY ✓</strong>
+        </button>
+
+        <div class="payment-network-warning"><span>!</span><div><strong>USDC on Solana ONLY</strong><p>Do not send USDC using Ethereum, Base, Polygon or another network. Always check that your wallet or exchange shows <b>Solana</b> before sending.</p></div></div>
+        <div class="payment-copy-notice" data-payment-copy-notice aria-live="polite"></div>
+      </section>
+
+      <section class="setup-card setup-card--ready" id="ready" data-stage="ready" aria-labelledby="ready-title">
+        <div class="setup-card__number">05</div>
+        <div class="setup-card__head">
+          <div>
+            <p class="eyebrow">Finish setup</p>
+            <h2 id="ready-title">Everything follows your login.</h2>
+          </div>
+          <span class="stage-state stage-state--violet">Ready</span>
+        </div>
+        <p class="setup-lead">Once the checklist is complete, open the Smart Signals app and sign in with the same email and password. Your selected trading account and setup will already belong to that Smart Signals login.</p>
+
+        <div class="ready-checklist">
+          <div data-ready-check="account"><i>○</i><span>Smart Signals account</span><strong>Required</strong></div>
+          <div><i>○</i><span>Vantage account</span><strong>Signup link coming</strong></div>
+          <div data-ready-check="trade-mode"><i>○</i><span>Paper or real account selected</span><strong>Choose one</strong></div>
+          <div><i>○</i><span>Subscription payment</span><strong>USDC · Solana</strong></div>
+        </div>
+
+        <a class="open-app-action" href="https://super-signals-day-8.onrender.com/">Open Smart Signals app</a>
+        <p class="ready-note">Use the same Smart Signals email and password in the app.</p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

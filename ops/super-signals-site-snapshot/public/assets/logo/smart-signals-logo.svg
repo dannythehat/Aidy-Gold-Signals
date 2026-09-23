@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
+  <title id="title">Smart Signals</title>
+  <desc id="desc">Smart Signals logo with a neon signal S mark and wordmark</desc>
+  <defs>
+    <linearGradient id="sgrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#35D6E8"/>
+      <stop offset="0.48" stop-color="#0FA7F2"/>
+      <stop offset="1" stop-color="#22E06B"/>
+    </linearGradient>
+    <linearGradient id="orbit" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0B5CFF"/>
+      <stop offset="0.5" stop-color="#35D6E8"/>
+      <stop offset="1" stop-color="#22E06B"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <g transform="translate(22 9)" filter="url(#glow)">
+    <text x="24" y="238" font-family="Arial Black, Archivo, sans-serif" font-size="238" font-weight="900" fill="url(#sgrad)" stroke="#0C3559" stroke-width="4">S</text>
+    <ellipse cx="134" cy="150" rx="124" ry="50" fill="none" stroke="url(#orbit)" stroke-width="12" transform="rotate(-13 134 150)" opacity=".95"/>
+    <rect x="106" y="118" width="20" height="58" rx="3" fill="#22E06B"/>
+    <rect x="136" y="91" width="20" height="85" rx="3" fill="#22E06B"/>
+    <rect x="166" y="64" width="20" height="112" rx="3" fill="#22E06B"/>
+    <path d="M104 112 L151 91 L190 55 L223 23" fill="none" stroke="#22E06B" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M202 22 L229 16 L224 43 Z" fill="#22E06B"/>
+  </g>
+
+  <g transform="translate(332 0)">
+    <text x="0" y="145" font-family="Archivo, Arial Black, Arial, sans-serif" font-size="118" font-weight="800" letter-spacing="3" fill="#E8EFF2">SMART</text>
+    <path d="M0 184 H102" stroke="#35D6E8" stroke-width="5" stroke-linecap="round" opacity=".95"/>
+    <path d="M520 184 H622" stroke="#22E06B" stroke-width="5" stroke-linecap="round" opacity=".95"/>
+    <text x="126" y="207" font-family="Satoshi, Arial, sans-serif" font-size="49" font-weight="600" letter-spacing="20" fill="#35D6E8">SIGNALS</text>
+  </g>
+</svg>

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#041019" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Your Smart Signals account dashboard." />
+  <link rel="canonical" href="https://smartsignals.site/account" />
+  <title>My Smart Signals</title>
+  <link rel="icon" href="/assets/logo/smart-signals-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/account-clean.css?v=20260830-premium2" />
+  <link rel="stylesheet" href="/account-refine.css?v=20260831-refine2" />
+  <script>try{for(let i=sessionStorage.length-1;i>=0;i--){const k=sessionStorage.key(i);if(k&&k.startsWith('ss-account-fast-v2:'))sessionStorage.removeItem(k)}}catch{}</script>
+  <script src="/account-fast.js?v=20260904-restart1100" defer></script>
+</head>
+<body>
+  <header class="member-top">
+    <a class="member-logo" href="/" aria-label="Smart Signals home"><img src="/assets/logo/smart-signals-approved.webp" alt="Smart Signals" /></a>
+    <details class="member-menu">
+      <summary>Account <span aria-hidden="true">⌄</span></summary>
+      <div class="member-menu__panel">
+        <a href="/performance">Performance history</a>
+        <a href="/join?manage=1">Manage setup</a>
+        <button type="button" data-signout>Sign out</button>
+      </div>
+    </details>
+  </header>
+
+  <main class="member-shell">
+    <section class="hero card card--hero">
+      <div><p class="eyebrow">My Smart Signals</p><h1>Hi, <span data-display-name>Member</span>.</h1></div>
+      <div class="status-row"><span class="pill" data-connection-status>Connecting…</span><span class="pill" data-account-mode>Account</span></div>
+    </section>
+
+    <section class="balance-card card card--performance">
+      <div class="balance-head balance-head--live">
+        <div>
+          <span class="balance-label" data-balance-label>Smart Signals trading balance</span>
+          <strong class="balance-value" data-balance>—</strong>
+          <span class="balance-note" data-balance-note>Connecting to your MT5 account…</span>
+        </div>
+        <div class="balance-tools">
+          <div class="gold-chip" aria-label="Live Gold price">
+            <span class="gold-chip__label"><i class="gold-dot"></i> GOLD · XAUUSD</span>
+            <strong data-gold-price>—</strong>
+            <em data-gold-state>LIVE</em>
+          </div>
+          <button class="refresh" type="button" data-refresh aria-label="Refresh account data">↻</button>
+        </div>
+      </div>
+      <div class="baseline-row" data-baseline-row>
+        <div><span>Since live start P&amp;L</span><strong data-baseline-pnl>—</strong></div>
+        <div><span>Today</span><strong data-baseline-return>—</strong></div>
+        <div class="history-link"><span>History</span><strong><a href="/performance">Full history →</a></strong></div>
+      </div>
+      <div class="performance-rail" aria-hidden="true"><span></span></div>
+      <div class="account-error hidden" data-account-error role="status"></div>
+    </section>
+
+    <section class="section-card card card--today">
+      <div class="section-head"><div><p class="eyebrow">Today</p><h2>Trading today</h2></div><span class="pill ok">Live</span></div>
+      <div class="today-grid">
+        <article class="metric metric--primary"><span>Realised P&amp;L</span><strong data-today-pnl>—</strong></article>
+        <article class="metric"><span>Net pips</span><strong data-net-pips>—</strong></article>
+        <article class="metric"><span>Trades</span><strong data-trade-count>—</strong></article>
+        <article class="metric"><span>Wins / losses</span><strong data-win-loss>—</strong></article>
+      </div>
+    </section>
+
+    <section class="section-card card card--trades" data-open-section>
+      <div class="section-head"><div><p class="eyebrow">Open now</p><h2>Open trades</h2></div><span class="count-pill" data-open-count>0</span></div>
+      <div class="trade-list" data-open-trades><div class="empty">Loading open trades…</div></div>
+    </section>
+
+    <section class="section-card card card--trades hidden" data-recent-section>
+      <div class="section-head"><div><p class="eyebrow">History</p><h2>Recent trades</h2></div></div>
+      <div class="trade-list" data-recent-trades></div>
+      <button class="recent-toggle hidden" type="button" data-recent-toggle>Show more</button>
+    </section>
+
+    <section class="section-card card card--pnl">
+      <div class="section-head"><div><p class="eyebrow">Performance</p><h2>Account P&amp;L</h2></div><a href="/performance">Full history →</a></div>
+      <div class="performance-grid" data-performance-grid>
+        <article class="metric"><span>Today</span><strong>—</strong></article>
+        <article class="metric"><span>This week</span><strong>—</strong></article>
+        <article class="metric"><span>This month</span><strong>—</strong></article>
+        <article class="metric"><span>Since live start</span><strong>—</strong></article>
+      </div>
+    </section>
+
+    <section class="actions" aria-label="Account actions">
+      <a class="action action--setup" href="/join?manage=1"><span>Manage setup</span><b>MT5 / Paper / Real</b></a>
+      <a class="action action--app" href="https://super-signals-day-8.onrender.com/"><span>Open trading app</span><b>Smart Signals →</b></a>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,71 @@
+@import url('/depth-force.css?v=20260830-depth1');
+
+/* Contrast pass for How Smart Signals Works — brighter copy on mobile and desktop. */
+
+body.explainer-page {
+  color: #edf5f2;
+}
+
+body.explainer-page .guide-hero__lead,
+body.explainer-page .guide-section__intro,
+body.explainer-page .process-row p,
+body.explainer-page .process-proof,
+body.explainer-page .audit-list li,
+body.explainer-page .life-node p,
+body.explainer-page .guide-principle p,
+body.explainer-page .guide-cta p,
+body.explainer-page .guide-status__item strong {
+  color: #d6e3df !important;
+}
+
+body.explainer-page .guide-hero h1,
+body.explainer-page .guide-section h2,
+body.explainer-page .process-row h3,
+body.explainer-page .audit-column h3,
+body.explainer-page .life-node h3,
+body.explainer-page .guide-cta h2,
+body.explainer-page .guide-principle__stamp {
+  color: #fbfdfc !important;
+  -webkit-text-fill-color: #fbfdfc !important;
+}
+
+body.explainer-page .guide-status__label,
+body.explainer-page .guide-mode {
+  color: #bed0cc !important;
+}
+
+body.explainer-page .guide-status__item {
+  color: #e4eeeb !important;
+}
+
+body.explainer-page .process-proof strong,
+body.explainer-page .audit-column__label,
+body.explainer-page .life-node span,
+body.explainer-page .guide-eyebrow,
+body.explainer-page .guide-section__eyebrow {
+  filter: brightness(1.16) saturate(1.08);
+}
+
+body.explainer-page .guide-back,
+body.explainer-page .guide-link {
+  color: #f3f8f6 !important;
+}
+
+@media (max-width: 720px) {
+  body.explainer-page .guide-hero__lead,
+  body.explainer-page .guide-section__intro,
+  body.explainer-page .process-row p,
+  body.explainer-page .process-proof,
+  body.explainer-page .audit-list li,
+  body.explainer-page .life-node p,
+  body.explainer-page .guide-principle p,
+  body.explainer-page .guide-cta p,
+  body.explainer-page .guide-status__item strong {
+    color: #dfe9e6 !important;
+  }
+
+  body.explainer-page .guide-status__label,
+  body.explainer-page .guide-mode {
+    color: #c7d8d4 !important;
+  }
+}

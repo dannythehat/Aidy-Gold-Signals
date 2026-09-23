@@ -1,0 +1,29 @@
+:root {
+  /* surface */
+  --void: #060D14;
+  --slate: #0E1A24;
+  --panel: #14232F;
+
+  /* glass */
+  --glass-bg: rgba(255,255,255,0.045);
+  --glass-line: rgba(255,255,255,0.09);
+  --glass-blur: blur(20px) saturate(140%);
+
+  /* accent ramp */
+  --signal: #22E06B;
+  --cyan: #35D6E8;
+  --ramp: linear-gradient(135deg, var(--cyan), var(--signal));
+
+  /* state */
+  --pass: #22E06B;
+  --reject: #4A5A66;
+  --warn: #E8A33D;
+
+  /* text */
+  --bone: #E8EFF2;
+  --ash: #8195A2;
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+}

@@ -1,0 +1,74 @@
+/* Smart Signals DEPTH FORCE — deliberately visible physical depth. */
+:root{--df-cyan:53,214,232;--df-green:34,224,107;--df-blue:65,140,255;--df-gold:232,163,61;--df-violet:142,104,255;}
+
+/* ONBOARDING */
+.setup-hero,.setup-card{
+  border:1px solid rgba(53,214,232,.34)!important;
+  border-bottom:6px solid rgba(53,214,232,.22)!important;
+  border-radius:30px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.075),transparent 6%),radial-gradient(circle at 90% 3%,rgba(53,214,232,.17),transparent 32%),linear-gradient(145deg,#0b2834,#071923 52%,#041018)!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.15),inset 0 -3px 0 rgba(0,0,0,.50),0 10px 0 #02090e,0 23px 0 rgba(53,214,232,.045),0 42px 76px -28px rgba(0,0,0,.94)!important;
+}
+.setup-card--vantage{border-color:rgba(var(--df-gold),.40)!important;border-bottom-color:rgba(var(--df-gold),.24)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.5),0 10px 0 #160d04,0 23px 0 rgba(var(--df-gold),.05),0 42px 76px -28px rgba(0,0,0,.94)!important}
+.setup-card--mt5,.setup-card--accounts{border-color:rgba(var(--df-blue),.42)!important;border-bottom-color:rgba(var(--df-blue),.24)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.5),0 10px 0 #061328,0 23px 0 rgba(var(--df-blue),.05),0 42px 76px -28px rgba(0,0,0,.94)!important}
+.setup-card--subscription{border-color:rgba(var(--df-green),.46)!important;border-bottom-color:rgba(var(--df-green),.25)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.5),0 10px 0 #041b10,0 23px 0 rgba(var(--df-green),.05),0 42px 76px -28px rgba(0,0,0,.94)!important}
+.setup-card--ready{border-color:rgba(var(--df-violet),.44)!important;border-bottom-color:rgba(var(--df-violet),.24)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.5),0 10px 0 #120b27,0 23px 0 rgba(var(--df-violet),.05),0 42px 76px -28px rgba(0,0,0,.94)!important}
+.explain-grid article,.trust-banner,.vantage-action,.mt5-explainer,.connection-preview,.payment-summary__item,.payment-copy-card,.payment-network-warning,.ready-checklist>div,.account-choice,.auth-switch,.auth-success{
+  border-bottom-width:4px!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.12),inset 0 -2px 0 rgba(0,0,0,.46),0 7px 0 rgba(1,8,12,.82),0 20px 34px -20px rgba(0,0,0,.88)!important;
+}
+
+/* MEMBER ACCOUNT */
+.member-shell>section:not(.member-actions),.action-card{
+  border-bottom-width:6px!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.48),0 10px 0 #02090e,0 24px 0 rgba(53,214,232,.035),0 42px 78px -30px rgba(0,0,0,.96)!important;
+}
+.balance-panel{border-bottom-color:rgba(var(--df-green),.25)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.48),0 10px 0 #03160d,0 23px 0 rgba(var(--df-green),.05),0 42px 78px -30px rgba(0,0,0,.96)!important}
+.today-panel{border-bottom-color:rgba(var(--df-cyan),.25)!important}
+.trades-panel{border-bottom-color:rgba(var(--df-blue),.24)!important}
+.trades-panel--recent{border-bottom-color:rgba(var(--df-gold),.22)!important}
+.performance-panel{border-bottom-color:rgba(var(--df-violet),.24)!important}
+.balance-card,.today-grid article,.performance-grid article,.trade-row,.empty-state{
+  border-bottom-width:4px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 12%),rgba(3,18,25,.72)!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.10),0 6px 0 #02090e,0 18px 30px -18px rgba(0,0,0,.9)!important;
+}
+
+/* PERFORMANCE */
+.ledger-hero,.performance-summary,.history-section,.calculator-section,.challenge-section,.method-section{
+  border:1px solid rgba(var(--df-cyan),.32)!important;
+  border-bottom:6px solid rgba(var(--df-cyan),.20)!important;
+  border-radius:30px!important;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),transparent 6%),radial-gradient(circle at 92% 4%,rgba(var(--df-cyan),.15),transparent 33%),linear-gradient(145deg,#0b2733,#061620 55%,#040d14)!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.5),0 10px 0 #02090e,0 23px 0 rgba(var(--df-cyan),.04),0 42px 76px -28px rgba(0,0,0,.95)!important;
+}
+.performance-summary{border-color:rgba(var(--df-green),.36)!important;border-bottom-color:rgba(var(--df-green),.22)!important}
+.history-section{border-color:rgba(var(--df-blue),.36)!important;border-bottom-color:rgba(var(--df-blue),.22)!important}
+.calculator-section{border-color:rgba(var(--df-violet),.36)!important;border-bottom-color:rgba(var(--df-violet),.22)!important}
+.challenge-section{border-color:rgba(var(--df-gold),.36)!important;border-bottom-color:rgba(var(--df-gold),.22)!important}
+.metric-card,.calendar-panel,.day-detail,.calculator-card,.challenge-board,.publish-card,.method-grid article{
+  border-bottom-width:4px!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.11),0 7px 0 #02090e,0 20px 34px -20px rgba(0,0,0,.9)!important;
+}
+
+/* HOW IT WORKS */
+.explainer-page .guide-hero,.explainer-page .guide-section,.explainer-page .guide-cta{
+  border-bottom-width:6px!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -3px 0 rgba(0,0,0,.48),0 10px 0 #02090e,0 24px 0 rgba(var(--df-green),.045),0 42px 76px -28px rgba(0,0,0,.95)!important;
+}
+.explainer-page .process-row,.explainer-page .audit-column,.explainer-page .life-node,.explainer-page .guide-principle{
+  border-bottom-width:4px!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.11),0 7px 0 #02090e,0 20px 34px -20px rgba(0,0,0,.9)!important;
+}
+
+/* CONTROLS */
+.primary-action,.mt5-connect-action,.payment-copy-all,.vantage-brand-card,.refresh-button,.publish-actions a,.period-presets button{
+  border-bottom-width:3px!important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.24),0 6px 0 rgba(1,8,12,.88),0 17px 28px -15px rgba(0,0,0,.82)!important;
+}
+
+@media(max-width:760px){
+  .setup-hero,.setup-card,.member-shell>section:not(.member-actions),.ledger-hero,.performance-summary,.history-section,.calculator-section,.challenge-section,.method-section,.explainer-page .guide-hero,.explainer-page .guide-section,.explainer-page .guide-cta{
+    border-radius:24px!important;border-bottom-width:5px!important;box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 -2px 0 rgba(0,0,0,.5),0 8px 0 #02090e,0 26px 44px -22px rgba(0,0,0,.96)!important
+  }
+}

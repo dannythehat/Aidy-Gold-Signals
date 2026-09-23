@@ -1,0 +1,57 @@
+/* Mobile header must never sit over the hero copy. */
+@media (max-width: 860px) {
+  .site-header {
+    position: absolute !important;
+    inset: 0 0 auto 0 !important;
+  }
+
+  .hero-inner {
+    padding-top: 168px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero-inner {
+    padding-top: 158px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-inner {
+    padding-top: 148px !important;
+  }
+}
+
+/* BUY and SELL gold cards stay visually distinct even when rejected. */
+.signal-card .signal-buy {
+  color: #39e886 !important;
+  text-shadow: 0 0 10px rgba(57,232,134,0.20);
+}
+
+.signal-card .signal-sell {
+  color: #57ccef !important;
+  text-shadow: 0 0 10px rgba(87,204,239,0.18);
+}
+
+.signal-theme-cyan,
+.signal-theme-teal,
+.signal-theme-green {
+  border-width: 1px;
+}
+
+.signal-theme-violet,
+.signal-theme-blue,
+.signal-theme-amber {
+  border-width: 1px;
+}
+
+/* Keep the gold-only flow easy to scan on phones. */
+@media (max-width: 560px) {
+  .signal-demo__caption {
+    letter-spacing: 0.12em;
+  }
+
+  .signal-card__title {
+    font-weight: 700;
+  }
+}

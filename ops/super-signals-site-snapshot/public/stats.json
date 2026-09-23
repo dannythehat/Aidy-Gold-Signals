@@ -1,0 +1,11 @@
+{
+  "as_of": "2026-08-29",
+  "tested_channels": 7,
+  "live_channels": 2,
+  "rejected_channels": 5,
+  "rejection_rate_percent_exact": 71.4,
+  "rejection_rate_percent_display": 71,
+  "minimum_approval_months": "3–6",
+  "source": "Super Signals provider audit reconciled with the live production source database",
+  "methodology": "Counts only providers with sufficient evaluation history. Internal/test records, duplicate feeds and insufficient-sample shadow sources are excluded. Rejection/removal rate is 5 divided by 7; the website displays the conservative whole-number value of 71%."
+}

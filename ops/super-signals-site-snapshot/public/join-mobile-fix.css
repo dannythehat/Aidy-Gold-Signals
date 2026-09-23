@@ -1,0 +1,30 @@
+/* Launch mobile onboarding: the numbered section cards already show progress.
+   Hide the separate six-step rail on all phone/tablet widths so it can never
+   collapse into floating 01–06 boxes again. */
+@media (max-width: 980px) {
+  .setup-rail {
+    display: none !important;
+  }
+
+  .join-shell {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+    padding-top: 12px !important;
+  }
+
+  .setup-content {
+    width: 100% !important;
+    max-width: none !important;
+    gap: 16px !important;
+  }
+
+  .setup-hero {
+    margin-top: 0 !important;
+  }
+}
+
+@media (min-width: 981px) {
+  .progress-list {
+    display: grid !important;
+  }
+}

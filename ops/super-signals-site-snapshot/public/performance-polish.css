@@ -1,0 +1,74 @@
+@import url('/depth-force.css?v=20260830-depth1');
+
+.publish-actions {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.publish-actions a {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 13px;
+  border: 1px solid rgba(82, 217, 236, .30);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(27, 90, 104, .34), rgba(8, 30, 39, .54));
+  color: #edfafa;
+  text-decoration: none;
+  text-align: center;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 16px 30px -25px rgba(82,217,236,.65);
+}
+
+.publish-actions a:nth-child(2) {
+  border-color: rgba(54, 227, 130, .30);
+  background: linear-gradient(145deg, rgba(27, 91, 59, .34), rgba(8, 34, 29, .54));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 16px 30px -25px rgba(54,227,130,.65);
+}
+
+.calculator-period {
+  margin-top: 22px;
+}
+
+.period-presets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.period-presets button {
+  border: 1px solid rgba(100, 164, 255, .22);
+  background: linear-gradient(145deg, rgba(41, 67, 112, .28), rgba(13, 30, 43, .62));
+  color: #eaf2ff;
+  padding: 13px 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.period-presets button.is-active {
+  border-color: rgba(82, 217, 236, .62);
+  background: linear-gradient(145deg, rgba(34, 108, 122, .56), rgba(12, 47, 58, .58));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 0 22px rgba(82,217,236,.11);
+}
+
+#history,
+#calculator {
+  scroll-margin-top: 92px;
+}
+
+@media (max-width: 620px) {
+  .publish-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .period-presets {
+    grid-template-columns: 1fr;
+  }
+}

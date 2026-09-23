@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#061017" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>AIDY Overview · Smart Signals</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:#061017;color:#f5fbff;font-family:Arial,sans-serif}
+    body{padding:22px;background:radial-gradient(circle at 20% 10%,rgba(18,188,230,.10),transparent 36%),radial-gradient(circle at 85% 80%,rgba(34,197,94,.08),transparent 34%),#061017}
+    main{max-width:980px;margin:0 auto}
+    .top{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+    .logo{width:150px;height:auto}
+    h1{font-size:22px;margin:0}
+    .eyebrow{color:#67e8f9;font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 4px}
+    .card{padding:20px;border:1px solid #244252;border-radius:16px;background:linear-gradient(180deg,#0d1b26,#08131c);box-shadow:0 14px 34px rgba(0,0,0,.35);margin-bottom:18px}
+    .card h2{margin:0 0 12px;font-size:15px;color:#cfe4ee}
+    .stat-row{display:flex;flex-wrap:wrap;gap:14px}
+    .stat{flex:1 1 160px;padding:12px 14px;border-radius:12px;background:#07131c;border:1px solid #1d3949}
+    .stat .n{display:block;font-size:22px;font-weight:800;color:#fff}
+    .stat .l{display:block;font-size:11px;color:#7f9cad;text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #16303d}
+    th{color:#7f9cad;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+    tr:last-child td{border-bottom:none}
+    .pos{color:#4ade80;font-weight:700}
+    .neg{color:#f87171;font-weight:700}
+    .neu{color:#9fb6c4}
+    .status{padding:16px;border-radius:14px;border:1px solid #1d3949;background:#07131c}
+    .status strong{display:block;color:#fff;margin-bottom:6px}
+    .status.error{border-color:rgba(239,68,68,.55);background:rgba(62,20,24,.55)}
+    form{display:grid;gap:13px;margin-top:14px}
+    label{display:grid;gap:6px;color:#d9e8f0;font-size:13px;font-weight:700}
+    input{width:100%;min-height:44px;border:1px solid #2b4858;border-radius:10px;background:#06111a;color:white;padding:0 14px;font-size:15px}
+    button{min-height:44px;border:0;border-radius:10px;background:#22c55e;color:#04110a;font-weight:900;font-size:14px;padding:0 18px;cursor:pointer}
+    button:disabled{opacity:.6;cursor:wait}
+    .refresh{background:#12bce6;margin-bottom:18px}
+    .hidden{display:none!important}
+    .muted{color:#7f9cad;font-size:12px}
+    .empty{color:#7f9cad;font-size:13px;padding:6px 0}
+    body{padding:14px}
+    @media(min-width:640px){body{padding:22px}}
+    @media(max-width:640px){
+      table,thead,tbody,tr,th,td{display:block}
+      thead{display:none}
+      tbody tr{margin-bottom:10px;border:1px solid #1d3949;border-radius:12px;padding:6px 12px;background:#07131c}
+      tbody tr:last-child{margin-bottom:0}
+      td{border:none;padding:7px 0;display:flex;justify-content:space-between;align-items:baseline;gap:12px;text-align:right}
+      td::before{content:attr(data-label);color:#7f9cad;font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;text-align:left;flex:0 0 auto}
+      .card{padding:16px}
+      .top{gap:10px}
+      .logo{width:120px}
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top">
+      <img class="logo" src="/assets/logo/smart-signals-approved.webp" alt="Smart Signals" />
+      <div><div class="eyebrow">Owner only</div><h1>AIDY Overview</h1></div>
+    </div>
+
+    <div class="status" id="status" aria-live="polite"><strong>Checking owner session…</strong><span>Please wait.</span></div>
+
+    <form id="login" class="hidden card" autocomplete="on">
+      <label>Owner email<input name="email" type="email" autocomplete="email" required /></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+      <button type="submit">Sign in</button>
+    </form>
+
+    <div id="content" class="hidden">
+      <button class="refresh" id="refreshBtn">Refresh</button>
+
+      <div class="card">
+        <h2>Coverage — is AIDY actually studying everyone?</h2>
+        <div class="stat-row">
+          <div class="stat"><span class="n" data-total-sources>—</span><span class="l">Signal groups connected</span></div>
+          <div class="stat"><span class="n" data-sources-observed>—</span><span class="l">Have trade history</span></div>
+          <div class="stat"><span class="n" data-sources-decided>—</span><span class="l">AIDY has decided on</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Decision Ledger</h2>
+        <div class="stat-row">
+          <div class="stat"><span class="n" data-total-decisions>—</span><span class="l">Total decisions</span></div>
+          <div class="stat"><span class="n" data-last-decision>—</span><span class="l">Last decided</span></div>
+          <div class="stat"><span class="n" data-total-scored>—</span><span class="l">Outcomes scored</span></div>
+          <div class="stat"><span class="n" data-last-scored>—</span><span class="l">Last scored</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Every provider AIDY has decided on (blended, not sliced by cohort)</h2>
+        <table>
+          <thead><tr><th>Provider</th><th>Decisions</th><th>Resolved</th><th>Win %</th><th>Net P&amp;L</th></tr></thead>
+          <tbody data-providers></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>By decision class</h2>
+        <table>
+          <thead><tr><th>Class</th><th>Count</th><th>Scored</th><th>Net delta</th><th>Helped</th><th>Hurt</th><th>Neutral</th><th>Open</th></tr></thead>
+          <tbody data-by-class></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Strongest cohorts (min 15 resolved trades)</h2>
+        <table>
+          <thead><tr><th>Provider</th><th>Side</th><th>Session</th><th>Weekday</th><th>Resolved</th><th>Win %</th><th>Net P&amp;L</th></tr></thead>
+          <tbody data-top-cohorts></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Weakest cohorts (min 15 resolved trades)</h2>
+        <table>
+          <thead><tr><th>Provider</th><th>Side</th><th>Session</th><th>Weekday</th><th>Resolved</th><th>Win %</th><th>Net P&amp;L</th></tr></thead>
+          <tbody data-bottom-cohorts></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Hypothesis registry (Day 13)</h2>
+        <p class="muted" data-registry>—</p>
+      </div>
+
+      <p class="muted" data-generated></p>
+    </div>
+  </main>
+
+  <script>
+    (()=>{
+      const api='/account-api';
+      const statusBox=document.getElementById('status');
+      const login=document.getElementById('login');
+      const content=document.getElementById('content');
+      const transientStatuses=new Set([502,503,504]);
+      const retryDelays=[500,900,1400,2000];
+      const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+
+      const setStatus=(title,text,type='')=>{
+        statusBox.className='status'+(type?' '+type:'');
+        statusBox.innerHTML='';
+        const strong=document.createElement('strong');strong.textContent=title;
+        const span=document.createElement('span');span.textContent=text;
+        statusBox.append(strong,span);
+      };
+
+      const requestJson=async(path,options={},allowRetry=false)=>{
+        const attempts=allowRetry?retryDelays.length+1:1;
+        let lastError=null;
+        for(let attempt=0;attempt<attempts;attempt+=1){
+          try{
+            const r=await fetch(api+path,{credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','Accept':'application/json',...(options.headers||{})},...options});
+            let body={};
+            try{body=await r.json()}catch{}
+            if(!r.ok){
+              const d=body&&body.detail;
+              const msg=typeof d==='string'?d:(d&&d.message)||'Request failed.';
+              const e=new Error(msg);e.status=r.status;
+              if(allowRetry&&transientStatuses.has(r.status)&&attempt<attempts-1){lastError=e;await sleep(retryDelays[attempt]);continue;}
+              throw e;
+            }
+            return body;
+          }catch(e){
+            if(e&&e.status===401)throw e;
+            if(allowRetry&&(!e.status||transientStatuses.has(e.status))&&attempt<attempts-1){lastError=e;await sleep(retryDelays[attempt]);continue;}
+            throw e;
+          }
+        }
+        throw lastError||new Error('Request failed.');
+      };
+
+      const fmtTime=(iso)=>{
+        if(!iso)return 'never';
+        try{return new Date(iso).toLocaleString();}catch{return iso;}
+      };
+      const fmtMoney=(value)=>{
+        const n=Number(value);
+        if(!Number.isFinite(n))return '—';
+        const cls=n>0?'pos':(n<0?'neg':'neu');
+        return `<span class="${cls}">${n>=0?'+':''}$${n.toFixed(2)}</span>`;
+      };
+      const fmtPct=(value)=>value===null||value===undefined?'—':`${Number(value).toFixed(1)}%`;
+
+      const renderByClass=(rows)=>{
+        const body=document.querySelector('[data-by-class]');
+        body.innerHTML='';
+        if(!rows.length){body.innerHTML='<tr><td colspan="8" class="empty">No decisions yet.</td></tr>';return;}
+        for(const row of rows){
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td data-label="Class">${row.decision_class}</td><td data-label="Count">${row.decision_count}</td><td data-label="Scored">${row.scored_count}</td>`+
+            `<td data-label="Net delta">${fmtMoney(row.net_delta_usd)}</td><td data-label="Helped">${row.confirmed_helped}</td><td data-label="Hurt">${row.confirmed_hurt}</td>`+
+            `<td data-label="Neutral">${row.neutral}</td><td data-label="Open">${row.open_at_window_end}</td>`;
+          body.append(tr);
+        }
+      };
+
+      const renderCohorts=(selector,rows)=>{
+        const body=document.querySelector(selector);
+        body.innerHTML='';
+        if(!rows.length){body.innerHTML='<tr><td colspan="7" class="empty">No cohort with at least 15 resolved trades yet.</td></tr>';return;}
+        for(const row of rows){
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td data-label="Provider">${row.provider}</td><td data-label="Side">${row.side}</td><td data-label="Session">${row.session}</td><td data-label="Weekday">${row.weekday}</td>`+
+            `<td data-label="Resolved">${row.trades_resolved}</td><td data-label="Win %">${fmtPct(row.win_rate_pct)}</td><td data-label="Net P&amp;L">${fmtMoney(row.net_pnl_usd)}</td>`;
+          body.append(tr);
+        }
+      };
+
+      const renderProviders=(rows)=>{
+        const body=document.querySelector('[data-providers]');
+        body.innerHTML='';
+        if(!rows.length){body.innerHTML='<tr><td colspan="5" class="empty">No decisions yet.</td></tr>';return;}
+        for(const row of rows){
+          const tr=document.createElement('tr');
+          tr.innerHTML=`<td data-label="Provider">${row.provider}</td><td data-label="Decisions">${row.decision_count}</td>`+
+            `<td data-label="Resolved">${row.trades_resolved}</td><td data-label="Win %">${fmtPct(row.win_rate_pct)}</td>`+
+            `<td data-label="Net P&amp;L">${fmtMoney(row.net_pnl_usd)}</td>`;
+          body.append(tr);
+        }
+      };
+
+      const render=(view)=>{
+        document.querySelector('[data-total-sources]').textContent=view.coverage.total_sources;
+        document.querySelector('[data-sources-observed]').textContent=view.coverage.sources_with_observations;
+        document.querySelector('[data-sources-decided]').textContent=view.coverage.sources_with_decisions;
+        document.querySelector('[data-total-decisions]').textContent=view.total_decisions;
+        document.querySelector('[data-last-decision]').textContent=fmtTime(view.last_decision_at);
+        document.querySelector('[data-total-scored]').textContent=view.total_outcomes_scored;
+        document.querySelector('[data-last-scored]').textContent=fmtTime(view.last_outcome_at);
+        renderProviders(view.providers);
+        renderByClass(view.by_class);
+        renderCohorts('[data-top-cohorts]',view.top_cohorts);
+        renderCohorts('[data-bottom-cohorts]',view.bottom_cohorts);
+        const registry=view.hypothesis_registry;
+        document.querySelector('[data-registry]').textContent=registry
+          ? `${registry.preregistered_count} preregistered, ${registry.tested_count} tested, ${registry.significant_count} significant -- latest run ${fmtTime(registry.run_completed_at)}.`
+          : 'No completed run yet.';
+        document.querySelector('[data-generated]').textContent=`Generated ${fmtTime(view.generated_at)}`;
+      };
+
+      const load=async()=>{
+        setStatus('Loading AIDY overview…','Reading the Decision Ledger.');
+        try{
+          const view=await requestJson('/admin/aidy/overview',{},true);
+          statusBox.classList.add('hidden');
+          content.classList.remove('hidden');
+          render(view);
+        }catch(e){
+          if(e.status===401){setStatus('Owner sign-in required','Sign in below.');login.classList.remove('hidden');return;}
+          if(e.status===403){setStatus('Not authorized','This account does not have admin access to AIDY internals.','error');return;}
+          setStatus('Could not load AIDY overview',e.message||'Please try again.','error');
+        }
+      };
+
+      document.getElementById('refreshBtn').addEventListener('click',load);
+
+      const boot=async()=>{
+        setStatus('Checking owner session…','If Smart Signals is updating, this page will continue automatically.');
+        try{
+          const me=await requestJson('/auth/me',{},true);
+          if(!['owner','trading_admin'].includes(me.role)){setStatus('Owner account required','This signed-in account cannot view AIDY internals.','error');return;}
+          await load();
+        }catch(e){
+          if(e.status===401){setStatus('Owner sign-in required','Sign in below.');login.classList.remove('hidden');return;}
+          setStatus('Could not verify owner account',e.message||'Please try again.','error');
+        }
+      };
+
+      login.addEventListener('submit',async(ev)=>{
+        ev.preventDefault();const btn=login.querySelector('button');btn.disabled=true;
+        try{
+          const data=Object.fromEntries(new FormData(login));
+          const me=await requestJson('/auth/login',{method:'POST',body:JSON.stringify(data)});
+          if(!['owner','trading_admin'].includes(me.role))throw new Error('This account does not have admin access.');
+          login.classList.add('hidden');
+          await load();
+        }catch(e){setStatus('Sign-in failed',e.message||'Check your details and try again.','error');btn.disabled=false;}
+      });
+
+      boot();
+    })();
+  </script>
+</body>
+</html>

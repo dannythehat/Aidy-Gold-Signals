@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#061017" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Complimentary Access · Smart Signals</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#061017;color:#f5fbff;font-family:Arial,sans-serif}body{min-height:100vh;display:grid;place-items:center;padding:22px;background:radial-gradient(circle at 20% 10%,rgba(18,188,230,.16),transparent 36%),radial-gradient(circle at 85% 80%,rgba(34,197,94,.12),transparent 34%),#061017}.card{width:min(100%,520px);padding:26px;border:1px solid #244252;border-radius:22px;background:linear-gradient(180deg,#0d1b26,#08131c);box-shadow:0 20px 50px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.06)}.logo{display:block;width:190px;max-width:62%;height:auto;margin:0 0 26px}.eyebrow{color:#67e8f9;font-size:12px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase}.card h1{font-size:28px;line-height:1.08;margin:8px 0 12px}.card p{color:#bdd0dc;line-height:1.6;margin:0 0 18px}.status{padding:16px;border-radius:14px;border:1px solid #1d3949;background:#07131c;margin-top:18px}.status strong{display:block;color:#fff;margin-bottom:6px}.status.success{border-color:rgba(34,197,94,.55);background:rgba(13,55,33,.58)}.status.error{border-color:rgba(239,68,68,.55);background:rgba(62,20,24,.55)}form{display:grid;gap:13px;margin-top:18px}label{display:grid;gap:6px;color:#d9e8f0;font-size:13px;font-weight:700}input{width:100%;min-height:48px;border:1px solid #2b4858;border-radius:12px;background:#06111a;color:white;padding:0 14px;font-size:16px}button,.button{display:inline-grid;place-items:center;min-height:48px;border:0;border-radius:12px;background:#22c55e;color:#04110a;font-weight:900;font-size:15px;padding:0 18px;text-decoration:none;cursor:pointer;box-shadow:0 5px 0 #0b6e30}button:disabled{opacity:.6;cursor:wait}.muted{font-size:12px;color:#7f9cad!important;margin-top:12px!important}.hidden{display:none!important}@media(max-width:480px){body{padding:14px}.card{padding:21px;border-radius:18px}.card h1{font-size:24px}.logo{width:165px}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img class="logo" src="/assets/logo/smart-signals-approved.webp" alt="Smart Signals" />
+    <div class="eyebrow">Owner approval</div>
+    <h1>Complimentary access</h1>
+    <p>This private page activates a new member without payment. Only an authenticated Smart Signals owner can complete the action.</p>
+
+    <div class="status" id="status" aria-live="polite"><strong>Checking owner session…</strong><span>Please wait.</span></div>
+
+    <form id="login" class="hidden" autocomplete="on">
+      <label>Owner email<input name="email" type="email" autocomplete="email" required /></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+      <button type="submit">Sign in & approve access</button>
+    </form>
+
+    <a class="button hidden" id="accountLink" href="/account">Open my account</a>
+    <p class="muted">The approval token expires after 7 days and is invalid after it has been used once.</p>
+  </main>
+
+  <script>
+    (()=>{
+      const api='/account-api';
+      const statusBox=document.getElementById('status');
+      const login=document.getElementById('login');
+      const accountLink=document.getElementById('accountLink');
+      const token=new URLSearchParams(location.search).get('token')||'';
+      const transientStatuses=new Set([502,503,504]);
+      const retryDelays=[500,900,1400,2000,3000,4000];
+      const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+      const setStatus=(title,text,type='')=>{statusBox.className='status'+(type?' '+type:'');statusBox.innerHTML='';const strong=document.createElement('strong');strong.textContent=title;const span=document.createElement('span');span.textContent=text;statusBox.append(strong,span);};
+      const requestJson=async(path,options={},allowRetry=false)=>{
+        const attempts=allowRetry?retryDelays.length+1:1;
+        let lastError=null;
+        for(let attempt=0;attempt<attempts;attempt+=1){
+          try{
+            const r=await fetch(api+path,{credentials:'include',cache:'no-store',headers:{'Content-Type':'application/json','Accept':'application/json',...(options.headers||{})},...options});
+            let body={};
+            try{body=await r.json()}catch{}
+            if(!r.ok){
+              const d=body&&body.detail;
+              const msg=typeof d==='string'?d:(d&&d.message)||'Request failed.';
+              const e=new Error(msg);e.status=r.status;
+              if(allowRetry&&transientStatuses.has(r.status)&&attempt<attempts-1){lastError=e;await sleep(retryDelays[attempt]);continue;}
+              throw e;
+            }
+            return body;
+          }catch(e){
+            if(e&&e.status===401)throw e;
+            if(allowRetry&&(!e.status||transientStatuses.has(e.status))&&attempt<attempts-1){lastError=e;await sleep(retryDelays[attempt]);continue;}
+            throw e;
+          }
+        }
+        throw lastError||new Error('Request failed.');
+      };
+      const grant=async()=>{
+        if(!token){setStatus('Invalid approval link','The complimentary access token is missing.','error');return;}
+        setStatus('Approving member…','Activating access and sending the member their setup email.');
+        try{
+          const result=await requestJson('/owner/mt5/approvals/subscriptions/complimentary/grant',{method:'POST',body:JSON.stringify({token})},true);
+          setStatus('Complimentary access activated',result.member_email_sent?'The member has been emailed and can now connect their MT5 account.':'Access is active. Smart Signals will keep the member notification available for recovery.','success');
+          accountLink.classList.remove('hidden');
+          history.replaceState({},'',location.pathname);
+        }catch(e){
+          if(e.status===401){setStatus('Owner sign-in required','Sign in below. Approval will continue automatically after login.');login.classList.remove('hidden');return;}
+          setStatus('Approval could not be completed',e.message||'Please try again.','error');
+        }
+      };
+      const boot=async()=>{
+        if(!token){setStatus('Invalid approval link','The complimentary access token is missing.','error');return;}
+        setStatus('Checking owner session…','If Smart Signals is updating, this page will continue automatically.');
+        try{
+          const me=await requestJson('/auth/me',{},true);
+          if(!['owner','admin'].includes(me.role)){setStatus('Owner account required','This signed-in account cannot grant complimentary access.','error');return;}
+          await grant();
+        }catch(e){
+          if(e.status===401){setStatus('Owner sign-in required','Sign in below. Approval will continue automatically after login.');login.classList.remove('hidden');return;}
+          setStatus('Could not verify owner account',e.message||'Please try again.','error');
+        }
+      };
+      login.addEventListener('submit',async(ev)=>{
+        ev.preventDefault();const btn=login.querySelector('button');btn.disabled=true;
+        try{
+          const data=Object.fromEntries(new FormData(login));
+          const me=await requestJson('/auth/login',{method:'POST',body:JSON.stringify(data)});
+          if(!['owner','admin'].includes(me.role))throw new Error('This account does not have owner access.');
+          login.classList.add('hidden');
+          await grant();
+        }catch(e){setStatus('Sign-in failed',e.message||'Check your details and try again.','error');btn.disabled=false;}
+      });
+      boot();
+    })();
+  </script>
+</body>
+</html>

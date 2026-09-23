@@ -1,0 +1,1 @@
+Smart Signals production rebuild trigger — 2026-08-30 final homepage scale and auth state.

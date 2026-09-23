@@ -1,0 +1,8 @@
+/* Keep the final How It Works cards concise and clean. */
+body #how-it-works .copy-link::before {
+  content: "05 · EXECUTED FAST\A\ASignals are placed and managed automatically." !important;
+}
+
+body #how-it-works .copy-link::after {
+  content: "06 · REVIEWED MONTHLY\A\AProviders must keep earning their place." !important;
+}

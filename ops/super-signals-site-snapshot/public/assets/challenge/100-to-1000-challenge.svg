@@ -1,0 +1,87 @@
+<svg width="1200" height="760" viewBox="0 0 1200 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="40" x2="1110" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A1F2B"/>
+      <stop offset="0.52" stop-color="#081522"/>
+      <stop offset="1" stop-color="#07110F"/>
+    </linearGradient>
+    <linearGradient id="line" x1="182" y1="590" x2="1020" y2="170" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#35D6E8"/>
+      <stop offset="0.5" stop-color="#4AA9FF"/>
+      <stop offset="1" stop-color="#22E06B"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#F5D98A"/>
+      <stop offset="1" stop-color="#C9963D"/>
+    </linearGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="38"/>
+    </filter>
+  </defs>
+
+  <rect x="18" y="18" width="1164" height="724" rx="44" fill="url(#bg)" stroke="#35D6E8" stroke-opacity="0.22" stroke-width="2"/>
+  <circle cx="930" cy="170" r="180" fill="#22E06B" fill-opacity="0.08" filter="url(#soft)"/>
+  <circle cx="275" cy="555" r="190" fill="#35D6E8" fill-opacity="0.08" filter="url(#soft)"/>
+
+  <g opacity="0.14" stroke="#8FE9F2">
+    <path d="M78 120H1122"/>
+    <path d="M78 240H1122"/>
+    <path d="M78 360H1122"/>
+    <path d="M78 480H1122"/>
+    <path d="M78 600H1122"/>
+    <path d="M190 84V680"/>
+    <path d="M390 84V680"/>
+    <path d="M590 84V680"/>
+    <path d="M790 84V680"/>
+    <path d="M990 84V680"/>
+  </g>
+
+  <g transform="translate(85 72)">
+    <rect width="318" height="84" rx="22" fill="#081821" stroke="#35D6E8" stroke-opacity="0.34"/>
+    <circle cx="45" cy="42" r="22" fill="#35D6E8" fill-opacity="0.11" stroke="#35D6E8" stroke-opacity="0.5"/>
+    <path d="M35 43L42 50L56 34" stroke="#7EEAF3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="82" y="35" fill="#7EEAF3" font-size="15" font-family="monospace" letter-spacing="2">SMART SIGNALS BOT</text>
+    <text x="82" y="59" fill="#A8BBC5" font-size="17" font-family="Arial, sans-serif">Following approved signals</text>
+  </g>
+
+  <path d="M170 604C254 590 308 548 378 520C458 488 508 520 574 452C646 378 673 392 738 336C818 268 862 302 934 232C974 193 1008 168 1044 148" stroke="#071019" stroke-width="22" stroke-linecap="round"/>
+  <path d="M170 604C254 590 308 548 378 520C458 488 508 520 574 452C646 378 673 392 738 336C818 268 862 302 934 232C974 193 1008 168 1044 148" stroke="url(#line)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+
+  <g>
+    <circle cx="170" cy="604" r="18" fill="#081923" stroke="#35D6E8" stroke-width="4"/>
+    <circle cx="574" cy="452" r="14" fill="#081923" stroke="#4AA9FF" stroke-width="4"/>
+    <circle cx="738" cy="336" r="14" fill="#081923" stroke="#E7BC62" stroke-width="4"/>
+    <circle cx="1044" cy="148" r="21" fill="#092119" stroke="#22E06B" stroke-width="5" filter="url(#glow)"/>
+  </g>
+
+  <g transform="translate(98 530)">
+    <rect width="238" height="130" rx="26" fill="#071720" stroke="#35D6E8" stroke-opacity="0.46"/>
+    <text x="28" y="38" fill="#7F97A3" font-size="14" font-family="monospace" letter-spacing="3">START</text>
+    <text x="28" y="87" fill="#EFF7F9" font-size="46" font-weight="700" font-family="Arial, sans-serif">$100</text>
+    <text x="28" y="112" fill="#6FDCE8" font-size="15" font-family="monospace">10 SEP 2026</text>
+  </g>
+
+  <g transform="translate(865 92)">
+    <rect width="246" height="142" rx="28" fill="#082019" stroke="#22E06B" stroke-opacity="0.52"/>
+    <text x="28" y="39" fill="#79A68A" font-size="14" font-family="monospace" letter-spacing="3">TARGET</text>
+    <text x="28" y="94" fill="#DFFFF0" font-size="52" font-weight="700" font-family="Arial, sans-serif">$1,000</text>
+    <text x="28" y="120" fill="#73E79E" font-size="15" font-family="monospace">10× ACCOUNT GOAL</text>
+  </g>
+
+  <g transform="translate(462 218)">
+    <rect width="288" height="96" rx="24" fill="#101B23" stroke="url(#gold)" stroke-opacity="0.55"/>
+    <text x="28" y="38" fill="#E7BC62" font-size="14" font-family="monospace" letter-spacing="3">THE CHALLENGE</text>
+    <text x="28" y="68" fill="#EDF4F7" font-size="22" font-weight="700" font-family="Arial, sans-serif">Can the bot reach the goal?</text>
+  </g>
+
+  <g transform="translate(512 566)">
+    <rect width="510" height="74" rx="22" fill="#07141D" stroke="#FFFFFF" stroke-opacity="0.08"/>
+    <text x="28" y="31" fill="#748A96" font-size="13" font-family="monospace" letter-spacing="2">PUBLIC PROGRESS</text>
+    <rect x="28" y="45" width="454" height="8" rx="4" fill="#132631"/>
+    <rect x="28" y="45" width="54" height="8" rx="4" fill="url(#line)"/>
+  </g>
+</svg>

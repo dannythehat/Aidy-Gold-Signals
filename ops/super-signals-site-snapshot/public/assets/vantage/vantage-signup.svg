@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 698" role="img" aria-labelledby="title desc">
+  <title id="title">Vantage</title>
+  <desc id="desc">Vantage broker signup artwork</desc>
+  <rect width="1536" height="698" rx="34" fill="#f15a24"/>
+  <g transform="translate(76 192)">
+    <path d="M0 0h90l84 151-48 115z" fill="#07505c"/>
+    <path d="M116 0h226l-101 83-1 122-57-101z" fill="#fff"/>
+  </g>
+  <text x="430" y="405" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="218" font-weight="600" letter-spacing="-13">vantage</text>
+</svg>

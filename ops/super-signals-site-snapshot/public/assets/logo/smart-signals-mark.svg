@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="Smart Signals mark">
+  <defs>
+    <linearGradient id="sgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#35D6E8"/><stop offset=".48" stop-color="#0FA7F2"/><stop offset="1" stop-color="#22E06B"/></linearGradient>
+    <linearGradient id="orbit" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#0B5CFF"/><stop offset=".5" stop-color="#35D6E8"/><stop offset="1" stop-color="#22E06B"/></linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="300" height="300" rx="66" fill="#060D14"/>
+  <g transform="translate(8 10)" filter="url(#glow)">
+    <text x="29" y="241" font-family="Arial Black, Archivo, sans-serif" font-size="238" font-weight="900" fill="url(#sgrad)" stroke="#0C3559" stroke-width="4">S</text>
+    <ellipse cx="140" cy="151" rx="124" ry="50" fill="none" stroke="url(#orbit)" stroke-width="12" transform="rotate(-13 140 151)"/>
+    <rect x="112" y="119" width="20" height="58" rx="3" fill="#22E06B"/><rect x="142" y="92" width="20" height="85" rx="3" fill="#22E06B"/><rect x="172" y="65" width="20" height="112" rx="3" fill="#22E06B"/>
+    <path d="M110 113 L157 92 L196 56 L229 24" fill="none" stroke="#22E06B" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><path d="M208 23 L235 17 L230 44 Z" fill="#22E06B"/>
+  </g>
+</svg>

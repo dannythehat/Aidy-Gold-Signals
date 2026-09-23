@@ -1,0 +1,344 @@
+@media (max-width: 860px) {
+  .site-header {
+    position: relative;
+    inset: auto;
+    z-index: 50;
+    width: 100%;
+    padding-top: 1px;
+    pointer-events: none;
+    background: linear-gradient(180deg, #060d14 0%, rgba(6,13,20,0.96) 72%, rgba(6,13,20,0) 100%);
+  }
+
+  .nav-shell {
+    margin-top: 10px;
+    margin-bottom: 8px;
+  }
+
+  .hero-inner {
+    padding-top: 30px;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero-inner {
+    padding-top: 26px;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero-inner {
+    padding-top: 22px;
+  }
+}
+
+/* Richer section colour + depth without changing layout */
+
+body .content-section {
+  isolation: isolate;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.028),
+    inset 0 -1px 0 rgba(255,255,255,0.025);
+}
+
+body .database-section {
+  background:
+    radial-gradient(circle at 12% 18%, rgba(231,188,98,0.10), transparent 28%),
+    radial-gradient(circle at 88% 34%, rgba(53,214,232,0.14), transparent 32%),
+    radial-gradient(circle at 54% 84%, rgba(34,224,107,0.08), transparent 34%),
+    linear-gradient(180deg, #061019 0%, #07131c 48%, #050c12 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(231,188,98,0.10),
+    inset 0 -1px 0 rgba(53,214,232,0.10),
+    0 28px 80px rgba(0,0,0,0.24);
+}
+
+body .database-section .database-point {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(13,29,40,0.96), rgba(7,18,26,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.055),
+    0 15px 34px -26px rgba(0,0,0,0.95);
+}
+
+body .database-section .database-point::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .9;
+}
+
+body .database-section .database-point:nth-child(1) {
+  border-color: rgba(53,214,232,0.28);
+}
+body .database-section .database-point:nth-child(1)::after {
+  background: radial-gradient(circle at 8% 20%, rgba(53,214,232,0.10), transparent 30%);
+}
+
+body .database-section .database-point:nth-child(2) {
+  border-color: rgba(74,169,255,0.27);
+}
+body .database-section .database-point:nth-child(2)::after {
+  background: radial-gradient(circle at 8% 20%, rgba(74,169,255,0.10), transparent 30%);
+}
+
+body .database-section .database-point:nth-child(3) {
+  border-color: rgba(231,188,98,0.28);
+}
+body .database-section .database-point:nth-child(3)::after {
+  background: radial-gradient(circle at 8% 20%, rgba(231,188,98,0.11), transparent 30%);
+}
+
+body .database-section .database-point:nth-child(4) {
+  border-color: rgba(34,224,107,0.30);
+}
+body .database-section .database-point:nth-child(4)::after {
+  background: radial-gradient(circle at 8% 20%, rgba(34,224,107,0.11), transparent 30%);
+}
+
+body .database-section .database-point > * {
+  position: relative;
+  z-index: 1;
+}
+
+body .smart-trading {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(53,214,232,0.16), transparent 29%),
+    radial-gradient(circle at 92% 72%, rgba(34,224,107,0.12), transparent 34%),
+    radial-gradient(circle at 16% 76%, rgba(74,169,255,0.07), transparent 28%),
+    linear-gradient(180deg, #040b12 0%, #06131c 54%, #050d14 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(53,214,232,0.10),
+    inset 0 -1px 0 rgba(74,169,255,0.08);
+}
+
+body .smart-trading .split-copy {
+  position: relative;
+}
+
+body .smart-trading .split-copy::before {
+  content: "";
+  position: absolute;
+  width: 210px;
+  height: 210px;
+  left: -80px;
+  top: 10%;
+  z-index: -1;
+  border-radius: 50%;
+  background: rgba(53,214,232,0.06);
+  filter: blur(56px);
+}
+
+body .smart-trading .copy-link {
+  border-color: rgba(53,214,232,0.42);
+  background: linear-gradient(135deg, rgba(53,214,232,0.11), rgba(34,224,107,0.05));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 16px 34px -24px rgba(53,214,232,0.55);
+}
+
+body .smart-trading .trading-card {
+  border-width: 1px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.075),
+    inset 0 -1px 0 rgba(255,255,255,0.018),
+    0 24px 54px -32px rgba(0,0,0,0.98);
+}
+
+body .smart-trading .trading-card:nth-child(1) {
+  border-color: rgba(53,214,232,0.45);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(53,214,232,0.16), transparent 36%),
+    linear-gradient(145deg, rgba(11,35,45,0.97), rgba(6,18,27,0.99));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 24px 58px -34px rgba(53,214,232,0.48);
+}
+
+body .smart-trading .trading-card:nth-child(2) {
+  border-color: rgba(74,169,255,0.46);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(74,169,255,0.16), transparent 36%),
+    linear-gradient(145deg, rgba(10,28,48,0.97), rgba(6,17,28,0.99));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 24px 58px -34px rgba(74,169,255,0.42);
+}
+
+body .smart-trading .trading-card:nth-child(3) {
+  border-color: rgba(34,224,107,0.48);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(34,224,107,0.17), transparent 38%),
+    linear-gradient(145deg, rgba(8,43,33,0.98), rgba(6,19,26,0.99));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.07),
+    0 24px 60px -34px rgba(34,224,107,0.44);
+}
+
+body .results-section {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(142,104,255,0.13), transparent 30%),
+    radial-gradient(circle at 86% 74%, rgba(53,214,232,0.09), transparent 34%),
+    linear-gradient(180deg, #060b14 0%, #080e18 48%, #050c12 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(142,104,255,0.12),
+    inset 0 -1px 0 rgba(53,214,232,0.07);
+}
+
+body .results-section .section-kicker {
+  color: #a991ff;
+}
+
+body .results-section .result-card {
+  border-color: rgba(142,104,255,0.22);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(142,104,255,0.10), transparent 32%),
+    linear-gradient(145deg, rgba(16,23,39,0.94), rgba(7,15,25,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.055),
+    0 28px 64px -42px rgba(82,55,170,0.58);
+}
+
+body .results-section .result-card:nth-child(2) {
+  border-color: rgba(53,214,232,0.20);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(53,214,232,0.08), transparent 32%),
+    linear-gradient(145deg, rgba(10,26,37,0.95), rgba(7,15,25,0.98));
+}
+
+body .results-section .calendar-day--reference {
+  border-color: rgba(53,214,232,0.38);
+  background: linear-gradient(145deg, rgba(53,214,232,0.11), rgba(74,169,255,0.045));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+body .how-section {
+  background:
+    radial-gradient(circle at 12% 26%, rgba(53,214,232,0.10), transparent 30%),
+    radial-gradient(circle at 86% 72%, rgba(231,188,98,0.08), transparent 30%),
+    linear-gradient(180deg, #050c12 0%, #07111a 50%, #050c12 100%);
+}
+
+body .how-section .step-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(12,27,37,0.95), rgba(7,17,25,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 22px 52px -38px rgba(0,0,0,0.95);
+}
+
+body .how-section .step-card:nth-child(1) { border-color: rgba(53,214,232,0.33); }
+body .how-section .step-card:nth-child(2) { border-color: rgba(74,169,255,0.32); }
+body .how-section .step-card:nth-child(3) { border-color: rgba(231,188,98,0.32); }
+body .how-section .step-card:nth-child(4) { border-color: rgba(34,224,107,0.34); }
+
+body #trust {
+  background:
+    radial-gradient(circle at 84% 22%, rgba(34,224,107,0.10), transparent 30%),
+    radial-gradient(circle at 18% 80%, rgba(53,214,232,0.07), transparent 28%),
+    linear-gradient(180deg, #050c12 0%, #06110f 52%, #050c12 100%);
+}
+
+body #trust .trust-card {
+  background: linear-gradient(145deg, rgba(10,31,30,0.92), rgba(7,17,24,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 22px 52px -38px rgba(0,0,0,0.96);
+}
+
+body #trust .trust-card:nth-child(1) { border-color: rgba(34,224,107,0.30); }
+body #trust .trust-card:nth-child(2) { border-color: rgba(53,214,232,0.30); }
+body #trust .trust-card:nth-child(3) { border-color: rgba(231,188,98,0.28); }
+
+body #faq {
+  background:
+    radial-gradient(circle at 90% 14%, rgba(142,104,255,0.08), transparent 28%),
+    linear-gradient(180deg, #050c12 0%, #080d15 52%, #050c12 100%);
+}
+
+body #faq .faq-item {
+  border-color: rgba(232,239,242,0.105);
+  background: linear-gradient(145deg, rgba(13,23,35,0.90), rgba(7,15,23,0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.045),
+    0 18px 44px -36px rgba(0,0,0,0.95);
+}
+
+body .final-cta {
+  border-color: rgba(53,214,232,0.34);
+  background:
+    radial-gradient(circle at 88% 20%, rgba(34,224,107,0.16), transparent 30%),
+    radial-gradient(circle at 15% 85%, rgba(53,214,232,0.13), transparent 34%),
+    linear-gradient(145deg, rgba(11,31,40,0.95), rgba(7,18,25,0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.065),
+    0 30px 72px -42px rgba(53,214,232,0.40);
+}
+
+@media (max-width: 720px) {
+  body .database-section .database-point {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      0 14px 30px -24px rgba(0,0,0,0.95);
+  }
+
+  body .database-section .database-mobile-card {
+    border-width: 1px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.075),
+      0 22px 48px -30px rgba(0,0,0,0.98);
+  }
+
+  body .database-section .database-mobile-card:nth-child(1) {
+    border-color: rgba(53,214,232,0.42);
+    background:
+      radial-gradient(circle at 92% 0%, rgba(53,214,232,0.16), transparent 36%),
+      linear-gradient(145deg, rgba(9,34,44,0.97), rgba(5,16,24,0.99));
+  }
+
+  body .database-section .database-mobile-card:nth-child(2) {
+    border-color: rgba(74,169,255,0.42);
+    background:
+      radial-gradient(circle at 92% 0%, rgba(74,169,255,0.15), transparent 36%),
+      linear-gradient(145deg, rgba(9,28,47,0.97), rgba(5,16,24,0.99));
+  }
+
+  body .database-section .database-mobile-card:nth-child(3) {
+    border-color: rgba(231,188,98,0.40);
+    background:
+      radial-gradient(circle at 92% 0%, rgba(231,188,98,0.15), transparent 36%),
+      linear-gradient(145deg, rgba(38,31,20,0.94), rgba(7,17,23,0.99));
+  }
+
+  body .database-section .database-mobile-card:nth-child(4) {
+    border-color: rgba(34,224,107,0.48);
+    background:
+      radial-gradient(circle at 92% 0%, rgba(34,224,107,0.17), transparent 38%),
+      linear-gradient(145deg, rgba(7,42,31,0.97), rgba(5,17,24,0.99));
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.075),
+      0 24px 52px -30px rgba(34,224,107,0.34);
+  }
+
+  body .database-section .database-mobile-card:nth-child(1) .database-mobile-num { color: #6ee8f2; }
+  body .database-section .database-mobile-card:nth-child(2) .database-mobile-num { color: #78baff; }
+  body .database-section .database-mobile-card:nth-child(3) .database-mobile-num { color: #e8c36f; }
+  body .database-section .database-mobile-card:nth-child(4) .database-mobile-num { color: #78eba3; }
+
+  body .smart-trading .trading-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.07),
+      0 20px 46px -28px rgba(0,0,0,0.98);
+  }
+
+  body .results-section .result-card,
+  body .how-section .step-card,
+  body #trust .trust-card,
+  body #faq .faq-item {
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.05),
+      0 18px 42px -30px rgba(0,0,0,0.96);
+  }
+}

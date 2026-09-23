@@ -1,0 +1,612 @@
+.signal-theme-cyan {
+  border-color: rgba(53,214,232,0.58);
+  background: linear-gradient(145deg, rgba(10,45,57,0.92), rgba(7,20,29,0.94));
+  box-shadow: 0 0 22px rgba(53,214,232,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.signal-theme-violet {
+  border-color: rgba(142,104,255,0.56);
+  background: linear-gradient(145deg, rgba(42,28,72,0.92), rgba(14,18,34,0.95));
+  box-shadow: 0 0 22px rgba(142,104,255,0.11), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.signal-theme-green {
+  border-color: rgba(34,224,107,0.82) !important;
+  background: linear-gradient(145deg, rgba(13,65,43,0.94), rgba(7,27,27,0.96)) !important;
+  box-shadow: 0 0 28px rgba(34,224,107,0.22), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+}
+
+.signal-theme-amber {
+  border-color: rgba(232,163,61,0.58);
+  background: linear-gradient(145deg, rgba(63,42,16,0.90), rgba(26,20,14,0.95));
+  box-shadow: 0 0 22px rgba(232,163,61,0.11), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.signal-theme-blue {
+  border-color: rgba(65,140,255,0.60);
+  background: linear-gradient(145deg, rgba(17,40,74,0.92), rgba(8,20,35,0.95));
+  box-shadow: 0 0 22px rgba(65,140,255,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.signal-theme-teal {
+  border-color: rgba(38,197,176,0.58);
+  background: linear-gradient(145deg, rgba(12,55,53,0.92), rgba(7,25,28,0.95));
+  box-shadow: 0 0 22px rgba(38,197,176,0.11), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.signal-theme-cyan .signal-card__source::before { background: rgba(53,214,232,0.22); }
+.signal-theme-violet .signal-card__source::before { background: rgba(142,104,255,0.22); color: #b7a4ff; }
+.signal-theme-green .signal-card__source::before { background: rgba(34,224,107,0.22); color: #7ff0aa; }
+.signal-theme-amber .signal-card__source::before { background: rgba(232,163,61,0.22); color: #efc46f; }
+.signal-theme-blue .signal-card__source::before { background: rgba(65,140,255,0.22); color: #86b6ff; }
+.signal-theme-teal .signal-card__source::before { background: rgba(38,197,176,0.22); color: #79e6d6; }
+
+.signal-filter::before {
+  content: "FILTER";
+  top: 48px;
+  transform: translateX(-50%);
+  padding: 5px 8px;
+  letter-spacing: 0.12em;
+}
+
+.signal-filter::after {
+  top: 52%;
+}
+
+.signal-demo__caption {
+  color: rgba(232,239,242,0.72);
+}
+
+/* Smoky silver-green headings with a visible Smart Signals green highlight. */
+body .hero h1,
+body .section-head h2,
+body .split-copy h2,
+body .database-copy h2,
+body .final-cta h2,
+body .explainer-hero h1,
+body .explainer-section h2 {
+  color: #b8d3c6 !important;
+  -webkit-text-fill-color: #b8d3c6 !important;
+  background: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  -webkit-text-stroke: 0 !important;
+  text-shadow:
+    0 -1px 0 rgba(79, 238, 137, .56),
+    0 -2px 8px rgba(34, 224, 107, .16),
+    0 2px 0 rgba(0, 0, 0, .88),
+    0 4px 0 rgba(0, 0, 0, .42),
+    0 7px 12px rgba(0, 0, 0, .58),
+    0 14px 28px rgba(0, 0, 0, .28) !important;
+  filter: none !important;
+}
+
+body .hero h1 {
+  color: #c1dccf !important;
+  -webkit-text-fill-color: #c1dccf !important;
+  text-shadow:
+    0 -1px 0 rgba(84, 247, 145, .70),
+    0 -2px 10px rgba(34, 224, 107, .20),
+    0 2px 0 rgba(0, 0, 0, .92),
+    0 4px 0 rgba(0, 0, 0, .48),
+    0 8px 14px rgba(0, 0, 0, .62),
+    0 16px 30px rgba(0, 0, 0, .31) !important;
+}
+
+/* Mobile sub-section heading between the summary cards and the detailed 01–04 database flow. */
+@media (max-width: 720px) {
+  body .database-section .database-visual::before {
+    content: "How the Super Signals Database works";
+    display: block;
+    margin: 46px 0 24px;
+    padding: 36px 4px 0;
+    border-top: 1px solid rgba(53,214,232,.28);
+    color: #b8d3c6;
+    font-family: "Archivo", system-ui, sans-serif;
+    font-size: clamp(2rem, 9vw, 2.65rem);
+    font-weight: 800;
+    line-height: 1.03;
+    letter-spacing: -.045em;
+    text-shadow:
+      0 -1px 0 rgba(79,238,137,.48),
+      0 -2px 8px rgba(34,224,107,.14),
+      0 2px 0 rgba(0,0,0,.86),
+      0 7px 14px rgba(0,0,0,.48);
+  }
+}
+
+@media (max-width: 640px) {
+  body .hero h1,
+  body .section-head h2,
+  body .split-copy h2,
+  body .database-copy h2,
+  body .final-cta h2,
+  body .explainer-hero h1,
+  body .explainer-section h2 {
+    text-shadow:
+      0 -1px 0 rgba(79, 238, 137, .58),
+      0 -2px 8px rgba(34, 224, 107, .15),
+      0 2px 0 rgba(0, 0, 0, .90),
+      0 4px 0 rgba(0, 0, 0, .44),
+      0 7px 11px rgba(0, 0, 0, .60),
+      0 13px 23px rgba(0, 0, 0, .28) !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .signal-filter::before {
+    top: 38px;
+    font-size: 0.42rem;
+    padding: 4px 6px;
+  }
+
+  .signal-card__title {
+    font-size: 0.68rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   DAY 5 — HOW WE WORK
+   Six clear gates from paid channel access to monthly re-approval.
+   Uses the existing homepage markup so the rest of the page remains untouched.
+   -------------------------------------------------------------------------- */
+body #how-it-works.how-section {
+  position: relative;
+  overflow: hidden;
+  padding-top: clamp(88px, 10vw, 144px);
+  padding-bottom: clamp(92px, 11vw, 156px);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(53,214,232,.11), transparent 29%),
+    radial-gradient(circle at 86% 78%, rgba(34,224,107,.11), transparent 31%),
+    linear-gradient(180deg, rgba(5,14,21,.99), rgba(5,17,22,.99) 46%, rgba(5,15,19,.99));
+  border-top: 1px solid rgba(110,226,238,.10);
+  border-bottom: 1px solid rgba(56,214,122,.11);
+}
+
+body #how-it-works.how-section::before,
+body #how-it-works.how-section::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 999px;
+  filter: blur(2px);
+}
+
+body #how-it-works.how-section::before {
+  width: 420px;
+  height: 420px;
+  left: -270px;
+  top: 22%;
+  border: 1px solid rgba(53,214,232,.09);
+  box-shadow: 0 0 90px rgba(53,214,232,.05);
+}
+
+body #how-it-works.how-section::after {
+  width: 520px;
+  height: 520px;
+  right: -350px;
+  bottom: 4%;
+  border: 1px solid rgba(34,224,107,.08);
+  box-shadow: 0 0 100px rgba(34,224,107,.05);
+}
+
+body #how-it-works .section-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1120px;
+}
+
+body #how-it-works .section-head {
+  max-width: 850px;
+  margin: 0 auto clamp(52px, 7vw, 82px);
+  text-align: center;
+}
+
+body #how-it-works .section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 8px 13px;
+  border: 1px solid rgba(53,214,232,.20);
+  border-radius: 999px;
+  background: rgba(6,27,34,.58);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 12px 28px rgba(0,0,0,.18);
+}
+
+body #how-it-works .section-kicker::before {
+  content: "●";
+  color: #35d6e8;
+  font-size: .68rem;
+  text-shadow: 0 0 10px rgba(53,214,232,.75);
+}
+
+body #how-it-works #how-title {
+  font-size: 0 !important;
+  line-height: 1;
+}
+
+body #how-it-works #how-title::after {
+  content: "Six gates between a signal group and your account.";
+  display: block;
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: clamp(2.45rem, 5.8vw, 5.1rem);
+  font-weight: 800;
+  line-height: .98;
+  letter-spacing: -.052em;
+  color: #b8d3c6;
+  -webkit-text-fill-color: #b8d3c6;
+  text-shadow:
+    0 -1px 0 rgba(79,238,137,.50),
+    0 -2px 9px rgba(34,224,107,.12),
+    0 3px 0 rgba(0,0,0,.74),
+    0 10px 24px rgba(0,0,0,.42);
+}
+
+body #how-it-works .section-lead {
+  max-width: 760px;
+  margin: 24px auto 0;
+  font-size: 0 !important;
+}
+
+body #how-it-works .section-lead::after {
+  content: "We pay for the channels, keep the complete record, make providers prove themselves, learn how each one communicates, execute approved trades, then make them earn their place again every month.";
+  display: block;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: clamp(1rem, 2vw, 1.16rem);
+  line-height: 1.7;
+  color: rgba(213,226,224,.76);
+}
+
+body #how-it-works .section-head::after {
+  content: "PAID ACCESS  →  FULL RECORD  →  3–6 MONTH GATE  →  PROVIDER-SPECIFIC AI  →  API EXECUTION  →  MONTHLY REVIEW";
+  display: block;
+  margin: 30px auto 0;
+  padding-top: 22px;
+  border-top: 1px solid rgba(111,196,192,.15);
+  font-family: "JetBrains Mono", monospace;
+  font-size: .69rem;
+  line-height: 1.7;
+  letter-spacing: .09em;
+  color: rgba(99,216,164,.68);
+}
+
+body #how-it-works .home-steps {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 88px minmax(0,1fr);
+  grid-template-rows: repeat(4, auto);
+  gap: 28px 0;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+body #how-it-works .home-steps::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  bottom: 18px;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #35d6e8 0%, #2ab9c8 24%, #43c58e 61%, #22e06b 100%);
+  box-shadow: 0 0 18px rgba(53,214,232,.19), 0 0 22px rgba(34,224,107,.12);
+  opacity: .64;
+}
+
+body #how-it-works .step-card {
+  position: relative;
+  min-height: 250px;
+  padding: 30px 30px 28px;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.10);
+  background:
+    radial-gradient(circle at 90% 4%, rgba(255,255,255,.04), transparent 38%),
+    linear-gradient(145deg, rgba(11,27,35,.95), rgba(6,17,23,.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 22px 60px -38px rgba(0,0,0,.92);
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+
+body #how-it-works .step-card:hover {
+  transform: translateY(-3px);
+}
+
+body #how-it-works .step-card:nth-child(1) { grid-column: 1; grid-row: 1; border-color: rgba(53,214,232,.42); }
+body #how-it-works .step-card:nth-child(2) { grid-column: 3; grid-row: 2; border-color: rgba(43,188,202,.40); }
+body #how-it-works .step-card:nth-child(3) { grid-column: 1; grid-row: 3; border-color: rgba(231,188,98,.42); }
+body #how-it-works .step-card:nth-child(4) { grid-column: 3; grid-row: 4; border-color: rgba(34,224,107,.48); }
+
+body #how-it-works .step-card:nth-child(1) { background: radial-gradient(circle at 90% 4%, rgba(53,214,232,.13), transparent 40%), linear-gradient(145deg, rgba(8,37,48,.96), rgba(6,18,24,.99)); }
+body #how-it-works .step-card:nth-child(2) { background: radial-gradient(circle at 90% 4%, rgba(44,180,197,.13), transparent 40%), linear-gradient(145deg, rgba(8,33,44,.96), rgba(6,18,24,.99)); }
+body #how-it-works .step-card:nth-child(3) { background: radial-gradient(circle at 90% 4%, rgba(231,188,98,.14), transparent 40%), linear-gradient(145deg, rgba(39,31,20,.96), rgba(8,18,23,.99)); }
+body #how-it-works .step-card:nth-child(4) { background: radial-gradient(circle at 90% 4%, rgba(34,224,107,.15), transparent 40%), linear-gradient(145deg, rgba(8,40,29,.96), rgba(6,18,23,.99)); }
+
+body #how-it-works .step-card::after {
+  content: "";
+  position: absolute;
+  top: 46px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #07131a;
+  border: 3px solid currentColor;
+  box-shadow: 0 0 0 7px rgba(7,19,26,.95), 0 0 18px currentColor;
+}
+
+body #how-it-works .step-card:nth-child(1),
+body #how-it-works .step-card:nth-child(2) { color: #47d5e1; }
+body #how-it-works .step-card:nth-child(3) { color: #e7bc62; }
+body #how-it-works .step-card:nth-child(4) { color: #43de83; }
+
+body #how-it-works .step-card:nth-child(odd)::after { right: -51px; }
+body #how-it-works .step-card:nth-child(even)::after { left: -51px; }
+
+body #how-it-works .step-card__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 30px;
+  margin-bottom: 24px;
+  padding: 0 9px;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  background: rgba(4,14,20,.58);
+  font-family: "JetBrains Mono", monospace;
+  font-size: .74rem;
+  letter-spacing: .10em;
+  color: currentColor;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+body #how-it-works .step-card h3 {
+  margin: 0 0 14px;
+  font-size: 0 !important;
+  line-height: 1.15;
+}
+
+body #how-it-works .step-card h3::after {
+  display: block;
+  font-family: "Archivo", system-ui, sans-serif;
+  font-size: clamp(1.45rem, 2.6vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.025em;
+  color: #d8e3df;
+}
+
+body #how-it-works .step-card:nth-child(1) h3::after { content: "We subscribe"; }
+body #how-it-works .step-card:nth-child(2) h3::after { content: "We log everything"; }
+body #how-it-works .step-card:nth-child(3) h3::after { content: "The gate"; }
+body #how-it-works .step-card:nth-child(4) h3::after { content: "The AI learns their language"; }
+
+body #how-it-works .step-card p {
+  margin: 0;
+  font-size: 0 !important;
+  line-height: 1.6;
+}
+
+body #how-it-works .step-card p::after {
+  display: block;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: .99rem;
+  line-height: 1.68;
+  color: rgba(211,224,222,.73);
+}
+
+body #how-it-works .step-card:nth-child(1) p::after {
+  content: "We pay full price for the VIP channel, same as anyone. No special access, no cherry-picked feed. We see exactly what you'd see.";
+}
+
+body #how-it-works .step-card:nth-child(2) p::after {
+  content: "Every call, entry, update and close goes into the database. Wins and losses both. Nothing gets quietly dropped because it was a bad week.";
+}
+
+body #how-it-works .step-card:nth-child(3) p::after {
+  content: "Three to six months minimum before a channel is even considered. It has to be profitable across the whole window, not just a hot month. Most aren't.";
+}
+
+body #how-it-works .step-card:nth-child(4) p::after {
+  content: "Every group writes differently. Our AI is trained on each approved group individually so shorthand, edits and follow-up messages are understood in that provider's own context.";
+}
+
+body #how-it-works .copy-link {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  max-width: 1040px;
+  margin: 28px auto 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  text-decoration: none !important;
+}
+
+body #how-it-works .copy-link::before,
+body #how-it-works .copy-link::after {
+  display: block;
+  min-height: 220px;
+  padding: 28px 30px;
+  border-radius: 22px;
+  white-space: pre-line;
+  font-family: "Satoshi", system-ui, sans-serif;
+  font-size: .98rem;
+  font-weight: 500;
+  line-height: 1.68;
+  color: rgba(216,229,225,.78);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.055), 0 24px 58px -42px rgba(0,0,0,.9);
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+
+body #how-it-works .copy-link::before {
+  content: "05 · TRADES GO ON IN SECONDS\A\AOur APIs place the trade seconds after the signal lands, apply the stop on entry, catch duplicates, and follow updates and partial closes exactly as posted.";
+  border: 1px solid rgba(53,214,232,.43);
+  background: radial-gradient(circle at 90% 4%, rgba(53,214,232,.14), transparent 42%), linear-gradient(145deg, rgba(8,36,47,.97), rgba(6,18,24,.99));
+}
+
+body #how-it-works .copy-link::after {
+  content: "06 · REVIEWED EVERY MONTH\A\AEvery live group is re-scored monthly. Underperform and you're moved out of the app. No loyalty, no exceptions, no grandfathering.";
+  border: 1px solid rgba(34,224,107,.49);
+  background: radial-gradient(circle at 90% 4%, rgba(34,224,107,.16), transparent 42%), linear-gradient(145deg, rgba(8,40,29,.97), rgba(6,18,23,.99));
+}
+
+body #how-it-works .copy-link:hover::before,
+body #how-it-works .copy-link:hover::after {
+  transform: translateY(-3px);
+}
+
+body #how-it-works .copy-link:focus-visible {
+  outline: 2px solid rgba(53,214,232,.75);
+  outline-offset: 8px;
+  border-radius: 24px;
+}
+
+@supports (animation-timeline: view()) {
+  @keyframes day5-reveal {
+    from { opacity: .35; transform: translateY(22px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  body #how-it-works .step-card,
+  body #how-it-works .copy-link {
+    animation: day5-reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 5% cover 30%;
+  }
+}
+
+@media (max-width: 800px) {
+  body #how-it-works .section-head {
+    text-align: left;
+    margin-bottom: 48px;
+  }
+
+  body #how-it-works .section-kicker {
+    margin-left: 0;
+  }
+
+  body #how-it-works .section-lead,
+  body #how-it-works .section-lead::after {
+    margin-left: 0;
+  }
+
+  body #how-it-works .section-head::after {
+    text-align: left;
+    font-size: .64rem;
+  }
+
+  body #how-it-works .home-steps {
+    display: block;
+    padding-left: 34px;
+  }
+
+  body #how-it-works .home-steps::before {
+    left: 9px;
+    top: 16px;
+    bottom: 16px;
+    transform: none;
+  }
+
+  body #how-it-works .step-card {
+    min-height: 0;
+    margin: 0 0 22px;
+    padding: 27px 25px 25px;
+  }
+
+  body #how-it-works .step-card:nth-child(odd)::after,
+  body #how-it-works .step-card:nth-child(even)::after {
+    left: -33px;
+    right: auto;
+    top: 39px;
+    width: 12px;
+    height: 12px;
+    box-shadow: 0 0 0 6px rgba(7,19,26,.95), 0 0 15px currentColor;
+  }
+
+  body #how-it-works .copy-link {
+    grid-template-columns: 1fr;
+    margin-top: 20px !important;
+    padding-left: 34px !important;
+  }
+
+  body #how-it-works .copy-link::before,
+  body #how-it-works .copy-link::after {
+    min-height: 0;
+    padding: 26px 25px;
+  }
+}
+
+@media (max-width: 520px) {
+  body #how-it-works.how-section {
+    padding-top: 82px;
+    padding-bottom: 92px;
+  }
+
+  body #how-it-works #how-title::after {
+    font-size: clamp(2.2rem, 11.6vw, 3.1rem);
+    line-height: 1.01;
+  }
+
+  body #how-it-works .section-head::after {
+    margin-top: 24px;
+    padding-top: 18px;
+    font-size: .58rem;
+    line-height: 1.75;
+    letter-spacing: .055em;
+  }
+
+  body #how-it-works .home-steps {
+    padding-left: 27px;
+  }
+
+  body #how-it-works .home-steps::before {
+    left: 6px;
+  }
+
+  body #how-it-works .step-card:nth-child(odd)::after,
+  body #how-it-works .step-card:nth-child(even)::after {
+    left: -27px;
+  }
+
+  body #how-it-works .step-card {
+    border-radius: 18px;
+    padding: 24px 21px 23px;
+  }
+
+  body #how-it-works .step-card h3::after {
+    font-size: 1.48rem;
+  }
+
+  body #how-it-works .step-card p::after,
+  body #how-it-works .copy-link::before,
+  body #how-it-works .copy-link::after {
+    font-size: .94rem;
+    line-height: 1.63;
+  }
+
+  body #how-it-works .copy-link {
+    padding-left: 27px !important;
+  }
+
+  body #how-it-works .copy-link::before,
+  body #how-it-works .copy-link::after {
+    border-radius: 18px;
+    padding: 24px 21px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body #how-it-works .step-card,
+  body #how-it-works .copy-link,
+  body #how-it-works .copy-link::before,
+  body #how-it-works .copy-link::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

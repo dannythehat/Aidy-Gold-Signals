@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#061018" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="Join Smart Signals, activate your membership and connect your Vantage MT5 account." />
+  <title>Join Smart Signals</title>
+  <link rel="icon" href="/assets/logo/smart-signals-mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/join-launch.css?v=20260830-2" />
+  <link rel="stylesheet" href="/auth-ux.css?v=20260831-1" />
+  <script src="/join-login-lock.js?v=20260831-permanent5"></script>
+  <script src="/join-launch.js?v=20260830-2" defer></script>
+  <script src="/auth-ux.js?v=20260831-1" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="/" aria-label="Smart Signals home"><img src="/assets/logo/smart-signals-approved.webp" alt="Smart Signals" /></a>
+  <a class="back" href="/">Back to site</a>
+</header>
+<main class="shell">
+  <section class="hero card">
+    <p class="eyebrow">Join Smart Signals</p>
+    <h1>Set up once. Then trade through Smart Signals.</h1>
+    <p>Create your account, open Vantage, activate your membership, then connect MT5. Your Smart Signals login keeps the setup together.</p>
+    <div class="flow-chips"><span>1 Account</span><span>2 Vantage</span><span>3 Membership</span><span>4 Approval</span><span>5 MT5</span></div>
+  </section>
+
+  <section class="card step" id="account">
+    <div class="step-no">01</div>
+    <p class="eyebrow">Your login</p><h2>Create or sign in.</h2>
+    <p class="lead">Use the same Smart Signals login on the website and in the app.</p>
+    <div class="tabs"><button class="active" data-tab="signup">Create account</button><button data-tab="login">Log in</button></div>
+    <form data-panel="signup" data-signup>
+      <label>Name<input name="display_name" autocomplete="name" maxlength="120" required /></label>
+      <label>Email<input name="email" type="email" autocomplete="email" maxlength="320" required /></label>
+      <label>Password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required /></label>
+      <label>Confirm password<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required /></label>
+      <button class="primary" type="submit">Create my account</button>
+    </form>
+    <form data-panel="login" data-login hidden>
+      <label>Email<input name="email" type="email" autocomplete="email" maxlength="320" required /></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" maxlength="128" required /></label>
+      <button class="primary" type="submit">Log in</button>
+    </form>
+    <div class="signed" data-signed hidden><div><strong data-user-name>Account ready</strong><span data-user-email></span></div><button data-signout>Sign out</button></div>
+    <p class="notice" data-auth-notice role="status"></p>
+  </section>
+
+  <section class="card step" id="vantage">
+    <div class="step-no">02</div>
+    <p class="eyebrow gold">Your broker</p><h2>Open or use your Vantage account.</h2>
+    <p class="lead">Your trading funds stay with Vantage. Smart Signals uses the broker connection you authorise to place and manage trades.</p>
+    <a class="primary gold-button" href="https://vigco.co/la-com-inv/rVbJG9xZ" target="_blank" rel="noopener noreferrer">Sign up to Vantage →</a>
+    <p class="small">Already have Vantage? Continue to membership below.</p>
+  </section>
+
+  <section class="card step" id="membership">
+    <div class="step-no">03</div>
+    <p class="eyebrow green">Membership</p><h2>Choose monthly or annual.</h2>
+    <div class="plans" role="radiogroup" aria-label="Membership plan">
+      <button class="plan active" type="button" data-plan="monthly"><span>Monthly</span><strong>€99</strong><small>per month</small></button>
+      <button class="plan" type="button" data-plan="annual"><span>Annual</span><strong>€999</strong><small>per year · save €189</small></button>
+    </div>
+    <div class="paybox">
+      <p><strong>Pay the selected plan in USDC on Solana.</strong> Use the USDC equivalent of the euro price shown for your plan.</p>
+      <button class="copy" type="button" data-copy="3x2NNMLoNs7uNbTx424ueEhEkGP1n6eDdc5iTXU4iFTF"><span>USDC wallet</span><strong>3x2NNMLoNs7uNbTx424ueEhEkGP1n6eDdc5iTXU4iFTF</strong><b>Copy</b></button>
+      <button class="copy" type="button" data-copy="Solana"><span>Network</span><strong>Solana only</strong><b>Copy</b></button>
+      <div class="warning"><strong>USDC · SOLANA ONLY</strong><span>Do not use Ethereum, Base, Polygon or another network.</span></div>
+    </div>
+    <form class="claim" data-claim>
+      <label>After paying, paste your Solana transaction ID/signature<input name="transaction_signature" minlength="32" maxlength="160" placeholder="Paste transaction ID" required /></label>
+      <button class="primary" type="submit" data-claim-button>Submit payment for approval</button>
+    </form>
+    <div class="subscription-state" data-subscription-state><span>Membership status</span><strong>Sign in above to continue</strong><small></small></div>
+    <p class="notice" data-payment-notice role="status"></p>
+  </section>
+
+  <section class="card step locked" id="approval" data-approval>
+    <div class="step-no">04</div>
+    <p class="eyebrow violet">Approval</p><h2 data-approval-title>Payment approval.</h2>
+    <p class="lead" data-approval-copy>After you submit your payment transaction, Smart Signals checks the claim and your membership is activated after approval.</p>
+    <div class="status-pill" data-approval-pill>WAITING FOR PAYMENT</div>
+  </section>
+
+  <section class="card step locked" id="mt5" data-mt5-section>
+    <div class="step-no">05</div>
+    <p class="eyebrow blue">Vantage MT5</p><h2>Connect your trading account.</h2>
+    <p class="lead">This unlocks only after your membership is active. Enter the exact MT5 account number, Vantage server and MT5 trading password shown by Vantage.</p>
+    <div class="lock-message" data-mt5-lock>Membership approval is required before MT5 can be connected.</div>
+    <form data-mt5-form hidden>
+      <label>MT5 account number<input name="login" inputmode="numeric" autocomplete="off" required /></label>
+      <label>Vantage MT5 server<input name="server" autocomplete="off" placeholder="e.g. VantageMarkets-Demo" required /></label>
+      <label>MT5 trading password<input name="password" type="password" autocomplete="off" required /></label>
+      <button class="primary" type="submit">Connect MT5 securely</button>
+    </form>
+    <div class="connected" data-mt5-connected hidden><strong>MT5 connected ✓</strong><span data-mt5-details></span></div>
+    <p class="notice" data-mt5-notice role="status"></p>
+  </section>
+
+  <section class="card ready locked" id="ready" data-ready>
+    <p class="eyebrow green">Ready</p><h2>Your Smart Signals setup is complete.</h2>
+    <p>Once your membership is active and MT5 is connected, use your account dashboard to see your connected account and trading activity.</p>
+    <a class="primary" href="/account">Open my account →</a>
+  </section>
+</main>
+<footer>Smart Signals does not hold your broker funds. Trading involves risk.</footer>
+</body>
+</html>
