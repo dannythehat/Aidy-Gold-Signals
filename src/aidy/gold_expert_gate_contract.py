@@ -24,10 +24,15 @@ from aidy.gold_environment_contract import assert_no_hindsight_fields
 #: 1,785 stored v1 packets unverifiable and wedged the shadow loop for five hours.
 EXPERT_GATE_CONTRACT_VERSION = "aidy_gold_expert_gate_contract_v2"
 
-#: Packets written before neutral votes became scoreable. Still verifiable, still
-#: scored, never rewritten - their calculator_digest seals `scoreable`, so amending a
-#: stored packet to match a newer rule would mean breaking the seal that makes it
-#: evidence. The packet declares its rule; verification honours it.
+#: Packets written before v2 existed. Still verifiable, still scored, never rewritten -
+#: their calculator_digest seals `scoreable`, so amending a stored packet to match a
+#: newer rule would mean breaking the seal that makes it evidence.
+#:
+#: v1 is AMBIGUOUS for one field, and deliberately tolerated as such: because the rule
+#: changed without a version bump, 673 packets carry v1 with neutral not scoreable and 5
+#: packets (one cycle, 2026-09-23T01:40:21.480Z) carry v1 with neutral scoreable. Both
+#: are genuine v1 packets. Only that one combination is tolerant; see
+#: `stored_scoreable_is_valid`.
 LEGACY_EXPERT_GATE_CONTRACT_VERSION = "aidy_gold_expert_gate_contract_v1"
 
 SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS = frozenset(
@@ -395,6 +400,43 @@ def subcalculator_is_scoreable(
     if contract_version == LEGACY_EXPERT_GATE_CONTRACT_VERSION:
         return vote in COMMITTED_DIRECTION_VOTES
     return vote in SCOREABLE_VOTES
+
+
+def stored_scoreable_is_valid(
+    *,
+    role: str,
+    state: str,
+    vote: str,
+    scoreable: object,
+    contract_version: str,
+) -> bool:
+    """Is a STORED `scoreable` flag consistent with the rule its packet declares?
+
+    Verification cannot simply re-derive the flag, because v1 does not identify one rule.
+    The scoreable rule changed without a version bump, so packets written either side of
+    that deploy both say v1: 673 with neutral not scoreable, and 5 - one cycle at
+    2026-09-23T01:40:21.480Z - with neutral scoreable. Rejecting either would stay wedged.
+
+    So a v1 directional/known/neutral subcalculator may legitimately carry either value,
+    and nothing else is tolerated: every other role, state and vote is re-derived and
+    compared exactly, under v1 and v2 alike. The flag is sealed in calculator_digest, so
+    a tampered value still cannot survive the digest check.
+
+    Downstream consumers read the stored flag rather than re-deriving it, so each packet
+    keeps being scored exactly as it was written.
+    """
+    if not isinstance(scoreable, bool):
+        return False
+    if (
+        contract_version == LEGACY_EXPERT_GATE_CONTRACT_VERSION
+        and role == "directional"
+        and state == "known"
+        and vote == "neutral"
+    ):
+        return True
+    return scoreable is subcalculator_is_scoreable(
+        role=role, state=state, vote=vote, contract_version=contract_version
+    )
 
 
 def subcalculator_strength_required(*, role: str, state: str, vote: str) -> bool:
@@ -787,13 +829,13 @@ def verify_expert_gate_packet(value: Mapping[str, Any]) -> bool:
                 return False
             if not str(item.get("explanation") or "").strip():
                 return False
-            expected_scoreable = subcalculator_is_scoreable(
+            if not stored_scoreable_is_valid(
                 role=role,
                 state=state,
                 vote=vote,
+                scoreable=item.get("scoreable"),
                 contract_version=packet_contract_version,
-            )
-            if item.get("scoreable") is not expected_scoreable:
+            ):
                 return False
             strength = item.get("strength")
             if subcalculator_strength_required(role=role, state=state, vote=vote):
@@ -885,5 +927,6 @@ __all__ = [
     "LEGACY_EXPERT_GATE_CONTRACT_VERSION",
     "SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS",
     "build_expert_gate_packet",
+    "stored_scoreable_is_valid",
     "verify_expert_gate_packet",
 ]

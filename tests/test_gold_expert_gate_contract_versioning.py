@@ -34,6 +34,7 @@ from aidy.gold_expert_gate_contract import (
     SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS,
     _digest,
     _normalise,
+    stored_scoreable_is_valid,
     subcalculator_is_scoreable,
     verify_expert_gate_packet,
 )
@@ -164,3 +165,108 @@ def test_changing_the_scoreable_rule_again_requires_a_new_version() -> None:
         "aidy_gold_expert_gate_contract_v1": (True, True, False, False, False),
         "aidy_gold_expert_gate_contract_v2": (True, True, True, False, False),
     }, "a changed scoreable rule needs its own contract version and this pin updated"
+
+
+def _as_mislabelled_v1(packet: dict) -> dict:
+    """A packet built under the NEW rule but still stamped v1.
+
+    This is the real shape that kept AIDY down after the first fix: the five packets of
+    cycle aidy_cycle_a4d43ad0d391e11a782a421b3b0ebb1e (2026-09-23T01:40:21.480Z), written
+    once #249 was live but before v2 existed. h1_price_structure_expert carries
+    directional/known/neutral with scoreable=true under contract_version v1.
+    """
+    body = _normalise(deepcopy(packet))
+    body.pop("packet_digest", None)
+    body["contract_version"] = LEGACY_EXPERT_GATE_CONTRACT_VERSION
+    for item in body["subcalculators"]:
+        item.pop("calculator_digest", None)
+        item["calculator_digest"] = _digest(dict(item))
+    return {**body, "packet_digest": _digest(body)}
+
+
+def test_a_v1_packet_written_under_the_new_rule_still_verifies() -> None:
+    """v1 does not identify one rule, because the rule changed without a version bump.
+    673 stored packets say v1 with neutral not scoreable; 5 say v1 with neutral
+    scoreable. Both are genuine and both must verify, or the loop stays wedged."""
+    packet = _as_mislabelled_v1(
+        _build(
+            subcalculators=_neutral_calculators(),
+            conclusion="neutral",
+            internal_conviction=None,
+        )
+    )
+    assert packet["contract_version"] == LEGACY_EXPERT_GATE_CONTRACT_VERSION
+    neutral = [
+        item
+        for item in packet["subcalculators"]
+        if item["role"] == "directional" and item["vote"] == "neutral"
+    ]
+    assert neutral and all(item["scoreable"] is True for item in neutral)
+    assert verify_expert_gate_packet(packet)
+
+
+def test_only_the_v1_neutral_flag_is_tolerant() -> None:
+    """The ambiguity is confined to one role/state/vote under one version. Everywhere
+    else the flag is re-derived and compared exactly."""
+    for stored in (True, False):
+        assert stored_scoreable_is_valid(
+            role="directional",
+            state="known",
+            vote="neutral",
+            scoreable=stored,
+            contract_version=LEGACY_EXPERT_GATE_CONTRACT_VERSION,
+        )
+
+    assert stored_scoreable_is_valid(
+        role="directional",
+        state="known",
+        vote="neutral",
+        scoreable=True,
+        contract_version=EXPERT_GATE_CONTRACT_VERSION,
+    )
+    assert not stored_scoreable_is_valid(
+        role="directional",
+        state="known",
+        vote="neutral",
+        scoreable=False,
+        contract_version=EXPERT_GATE_CONTRACT_VERSION,
+    )
+
+    for version in sorted(SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS):
+        for role, state, vote in (
+            ("directional", "known", "bullish"),
+            ("directional", "known", "bearish"),
+            ("directional", "known", "abstain"),
+            ("directional", "unknown", "unknown"),
+            ("context_only", "known", "context_only"),
+        ):
+            correct = subcalculator_is_scoreable(
+                role=role, state=state, vote=vote, contract_version=version
+            )
+            assert stored_scoreable_is_valid(
+                role=role,
+                state=state,
+                vote=vote,
+                scoreable=correct,
+                contract_version=version,
+            )
+            assert not stored_scoreable_is_valid(
+                role=role,
+                state=state,
+                vote=vote,
+                scoreable=not correct,
+                contract_version=version,
+            ), f"{version} {role}/{state}/{vote} must be exact"
+
+
+def test_a_non_boolean_scoreable_is_never_accepted() -> None:
+    """1 and 0 round-trip through JSON as ints in some drivers; they are not the flag."""
+    for version in sorted(SUPPORTED_EXPERT_GATE_CONTRACT_VERSIONS):
+        for bad in (None, 1, 0, "true"):
+            assert not stored_scoreable_is_valid(
+                role="directional",
+                state="known",
+                vote="neutral",
+                scoreable=bad,
+                contract_version=version,
+            )
