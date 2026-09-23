@@ -75,25 +75,19 @@ def _deploy_super_signals_website() -> None:
     assert len(result) == 1, {"account_count": len(result)}
     account_id = result[0]["id"]
 
-    with tempfile.TemporaryDirectory(prefix="super-signals-site-") as tmp:
-        repo = os.path.join(tmp, "site")
-        subprocess.run(
-            [
-                "git", "clone", "--depth", "1", "--branch", "main",
-                "https://github.com/dannythehat/super-signals-website.git",
-                repo,
-            ],
-            check=True,
-        )
-        env = dict(os.environ)
-        env.pop("PYTHONPATH", None)
-        env["CLOUDFLARE_ACCOUNT_ID"] = account_id
-        subprocess.run(
-            ["npx", "--yes", "wrangler@4", "deploy", "--config", "wrangler.jsonc"],
-            cwd=repo,
-            env=env,
-            check=True,
-        )
+    snapshot = os.path.abspath("ops/super-signals-site-snapshot")
+    config = os.path.join(snapshot, "wrangler.jsonc")
+    assert os.path.isfile(config), config
+
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+    env["CLOUDFLARE_ACCOUNT_ID"] = account_id
+    subprocess.run(
+        ["npx", "--yes", "wrangler@4", "deploy", "--config", "wrangler.jsonc"],
+        cwd=snapshot,
+        env=env,
+        check=True,
+    )
 
     with urllib.request.urlopen(
         f"https://super-signals-website.dannythehat2.workers.dev/data/public-performance.json?verify={int(time.time())}",
