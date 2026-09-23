@@ -29,11 +29,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from aidy.gold_expert_directional_skill import (  # noqa: E402
+from aidy.gold_expert_directional_skill import (
     MIN_DIRECTIONAL_N,
     assess,
 )
-from aidy.gold_expert_momentum_stance import assess as assess_stance  # noqa: E402
+from aidy.gold_expert_momentum_stance import assess as assess_stance
 
 #: Only aggregate at one scope. gate_global is the scope every subject actually falls
 #: back to in production, and mixing scopes would double-count the same cycle.

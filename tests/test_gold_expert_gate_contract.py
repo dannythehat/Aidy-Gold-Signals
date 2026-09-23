@@ -8,12 +8,10 @@ from aidy.gold_cycle_environment import build_cycle_environment
 from aidy.gold_expert_gate_contract import (
     EXPERT_GATE_CONTRACT_VERSION,
     build_expert_gate_packet,
+    verify_expert_gate_packet,
 )
 from aidy.gold_expert_gate_contract import (
     subcalculator_is_scoreable as contract_is_scoreable,
-)
-from aidy.gold_expert_gate_contract import (
-    verify_expert_gate_packet,
 )
 
 AS_OF = datetime(2026, 9, 21, 8, 10, tzinfo=UTC)

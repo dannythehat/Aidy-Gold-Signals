@@ -50,7 +50,7 @@ STANCE_FADER = "momentum_fader"
 STANCE_MIXED = "mixed"
 STANCE_INSUFFICIENT = "insufficient_sample"
 
-_ZERO = Decimal("0")
+_ZERO = Decimal(0)
 _HALF = Decimal("0.5")
 
 
