@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import shutil
+import tempfile
 import sys
 import time
 import urllib.request
@@ -62,7 +64,51 @@ def _cf_json(url: str, *, token: str, data: dict | None = None) -> dict:
         return json.load(response)
 
 
+def _deploy_super_signals_website() -> None:
+    token = os.environ.get("CLOUDFLARE_API_TOKEN", "").strip()
+    if not token:
+        raise SystemExit("missing CLOUDFLARE_API_TOKEN")
+
+    accounts = _cf_json("https://api.cloudflare.com/client/v4/accounts", token=token)
+    assert accounts.get("success") is True, accounts
+    result = accounts.get("result") or []
+    assert len(result) == 1, {"account_count": len(result)}
+    account_id = result[0]["id"]
+
+    with tempfile.TemporaryDirectory(prefix="super-signals-site-") as tmp:
+        repo = os.path.join(tmp, "site")
+        subprocess.run(
+            [
+                "git", "clone", "--depth", "1", "--branch", "main",
+                "https://github.com/dannythehat/super-signals-website.git",
+                repo,
+            ],
+            check=True,
+        )
+        env = dict(os.environ)
+        env.pop("PYTHONPATH", None)
+        env["CLOUDFLARE_ACCOUNT_ID"] = account_id
+        subprocess.run(
+            ["npx", "--yes", "wrangler@4", "deploy", "--config", "wrangler.jsonc"],
+            cwd=repo,
+            env=env,
+            check=True,
+        )
+
+    with urllib.request.urlopen(
+        f"https://super-signals-website.dannythehat2.workers.dev/data/public-performance.json?verify={int(time.time())}",
+        timeout=30,
+    ) as response:
+        payload = json.load(response)
+    assert payload.get("live_source") == "vantage_equity_21_sofia", payload.get("live_source")
+    print("super_signals_website_deploy_verified=true", flush=True)
+    _serve_stdlib()
+
+
 def main() -> None:
+    if os.environ.get("SUPER_SIGNALS_WEBSITE_DEPLOY_RUNNER") == "1":
+        _deploy_super_signals_website()
+
     if os.environ.get("AIDY_GOLD_DEPLOY_RUNNER") != "1":
         _serve_stdlib()
 
