@@ -33,23 +33,30 @@ from aidy.gold_expert_directional_skill import (  # noqa: E402
     MIN_DIRECTIONAL_N,
     assess,
 )
+from aidy.gold_expert_momentum_stance import assess as assess_stance  # noqa: E402
 
 #: Only aggregate at one scope. gate_global is the scope every subject actually falls
 #: back to in production, and mixing scopes would double-count the same cycle.
 SCOPE_TYPE = os.getenv("SKILL_SCOPE_TYPE", "gate_global")
 
+#: decided_at orders each subject's own history, which is what the momentum stance
+#: needs to know what the expert could have been extrapolating from.
 SQL = """
 SELECT s.gate_id AS subject_id,
+       c.decided_at_utc AS decided_at,
        s.conclusion,
        l.realised_direction
 FROM aidy_gold_expert_outcome_ledger AS l
 JOIN aidy_gold_expert_gate_snapshots AS s
   ON s.packet_digest = l.packet_digest
+JOIN aidy_gold_expert_shadow_cycles AS c
+  ON c.cycle_view_id = s.cycle_view_id
 WHERE l.subject_type = 'gate'
   AND l.scope_type = ?
   AND l.correct IS NOT NULL
   AND s.conclusion IN ('bullish','bearish')
   AND l.realised_direction IN ('bullish','bearish')
+ORDER BY s.gate_id, c.decided_at_utc
 """
 
 
@@ -84,11 +91,27 @@ def main() -> int:
         return 1
 
     results = assess(rows)
+    stances = assess_stance(rows)
     report = {
         "scope_type": SCOPE_TYPE,
         "subjects_examined": len(results),
         "minimum_directional_n": MIN_DIRECTIONAL_N,
         "total_directional_resolutions": sum(item.directional_n for item in results),
+        "momentum_stance": [
+            {
+                "subject_id": item.subject_id,
+                "n": item.n,
+                "momentum_alignment": item.momentum_alignment,
+                "market_continuation": item.market_continuation,
+                "followed_n": item.followed_n,
+                "followed_accuracy": item.followed_accuracy,
+                "faded_n": item.faded_n,
+                "faded_accuracy": item.faded_accuracy,
+                "stance": item.stance,
+                "alignment_interval": item.alignment_interval,
+            }
+            for item in stances
+        ],
         "subjects": [
             {
                 "subject_id": item.subject_id,
@@ -122,6 +145,16 @@ def main() -> int:
             f"  {item.subject_id}: n={item.directional_n} "
             f"agree={item.agreed} oppose={item.opposed} rate={rate} "
             f"-> {item.polarity}{interval}"
+        )
+
+    print()
+    print("  momentum stance (is the expert extrapolating, and does it pay?)")
+    for item in stances:
+        print(
+            f"    {item.subject_id}: n={item.n} "
+            f"follows={item.momentum_alignment} market_continues={item.market_continuation} "
+            f"followed_acc={item.followed_accuracy} faded_acc={item.faded_accuracy} "
+            f"-> {item.stance}"
         )
 
     actionable = [item for item in results if item.actionable]
