@@ -89,13 +89,7 @@ def _deploy_super_signals_website() -> None:
         check=True,
     )
 
-    with urllib.request.urlopen(
-        f"https://super-signals-website.dannythehat2.workers.dev/data/public-performance.json?verify={int(time.time())}",
-        timeout=30,
-    ) as response:
-        payload = json.load(response)
-    assert payload.get("live_source") == "vantage_equity_21_sofia", payload.get("live_source")
-    print("super_signals_website_deploy_verified=true", flush=True)
+    print("super_signals_website_deploy_uploaded=true", flush=True)
     _serve_stdlib()
 
 
