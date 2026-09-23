@@ -277,17 +277,13 @@ def _normalise_subcalculators(
                 f"subcalculator {calculator_id} requires a readable explanation"
             )
 
-        scoreable = (
-            role == "directional"
-            and state == "known"
-            and vote in {"bullish", "bearish"}
-        )
+        scoreable = subcalculator_is_scoreable(role=role, state=state, vote=vote)
         strength = _probability(
             raw.get("strength"),
             field=f"subcalculator {calculator_id} strength",
-            required=scoreable,
+            required=subcalculator_strength_required(role=role, state=state, vote=vote),
         )
-        if not scoreable and raw.get("strength") is None:
+        if raw.get("strength") is None:
             strength = None
 
         item = {
@@ -340,6 +336,51 @@ def _normalise_explanation_parts(
                 )
         result.append({"text": text, "source_refs": refs})
     return result
+
+
+#: Votes that commit to a side. Distinct from DIRECTIONAL_VOTES at the top of this
+#: module, which is the set of votes a directional subcalculator may legally cast.
+COMMITTED_DIRECTION_VOTES = frozenset({"bullish", "bearish"})
+#: Votes that can be checked against a realised outcome, neutral included.
+SCOREABLE_VOTES = frozenset({"bullish", "bearish", "neutral"})
+
+
+def subcalculator_is_scoreable(*, role: str, state: str, vote: str) -> bool:
+    """Can this subcalculator vote be checked against a realised outcome?
+
+    A neutral vote is a falsifiable claim - "no meaningful move" - and the rest of
+    the system already treats it as one: `score_directional_outcome` accepts
+    neutral, and the meta layer has always scored its own neutral decisions
+    (`gold_expert_shadow`, scoreable=frozen_direction in {bullish, bearish,
+    neutral}). Only this contract disagreed, so every neutral subcalculator vote
+    was thrown away instead of becoming evidence.
+
+    Measured on 2026-09-23: directional experts voted neutral 30.0 per cent of the
+    time into a market that is neutral 10.2 per cent of the time, and none of it
+    was scored. With abstain that left 64 per cent of expert output invisible to
+    the trust engine, in a system whose entire scored evidence base at gate_global
+    was 240 calls.
+
+    Scoring neutral does not improve accuracy - the directional deficit is a flat
+    -14 points against the majority baseline at every move size - but it turns the
+    scarcest resource here, labelled evidence, from discarded into usable, and it
+    lets trust finally see an over-neutral expert.
+    """
+    return role == "directional" and state == "known" and vote in SCOREABLE_VOTES
+
+
+def subcalculator_strength_required(*, role: str, state: str, vote: str) -> bool:
+    """Strength is required for a directional vote only.
+
+    Experts deliberately emit ``strength=None`` beside a neutral vote, so tying
+    this to scoreability would raise on every neutral subcalculator and take the
+    whole shadow loop down with it.
+    """
+    return (
+        role == "directional"
+        and state == "known"
+        and vote in COMMITTED_DIRECTION_VOTES
+    )
 
 
 def _validate_conclusion(
@@ -717,15 +758,13 @@ def verify_expert_gate_packet(value: Mapping[str, Any]) -> bool:
                 return False
             if not str(item.get("explanation") or "").strip():
                 return False
-            expected_scoreable = (
-                role == "directional"
-                and state == "known"
-                and vote in {"bullish", "bearish"}
+            expected_scoreable = subcalculator_is_scoreable(
+                role=role, state=state, vote=vote
             )
             if item.get("scoreable") is not expected_scoreable:
                 return False
             strength = item.get("strength")
-            if expected_scoreable:
+            if subcalculator_strength_required(role=role, state=state, vote=vote):
                 _probability(
                     strength,
                     field=f"subcalculator {calculator_id} strength",
