@@ -8,15 +8,17 @@ import tempfile
 from pathlib import Path
 
 
-def _runtime_http_server_start() -> bool:
+def _runtime_deploy_start() -> bool:
     port = str(os.environ.get("PORT") or "").strip()
-    if not port:
-        return False
     args = [str(x) for x in sys.argv]
-    return bool(args and args[0] == "-m" and port in args[1:])
+    if port and args and args[0] == "-m" and port in args[1:]:
+        return True
+    if args and Path(args[0]).name == "receiver.py":
+        return True
+    return False
 
 
-if _runtime_http_server_start():
+if _runtime_deploy_start():
     print("SUPER_SIGNALS_RUNTIME_DEPLOY=START", flush=True)
     token = bool(os.environ.get("CLOUDFLARE_API_TOKEN"))
     account = str(os.environ.get("CLOUDFLARE_ACCOUNT_ID") or "").strip()
