@@ -190,7 +190,7 @@ def read_bigquery_window(client: Any, window: Window) -> tuple[ReadResult, str]:
                provenance_class, pit_eligible, source_file,
                source_file_sha256, source_payload_sha256,
                derived_from_timeframe, input_rows, research_identity
-        FROM \`{TABLE}\`
+        FROM `{TABLE}`
         WHERE symbol='XAUUSD' AND timeframe='M1' AND source='histdata'
           AND open_time_utc >= @start AND open_time_utc < @end
         ORDER BY open_time_utc
