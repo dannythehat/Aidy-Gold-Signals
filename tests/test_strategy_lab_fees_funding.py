@@ -11,11 +11,14 @@ from pathlib import Path
 import pytest
 
 from aidy.strategy_lab_bidask_execution import (
-    QuoteTape, SpreadScenario, research_round_trip,
+    QuoteTape,
+    SpreadScenario,
+    research_round_trip,
 )
 from aidy.strategy_lab_broker_profile import BrokerProfile
 from aidy.strategy_lab_fees_funding import (
-    _rollover_utc, apply_research_costs,
+    _rollover_utc,
+    apply_research_costs,
 )
 
 ROOT = Path(__file__).parents[1] / "research" / "strategy_lab" / "fixtures"
@@ -177,7 +180,7 @@ def test_tampered_day12_fill_must_not_be_accepted():
         entry_signal_closed_at_utc=START,
         exit_signal_closed_at_utc=START + timedelta(minutes=5),
     )
-    tampered = replace(trip, gross_quote_side_usd=Decimal("99999"))
+    tampered = replace(trip, gross_quote_side_usd=Decimal(99999))
     with pytest.raises(ValueError, match="replay"):
         apply_research_costs(profile, source, quotes, tampered)
 
