@@ -1,4 +1,5 @@
 name: Strategy Lab Day06C Real HistData Tick Download
+# Acquisition run for January 2024 XAUUSD source archive
 on:
   pull_request:
     branches: [main]
