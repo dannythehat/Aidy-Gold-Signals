@@ -90,9 +90,15 @@ def r2_catalog(account_id: str, api_token: str) -> dict[str, dict]:
 
 
 def audit() -> dict:
-    archive = previous_manifests(os.environ["GITHUB_TOKEN"])
-    remotely_listed = r2_catalog(os.environ["CLOUDFLARE_ACCOUNT_ID"],
-                                 os.environ["CLOUDFLARE_API_TOKEN"])
+    try:
+        archive = previous_manifests(os.environ["GITHUB_TOKEN"])
+    except (OSError, RuntimeError, ValueError, KeyError, zipfile.BadZipFile) as exc:
+        raise RuntimeError(f"GITHUB_MANIFEST_ACCESS_{type(exc).__name__}") from exc
+    try:
+        remotely_listed = r2_catalog(os.environ["CLOUDFLARE_ACCOUNT_ID"],
+                                     os.environ["CLOUDFLARE_API_TOKEN"])
+    except (OSError, RuntimeError, ValueError, KeyError) as exc:
+        raise RuntimeError(f"R2_CATALOG_ACCESS_{type(exc).__name__}") from exc
     months = []
     for year in range(2020, 2027):
         for mon in range(1, 10 if year == 2026 else 13):
