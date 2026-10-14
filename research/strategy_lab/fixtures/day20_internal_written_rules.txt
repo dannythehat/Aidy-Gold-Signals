@@ -1,0 +1,33 @@
+# DAY 20 — INTERNALLY AUTHORED WRITTEN-RULE INTAKE FIXTURE
+# Not a third-party strategy. No source-platform/actual-broker parity or returns.
+
+Strategy ID sample_ema_cross, revision 1. Candidate is a complete mechanical
+strategy, titled "Illustrative EMA(10/30) closed-bar crossover".
+The author is AIDY Strategy Lab illustrative fixture — not a third-party result.
+License: internal_fixture_only. No performance has been claimed.
+Symbol XAUUSD. Use HistData Generic ASCII native M1 bid OHLC, in the
+fixed EST UTC-05 source clock, resampled to signal timeframe M5.
+Every signal uses fully closed M5 candle closes, never unfinished bars.
+EMA fast (10) and EMA slow (30) on M5 close, no additional indicator parameters.
+Require 50 fully closed M5 candles of warm-up.
+
+Long signal is enabled. Combine all long predicates (ALL). A long entry occurs
+only when EMA(10) crosses above EMA(30): previous fast EMA <= previous slow EMA,
+AND the current closed fast EMA > current closed slow EMA. Exactly one entry
+predicate. No short entries; the short side is disabled and has no exits.
+All signals are evaluated only on closed bars. Enter on the NEXT tradable quote
+strictly after the completed candle, never at the known closing price.
+Long protective stop is 120 broker-defined ticks from the entry.
+Long take-profit is 240 broker-defined ticks from the entry.
+Maximum long holding period is 48 fully closed M5 bars. Exit at session end.
+Do NOT exit on an opposite signal. NO trailing stop. NO partial exits.
+
+Allowed sessions: Monday, Tuesday, Wednesday, Thursday, Friday;
+all five days 07:00 inclusive to 21:00 exclusive UTC, with no excluded dates.
+Stay flat outside sessions. Sessions timezone is UTC.
+Risk sizing is 1 percent of equity at the initial protective stop.
+Maximum one position; no hedging; no pyramiding. Total portfolio risk cap 2 percent.
+
+This is an INTERNAL DECLARATION. Exact EMA initialisation/seed and practical
+broker-session calendars require later independent source-parity checks.
+Trading profitability and real broker execution are not demonstrated.
