@@ -178,7 +178,7 @@ def test_odd_pine_script_or_forged_hash_refused():
     with pytest.raises(ValueError, match="source"):
         examine(obj=replace(obj,source_bytes=obj.source_bytes+b"\n"))
     with pytest.raises(ValueError):
-        examine(obj=replace(obj,source_sha256="a"*64))  # noqa: F821
+        examine(obj=replace(obj,original_sha256="a"*64))
 
 
 def test_read_csv_untrusted_even_if_all_numbers_pass():
