@@ -233,7 +233,9 @@ class BrokerProfile:
         rollover_raw = raw_costs["rollover_hhmm"]
         triple = None if triple_raw is None else _integer(triple_raw, "triple_swap_weekday", 0, 6)
         rollover = None if rollover_raw is None else _time_hhmm(rollover_raw)
-        if (swap_long is None or swap_short is None) != (triple is None or rollover is None):
+        if any(x is None for x in (swap_long, swap_short, triple, rollover)) and any(
+            x is not None for x in (swap_long, swap_short, triple, rollover)
+        ):
             raise ValueError("swap amounts, triple weekday, and rollover time must be all present or all absent")
         costs = Costs(commission, swap_long, swap_short, triple, rollover, slippage)
 
@@ -360,7 +362,7 @@ def qualify_broker_profile(profile: BrokerProfile, source_bytes: bytes | None,
                                     "account_currency", "contract", "margin",
                                     "costs", "clock"}, "broker evidence document")
                 wire = profile.to_wire()
-                observed_match = all(doc[key] == wire[key] for key in doc)
+                observed_match = all(doc[key] == wire[key] for key in doc if key != "evidence_kind")
                 if not observed_match:
                     problems.append("SOURCE_FIELDS_MISMATCH")
                 if doc["evidence_kind"] != profile.provenance.evidence_kind:
