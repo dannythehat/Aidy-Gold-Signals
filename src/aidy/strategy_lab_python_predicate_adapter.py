@@ -62,7 +62,7 @@ def _source_tree(source_bytes: bytes) -> ast.BoolOp:
         raise ValueError("only pure signal(fast_prev,slow_prev,fast_now,slow_now) supported")
     expression = func.body[0].value
     if not isinstance(expression, ast.BoolOp) or not isinstance(expression.op, ast.And):
-        raise ValueError("signal must AND both supported crossover predicates")
+        raise ValueError("signal must AND both supported crossover predicates")  # noqa: TRY004
     if len(expression.values) != 2:
         raise ValueError("signal must contain exactly two crossover predicates")
     predicates: set[tuple[str, str, str]] = set()
@@ -97,10 +97,10 @@ def _interpret(expression: ast.BoolOp, values: dict[str, Decimal]) -> bool:
     results = []
     for node in expression.values:
         if not isinstance(node, ast.Compare):
-            raise ValueError("invalid untrusted expression")
+            raise ValueError("invalid untrusted expression")  # noqa: TRY004
         left, right = node.left, node.comparators[0]
         if not isinstance(left, ast.Name) or not isinstance(right, ast.Name):
-            raise ValueError("unsupported expression operands")
+            raise ValueError("unsupported expression operands")  # noqa: TRY004
         x, y = values[left.id], values[right.id]
         op = node.ops[0]
         if isinstance(op, ast.LtE):
@@ -108,7 +108,7 @@ def _interpret(expression: ast.BoolOp, values: dict[str, Decimal]) -> bool:
         elif isinstance(op, ast.Gt):
             results.append(x > y)
         else:
-            raise ValueError("unsupported expression comparator")
+            raise ValueError("unsupported expression comparator")  # noqa: TRY004
     return all(results)
 
 
@@ -176,7 +176,7 @@ def evaluate_restricted_python(
     records, and enforce exactly ordered closed M5 input timestamps.
     """
     if not isinstance(adapter, PythonPredicateAdapter):
-        raise ValueError("expected a frozen restricted-Python adapter")
+        raise ValueError("expected a frozen restricted-Python adapter")  # noqa: TRY004
     fresh = admit_python_predicate(
         adapter.source_bytes, adapter.spec_json,
         expected_source_sha256=adapter.source_sha256,
@@ -190,7 +190,7 @@ def evaluate_restricted_python(
     previous = None
     for sample in samples:
         if not isinstance(sample, ClosedIndicatorSample):
-            raise ValueError("only closed indicator trace records supported")
+            raise ValueError("only closed indicator trace records supported")  # noqa: TRY004
         stamp = sample.closed_at_utc
         if (stamp.tzinfo is None or stamp.utcoffset() != timedelta(0)
             or (previous is not None and stamp - previous != timedelta(minutes=5))):
