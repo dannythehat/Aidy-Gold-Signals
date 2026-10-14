@@ -1,0 +1,71 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-IBFB-R",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "IBFB-R-01",
+   "note": "bear sweep at the upper boundary; stop max(2011.00, 2010.50)+0.20; target lower hi 1991.00; risk 3.30 reward 16.90",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2011.00",
+      "l": "2004.00",
+      "c": "2008.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "AT_UPPER",
+     "lower": {
+      "lo": "1990.00",
+      "hi": "1991.00"
+     },
+     "upper": {
+      "lo": "2009.50",
+      "hi": "2010.50"
+     }
+    },
+    "htf": {
+     "D1": {
+      "state": "RANGE_BOUNDED"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "2007.90"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2007.90",
+     "stop": "2011.20",
+     "target": "1991.00",
+     "rr": "169/33"
+    }
+   }
+  }
+ ]
+}
