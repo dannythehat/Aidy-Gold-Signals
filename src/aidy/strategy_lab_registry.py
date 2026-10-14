@@ -229,10 +229,11 @@ class StrategyRegistry:
                 conn.execute("BEGIN IMMEDIATE")
                 self._check_guards(conn)
                 history = self._verified_history(conn, spec.strategy_id)
-                expected_prev = history[-1].version_id if history else None
-                record = _create_record(spec, expected_prev)
                 if spec.revision <= len(history):
                     existing = history[spec.revision - 1]
+                    # Replays compare against that stored version's original
+                    # predecessor, never against the current tip of the chain.
+                    record = _create_record(spec, existing.previous_version_sha256)
                     if existing != record:
                         raise RegistryConflictError(
                             "strategy revision already exists with different rule/source bytes"
@@ -241,6 +242,8 @@ class StrategyRegistry:
                     return existing
                 if spec.revision != len(history) + 1:
                     raise RegistryConflictError("revision must start at 1 and increase by exactly 1")
+                expected_prev = history[-1].version_id if history else None
+                record = _create_record(spec, expected_prev)
                 source_sha = _digest(source_bytes)
                 if source_sha != record.original_source_sha256:
                     raise RegistryIntegrityError("source hash drift before write")
