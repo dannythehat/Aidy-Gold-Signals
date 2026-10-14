@@ -1,0 +1,10 @@
+//@version=6
+strategy("AIDY TV evidence XAUUSD M5", overlay=true, process_orders_on_close=false, calc_on_every_tick=false, calc_on_order_fills=false, pyramiding=0)
+fastEma = ta.ema(close, 10)
+slowEma = ta.ema(close, 30)
+longSignal = barstate.isconfirmed and ta.crossover(fastEma, slowEma)
+if longSignal
+    strategy.entry("Long", strategy.long)
+plot(fastEma, "AIDY_FAST_EMA", display=display.data_window)
+plot(slowEma, "AIDY_SLOW_EMA", display=display.data_window)
+plot(longSignal ? 1 : 0, "AIDY_LONG_SIGNAL", display=display.data_window)
