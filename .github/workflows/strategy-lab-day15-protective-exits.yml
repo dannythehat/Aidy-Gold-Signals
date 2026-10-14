@@ -1,0 +1,24 @@
+name: Strategy Lab Day15 Protective Exit Acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_protective_exits.py
+      - tests/test_strategy_lab_protective_exits.py
+      - .github/workflows/strategy-lab-day15-protective-exits.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -q pytest ruff
+      - run: |
+          python -m compileall -q src/aidy/strategy_lab_protective_exits.py tests/test_strategy_lab_protective_exits.py
+          ruff check src/aidy/strategy_lab_protective_exits.py tests/test_strategy_lab_protective_exits.py
+      - name: Run protective exits and Day14 lifecycle regression
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_protective_exits.py tests/test_strategy_lab_order_lifecycle.py
