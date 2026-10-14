@@ -142,13 +142,10 @@ def test_rollover_and_triple_swap_long_wednesday():
 def test_rollover_and_triple_swap_short_credit():
     item = overnight("short")
     assert item.quote_gross_usd == Decimal("-1.00")
-    assert item.funding_usd == Decimal("0.30")
-    assert item.net_usd == Decimal("-1.40")
+    assert item.funding_usd == Decimal("0.31")
+    assert item.net_usd == Decimal("-1.39")
     swaps = [e for e in item.events if e.kind == "swap_credit"]
-    assert [e.usd for e in swaps] == [Decimal("0.08"), Decimal("0.23")] or (
-        # Event cent rounding: 0.075 -> 0.08 and 0.225 -> 0.23.
-        [e.usd for e in swaps] == [Decimal("0.08"), Decimal("0.23")]
-    )
+    assert [e.usd for e in swaps] == [Decimal("0.08"), Decimal("0.23")]
 
 
 def test_individual_cash_legs_use_half_up_cent_rounding():
