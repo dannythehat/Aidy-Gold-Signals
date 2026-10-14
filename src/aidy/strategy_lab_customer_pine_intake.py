@@ -95,12 +95,13 @@ def inspect_customer_pine(
         raise ValueError("A Pine source file must contain 1 to 100,000 bytes")
     if submission_type not in _CONTROLLED_DOC_TYPE:
         raise ValueError("unsupported customer submission type")
-    if filename is not None:
-        if (not isinstance(filename, str) or not filename.strip()
-            or len(filename) > MAX_NAME_CHARS
-            or "/" in filename or "\\" in filename
-            or any(ord(c) < 32 for c in filename)):
-            raise ValueError("supplied filename must be a short base name")
+    if filename is not None and (
+        not isinstance(filename, str) or not filename.strip()
+        or len(filename) > MAX_NAME_CHARS
+        or "/" in filename or "\\" in filename
+        or any(ord(c) < 32 for c in filename)
+    ):
+        raise ValueError("supplied filename must be a short base name")
     digest = sha256(source).hexdigest()
     try:
         text = source.decode("utf-8")
