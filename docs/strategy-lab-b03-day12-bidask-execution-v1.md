@@ -1,6 +1,6 @@
 # B03 Day 12 — Bid/Ask Next-Quote Execution Contract
 
-**Status: IMPLEMENTED — CI PENDING**. Isolated AIDY Strategy Lab development branch. No real trading authority and no owner-approved B03 release.
+**Status: DAY 12 TECHNICAL ACCEPTANCE PASSED (14 October 2026).** Isolated AIDY Strategy Lab development branch. No real trading authority and no owner-approved B03 release.
 
 ## Implemented contract
 
@@ -36,4 +36,9 @@ Price source reality is **not** inferred from fixture examples. `quote_source_cl
 
 ## Acceptance evidence
 
-Add actual immutable GitHub CI URL, commit hash, fixture SHA256, test count, test job ID and scope qualification **after all tests pass**. Don't tick Notion based on planned code.
+- **Passing CI:** [run 38551416776](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38551416776), job `115810011674`, code/test commit `3e75142ffcef9185485830396979b69df95190ca`. Strict Ruff and source compilation PASS. **135 Day11+Day12 automated tests PASSED** (one non-failing existing pytest configuration warning).
+- Frozen **original illustrative bid/ask quote JSON SHA256:** `6f782e6cd8580d93a250950f8d0a1461ffd026a66e1d807014c2cc1943e21066`, calculated independently by GitHub CI with `sha256sum`. Day11 broker-contract fixture SHA256: `1302931d9cc35a04d979b178e113cd6bf06315d1a1c75850d7f4403ba3dc44df`.
+- Exact CI-known answers: long +USD 9.000, short −USD 11.000; scenario +2 adverse ticks per side yields long +USD 8.600, short −USD 11.400, each at 0.1 illustrative lots. Entry selected index 1, exit index 3 after strict closed-signal timestamps.
+- Deterministic Day12 baseline result SHA256: long `e82147fa02513f2dcea0453b439eb7aa01240dc0687e817cf914324ba9908e71`, short `a7af44530a665d5f3c6273cab26efe2c340125a084e93e4a60aa349f6c8ff348`.
+- Source/broker qualification flags: `quote_source=synthetic_illustrative_only`, `broker_qualified=false`, `broker_orders_executed=false`, `commissions_and_funding_deducted=false`. These labels prevent a fixture success from being used as real-broker parity or any market profitability claim.
+- **Day-level Day12 PASS only.** Broker-realness, B03 stage and owner acceptance remain OPEN. Next: Day13 cash commission, explicit slippage and swap/rollover, then USD journal reconciliation.
