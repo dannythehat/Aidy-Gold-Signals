@@ -1,0 +1,41 @@
+{
+  "probe": "aidy_b00_day02_read_only_v1",
+  "observed_at_utc": "2026-10-14T05:27:31.040184+00:00",
+  "table": "aidy-signals.aidy_analytics_test.research_candles",
+  "location": "EU",
+  "estimated_bytes": 136302157,
+  "query_job_id": "aa29ffbc-f0ff-472e-8db8-f5ff58f3e8f1",
+  "query_type": "SELECT_ONLY",
+  "rows": [
+    {
+      "year": 2024,
+      "row_count": 355592,
+      "distinct_minutes": 355592,
+      "distinct_identities": 355592,
+      "missing_ohlc": 0,
+      "pit_eligible_rows": 0,
+      "first_utc": "2024-01-01T23:00:00+00:00",
+      "last_utc": "2024-12-31T21:57:00+00:00"
+    },
+    {
+      "year": 2025,
+      "row_count": 353951,
+      "distinct_minutes": 353951,
+      "distinct_identities": 353951,
+      "missing_ohlc": 0,
+      "pit_eligible_rows": 0,
+      "first_utc": "2025-01-01T23:00:00+00:00",
+      "last_utc": "2025-12-31T21:57:00+00:00"
+    }
+  ],
+  "status": "PASS",
+  "workflow_run": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38516716038",
+  "artifact": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38516716038/artifacts/11872450568",
+  "artifact_sha256": "aed0e9987fc426c4d65e73875fffc805f0d924b0bdfaf488b5debf419837b42c",
+  "limitations": [
+    "BigQuery access and historical M1 table proven; R2 raw access not checked",
+    "Rows not checked for session gaps, outlier values, complete timestamp alignment, ask/bid fill fidelity or commercial licensing",
+    "Proof on repository feature branch; not deployed production code"
+  ],
+  "note": "Output manually transcribed from successful GitHub Actions job log; authoritative full JSON is preserved as linked Actions artifact."
+}
