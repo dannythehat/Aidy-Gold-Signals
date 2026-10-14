@@ -1,0 +1,57 @@
+name: Strategy Lab Day22 Pine v6 Adapter Technical CI
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_pine_adapter.py
+      - tests/test_strategy_lab_pine_adapter.py
+      - research/strategy_lab/fixtures/day22_internal_pine_v6.pine.txt
+      - docs/strategy-lab-day22-pine-adapter-v1.md
+      - .github/workflows/strategy-lab-day22-pine.yml
+permissions:
+  contents: read
+jobs:
+  technical-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff
+      - name: Compile and Ruff
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_pine_adapter.py tests/test_strategy_lab_pine_adapter.py
+          ruff check src/aidy/strategy_lab_pine_adapter.py tests/test_strategy_lab_pine_adapter.py
+      - name: Pine subset, external evidence blocking and Day20 regression
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_pine_adapter.py tests/test_strategy_lab_written_rule_intake.py tests/test_strategy_lab_python_predicate_adapter.py
+      - name: SHA256 original synthetic source
+        run: sha256sum research/strategy_lab/fixtures/day22_internal_pine_v6.pine.txt
+      - name: Fail closed on absent genuine TradingView source evidence
+        run: |
+          PYTHONPATH=src:tests python - <<'PY'
+          import hashlib
+          import json
+          from test_strategy_lab_pine_adapter import admitted, compare, reference, source
+          from aidy.strategy_lab_pine_adapter import compare_pine_to_spec
+          from test_strategy_lab_written_rule_intake import samples
+
+          adapter = admitted()
+          got=compare_pine_to_spec(adapter, samples())
+          self_test=compare()
+          self_labelled_tv=compare(reference("tradingview_user_export_unattested"))
+          assert len(got)==2
+          assert self_test.matched and not self_test.real_tradingview_capture_qualified
+          assert self_labelled_tv.matched and not self_labelled_tv.real_tradingview_capture_qualified
+          assert not adapter.original_platform_parity_verified and not adapter.complete_strategy_ported
+          print(json.dumps({
+             "technical_test": "PASS", "day22_notional_acceptance": "BLOCKED_NO_INDEPENDENT_TRADINGVIEW_REFERENCE",
+             "source_sha256": hashlib.sha256(source()).hexdigest(),
+             "source_type":"internal_synthetic_pine_v6",
+             "matched_signals":[d.isoformat() for d in got],
+             "original_tradingview_qualified": False,
+             "full_strategy_import_qualified": False,
+             "broker_orders_executed":False
+          }, sort_keys=True))
+          PY
