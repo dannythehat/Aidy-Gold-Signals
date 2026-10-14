@@ -123,16 +123,19 @@ def run_internal_reference(
         {"key":"fund","at_utc":"2026-10-14T13:00:00Z","kind":"deposit",
          "data":{"usd":"10000.00"}},
         {"key":"initial_mark","at_utc":"2026-10-14T14:00:00Z","kind":"mark",
-         "data":{"bid":"2649.90","ask":"2650.00"}},
+         "data":{"bid":str(quote_tape.quotes[0].bid),
+                 "ask":str(quote_tape.quotes[0].ask)}},
         {"key":"open","at_utc":actual.entry.filled_at_utc.isoformat().replace("+00:00","Z"),
          "kind":"open","data":{"id":"reference_trade","direction":"long",
                                "price":str(actual.entry.fill_price),"lots":"0.1"}},
     ]
     for i,event in enumerate(e for e in costed.events if e.at_utc==actual.entry.filled_at_utc):
         ev.append({"key":f"entry_charge_{i}","at_utc":event.at_utc.isoformat().replace("+00:00","Z"),
-                   "kind":event.kind,"data":{"usd":format(event.usd,"f")}})
+                   "kind":"slippage" if event.kind=="slippage_scenario" else event.kind,
+                   "data":{"usd":format(event.usd,"f")}})
     ev.append({"key":"exit_mark","at_utc":actual.exit.filled_at_utc.isoformat().replace("+00:00","Z"),
-               "kind":"mark","data":{"bid":"2651.00","ask":"2651.10"}})
+               "kind":"mark","data":{"bid":str(quote_tape.quotes[actual.exit.quote_index].bid),
+                                    "ask":str(quote_tape.quotes[actual.exit.quote_index].ask)}})
     ev.append({"key":"close","at_utc":actual.exit.filled_at_utc.isoformat().replace("+00:00","Z"),
                "kind":"close","data":{"id":"reference_trade","price":str(actual.exit.fill_price),"lots":"0.1"}})
     for i,event in enumerate(e for e in costed.events if e.at_utc==actual.exit.filled_at_utc):
