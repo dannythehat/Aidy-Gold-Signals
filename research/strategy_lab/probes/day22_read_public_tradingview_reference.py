@@ -66,9 +66,6 @@ def main():
                     "exception_type": type(exc).__name__,
                     "reason": str(exc)[:320],
                 })
-            # Limited research diagnostics for a public open-source M5 gold
-            # publication. Its author made the source available under the
-            # TradingView open-source attribution conditions.
             if (result["status"] == "SOURCE_AND_REPORT_READ"
                 and slug == "5q4PsY3a-XAUUSD-Scalping-AGRESIV"
                 and isinstance(original, str)):
