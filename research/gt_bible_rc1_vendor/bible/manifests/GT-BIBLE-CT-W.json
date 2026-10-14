@@ -1,0 +1,218 @@
+{
+  "manifest_format": "goldthinker.bible.manifest/1",
+  "manifest_id": "GT-BIBLE-CT-W",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "kind": "STRATEGY",
+  "execution_class": "RECORD_ONLY",
+  "family": "STRUCTURE",
+  "common": "GT-BIBLE-COMMON",
+  "sides": [
+    "BULL",
+    "BEAR"
+  ],
+  "summary": "Counter-trend reversal at a proven weekly turning point: pin bar or inside bar false breakout on D1/H4 at a W1 level rejected at least twice. Recorded, never traded in 2.0.",
+  "sources": [
+    {
+      "page": 75,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "As you can see in the chart above, price are at a weekly resistance level, buyers were rejected twice from this level which indicates that the market is at a hot a point and it is likely to reverse."
+    },
+    {
+      "page": 76,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "The pin bar was rejected from that level, and there is also the formation of an inside bar false breakout. This is a clear indication of a trend change."
+    },
+    {
+      "page": 77,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "counter trend works if it is well mastered, it is a contrarian approach that requires experience, so if you are a beginner, i highly recommend you to stick with the trend"
+    }
+  ],
+  "geometry": {
+    "any_of": [
+      {
+        "engine": "goldthinker.patterns.canonical.detect",
+        "pattern_id": "P03",
+        "formation_bars": 1,
+        "signal_bar": "the pin bar",
+        "clauses": {
+          "BULL": [
+            "R>=0.50ATR",
+            "B<=0.33R",
+            "LW>=0.66R",
+            "UW<=0.10R",
+            "C>=L+0.75R"
+          ],
+          "BEAR": [
+            "R>=0.50ATR",
+            "B<=0.33R",
+            "UW>=0.66R",
+            "LW<=0.10R",
+            "C<=H-0.75R"
+          ]
+        },
+        "extreme": {
+          "BULL": "pin low",
+          "BEAR": "pin high"
+        },
+        "aliases_recorded": [
+          "P01 hammer",
+          "P02 shooting star",
+          "P04 dragonfly",
+          "P05 gravestone"
+        ],
+        "sources": [
+          {
+            "page": 81,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "it is characterized by a very long tail that shows rejection"
+          },
+          {
+            "page": 81,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "typically all pin bars have a very small real body and a long shadow."
+          },
+          {
+            "page": 34,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "The Hammer candlestick is created when the open high and close are roughly the same price; it is also characterized by a long lower shadow"
+          },
+          {
+            "page": 37,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "Professional technicians say that the shadow should be twice the length of the real body."
+          },
+          {
+            "page": 85,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "Pin bars with longer tails are more powerful."
+          }
+        ],
+        "strength_labels_recorded": [
+          "tail/range ratio (p.85)",
+          "body colour matches side (p.81)"
+        ],
+        "interpretation_ids": [
+          "I-19"
+        ]
+      },
+      {
+        "engine": "goldthinker.patterns.canonical.detect",
+        "pattern_id": "P22",
+        "formation_bars": "mother + inside + sweep candle within the next 3",
+        "clauses": {
+          "BULL": [
+            "H2<H1",
+            "L2>L1",
+            "first piercing candle k in 3..5 pierces below L1 only and closes inside [L1,H1]"
+          ],
+          "BEAR": [
+            "H2<H1",
+            "L2>L1",
+            "first piercing candle k in 3..5 pierces above H1 only and closes inside [L1,H1]"
+          ]
+        },
+        "extreme": {
+          "BULL": "min(L1, L2, Lk)",
+          "BEAR": "max(H1, H2, Hk)"
+        },
+        "signal_bar": "the sweep candle k",
+        "sources": [
+          {
+            "page": 137,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "An inside bar is two candlesticks, the first one is called the mother candle, it is big and large, and the second one is smaller and it is located inside of the mother bar."
+          },
+          {
+            "page": 138,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "the second small bar is completely contained by the first one which is the opposite of the engulfing bar pattern."
+          },
+          {
+            "page": 148,
+            "label": "SOURCE_EXPLICIT",
+            "quote": "This price action signal is formed when price breaks out from the inside bar pattern and then quickly reverses to close within the range of the mother bar."
+          },
+          {
+            "page": 149,
+            "label": "SOURCE_CHART",
+            "quote": "diagram: the false-breakout candle's wick pierces beyond the mother extreme and its body closes back inside"
+          }
+        ],
+        "interpretation_ids": [
+          "I-17"
+        ]
+      }
+    ]
+  },
+  "timeframes": {
+    "signal": [
+      "H4",
+      "D1"
+    ],
+    "research_arm": [],
+    "interpretation_ids": [
+      "I-24"
+    ]
+  },
+  "market_structure": {
+    "own_state": {
+      "BULL": [
+        "TREND_DOWN",
+        "RANGE_BOUNDED",
+        "CHOP",
+        "UNDETERMINED"
+      ],
+      "BEAR": [
+        "TREND_UP",
+        "RANGE_BOUNDED",
+        "CHOP",
+        "UNDETERMINED"
+      ]
+    },
+    "alignment": "NONE",
+    "note": "the weekly level replaces trend agreement; own_state is recorded",
+    "interpretation_ids": [
+      "I-23"
+    ]
+  },
+  "level": {
+    "set": "proven_weekly_level",
+    "definition": "W1 live G4 zone, role RESISTANCE with >= 2 separate swing-high touches for a BEAR / role SUPPORT with >= 2 separate swing-low touches for a BULL, containing the extreme +- 0.10 * W1 ATR",
+    "at": "geometry.extreme",
+    "minimum": 1,
+    "interpretation_ids": [
+      "I-23"
+    ]
+  },
+  "entry": {
+    "type": "MARKET_NEXT_TICK",
+    "price": "the first executable tick after the signal candle completes (BUY ask / SELL bid)",
+    "valid_bars": 0,
+    "interpretation_ids": [
+      "I-28"
+    ]
+  },
+  "stop": {
+    "anchor": {
+      "BULL": "pattern extreme low",
+      "BEAR": "pattern extreme high"
+    },
+    "interpretation_ids": [
+      "I-12"
+    ]
+  },
+  "target": {
+    "rule": "NEXT_LEVEL",
+    "interpretation_ids": [
+      "I-11"
+    ]
+  },
+  "min_rr": 2,
+  "invalidation": [
+    "none after entry"
+  ],
+  "promotion": "Only after the with-trend strategies are proven and the owner approves (p.77).",
+  "golden_vectors": "bible/golden/GT-BIBLE-CT-W.json"
+}
