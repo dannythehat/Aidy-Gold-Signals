@@ -71,7 +71,7 @@ def inputs():
         group: {
             "source_excerpt": EXCERPTS[group],
             "declared_values": {
-                path: _get_pointer(spec, path) for path in paths
+                path: copy.deepcopy(_get_pointer(spec, path)) for path in paths
             },
         }
         for group, paths in RULE_BINDINGS.items()
