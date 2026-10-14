@@ -55,6 +55,8 @@ def test_explicit_source_second_precision_is_observed(tmp_path):
     source = zip_source(tmp_path, "202606", rows(year=2026, month=6, seconds_only=True))
     audit = audit_source_tick_zip(source, "202606")
     assert audit.second_precision_rows == 1002
+    assert audit.maximum_tick_utc.second == 41
+    assert audit.maximum_tick_utc.microsecond == 0
     assert audit.chronological
 
 
