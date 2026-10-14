@@ -134,7 +134,7 @@ def evaluate_mql_closed_cross(
                 or previous is not None and ts - previous != timedelta(minutes=5)):
             raise ValueError("disordered or missing UTC M5 closed bars")
         previous = ts
-        if any(not isinstance(x, Decimal) or x <= 0 or not x.is_finite()
+        if any(not isinstance(x, Decimal) or not x.is_finite() or x <= 0
                for x in (sample.fast_ema, sample.slow_ema)):
             raise ValueError("invalid closed MQL EMA value")
 
