@@ -1,4 +1,5 @@
 name: Strategy Lab Day20 Rule Intake CI
+# Day 20 acceptance on current PR HEAD after strict lint corrections
 on:
   pull_request:
     branches: [main]
