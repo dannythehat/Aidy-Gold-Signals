@@ -10,7 +10,7 @@ import io
 import re
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from aidy.historical_spread import parse_tick_fields, tick_archive_meta
