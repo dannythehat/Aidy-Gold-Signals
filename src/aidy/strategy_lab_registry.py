@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from aidy.strategy_lab_rule_validator import assess_rule_completeness
 from aidy.strategy_lab_spec import StrategySpec
