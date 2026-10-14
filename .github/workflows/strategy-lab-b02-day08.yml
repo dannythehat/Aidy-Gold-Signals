@@ -1,0 +1,40 @@
+name: Strategy Lab B02 Day08 StrategySpec v1 Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_spec.py
+      - tests/test_strategy_lab_spec.py
+      - research/strategy_lab/fixtures/strategy_spec_v1_sample.json
+      - docs/strategy-lab-b02-strategyspec-contract-v1.md
+      - .github/workflows/strategy-lab-b02-day08.yml
+
+permissions:
+  contents: read
+
+jobs:
+  strict-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff
+      - name: Compile and lint production-intended schema
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_spec.py tests/test_strategy_lab_spec.py
+          ruff check src/aidy/strategy_lab_spec.py tests/test_strategy_lab_spec.py
+      - name: Run strict schema acceptance cases
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_spec.py
+      - name: Verify fixture import and stable round-trip
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          from pathlib import Path
+          from aidy.strategy_lab_spec import StrategySpec
+          obj = StrategySpec.from_json(Path("research/strategy_lab/fixtures/strategy_spec_v1_sample.json").read_text())
+          assert StrategySpec.from_json(obj.to_json()).to_json() == obj.to_json()
+          print("STRATEGYSPEC_V1_ROUNDTRIP_PASS", obj.strategy_id, obj.revision)
+          PY
