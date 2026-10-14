@@ -1,0 +1,199 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-CT-W",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "CT-W-01",
+   "note": "bear pin against the daily uptrend at a W1 level rejected twice: recorded, not traded",
+   "snapshot": {
+    "tf": "D1",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2000.20",
+      "h": "2007.00",
+      "l": "2000.00",
+      "c": "2000.10"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {},
+    "levels_at_extreme": [],
+    "obstacles": [
+     {
+      "lo": "1984.00",
+      "hi": "1985.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "1999.90",
+    "pattern_id": "P03",
+    "proven_weekly_level": true
+   },
+   "expect": {
+    "decision": "RECORD_ONLY",
+    "reasons": [],
+    "order": {
+     "entry": "1999.90",
+     "stop": "2007.20",
+     "target": "1985.00",
+     "rr": "149/73"
+    },
+    "level_sources": [
+     "PROVEN_W1"
+    ]
+   }
+  },
+  {
+   "id": "CT-W-02",
+   "note": "no proven weekly level",
+   "snapshot": {
+    "tf": "D1",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2000.20",
+      "h": "2007.00",
+      "l": "2000.00",
+      "c": "2000.10"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {},
+    "levels_at_extreme": [],
+    "obstacles": [
+     {
+      "lo": "1984.00",
+      "hi": "1985.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "1999.90",
+    "pattern_id": "P03",
+    "proven_weekly_level": false
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_LEVEL"
+    ]
+   }
+  },
+  {
+   "id": "CT-W-03",
+   "note": "daily already down: not counter-trend",
+   "snapshot": {
+    "tf": "D1",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2000.20",
+      "h": "2007.00",
+      "l": "2000.00",
+      "c": "2000.10"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {},
+    "levels_at_extreme": [],
+    "obstacles": [
+     {
+      "lo": "1984.00",
+      "hi": "1985.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "1999.90",
+    "pattern_id": "P03",
+    "proven_weekly_level": true
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "OWN_STATE"
+    ]
+   }
+  },
+  {
+   "id": "CT-W-04",
+   "note": "IBFB at the weekly level; stop 2011.20; risk 3.30 reward 16.90",
+   "snapshot": {
+    "tf": "D1",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2011.00",
+      "l": "2004.00",
+      "c": "2008.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {},
+    "levels_at_extreme": [],
+    "obstacles": [
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2007.90",
+    "pattern_id": "P22",
+    "proven_weekly_level": true
+   },
+   "expect": {
+    "decision": "RECORD_ONLY",
+    "reasons": [],
+    "order": {
+     "entry": "2007.90",
+     "stop": "2011.20",
+     "target": "1991.00",
+     "rr": "169/33"
+    }
+   }
+  }
+ ]
+}
