@@ -1,0 +1,207 @@
+{
+  "manifest_format": "goldthinker.bible.manifest/1",
+  "manifest_id": "GT-BIBLE-ENG-T",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "kind": "STRATEGY",
+  "execution_class": "EXECUTABLE",
+  "family": "ENGULF",
+  "common": "GT-BIBLE-COMMON",
+  "sides": [
+    "BULL",
+    "BEAR"
+  ],
+  "summary": "With-trend engulfing at a level after a pullback (continuation); enter after it closes.",
+  "sources": [
+    {
+      "page": 112,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "trading the engulfing bar pattern with the trend is the easiest way to make money in the market."
+    },
+    {
+      "page": 113,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "your first rule is to follow the market direction"
+    },
+    {
+      "page": 18,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "When a bullish engulfing candle forms in the context of an uptrend, it indicates a continuation signal."
+    },
+    {
+      "page": 115,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "Your ability to identify an engulfing candlestick at a key level in a clear uptrend or downtrend will greatly enhance the probabilities of making a wining trade."
+    },
+    {
+      "page": 118,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "we simply buy when price pullbacks to the moving average and an engulfing bar pattern forms."
+    },
+    {
+      "page": 120,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "if you see an engulfing bar pattern matches up with 50% or 61 % levels, it is a powerful price action trading signal"
+    },
+    {
+      "page": 134,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "Take an order immediately after the price action signal forms, put your stop loss below the candlestick pattern"
+    }
+  ],
+  "geometry": {
+    "engine": "goldthinker.patterns.canonical.detect",
+    "pattern_id": {
+      "BULL": "P06",
+      "BEAR": "P07"
+    },
+    "formation_bars": 2,
+    "signal_bar": "the engulfing (second) candle",
+    "clauses": {
+      "BULL": [
+        "K1 bear",
+        "K2 bull",
+        "O2<=C1",
+        "C2>=O1",
+        "B2>B1",
+        "B1>0.05R1"
+      ],
+      "BEAR": [
+        "K1 bull",
+        "K2 bear",
+        "O2>=C1",
+        "C2<=O1",
+        "B2>B1",
+        "B1>0.05R1"
+      ]
+    },
+    "extreme": {
+      "BULL": "min(L1, L2)",
+      "BEAR": "max(H1, H2)"
+    },
+    "flags_recorded": [
+      "B2>=2*B1",
+      "wicks engulfed (outside bar)"
+    ],
+    "sources": [
+      {
+        "page": 109,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "This reversal candlestick pattern consists of two opposite colored bodies in which the second body engulfs or covers entirely the first one"
+      },
+      {
+        "page": 111,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "the first body is entirely engulfed by the second one."
+      },
+      {
+        "page": 111,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The second real body is the opposite of the first real body."
+      }
+    ],
+    "not_used": [
+      {
+        "page": 16,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The engulfing bar can engulf more than one previous candle, but to be considered an engulfing bar, at least one candle must be fully consumed."
+      },
+      {
+        "page": 19,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The color of the bodies is not important."
+      }
+    ],
+    "interpretation_ids": [
+      "I-18"
+    ]
+  },
+  "timeframes": {
+    "signal": [
+      "H4",
+      "D1"
+    ],
+    "research_arm": [
+      "H1"
+    ],
+    "interpretation_ids": [
+      "I-24"
+    ]
+  },
+  "market_structure": {
+    "own_state": {
+      "BULL": [
+        "TREND_UP"
+      ],
+      "BEAR": [
+        "TREND_DOWN"
+      ]
+    },
+    "alignment": "TREND",
+    "sources": [
+      {
+        "page": 112,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if the market is making series of higher highs and higher lows it is about an uptrend market"
+      }
+    ],
+    "interpretation_ids": [
+      "I-01",
+      "I-09",
+      "I-10"
+    ]
+  },
+  "level": {
+    "set": "trend_level_set",
+    "at": "geometry.extreme",
+    "minimum": 1,
+    "sources": [
+      {
+        "page": 115,
+        "label": "SOURCE_CHART",
+        "quote": "EURUSD Daily: bullish engulfing at resistance-becomes-support"
+      },
+      {
+        "page": 117,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "using the moving average as a dynamic support and resistance in trending markets, in combination with an engulfing bar pattern signal is the perfect way"
+      }
+    ]
+  },
+  "entry": {
+    "type": "MARKET_NEXT_TICK",
+    "price": "the first executable tick after the signal candle completes (BUY ask / SELL bid)",
+    "valid_bars": 0,
+    "interpretation_ids": [
+      "I-28"
+    ]
+  },
+  "stop": {
+    "anchor": {
+      "BULL": "min(L1, L2)",
+      "BEAR": "max(H1, H2)"
+    },
+    "sources": [
+      {
+        "page": 134,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "put your stop loss below the candlestick pattern"
+      }
+    ],
+    "interpretation_ids": [
+      "I-12"
+    ]
+  },
+  "target": {
+    "rule": "NEXT_LEVEL",
+    "interpretation_ids": [
+      "I-11"
+    ]
+  },
+  "min_rr": 2,
+  "invalidation": [
+    "none after entry"
+  ],
+  "control_note": "The existing P06/P07 SRC-CB (counter-trend reversal) stays as the control the Bible warns about (p.77, 113).",
+  "golden_vectors": "bible/golden/GT-BIBLE-ENG-T.json"
+}
