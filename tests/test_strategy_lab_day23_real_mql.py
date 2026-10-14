@@ -4,9 +4,9 @@ from __future__ import annotations
 from dataclasses import replace
 
 import pytest
+from test_strategy_lab_day22_real_history import example_read
 
 from scripts.strategy_lab.day23_real_mql_audit import audit_read_only_history
-from test_strategy_lab_day22_real_history import example_read
 
 
 def test_mql4_mql5_same_closed_bar_internal_entry_and_exit():
