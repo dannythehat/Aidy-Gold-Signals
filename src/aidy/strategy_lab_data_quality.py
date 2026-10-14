@@ -4,11 +4,11 @@ No broker assumptions or interpolation. Calendar closure classification is delib
 not guessed from a generic weekly schedule: verified session calendars must be supplied.
 """
 from __future__ import annotations
+import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
-import json
 
 @dataclass(frozen=True)
 class SourceContract:
