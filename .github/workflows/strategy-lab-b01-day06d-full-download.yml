@@ -1,11 +1,7 @@
 name: Strategy Lab Full Historical Gold Tick Acquisition
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - scripts/b01_day06d_full_year_histdata_archive.py
-      - .github/workflows/strategy-lab-b01-day06d-full-download.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
