@@ -140,7 +140,8 @@ def run_internal_reference(
                "kind":"close","data":{"id":"reference_trade","price":str(actual.exit.fill_price),"lots":"0.1"}})
     for i,event in enumerate(e for e in costed.events if e.at_utc==actual.exit.filled_at_utc):
         ev.append({"key":f"exit_charge_{i}","at_utc":event.at_utc.isoformat().replace("+00:00","Z"),
-                   "kind":event.kind,"data":{"usd":format(event.usd,"f")}})
+                   "kind":"slippage" if event.kind=="slippage_scenario" else event.kind,
+                   "data":{"usd":format(event.usd,"f")}})
     source_sha=broker_profile.provenance.source_sha256
     manifest_sha=sha256(canonical_events(ev,source_sha)).hexdigest()
     journal=replay_cash_events(sqlite_path,ev,source_sha256=source_sha,
