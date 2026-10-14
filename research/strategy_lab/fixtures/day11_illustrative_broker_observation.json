@@ -1,0 +1,40 @@
+{
+  "evidence_kind": "internal_fixture",
+  "broker_id": "synthetic_gold_broker",
+  "account_type": "fixture_standard",
+  "account_currency": "USD",
+  "contract": {
+    "symbol": "XAUUSD",
+    "quote_currency": "USD",
+    "profit_currency": "USD",
+    "margin_currency": "USD",
+    "contract_ounces_per_lot": "100",
+    "tick_size": "0.01",
+    "point_size": "0.01",
+    "price_digits": 2,
+    "tick_value_profit_currency_per_lot": "1.00",
+    "volume_min_lots": "0.01",
+    "volume_max_lots": "100.00",
+    "volume_step_lots": "0.01",
+    "stops_level_ticks": 0,
+    "freeze_level_ticks": 0
+  },
+  "margin": {
+    "calculation": "notional_usd_divided_by_leverage",
+    "leverage_ratio": "100"
+  },
+  "costs": {
+    "commission_usd_per_lot_per_side": "2.50",
+    "swap_long_usd_per_lot_per_rollover": "-1.50",
+    "swap_short_usd_per_lot_per_rollover": "0.75",
+    "triple_swap_weekday": 2,
+    "rollover_hhmm": "22:00",
+    "slippage_scenario_ticks": "1"
+  },
+  "clock": {
+    "clock_model": "fixed_utc_offset",
+    "zone": "UTC+02:00",
+    "observed_utc": "2026-10-14T14:00:00Z",
+    "observed_server_hhmm": "16:00"
+  }
+}
