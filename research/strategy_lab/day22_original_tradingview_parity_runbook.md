@@ -41,7 +41,7 @@ TradingView's own docs explicitly support `Export chart data` CSV containing
 a script's `plot()` data-window outputs. The three script plot labels are
 chosen to be stable CSV headers, and the parser rejects missing indicators.
 
-1. Use the **exact** [instrumented Pine v6 source](../fixtures/day22_tradingview_exportable_v6.pine.txt),
+1. Use the **exact** [instrumented Pine v6 source](fixtures/day22_tradingview_exportable_v6.pine.txt),
    SHA-256 **`fd2955cfaf5fff3f39f22cc3ac2f39fca5c803f52c1414956b89d5996421c1f8`**,
    with no edits. Its three trailing plot calls export `AIDY_FAST_EMA`,
    `AIDY_SLOW_EMA` and `AIDY_LONG_SIGNAL`.
