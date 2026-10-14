@@ -1,6 +1,6 @@
 # B02 Day 09 — Rule Completeness and No-Lookahead Admission Gate
 
-Status: IMPLEMENTED; CI result must be independently checked before ticking Day 09. Research branch only.
+Status: **DAY 09 IMPLEMENTED AND CI PASSED**. Research branch only; no merge/deployment or broker authority.
 
 ## Contract and boundaries
 - `src/aidy/strategy_lab_rule_validator.py` reads strictly parsed `StrategySpec v1` objects and optionally **actual source snapshot bytes from a trusted caller**. It reparses the wire representation so an unchecked directly-constructed dataclass cannot bypass schema validation.
@@ -23,3 +23,14 @@ Status: IMPLEMENTED; CI result must be independently checked before ticking Day 
 This is **not** a strategy interpreter, indicator calculator, source-parity engine, broker fill simulator, historical-data rights determination or profit report. No strategy was traded. No live AIDY/GoldThinker/MT5 behaviour changed.
 
 Day 10 builds the canonical versioned registry and persistent content hashes. Later B06 adapters must independently reproduce source-platform signals before any VERIFIED label.
+
+## Day 09 verified acceptance record (14 October 2026)
+
+**Day-level result: PASS** — isolated code, nontrivial negative tests and documented internal-source fixture. No external strategy profitability or platform-parity claim.
+
+- **CI:** [Day 09 real GitHub Actions acceptance](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38527183781) (job `115730191293`): **98 passing Day08+Day09 tests**, Ruff/static compilation pass, one non-failing warning.
+- **CI source commit:** `da05c2b78938d38d0fd09cf0a7ea39af369c467a`; implementing module `src/aidy/strategy_lab_rule_validator.py`.
+- **Actual internally authored source fixture digest:** SHA-256 `01d539024f28d37d0770bf9c4a58fc72ad24a29dc934c088fc022399051d0909` (computed by GitHub Actions with `sha256sum`).
+- **Canonical parsed sample spec digest:** `de4fe9b278c77643508f6e88bd7ac2eb00a4d3b7abaece8a32b007de20a83a59`.
+- **Live CI demonstration:** prior Day08 example without original snapshot returns `BLOCKED`; the same internal example supplemented with source reference and matching real bytes returns `RULES_COMPLETE_SOURCE_MATCHED`.
+- **Clarification:** example rules are internal **synthetic rules**, no independent source-platform parity, true historical signals, fill simulation or historical profitability. Positive validation certifies syntactic/completeness and source-byte matching only, **not** strategy edge or commercial licensing. B02 stage NOT owner-accepted.
