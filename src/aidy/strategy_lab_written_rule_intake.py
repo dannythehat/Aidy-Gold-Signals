@@ -287,7 +287,7 @@ def strategy_spec_signal_indices(spec:StrategySpec,prices:tuple[Decimal,...])->t
     a,b=series(fast.period),series(slow.period)
     out=[]
     for index in range(max(spec.warmup_closed_bars-1,slow.period),len(prices)):
-        if all(x is not None for x in (a[index-1],b[index-1],a[index],b[index])):
-            if a[index-1]<=b[index-1] and a[index]>b[index]:
-                out.append(index)
+        if (all(x is not None for x in (a[index-1],b[index-1],a[index],b[index]))
+            and a[index-1] <= b[index-1] and a[index] > b[index]):
+            out.append(index)
     return tuple(out)
