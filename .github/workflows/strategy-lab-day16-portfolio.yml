@@ -1,0 +1,24 @@
+name: Strategy Lab Day16 Portfolio and Margin CI
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_portfolio.py
+      - tests/test_strategy_lab_portfolio.py
+      - .github/workflows/strategy-lab-day16-portfolio.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -q pytest ruff tzdata
+      - run: |
+          python -m compileall -q src/aidy/strategy_lab_portfolio.py tests/test_strategy_lab_portfolio.py
+          ruff check src/aidy/strategy_lab_portfolio.py tests/test_strategy_lab_portfolio.py
+      - run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_portfolio.py tests/test_strategy_lab_broker_profile.py
+      - run: sha256sum research/strategy_lab/fixtures/day11_illustrative_broker_observation.json
