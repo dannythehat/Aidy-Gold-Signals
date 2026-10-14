@@ -1,0 +1,32 @@
+name: AIDY independent GT-BIBLE RC1 parity gate
+on:
+  push:
+    branches:
+      - research/goldthinker-historical-readonly-20261014
+    paths:
+      - research/gt_bible_rc1_independent.py
+      - .github/workflows/gt-bible-rc1-independent-parity.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - name: Checkout isolated AIDY research branch (both repos private)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify rule hashes and independently reproduce all 43 golden decisions
+        run: python research/gt_bible_rc1_independent.py
+      - name: Keep transparent synthetic-case test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: independent-gt-bible-rc1-golden-parity
+          path: artifacts/gt_bible_rc1_independent_golden.json
+          if-no-files-found: ignore
+          retention-days: 14
