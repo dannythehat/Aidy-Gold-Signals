@@ -74,7 +74,7 @@ def test_schema_and_source_exact_canonical_roundtrip():
 
 def test_exact_100_ounce_contract_and_reference_values():
     obj = profile()
-    assert obj.contract.contract_ounces_per_lot == Decimal("100")
+    assert obj.contract.contract_ounces_per_lot == Decimal(100)
     assert obj.contract.tick_size == Decimal("0.01")
     assert obj.contract.tick_value_profit_currency_per_lot == Decimal("1.00")
     assert obj.usd_per_tick("1.00") == Decimal("1.00")
