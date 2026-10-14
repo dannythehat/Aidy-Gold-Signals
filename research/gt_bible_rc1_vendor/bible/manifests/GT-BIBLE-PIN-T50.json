@@ -1,0 +1,226 @@
+{
+  "manifest_format": "goldthinker.bible.manifest/1",
+  "manifest_id": "GT-BIBLE-PIN-T50",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "kind": "STRATEGY",
+  "execution_class": "EXECUTABLE",
+  "family": "PIN",
+  "common": "GT-BIBLE-COMMON",
+  "sides": [
+    "BULL",
+    "BEAR"
+  ],
+  "summary": "Same setup as GT-BIBLE-PIN-T; conservative entry: limit order at 50% of the pin's range.",
+  "sources": [
+    {
+      "page": 88,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "you start by identifying a clear uptrend or downtrend, and you wait for a pin bar to occur after a pullback to support or resistance level."
+    },
+    {
+      "page": 89,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "The formation of the pin bar indicates the end of the retracement move, and the beginning of the impulsive move"
+    },
+    {
+      "page": 85,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "bullish pin bars that were formed in line with the uptrend work, and they should be taken into consideration. But the bearish ones that were formed against the trend should be ignored."
+    },
+    {
+      "page": 92,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "entering the market immediately after the pin bar closes without waiting for a confirmation."
+    },
+    {
+      "page": 102,
+      "label": "SOURCE_CHART",
+      "quote": "GOLD H4 uptrend: two bullish pins after pullbacks to support with 21 MA and 50% Fibonacci"
+    }
+  ],
+  "geometry": {
+    "engine": "goldthinker.patterns.canonical.detect",
+    "pattern_id": "P03",
+    "formation_bars": 1,
+    "signal_bar": "the pin bar",
+    "clauses": {
+      "BULL": [
+        "R>=0.50ATR",
+        "B<=0.33R",
+        "LW>=0.66R",
+        "UW<=0.10R",
+        "C>=L+0.75R"
+      ],
+      "BEAR": [
+        "R>=0.50ATR",
+        "B<=0.33R",
+        "UW>=0.66R",
+        "LW<=0.10R",
+        "C<=H-0.75R"
+      ]
+    },
+    "extreme": {
+      "BULL": "pin low",
+      "BEAR": "pin high"
+    },
+    "aliases_recorded": [
+      "P01 hammer",
+      "P02 shooting star",
+      "P04 dragonfly",
+      "P05 gravestone"
+    ],
+    "sources": [
+      {
+        "page": 81,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "it is characterized by a very long tail that shows rejection"
+      },
+      {
+        "page": 81,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "typically all pin bars have a very small real body and a long shadow."
+      },
+      {
+        "page": 34,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The Hammer candlestick is created when the open high and close are roughly the same price; it is also characterized by a long lower shadow"
+      },
+      {
+        "page": 37,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Professional technicians say that the shadow should be twice the length of the real body."
+      },
+      {
+        "page": 85,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Pin bars with longer tails are more powerful."
+      }
+    ],
+    "strength_labels_recorded": [
+      "tail/range ratio (p.85)",
+      "body colour matches side (p.81)"
+    ],
+    "interpretation_ids": [
+      "I-19"
+    ]
+  },
+  "timeframes": {
+    "signal": [
+      "H4",
+      "D1"
+    ],
+    "research_arm": [
+      "H1"
+    ],
+    "interpretation_ids": [
+      "I-24"
+    ]
+  },
+  "market_structure": {
+    "own_state": {
+      "BULL": [
+        "TREND_UP"
+      ],
+      "BEAR": [
+        "TREND_DOWN"
+      ]
+    },
+    "alignment": "TREND",
+    "sources": [
+      {
+        "page": 84,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The pin bar formed in line with the direction of the market is more powerful than the one which is formed against the trend."
+      }
+    ],
+    "interpretation_ids": [
+      "I-01",
+      "I-09",
+      "I-10"
+    ]
+  },
+  "level": {
+    "set": "trend_level_set",
+    "at": "geometry.extreme",
+    "minimum": 1,
+    "sources": [
+      {
+        "page": 89,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "If you are in this situation, you can use the 21-moving average which will act as a dynamic support in an uptrend market and a dynamic resistance in a downtrend market."
+      },
+      {
+        "page": 96,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "i personally use the 8 and 21 moving average"
+      },
+      {
+        "page": 96,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "I use the 61% and 50 % Fibonacci retracement to find the most powerful areas in the market."
+      }
+    ]
+  },
+  "entry": {
+    "type": "LIMIT",
+    "price": {
+      "BULL": "(pin high + pin low) / 2, quantised down to the tick",
+      "BEAR": "(pin high + pin low) / 2, quantised up to the tick"
+    },
+    "placed_at": "pin completion",
+    "valid_bars": 3,
+    "cancel_if": [
+      "the stop price trades before the fill",
+      "the target price trades before the fill (MISSED)"
+    ],
+    "sources": [
+      {
+        "page": 93,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The conservative entry option: this strategy consists of entering the market after 50% of the range bar retracement."
+      },
+      {
+        "page": 95,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "the market sometimes doesn't retrace to 50% of the range bar"
+      }
+    ],
+    "interpretation_ids": [
+      "I-15"
+    ]
+  },
+  "stop": {
+    "anchor": {
+      "BULL": "pin low",
+      "BEAR": "pin high"
+    },
+    "sources": [
+      {
+        "page": 93,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "your stop loss above the long tail."
+      }
+    ],
+    "interpretation_ids": [
+      "I-12"
+    ]
+  },
+  "target": {
+    "rule": "NEXT_LEVEL",
+    "interpretation_ids": [
+      "I-11"
+    ]
+  },
+  "min_rr": 2,
+  "invalidation": [
+    "none after entry: stop or target only"
+  ],
+  "checklist_p89": [
+    "pin well formed and in line with the market (geometry + own_state + alignment)",
+    "rejection at a major key level (level)",
+    "risk to reward good (min_rr)"
+  ],
+  "rr_basis": "limit price",
+  "golden_vectors": "bible/golden/GT-BIBLE-PIN-T50.json"
+}
