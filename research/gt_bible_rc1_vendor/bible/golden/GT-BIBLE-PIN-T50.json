@@ -1,0 +1,187 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-PIN-T50",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "PIN-T50-01",
+   "note": "limit at (2001.00+1994.00)/2 = 1997.50; risk 3.70; reward 18.50",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ]
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "1997.50",
+     "stop": "1993.80",
+     "target": "2016.00",
+     "rr": "5"
+    },
+    "valid_bars": 3
+   }
+  },
+  {
+   "id": "PIN-T50-02",
+   "note": "midpoint 1997.505 -> buy limit floored to 1997.50",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.81",
+      "h": "2001.01",
+      "l": "1994.00",
+      "c": "2000.91"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ]
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "1997.50",
+     "stop": "1993.80",
+     "target": "2016.00",
+     "rr": "5"
+    }
+   }
+  },
+  {
+   "id": "PIN-T50-03",
+   "note": "sell limit at 2003.50; stop 2007.20; target 1985.00",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2000.20",
+      "h": "2007.00",
+      "l": "2000.00",
+      "c": "2000.10"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_DOWN"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "ZONE"
+    ],
+    "obstacles": [
+     {
+      "lo": "1984.00",
+      "hi": "1985.00",
+      "source": "ZONE:H4"
+     }
+    ]
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2003.50",
+     "stop": "2007.20",
+     "target": "1985.00",
+     "rr": "5"
+    }
+   }
+  }
+ ]
+}
