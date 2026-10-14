@@ -6,7 +6,7 @@ policy claim. State mutation is local to a research simulation instance.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_FLOOR, ROUND_HALF_UP
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 
 from aidy.strategy_lab_broker_profile import BrokerProfile, qualify_broker_profile
 
