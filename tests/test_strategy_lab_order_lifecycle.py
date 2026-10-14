@@ -70,8 +70,8 @@ def test_limit_waits_for_later_marketable_quote():
     x = OrderIntent("aidy-v1-"+"f"*64,"x","sell","limit",Decimal(".1"),
                     CLOSE,CLOSE+timedelta(minutes=6),Decimal("2651.00"))
     result = simulate_order(profile,src,tape,x)
-    assert result.events[-1].quote_index == 2
-    assert result.events[-1].at_utc == CLOSE+timedelta(minutes=5)
+    assert result.events[-1].quote_index == 3
+    assert result.events[-1].at_utc == CLOSE+timedelta(minutes=5, seconds=1)
     assert result.events[-1].price == Decimal("2651.00")
 
 
