@@ -39,7 +39,7 @@ def _string(value: Any, name: str) -> str:
 
 
 def _choice(value: Any, choices: frozenset[str], name: str) -> str:
-    if value not in choices or not isinstance(value, str):
+    if not isinstance(value, str) or value not in choices:
         raise ValueError(f"unsupported {name}: {value!r}")
     return value
 
@@ -98,7 +98,9 @@ class Origin:
     source_url: str | None
     source_language: str
     source_sha256: str
+    source_snapshot_ref: str | None
     licence: str
+    claimed_performance: str | None
     interpretation_notes: tuple[str, ...]
     unresolved_questions: tuple[str, ...]
 
@@ -283,7 +285,10 @@ class StrategySpec:
         origin = Origin(
             _string(o["author"], "author"), source_url,
             _choice(o["source_language"], SOURCE_LANGUAGES, "source_language"),
-            _hash(o["source_sha256"]), _string(o["licence"], "licence"),
+            _hash(o["source_sha256"]),
+            _optional(o["source_snapshot_ref"], lambda x: _string(x, "source_snapshot_ref")),
+            _string(o["licence"], "licence"),
+            _optional(o["claimed_performance"], lambda x: _string(x, "claimed_performance")),
             tuple(_string(x, "interpretation note") for x in _array(o["interpretation_notes"], "interpretation_notes")),
             tuple(_string(x, "unresolved question") for x in _array(o["unresolved_questions"], "unresolved_questions")),
         )
@@ -292,7 +297,7 @@ class StrategySpec:
             _choice(m["symbol"], frozenset({"XAUUSD"}), "symbol"),
             _choice(m["signal_timeframe"], TIMEFRAMES, "signal_timeframe"),
             _string(m["data_source"], "data_source"),
-            _string(m["source_clock"], "source_clock"),
+            _choice(m["source_clock"], frozenset({"EST_FIXED_UTC_MINUS_05", "UTC"}), "source_clock"),
             _choice(m["price_basis"], frozenset({"bid", "ask", "mid"}), "price_basis"),
         )
 
