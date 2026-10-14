@@ -140,6 +140,16 @@ def acquire(period_str: str, workdir: Path) -> dict:
     except Exception as exc:  # noqa: BLE001 - preserve structured recovery evidence
         evidence.update({"status": "FAILED", "last_stage":step,
                          "error_type":type(exc).__name__})
+        if step == "tick_parse" and isinstance(exc, ValueError):
+            message = str(exc)
+            if "not time ordered" in message:
+                evidence["reason"] = "SOURCE_NONMONOTONIC_TICK_ORDER"
+            elif "Invalid HistData tick timestamp" in message:
+                evidence["reason"] = "SOURCE_TIMESTAMP_FORMAT_REJECTED"
+            elif "ask cannot be below bid" in message:
+                evidence["reason"] = "SOURCE_ASK_BELOW_BID"
+            else:
+                evidence["reason"] = "SOURCE_TICK_PARSE_VALUE_ERROR"
         # Only print our own known stage and error type; never leak response text/secrets.
         if isinstance(exc, RuntimeError) and str(exc) in {
             "R2_CATALOG_NOT_AUTHORISED", "DUPLICATE_R2_OBJECT",
