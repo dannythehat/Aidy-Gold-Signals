@@ -1,0 +1,28 @@
+name: Strategy Lab Day20 Rule Intake CI
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_written_rule_intake.py
+      - tests/test_strategy_lab_written_rule_intake.py
+      - research/strategy_lab/fixtures/day20_closed_ema_parity_prices.json
+      - .github/workflows/strategy-lab-day20.yml
+permissions:
+  contents: read
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -q pytest ruff
+      - name: Compile and quality checks
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_written_rule_intake.py tests/test_strategy_lab_written_rule_intake.py
+          ruff check src/aidy/strategy_lab_written_rule_intake.py tests/test_strategy_lab_written_rule_intake.py
+      - name: Source-rule admission and independent parity tests
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_written_rule_intake.py tests/test_strategy_lab_spec.py tests/test_strategy_lab_rule_validator.py
+      - name: Fingerprint source and synthetic prices
+        run: sha256sum research/strategy_lab/fixtures/day09_internal_source_rules.txt research/strategy_lab/fixtures/day20_closed_ema_parity_prices.json
