@@ -1,0 +1,40 @@
+name: Strategy Lab B01 Day07 Historical Reader Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_history_reader.py
+      - tests/test_strategy_lab_history_reader.py
+      - scripts/b01_day07_live_reader_acceptance.py
+      - .github/workflows/strategy-lab-b01-day07.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test-real-archive-read:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install dependencies
+        run: python -m pip install --quiet pytest ruff 'google-cloud-bigquery>=3.42,<4'
+      - name: Static checks and executable tests
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_history_reader.py tests/test_strategy_lab_history_reader.py scripts/b01_day07_live_reader_acceptance.py
+          ruff check src/aidy/strategy_lab_history_reader.py tests/test_strategy_lab_history_reader.py scripts/b01_day07_live_reader_acceptance.py
+          PYTHONPATH=src pytest -q tests/test_strategy_lab_data_quality.py tests/test_strategy_lab_history_reader.py
+      - name: Real read-only BigQuery window and replay
+        run: PYTHONPATH=src python scripts/b01_day07_live_reader_acceptance.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b01-day07-real-reader-evidence
+          path: artifacts/b01_day07_live_reader.json
+          retention-days: 30
