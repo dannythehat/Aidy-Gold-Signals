@@ -1,0 +1,94 @@
+name: Strategy Lab B03 Day12 Bid Ask Execution Acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_bidask_execution.py
+      - tests/test_strategy_lab_bidask_execution.py
+      - research/strategy_lab/fixtures/day12_illustrative_bidask_quotes.json
+      - docs/strategy-lab-b03-day12-bidask-execution-v1.md
+      - .github/workflows/strategy-lab-b03-day12.yml
+      - src/aidy/strategy_lab_broker_profile.py
+
+permissions:
+  contents: read
+
+jobs:
+  verify-quote-sides:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install strict quality/test tools
+        run: python -m pip install --quiet pytest ruff tzdata
+      - name: Compile and Ruff Day12 implementation
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_bidask_execution.py tests/test_strategy_lab_bidask_execution.py
+          ruff check src/aidy/strategy_lab_bidask_execution.py tests/test_strategy_lab_bidask_execution.py
+      - name: Run Day11 and Day12 source bound regression suite
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_broker_profile.py tests/test_strategy_lab_bidask_execution.py
+      - name: Frozen input SHA and independent expected long short reconciliation
+        run: |
+          sha256sum research/strategy_lab/fixtures/day11_illustrative_broker_observation.json research/strategy_lab/fixtures/day12_illustrative_bidask_quotes.json
+          PYTHONPATH=src python - <<'PY'
+          import hashlib
+          import json
+          from datetime import UTC, datetime, timedelta
+          from decimal import Decimal
+          from pathlib import Path
+          from aidy.strategy_lab_broker_profile import BrokerProfile
+          from aidy.strategy_lab_bidask_execution import QuoteTape, SpreadScenario, research_round_trip
+
+          root = Path("research/strategy_lab/fixtures")
+          bp = root / "day11_illustrative_broker_observation.json"
+          qp = root / "day12_illustrative_bidask_quotes.json"
+          broker_bytes, quote_bytes = bp.read_bytes(), qp.read_bytes()
+          profile = json.loads(broker_bytes)
+          profile.pop("evidence_kind")
+          profile.update({"schema_version": "aidy.broker_profile.v1",
+                          "profile_id": "synthetic_xauusd_standard", "revision": 1,
+                          "provenance": {
+                              "evidence_kind": "internal_fixture",
+                              "source_reference": str(bp),
+                              "source_sha256": hashlib.sha256(broker_bytes).hexdigest(),
+                              "captured_at_utc": "2026-10-14T14:10:00Z",
+                              "evidence_label": "illustrative_not_live"}})
+          profile = BrokerProfile.from_wire(profile)
+          tape = QuoteTape.from_snapshot(quote_bytes, expected_sha256=hashlib.sha256(quote_bytes).hexdigest())
+          entry = datetime(2026, 10, 14, 14, tzinfo=UTC)
+          exit_at = entry + timedelta(minutes=5)
+          results = {}
+          for direction, baseline_expected, stressed_expected in [
+              ("long", Decimal("9.00"), Decimal("8.60")),
+              ("short", Decimal("-11.00"), Decimal("-11.40")),
+          ]:
+              params = dict(direction=direction, lots="0.1",
+                            entry_signal_closed_at_utc=entry,
+                            exit_signal_closed_at_utc=exit_at)
+              original = research_round_trip(profile, broker_bytes, tape, **params)
+              stressed = research_round_trip(profile, broker_bytes, tape,
+                                             scenario=SpreadScenario(2), **params)
+              assert original.gross_quote_side_usd == baseline_expected
+              assert stressed.gross_quote_side_usd == stressed_expected
+              assert original.entry.filled_at_utc > entry and original.exit.filled_at_utc > exit_at
+              assert not original.real_broker_terms_qualified and not original.costs_included
+              results[direction] = {
+                  "entry_side": original.entry.transaction_side,
+                  "exit_side": original.exit.transaction_side,
+                  "entry_quote_index": original.entry.quote_index,
+                  "exit_quote_index": original.exit.quote_index,
+                  "gross_before_costs_usd": str(original.gross_quote_side_usd),
+                  "stressed_gross_before_costs_usd": str(stressed.gross_quote_side_usd),
+                  "result_sha256": hashlib.sha256(original.to_json().encode()).hexdigest(),
+              }
+          print(json.dumps({
+              "status": "PASS", "source_quote_sha256": hashlib.sha256(quote_bytes).hexdigest(),
+              "broker_fixture_sha256": hashlib.sha256(broker_bytes).hexdigest(),
+              "results": results, "quote_source": "synthetic_illustrative_only",
+              "broker_qualified": False, "commissions_and_funding_deducted": False,
+              "broker_orders_executed": False
+          }, sort_keys=True))
+          PY
