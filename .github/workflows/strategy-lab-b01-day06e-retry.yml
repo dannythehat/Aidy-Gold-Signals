@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - scripts/b01_day06e_targeted_tick_recovery.py
+      - src/aidy/strategy_lab_tick_source_audit.py
+      - tests/test_strategy_lab_tick_source_audit.py
       - .github/workflows/strategy-lab-b01-day06e-retry.yml
 
 permissions:
@@ -15,7 +17,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet httpx pytest ruff
+      - name: Compile, lint and test source preservation
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_tick_source_audit.py scripts/b01_day06e_targeted_tick_recovery.py tests/test_strategy_lab_tick_source_audit.py
+          ruff check src/aidy/strategy_lab_tick_source_audit.py scripts/b01_day06e_targeted_tick_recovery.py tests/test_strategy_lab_tick_source_audit.py
+          PYTHONPATH=src pytest -q tests/test_strategy_lab_tick_source_audit.py
   retry-only-missing:
+    needs: test-source-audit
     strategy:
       fail-fast: false
       max-parallel: 2
