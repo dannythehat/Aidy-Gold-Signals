@@ -1,0 +1,176 @@
+{
+  "manifest_format": "goldthinker.bible.manifest/1",
+  "manifest_id": "GT-BIBLE-IB-T",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "kind": "STRATEGY",
+  "execution_class": "EXECUTABLE",
+  "family": "INSIDE",
+  "common": "GT-BIBLE-COMMON",
+  "sides": [
+    "BULL",
+    "BEAR"
+  ],
+  "summary": "Inside bar at a key level in a trend; stop order beyond the mother bar in the trend direction.",
+  "sources": [
+    {
+      "page": 137,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "An inside bar is two candlesticks, the first one is called the mother candle, it is big and large, and the second one is smaller and it is located inside of the mother bar."
+    },
+    {
+      "page": 138,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "the second small bar is completely contained by the first one which is the opposite of the engulfing bar pattern."
+    },
+    {
+      "page": 140,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "you have to identify a strong trend, and wait for the formation of an inside bar pattern in line with the direction of the market."
+    },
+    {
+      "page": 141,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "You can place a sell order after the breakout of the pattern as it is mentioned in the chart above, and your stop loss order should be placed above the mother candle. Your profit target is the next support level."
+    },
+    {
+      "page": 144,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "the safest entry should be after the breakout of this pattern."
+    },
+    {
+      "page": 146,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "Trade only from key levels"
+    }
+  ],
+  "geometry": {
+    "engine": "goldthinker.patterns.canonical.detect",
+    "pattern_id": "P09",
+    "formation_bars": 2,
+    "signal_bar": "the inside bar (the order is armed at its completion)",
+    "clauses": {
+      "BULL": [
+        "H2<H1",
+        "L2>L1"
+      ],
+      "BEAR": [
+        "H2<H1",
+        "L2>L1"
+      ]
+    },
+    "extreme": {
+      "BULL": "mother low (L1)",
+      "BEAR": "mother high (H1)"
+    },
+    "sources": [
+      {
+        "page": 137,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "An inside bar is two candlesticks, the first one is called the mother candle, it is big and large, and the second one is smaller and it is located inside of the mother bar."
+      },
+      {
+        "page": 138,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "the second small bar is completely contained by the first one which is the opposite of the engulfing bar pattern."
+      }
+    ],
+    "flags_recorded": [
+      "compression R2/R1"
+    ],
+    "interpretation_ids": [
+      "I-16"
+    ]
+  },
+  "timeframes": {
+    "signal": [
+      "H4",
+      "D1"
+    ],
+    "research_arm": [
+      "H1"
+    ],
+    "interpretation_ids": [
+      "I-24"
+    ]
+  },
+  "market_structure": {
+    "own_state": {
+      "BULL": [
+        "TREND_UP"
+      ],
+      "BEAR": [
+        "TREND_DOWN"
+      ]
+    },
+    "alignment": "TREND",
+    "sources": [
+      {
+        "page": 146,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "don't never try to trade it against the trend if you are a newbie."
+      }
+    ],
+    "interpretation_ids": [
+      "I-01",
+      "I-09",
+      "I-10"
+    ]
+  },
+  "level": {
+    "set": "trend_level_set",
+    "at": "geometry.extreme",
+    "minimum": 1,
+    "sources": [
+      {
+        "page": 142,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "You have to look for significant patterns that form in specific areas in the market such as support and resistance, Fibonacci retracement levels, moving averages"
+      }
+    ]
+  },
+  "entry": {
+    "type": "STOP",
+    "price": {
+      "BULL": "mother high + 1 tick",
+      "BEAR": "mother low - 1 tick"
+    },
+    "placed_at": "inside bar completion",
+    "valid_bars": 3,
+    "cancel_if": [
+      "a candle closes beyond the opposite mother extreme before the fill",
+      "no fill within 3 candles (EXPIRED)"
+    ],
+    "interpretation_ids": [
+      "I-16"
+    ]
+  },
+  "rr_basis": "stop-order price",
+  "stop": {
+    "anchor": {
+      "BULL": "mother low",
+      "BEAR": "mother high"
+    },
+    "sources": [
+      {
+        "page": 141,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "your stop loss order should be placed above the mother candle."
+      }
+    ],
+    "interpretation_ids": [
+      "I-12"
+    ]
+  },
+  "target": {
+    "rule": "NEXT_LEVEL",
+    "interpretation_ids": [
+      "I-11"
+    ]
+  },
+  "min_rr": 2,
+  "invalidation": [
+    "none after entry"
+  ],
+  "golden_vectors": "bible/golden/GT-BIBLE-IB-T.json"
+}
