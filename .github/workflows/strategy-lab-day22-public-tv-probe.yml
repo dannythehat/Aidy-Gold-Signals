@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - research/strategy_lab/probes/day22_read_public_tradingview_reference.py
+      - research/strategy_lab/fixtures/day22_tradingview_exportable_v6.pine.txt
+      - src/aidy/strategy_lab_tv_chart_csv.py
+      - src/aidy/strategy_lab_pine_adapter.py
+      - tests/test_strategy_lab_tv_chart_csv.py
       - .github/workflows/strategy-lab-day22-public-tv-probe.yml
 
 permissions:
@@ -20,6 +24,14 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install unofficial read-only public TradingView report SDK
-        run: python -m pip install --quiet 'selectolax>=0.3,<0.4' tradingview-sdk
-      - name: Probe two public published TradingView strategies and reports
+        run: python -m pip install --quiet 'selectolax>=0.3,<0.4' tradingview-sdk pytest ruff tzdata
+      - name: Probe six public published TradingView strategies and reports
         run: python research/strategy_lab/probes/day22_read_public_tradingview_reference.py
+      - name: Compile and check strict Pine/CSV adapter quality
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_tv_chart_csv.py tests/test_strategy_lab_tv_chart_csv.py
+          ruff check src/aidy/strategy_lab_tv_chart_csv.py tests/test_strategy_lab_tv_chart_csv.py src/aidy/strategy_lab_pine_adapter.py
+      - name: Validate native export CSV contract and regression
+        run: PYTHONPATH=src:tests python -m pytest -q tests/test_strategy_lab_tv_chart_csv.py tests/test_strategy_lab_pine_adapter.py tests/test_strategy_lab_written_rule_intake.py
+      - name: Fingerprint original instrumented Pine source
+        run: sha256sum research/strategy_lab/fixtures/day22_tradingview_exportable_v6.pine.txt
