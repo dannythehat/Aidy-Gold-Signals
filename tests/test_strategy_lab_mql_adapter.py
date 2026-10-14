@@ -8,13 +8,13 @@ from hashlib import sha256
 from pathlib import Path
 
 import pytest
+from test_strategy_lab_written_rule_intake import inputs, samples
 
 from aidy.strategy_lab_customer_mql_intake import inspect_customer_mql
 from aidy.strategy_lab_mql_adapter import (
     admit_mql_closed_cross,
     evaluate_mql_closed_cross,
 )
-from test_strategy_lab_written_rule_intake import inputs, samples
 
 ROOT = Path(__file__).resolve().parents[1] / "research/strategy_lab/fixtures"
 
