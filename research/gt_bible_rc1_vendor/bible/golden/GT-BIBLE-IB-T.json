@@ -1,0 +1,179 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-IB-T",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "IB-T-01",
+   "note": "buy stop at mother high + 1 tick; stop mother low 2000.00-0.20; risk 10.21 reward 20.99",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2001.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2009.00"
+     },
+     {
+      "o": "2008.00",
+      "h": "2009.00",
+      "l": "2005.00",
+      "c": "2006.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2031.00",
+      "hi": "2032.00",
+      "source": "ZONE:H4"
+     }
+    ]
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2010.01",
+     "stop": "1999.80",
+     "target": "2031.00",
+     "rr": "2099/1021"
+    },
+    "valid_bars": 3
+   }
+  },
+  {
+   "id": "IB-T-02",
+   "note": "sell stop at mother low - 1 tick; stop 2010.20",
+   "snapshot": {
+    "tf": "D1",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2001.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2009.00"
+     },
+     {
+      "o": "2008.00",
+      "h": "2009.00",
+      "l": "2005.00",
+      "c": "2006.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "ZONE"
+    ],
+    "obstacles": [
+     {
+      "lo": "1978.00",
+      "hi": "1979.00",
+      "source": "ZONE:H4"
+     }
+    ]
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "1999.99",
+     "stop": "2010.20",
+     "target": "1979.00",
+     "rr": "2099/1021"
+    }
+   }
+  },
+  {
+   "id": "IB-T-03",
+   "note": "inside high equals mother high: not strictly inside",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2001.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2009.00"
+     },
+     {
+      "o": "2008.00",
+      "h": "2010.00",
+      "l": "2005.00",
+      "c": "2006.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2031.00",
+      "hi": "2032.00",
+      "source": "ZONE:H4"
+     }
+    ]
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_SHAPE"
+    ],
+    "failing_clauses": [
+     "H2<H1"
+    ]
+   }
+  }
+ ]
+}
