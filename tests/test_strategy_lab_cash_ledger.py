@@ -1,8 +1,6 @@
 """Day17 real SQLite cash and equity journal reconciliation."""
-from datetime import UTC, datetime
-from decimal import Decimal as D
-from pathlib import Path
 import sqlite3
+from decimal import Decimal as D
 
 import pytest
 
