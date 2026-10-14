@@ -1,0 +1,30 @@
+{
+  "schema_version": "aidy.quote_tape.v1",
+  "source_class": "internal_fixture",
+  "symbol": "XAUUSD",
+  "source_clock": "UTC",
+  "source_archive_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "source_identity": "day12_illustrative_bidask_utc_v1",
+  "quotes": [
+    {
+      "time_utc": "2026-10-14T14:00:00Z",
+      "bid": "2649.90",
+      "ask": "2650.00"
+    },
+    {
+      "time_utc": "2026-10-14T14:00:01Z",
+      "bid": "2650.00",
+      "ask": "2650.10"
+    },
+    {
+      "time_utc": "2026-10-14T14:05:00Z",
+      "bid": "2650.90",
+      "ask": "2651.00"
+    },
+    {
+      "time_utc": "2026-10-14T14:05:01Z",
+      "bid": "2651.00",
+      "ask": "2651.10"
+    }
+  ]
+}
