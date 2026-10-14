@@ -1,8 +1,9 @@
 """Read-only browser research: can a signed-out TradingView chart open Pine Editor?
 
-No login, signup, order placement, site data modification, credential use,
-script submission or account interaction. Logs only limited UI labels and
-whether an unauthenticated script editor seems accessible.
+No login, signup, broker order, credential use or account interaction.
+Insert an exact locally source-pinned script into an anonymous browser's Pine
+Editor and try its Add-to-chart button. The site sign-in barrier is recorded;
+never claim platform execution or a provider signal match without it.
 """
 from __future__ import annotations
 
@@ -112,6 +113,11 @@ async def main() -> None:
                         "button[title='Add to chart']"
                     ).count()
                     result["after_submit_dialog_count"] = await page.get_by_role("dialog").count()
+                    result["native_add_to_chart_login_required"] = (
+                        "Sign in" in rendered and "Do not have an account? Sign up" in rendered
+                    )
+                    result["pine_script_executed_by_provider"] = False
+                    result["original_platform_signal_parity_qualified"] = False
                     result["after_submit_dom"] = await page.locator(
                         "button, [role='button'], [title], [aria-label]"
                     ).evaluate_all(
@@ -131,7 +137,9 @@ async def main() -> None:
         finally:
             await browser.close()
     print("DAY22_ANONYMOUS_NATIVE_UI_PROBE",json.dumps(result,sort_keys=True))
-    if result.get("editor_after_click_visible"):
+    if result.get("native_add_to_chart_login_required"):
+        print("DAY22_CONFIRMED_PROVIDER_LOGIN_GATE: native Add-to-chart requires sign-in; source did not execute")
+    elif result.get("editor_after_click_visible"):
         print("DAY22_NATIVE_EDITOR_UI_POSSIBLY_AVAILABLE: inspect next without claiming source parity")
     else:
         print("DAY22_NATIVE_EDITOR_NOT_PROVEN: do not call original-platform parity passed")
