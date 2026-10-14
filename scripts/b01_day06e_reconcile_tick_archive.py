@@ -139,7 +139,9 @@ def audit() -> dict:
         "r2_objects_in_prefix": len(remotely_listed),
         "verified_metadata_and_manifest": sum(m["metadata_matches_manifest"] for m in months),
         "remote_present": sum(m["remote_exists"] for m in months),
-        "pending_periods": [m["period"] for m in months if not m["metadata_matches_manifest"]],
+        "pending_periods": [m["period"] for m in months if not (
+            m["metadata_matches_manifest"] if archive else m["remote_nonempty_object"]
+        )],
         "github_manifest_access": "PASS" if not manifest_read_error else manifest_read_error,
         "remote_nonempty_objects": sum(m["remote_nonempty_object"] for m in months),
         "verification_level": "Cloudflare remote object list; source manifest hash/size comparison ONLY when GH manifests accessible. Full object bytes not rehashed",
