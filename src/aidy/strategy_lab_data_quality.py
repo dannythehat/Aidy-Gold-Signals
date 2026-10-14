@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
 
+
 @dataclass(frozen=True)
 class SourceContract:
     source: str
