@@ -1,0 +1,22 @@
+name: Day22 Anonymous Native Pine Editor UI Feasibility
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - research/strategy_lab/probes/day22_anonymous_browser_pine_editor.py
+      - .github/workflows/strategy-lab-day22-anonymous-ui-probe.yml
+permissions:
+  contents: read
+jobs:
+  anonymous-native-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet playwright
+      - run: python -m playwright install --with-deps chromium
+      - name: Check signed-out TradingView UI (no account, no script run)
+        run: python research/strategy_lab/probes/day22_anonymous_browser_pine_editor.py
