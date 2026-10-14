@@ -1,6 +1,6 @@
 # B03 Day 13 — Fees, Slippage Scenario and Overnight Funding
 
-**Status:** Implementation submitted for CI; day-level PASS only after verified tests.
+**Status: DAY 13 TECHNICAL ACCEPTANCE PASSED (14 October 2026)** — research-only scope; B03 owner stage not accepted.
 
 ## Reusable research implementation
 - `src/aidy/strategy_lab_fees_funding.py` accepts **Day11 source-matched BrokerProfile** and **Day12 quote-side ResearchRoundTrip**, including unchanged, SHA-pinned original quote bytes; recomputes entry/exit independently from the pinned source before accepting a result.
@@ -34,3 +34,14 @@ At 0.1 lots, Day12 representative bid/ask path:
 
 ## Acceptance requirements
 CI source compilation, Ruff and Day11+12+13 tests; independent script demonstrating long/short cash vectors and frozen source SHA256, including a Wednesday triple-rollover example. Attach exact job, commit, hashes and totals only once witnessed.
+
+## Verified Day 13 CI acceptance evidence
+
+- [GitHub Actions successful run 38553163892](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38553163892), job `115815754605`: **149 Day11+Day12+Day13 tests PASSED**, strict Ruff compilation and quality checks PASSED (one non-fatal pre-existing pytest configuration warning).
+- Passing source/test commit `1d1927c84d2f2fd203fd445284165e79ab61dd8d`. Source module `src/aidy/strategy_lab_fees_funding.py`, tests `tests/test_strategy_lab_fees_funding.py`.
+- Frozen actual illustrative source hashes, checked by GitHub CI with `sha256sum`: Day11 broker observation `1302931d9cc35a04d979b178e113cd6bf06315d1a1c75850d7f4403ba3dc44df`; Day12 bid/ask quote snapshot `6f782e6cd8580d93a250950f8d0a1461ffd026a66e1d807014c2cc1943e21066`.
+- Independent CI outputs: intraday long net `8.30`, intraday short net `-11.70`, Tuesday/Wednesday overnight long `-2.30`, overnight short `-1.39`, each event list reconciled exactly in USD cents.
+- Result SHA-256s (result JSON): long intraday `e5bf7a48390a67662a65f05c539b911e84b2d74770dbd8c50d7f073c5e8c8b32`, short intraday `440c51eae1be96cdab088737611859eeda08e2106dcc6784aeee1def08dee04a`, long overnight `87886b36a93dc5e88f1d086214da0eb50fe1ca368e2c594490534ee315f47dba`, short overnight `c41162c4d8769a5889e290608f35e1675a0109e9613f0d376c85880d241c884b`.
+- All examples have `actual_trade_executed=false`, `real_broker_terms_verified=false`, `vendor_holiday_calendar_verified=false` in CI. This is not evidence of Vantage profitability or funding schedule fidelity. The Day17 portfolio-level append-only cash/equity ledger is separate and not yet built.
+
+**Day 13 acceptance is a day-level implementation+test PASS only.** Day14 order lifecycle state machine NEXT; B03 owner-stage approval, real broker evidence, historical tick chronology normalization and licensing remain OPEN.
