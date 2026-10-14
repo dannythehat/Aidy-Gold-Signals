@@ -28,4 +28,11 @@ TradingView official Pine docs:
 **No live trading, broker terminal, customer strategy, downloaded provider dataset or historical profitability is verified.**
 
 ## Acceptance evidence
-To be populated with actual CI workflow/test count, merged PR and source SHA when verified. Day22 remains PARTIAL until genuinely independent TradingView parity checks succeed.
+**Day22 engineering CI PASS; full Day22 original-TradingView parity remains BLOCKED.**
+
+- [GitHub Actions run 38563701850](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38563701850), job `115850918670`: **133 Day20/21/22 tests passed**, Ruff and compileall passed, one non-fatal existing pytest `asyncio_mode` configuration warning.
+- Tested implementation head `a54623e221c07d9e5ce864bd944e8766f46a1414` and [PR #268](https://github.com/dannythehat/Aidy-Gold-Signals/pull/268). Original internally authored Pine source SHA256 `1b403e7c305adecbb0f35437e1671108e2be72def45ff4358c6e5ceef5128411`.
+- Independent Day20 closed-M5 predicate parity: exactly two synthetic signal timestamps, 2026-10-14T12:10:00Z and 2026-10-14T12:30:00Z.
+- **CI explicitly reports** `day22_notional_acceptance=BLOCKED_NO_INDEPENDENT_TRADINGVIEW_REFERENCE`, `original_tradingview_qualified=false`, `full_strategy_import_qualified=false`, `broker_orders_executed=false`.
+- The source code and adversarial tests are validated and can be merged to main. **Do not mark the Day22 Notion checkbox complete** until an independent original TradingView reference capture and source-platform signal comparison is recorded.
+
