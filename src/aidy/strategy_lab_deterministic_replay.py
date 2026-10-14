@@ -52,7 +52,7 @@ def replay_cash_events(path: Path, events: list[dict], *,
     if sha256(frozen).hexdigest()!=expected_manifest_sha256:
         raise ValueError("frozen replay manifest digest mismatch")
     if not isinstance(path,Path):
-        raise ValueError("expected isolated SQLite path")
+        raise ValueError("expected isolated SQLite path")  # noqa: TRY004
     journal=CashJournal(path,ounces_per_lot=ounces_per_lot,source_sha256=source_sha256)
     journal.initialize()
     duplicate_count=0
