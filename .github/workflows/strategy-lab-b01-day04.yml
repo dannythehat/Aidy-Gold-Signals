@@ -23,6 +23,7 @@ jobs:
       - name: Check formatting and source contract
         run: |
           python -m compileall -q src/aidy/strategy_lab_data_quality.py tests/test_strategy_lab_data_quality.py
+          ruff check --diff src/aidy/strategy_lab_data_quality.py tests/test_strategy_lab_data_quality.py || true
           ruff check src/aidy/strategy_lab_data_quality.py tests/test_strategy_lab_data_quality.py
       - name: Run tests
         run: PYTHONPATH=src pytest -q tests/test_strategy_lab_data_quality.py
