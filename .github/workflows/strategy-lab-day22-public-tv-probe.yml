@@ -9,6 +9,8 @@ on:
       - src/aidy/strategy_lab_tv_chart_csv.py
       - src/aidy/strategy_lab_pine_adapter.py
       - tests/test_strategy_lab_tv_chart_csv.py
+      - scripts/strategy_lab/day22_check_native_tradingview_csv.py
+      - research/strategy_lab/day22_original_tradingview_parity_runbook.md
       - .github/workflows/strategy-lab-day22-public-tv-probe.yml
 
 permissions:
@@ -35,3 +37,6 @@ jobs:
         run: PYTHONPATH=src:tests python -m pytest -q tests/test_strategy_lab_tv_chart_csv.py tests/test_strategy_lab_pine_adapter.py tests/test_strategy_lab_written_rule_intake.py
       - name: Fingerprint original instrumented Pine source
         run: sha256sum research/strategy_lab/fixtures/day22_tradingview_exportable_v6.pine.txt
+      - name: Verify native original-export evidence CLI loads
+        run: |
+          PYTHONPATH=src python scripts/strategy_lab/day22_check_native_tradingview_csv.py --help
