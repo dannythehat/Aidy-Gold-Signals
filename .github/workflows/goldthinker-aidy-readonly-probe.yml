@@ -1,0 +1,43 @@
+name: GoldThinker isolated AIDY historical data check
+
+# Research-only job: single partition-bounded BigQuery SELECT, never touches AIDY live state.
+# Branch-only activation and workflow dispatch. Do not merge into main.
+on:
+  push:
+    branches:
+      - research/goldthinker-historical-readonly-20261014
+    paths:
+      - .github/workflows/goldthinker-aidy-readonly-probe.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goldthinker-aidy-readonly-probe
+  cancel-in-progress: false
+
+jobs:
+  verify-history:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Checkout isolated research branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install bounded BigQuery client
+        run: |
+          python -m pip install --disable-pip-version-check --quiet 'google-cloud-bigquery>=3.25,<4' 'google-auth>=2.20,<3'
+      - name: Query accepted 2024-2025 candle counts (read-only, 750MB billing cap)
+        run: python research/goldthinker_readonly_bq_probe.py
+      - name: Retain summary counts only; no raw prices or credentials
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goldthinker-aidy-history-probe
+          path: artifacts/goldthinker-readonly-bq-probe.json
+          if-no-files-found: ignore
+          retention-days: 7
