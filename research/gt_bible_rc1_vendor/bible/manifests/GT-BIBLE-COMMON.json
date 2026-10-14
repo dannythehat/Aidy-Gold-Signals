@@ -1,0 +1,709 @@
+{
+  "manifest_format": "goldthinker.bible.manifest/1",
+  "manifest_id": "GT-BIBLE-COMMON",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "kind": "COMMON_RULEBOOK",
+  "summary": "Rules every GT-BIBLE strategy shares: the Bible's trend + level + signal method, timeframes, as-of higher-timeframe context, level definitions, entry/stop/target arithmetic, the 2:1 floor and the one-direction portfolio policy.",
+  "source_document": {
+    "title": "The Candlestick Trading Bible",
+    "file": "research/source_material/The-Candlestick-Trading-Bible-169-pages.pdf",
+    "page_convention": "printed page number = PDF page number (verified 2026-10-14 by OCR of all 169 pages; page 116 and 169 carry no text)",
+    "page_notes": "research/READ_NOTES_BIBLE_2026-10-07.md"
+  },
+  "evidence_labels": {
+    "SOURCE_EXPLICIT": "the Bible states it in words on the cited page",
+    "SOURCE_CHART": "shown in a Bible chart or diagram on the cited page, not stated in words",
+    "INTERP": "a GoldThinker numerical or procedural choice where the Bible gives no number; listed under interpretations with an id",
+    "EXISTING_SPEC": "an already-frozen GoldThinker definition (CANDLE_SPEC_V1 / D-095 / D-097 / D-121) reused unchanged; also an interpretation"
+  },
+  "method": {
+    "rule": "A trade exists only when the market type, a level and one of the four Bible signals agree, in the market's direction, with at least 2:1 room to the next level.",
+    "sources": [
+      {
+        "page": 79,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "These three aspects which are the trend, the level, and the signal are what we will use in our trading approach"
+      },
+      {
+        "page": 79,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if it is a choppy market, you close your chart and you stay away."
+      },
+      {
+        "page": 159,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Wait for a pin bar, an engulfing bar, an inside bar, or an inside bar false breakout to form near these levels in line with the direction of the market, and then execute your trade."
+      },
+      {
+        "page": 96,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "we are not going to take any pin bar that we find on our chart."
+      },
+      {
+        "page": 85,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "this rejection doesn't indicate a reversal signal, because this price action setup can form everywhere in your chart."
+      }
+    ]
+  },
+  "price_basis": {
+    "signal_candles": "BID OHLC, completed candles only",
+    "execution": "BUY fills at ASK, SELL fills at BID; exits: long at BID, short at ASK",
+    "historical_bid_only_note": "On bid-only history the ASK is not observed. A run must label any ASK-dependent number MODELLED with its spread assumption, or report directional price research only. Never invent intraminute ordering.",
+    "label": "EXISTING_SPEC"
+  },
+  "timeframes": {
+    "signal_allowed": [
+      "H4",
+      "D1"
+    ],
+    "signal_research_arm": [
+      "H1"
+    ],
+    "context_only": [
+      "W1"
+    ],
+    "never_signal": [
+      "M1",
+      "M5",
+      "M15",
+      "M30",
+      "MN1"
+    ],
+    "sources": [
+      {
+        "page": 70,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "As a price action trader, your primary time frame is the 1H, the 4H and the daily."
+      },
+      {
+        "page": 70,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if you try to trade pin bars or engulfing bars on the 5-minute time frame, you will lose your money"
+      },
+      {
+        "page": 83,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The pin bar formed in bigger time frames such as the 4 hour or daily time frame should be taken into consideration"
+      },
+      {
+        "page": 146,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if you are beginner i recommend you to stick with trading this signal in bigger time frames such the daily and the 4-hour time frame."
+      },
+      {
+        "page": 117,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "we will use the 21 and the 8-simple moving averages in the daily and 4-hour time frames"
+      }
+    ],
+    "interpretation_ids": [
+      "I-24"
+    ]
+  },
+  "higher_timeframe": {
+    "as_of_rule": "A higher-timeframe candle is usable only if its full period ended at or before the signal candle's completion. The forming higher-timeframe candle is never used.",
+    "alignment_map": {
+      "H1": [
+        "D1"
+      ],
+      "H4": [
+        "D1",
+        "W1"
+      ],
+      "D1": [
+        "W1"
+      ]
+    },
+    "agree_rule_trend_strategies": "Every timeframe in alignment_map[signal_tf] must have market_state TREND_UP for a BULL trade or TREND_DOWN for a BEAR trade.",
+    "agree_rule_range_strategies": "No timeframe in alignment_map[signal_tf] may be CHOP, UNDETERMINED, or a TREND opposite to the trade side; TREND in the trade's side or RANGE_BOUNDED is allowed.",
+    "missing_context": "If a required higher-timeframe series has too few completed candles to compute market_state (ATR14 needs 15; G3 needs 2 swing highs and 2 swing lows in its 200-bar window), the decision is NO_TRADE with reason HTF_UNAVAILABLE. A missing trend is never read as up or down.",
+    "sources": [
+      {
+        "page": 53,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "To determine whether a market is trending or not, you have to use bigger time frames such the 4H, the daily or the weekly time frame. Never try to use smaller time frames to determine the market structure."
+      },
+      {
+        "page": 70,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if the weekly and the daily charts analysis align with the 4h chart, you can then take your trading decision."
+      },
+      {
+        "page": 70,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if you want to trade the 1H chart, you have to look at the daily chart first."
+      },
+      {
+        "page": 74,
+        "label": "SOURCE_CHART",
+        "quote": "Elements from the higher time frames can be such a power feature, that they dominate over signal on your trading time frame. [text printed inside the p.74 chart image]"
+      }
+    ],
+    "interpretation_ids": [
+      "I-09",
+      "I-10",
+      "I-20"
+    ]
+  },
+  "market_state": {
+    "values": [
+      "TREND_UP",
+      "TREND_DOWN",
+      "RANGE_BOUNDED",
+      "CHOP",
+      "UNDETERMINED"
+    ],
+    "engine": "goldthinker.core.book_levels.market_state(bars, cutoff, atr, trend, low, high) with trend = goldthinker.core.structure.trend_from_swings(swings(bars, cutoff), atr)",
+    "atr": "goldthinker.core.indicators.atr14(bars, i0): simple mean of the 14 true ranges of the completed bars ending at i0-1",
+    "position_values": [
+      "AT_LOWER",
+      "AT_UPPER",
+      "INTERIOR"
+    ],
+    "cutoff": "For the signal timeframe: the bar BEFORE the formation's first bar (the formation never defines its own context). For a higher timeframe: its last completed bar per the as_of_rule.",
+    "sources": [
+      {
+        "page": 51,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Trending markets are simply characterized by a repeating pattern of higher highs and higher low in an up-trending market, and lower high and lower low in a down trending market."
+      },
+      {
+        "page": 103,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "To confirm a ranging market, i have to look for at least two touches of support level, and two touches of resistance level"
+      },
+      {
+        "page": 68,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if you feel like you can't identify the boundaries (support and resistance). this is a clear indication of a choppy market."
+      },
+      {
+        "page": 69,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "This is a sign of a choppy market that you should stay away from."
+      }
+    ],
+    "label": "EXISTING_SPEC",
+    "interpretation_ids": [
+      "I-01",
+      "I-02",
+      "I-04"
+    ]
+  },
+  "levels": {
+    "role_rule": "A BULL trade needs a level acting as SUPPORT at the formation's lowest low; a BEAR trade a level acting as RESISTANCE at the formation's highest high.",
+    "tolerance": "within AT_ZONE * ATR = 0.10 * ATR of the level's [lo, hi] (distance 0 inside)",
+    "kinds": {
+      "ZONE": {
+        "definition": "a LIVE G4 zone (goldthinker.core.book_levels.zones_detail) on the signal timeframe whose role is SUPPORT (bull) / RESISTANCE (bear)",
+        "pages": [
+          58,
+          59,
+          113
+        ],
+        "label": "EXISTING_SPEC"
+      },
+      "FLIP": {
+        "definition": "an INTACT flipped level (goldthinker.core.book_levels.flipped_levels) whose potential_role is SUPPORT (bull) / RESISTANCE (bear); at_flip()",
+        "pages": [
+          59,
+          67,
+          86,
+          87,
+          93,
+          98,
+          100,
+          115,
+          151,
+          158
+        ],
+        "label": "EXISTING_SPEC"
+      },
+      "SMA21": {
+        "definition": "|extreme - SMA21(closes at cutoff)| <= 0.10*ATR and sma21_slope_sign = +1 (bull) / -1 (bear) (book_levels.ma_facts)",
+        "pages": [
+          89,
+          90,
+          91,
+          96,
+          117,
+          118
+        ],
+        "label": "EXISTING_SPEC"
+      },
+      "SMA8": {
+        "definition": "|extreme - SMA8(closes at cutoff)| <= 0.10*ATR (book_levels.ma_facts)",
+        "pages": [
+          96,
+          117,
+          118
+        ],
+        "label": "EXISTING_SPEC"
+      },
+      "FIB_50_618": {
+        "definition": "book_levels.fib_facts(side).in_50_618_zone is true (last confirmed impulse by G3 swings)",
+        "pages": [
+          96,
+          120,
+          121,
+          154,
+          155
+        ],
+        "label": "EXISTING_SPEC"
+      },
+      "SD_ZONE": {
+        "definition": "a fresh supply (bear) / demand (bull) zone on the signal timeframe or a higher timeframe containing the extreme +-0.10*ATR (goldthinker.core.sd_zones.at_zone)",
+        "pages": [
+          85,
+          96,
+          130,
+          131
+        ],
+        "label": "EXISTING_SPEC"
+      },
+      "HTF_ZONE": {
+        "definition": "a LIVE role-matched G4 zone of any timeframe in alignment_map[signal_tf], computed on that timeframe's own bars and ATR, containing the extreme +- 0.10 * that timeframe's ATR",
+        "pages": [
+          70,
+          71,
+          72,
+          73,
+          74
+        ],
+        "label": "INTERP"
+      }
+    },
+    "trend_level_set": [
+      "ZONE",
+      "FLIP",
+      "SMA21",
+      "SMA8",
+      "FIB_50_618",
+      "SD_ZONE",
+      "HTF_ZONE"
+    ],
+    "range_level_set": [
+      "RANGE_BOUNDARY"
+    ],
+    "RANGE_BOUNDARY": {
+      "definition": "book_levels.market_state position AT_LOWER (bull) / AT_UPPER (bear) on the signal timeframe",
+      "pages": [
+        103,
+        105,
+        127,
+        160
+      ],
+      "label": "EXISTING_SPEC"
+    },
+    "not_modelled": [
+      {
+        "item": "trend lines",
+        "pages": [
+          60,
+          61,
+          62,
+          122,
+          123,
+          124
+        ],
+        "why": "drawing rules give no deterministic definition beyond 'at least 2 swing points, don't force it'; separate future hypothesis",
+        "interpretation_ids": [
+          "I-25"
+        ]
+      },
+      {
+        "item": "Bollinger band confirmation in ranges",
+        "pages": [
+          106,
+          107,
+          108
+        ],
+        "why": "confirmation only, never a signal; recorded later as a flag",
+        "interpretation_ids": [
+          "I-26"
+        ]
+      },
+      {
+        "item": "pivot points",
+        "pages": [
+          142
+        ],
+        "why": "named once, never defined in the Bible"
+      }
+    ],
+    "confluence_sources": [
+      {
+        "page": 97,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "If you can find just one or two factors of confluence that come up together with a good pin bar setup, this is quite enough to make a profitable trade."
+      },
+      {
+        "page": 146,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "make sure that your signal is located in a key level in the market."
+      }
+    ],
+    "minimum_level_count": 1,
+    "record": "Every decision records every level kind that matched (level_sources) so results can be split by level kind.",
+    "interpretation_ids": [
+      "I-03",
+      "I-04",
+      "I-05",
+      "I-06",
+      "I-07",
+      "I-08"
+    ]
+  },
+  "stop": {
+    "buffer": "G_BUFFER = max(0.20 USD, 0.05 * ATR), then quantised to the tick (G13)",
+    "rule": "BULL: stop = anchor_low - G_BUFFER; BEAR: stop = anchor_high + G_BUFFER. Each strategy names its anchor.",
+    "hard_stop": "Sent with the order; never moved.",
+    "sources": [
+      {
+        "page": 165,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Don't never think of using mental stops"
+      },
+      {
+        "page": 93,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "your stop loss above the long tail."
+      }
+    ],
+    "interpretation_ids": [
+      "I-12"
+    ]
+  },
+  "target": {
+    "rule": "NEXT_LEVEL: the nearest level strictly beyond the entry in the trade direction among (a) live G4 zones of the signal timeframe, (b) INTACT flipped levels of the signal timeframe, (c) live G4 zones of every alignment timeframe. Target price = that level's near edge (BUY: lo; SELL: hi), quantised. The rule never steps over a nearer obstacle.",
+    "straddle": "A level that contains or straddles the entry is the nearest obstacle: TARGET_ALREADY_PASSED, no trade (CANDLE_SPEC ruling A-04).",
+    "none": "No level beyond the entry: NO_TARGET, no trade.",
+    "range_override": "Range strategies use the opposite boundary's near edge instead (see each manifest).",
+    "frozen_at": "computed once from levels known at the signal candle's completion and stored on the trade",
+    "sources": [
+      {
+        "page": 93,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "your profit target will be the next support level in case of a downtrend."
+      },
+      {
+        "page": 134,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "look at simply the chart to find the next support or resistance level, this is going to be your profit target."
+      }
+    ],
+    "interpretation_ids": [
+      "I-11"
+    ]
+  },
+  "reward_to_risk": {
+    "formula": "rr = |target - entry| / |entry - stop| using the order's entry price (market: the executable fill price; limit/stop orders: the order price)",
+    "minimum": 2,
+    "below_minimum": "RR_BELOW_2: no trade (recorded with the computed rr)",
+    "costs": "The floor is applied to price distances (the Bible speaks of money won vs risked and never mentions costs). Reports must also give the net-of-cost figure.",
+    "sources": [
+      {
+        "page": 133,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Price action signals with low risk /reward ratios should be ignored."
+      },
+      {
+        "page": 133,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "just make sure your trade has a potential of 2:1 risk to reward ratio."
+      },
+      {
+        "page": 163,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Don't never enter a trade in which the profit is less than the amount of money you risked. If you will risk 100$ for example, your profit target should be at least 200$ [OCR of the PDF reads 2008; the image shows 200$]"
+      }
+    ],
+    "interpretation_ids": [
+      "I-13"
+    ]
+  },
+  "trade_life": {
+    "exit": "Only the stop or the target. No time exit, no trailing, no break-even move.",
+    "max_hold_bars": null,
+    "data_end": "A trade still open at the end of the data is CENSORED, never closed at a price.",
+    "sources": [
+      {
+        "page": 165,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "Place your stop loss order. And your profit target. And forget about your trade."
+      },
+      {
+        "page": 135,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "When you set your protective stop and your target, don't never look back"
+      }
+    ],
+    "interpretation_ids": [
+      "I-14"
+    ]
+  },
+  "risk": {
+    "per_trade": "1% of the reference balance (D-004, D-007)",
+    "sources": [
+      {
+        "page": 135,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "If you are beginner, don't risk more than 1%."
+      }
+    ]
+  },
+  "portfolio_policy": {
+    "direction_gate": "A trade may only be taken in the direction its market_state and alignment allow (see each manifest).",
+    "no_oppose": "NO_OPPOSE: a new GoldThinker trade is refused while any GoldThinker position in the opposite direction is open (D-170 arm, here the rule). Reason OPPOSITE_POSITION_OPEN.",
+    "same_direction_stacking": "Allowed: a new same-direction trade at a new signal is permitted (B p.102, 141, 161 show repeated with-trend entries).",
+    "one_per_cluster": "One trade per signal cluster (timeframe, side, signal candle). If several GT-BIBLE strategies fire on the same candle and side, the first in priority_order is taken; the others are recorded DUPLICATE_CLUSTER.",
+    "priority_order": [
+      "GT-BIBLE-IBFB-T",
+      "GT-BIBLE-PIN-T",
+      "GT-BIBLE-ENG-T",
+      "GT-BIBLE-IB-T",
+      "GT-BIBLE-IBFB-R",
+      "GT-BIBLE-PIN-R",
+      "GT-BIBLE-ENG-R",
+      "GT-BIBLE-PIN-T50"
+    ],
+    "sources": [
+      {
+        "page": 54,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "if it is a bullish market, you will look for a buying opportunity, because you have to trade with the trend, and if the market is bearish, you have to look for a selling opportunity."
+      },
+      {
+        "page": 141,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "you will only look for selling opportunities, this way, you are not fighting big institutions and central banks"
+      },
+      {
+        "page": 147,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "This trading method will give you confidence in your trading approach and it will allow you to avoid over-trading."
+      }
+    ],
+    "interpretation_ids": [
+      "I-27"
+    ]
+  },
+  "decision_reasons": {
+    "TRADE": "all gates pass; an order is produced",
+    "RECORD_ONLY": "all gates pass for a strategy whose execution_class is RECORD_ONLY",
+    "TF_NOT_ALLOWED": "signal timeframe not in the manifest's list",
+    "NO_SHAPE": "canonical geometry fails (failing clauses recorded)",
+    "OWN_STATE": "signal-timeframe market_state not allowed for this side",
+    "HTF_UNAVAILABLE": "a required higher-timeframe state cannot be computed",
+    "HTF_DISAGREE": "a required higher-timeframe state does not agree",
+    "NO_LEVEL": "no allowed level kind at the formation's extreme",
+    "NOT_AT_BOUNDARY": "range strategy: formation not at the side's boundary",
+    "NO_TARGET": "no level beyond the entry",
+    "TARGET_ALREADY_PASSED": "the nearest level contains or is behind the entry",
+    "RR_BELOW_2": "reward to risk below 2",
+    "PENDING_BREAKOUT": "inside bar: waiting for the window to resolve (not terminal)",
+    "NO_SWEEP": "inside bar false breakout: no single-bar sweep and reclaim within the window",
+    "SWEEP_BOTH_SIDES": "the sweep bar pierced both sides of the mother",
+    "SWEEP_WRONG_SIDE": "the sweep is on the other side than this strategy's"
+  },
+  "interpretations": [
+    {
+      "id": "I-01",
+      "topic": "swings and trend",
+      "choice": "G3: a swing high/low needs 2 lower highs / higher lows on each side; trend = last two swing highs AND lows both higher by >= 0.10*ATR (UP) or both lower (DOWN), else RANGE; fewer than 2 of either = UNDETERMINED; 200-bar window",
+      "bible": "HH/HL vs LH/LL by eye (p.51-53)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-02",
+      "topic": "range vs chop",
+      "choice": "book_levels.market_state: RANGE_BOUNDED = G3 RANGE with a live zone with >= 2 separate swing-low touches below the reference close and one with >= 2 swing-high touches above it, not overlapping; else CHOP",
+      "bible": "at least two touches each side (p.103); chop = can't identify boundaries (p.68)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-03",
+      "topic": "at a level",
+      "choice": "extreme within 0.10*ATR of the level",
+      "bible": "'near', 'at', 'rejected from' (no number)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-04",
+      "topic": "support/resistance zone",
+      "choice": "G4: swing pivots clustered within 0.25*ATR, at least 2 pivots with a pair >= 3 bars apart, zone = median +- 0.125*ATR, role = type of the latest pivot, dies on a close beyond it by > 0.10*ATR",
+      "bible": "swing points act as support/resistance (p.58-59)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-05",
+      "topic": "role flip",
+      "choice": "book_levels.flipped_levels: a G4 zone that died by a close becomes a candidate of the opposite role, FAILED if a later close goes back through it by > 0.10*ATR",
+      "bible": "resistance becomes support (p.59, 67, 98, 115)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-06",
+      "topic": "moving averages",
+      "choice": "simple MA of closes at the cutoff; SMA21 needs its 5-bar slope sign to match the side; SMA8 has no slope condition",
+      "bible": "8 and 21 simple MA as dynamic support/resistance in trends (p.89-91, 96, 117-118); no slope rule stated",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-07",
+      "topic": "Fibonacci anchor",
+      "choice": "last confirmed impulse from G3 swings; at level = within 0.10*ATR of the 50%-61.8% band",
+      "bible": "50% and 61% of the last impulsive move, drawn by eye (p.120, 154)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-08",
+      "topic": "supply/demand zones",
+      "choice": "D-121 sd_zones: base 1-3 small candles (body <= 50% of range), departure 1-2 candles closing >= 1.5*ATR beyond, fresh until closed through",
+      "bible": "leaves the zone quickly; daily/4H zones (p.130)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-09",
+      "topic": "which higher timeframes",
+      "choice": "H4 -> D1 and W1; H1 -> D1; D1 -> W1",
+      "bible": "p.70 gives H4 -> weekly + daily and H1 -> daily; D1 -> weekly is inferred from the same top-down logic",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-10",
+      "topic": "as-of higher timeframe",
+      "choice": "only higher-timeframe candles whose period ended at or before the signal candle's completion",
+      "bible": "not discussed; required to avoid look-ahead",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-11",
+      "topic": "next level for the target",
+      "choice": "nearest of: signal-TF live G4 zones (any role), signal-TF intact flips, alignment-TF live G4 zones; near edge; straddle = already passed",
+      "bible": "'the next support level' (p.93, 134); higher-timeframe levels dominate (p.72-74)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-12",
+      "topic": "stop buffer",
+      "choice": "G_BUFFER = max(0.20 USD, 0.05*ATR)",
+      "bible": "'above the long tail', 'below the candlestick pattern', 'above the mother candle' (no distance)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-13",
+      "topic": "2:1 floor on price distance",
+      "choice": "rr >= 2 on entry/stop/target prices; costs reported separately",
+      "bible": "2:1 in money (p.133, 163)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-14",
+      "topic": "no time exit",
+      "choice": "max_hold = none; censor at data end",
+      "bible": "set and forget (p.146, 165); no time exit anywhere",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-15",
+      "topic": "pin bar 50% entry",
+      "choice": "limit at the pin's (high+low)/2, placed at the pin's completion, valid for the next 3 completed signal-TF candles; cancelled if the stop price or the target price trades before the fill",
+      "bible": "'entering the market after 50% of the range bar retracement' (p.93); no validity period",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-16",
+      "topic": "inside bar entry",
+      "choice": "stop order 1 tick beyond the mother extreme in the trade direction, armed at the inside bar's completion, valid for the next 3 completed candles; cancelled if a candle first closes beyond the opposite mother extreme",
+      "bible": "'place a sell order after the breakout of the pattern' (p.141); the chart shows the entry at the break (p.142)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-17",
+      "topic": "inside bar false breakout",
+      "choice": "P22: within the 3 candles after the inside bar, the first candle that pierces the mother range pierces exactly one side and closes back inside [mother low, mother high]",
+      "bible": "'breaks out from the inside bar pattern and then quickly reverses to close within the range of the mother bar' (p.148); diagram p.149",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-18",
+      "topic": "engulfing reading",
+      "choice": "strict P06/P07: opposite colours, second body covers first body (O2<=C1 and C2>=O1 for bull), B2 > B1, first body > 5% of its range",
+      "bible": "p.109 and Nison p.111 (strict); p.16-19 (looser, any colour) is NOT used",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-19",
+      "topic": "pin bar geometry",
+      "choice": "P03: range >= 0.50*ATR, body <= 33% of range, dominant wick >= 66%, opposite wick <= 10%, close in the outer 25%",
+      "bible": "very small body, long tail (p.81); shadow at least twice the body (p.37)",
+      "label": "EXISTING_SPEC"
+    },
+    {
+      "id": "I-20",
+      "topic": "range trades vs higher timeframe",
+      "choice": "a range trade is refused if any alignment timeframe is CHOP, UNDETERMINED or trending against the trade",
+      "bible": "top-down applies to every trade (p.70-74); not spelled out for ranges",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-21",
+      "topic": "range stop",
+      "choice": "beyond the further of the formation extreme and the boundary zone edge, plus G_BUFFER",
+      "bible": "'stop loss should be below the support level' (p.104)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-22",
+      "topic": "range target",
+      "choice": "the opposite boundary zone's near edge; interior levels are ignored",
+      "bible": "'profit target must be placed near the resistance level' (p.104)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-23",
+      "topic": "proven weekly turning point",
+      "choice": "a live W1 G4 zone whose pivots include >= 2 separate touches of the opposing type (swing highs for a resistance used by a SELL, swing lows for a BUY)",
+      "bible": "'buyers were rejected twice from this level' (p.75)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-24",
+      "topic": "signal timeframes",
+      "choice": "executable: H4, D1; H1 only as a separately reported research arm (identity suffix -H1)",
+      "bible": "p.70 allows 1H generally; p.83 (pins) and p.146 (inside bars) say 4H/daily",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-25",
+      "topic": "trend lines",
+      "choice": "not modelled in 2.0",
+      "bible": "p.60-62, 122-124",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-26",
+      "topic": "Bollinger confirmation",
+      "choice": "not modelled in 2.0",
+      "bible": "p.106-108 (confirmation in ranges only)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-27",
+      "topic": "portfolio",
+      "choice": "NO_OPPOSE + one per cluster with a fixed priority order; same-direction stacking allowed",
+      "bible": "trade only the side in control (p.54, 85, 113, 141)",
+      "label": "INTERP"
+    },
+    {
+      "id": "I-28",
+      "topic": "market entry timing",
+      "choice": "NEXT_TICK: the first executable tick after the signal candle's completion",
+      "bible": "'immediately after the pin bar closes' (p.92); 'Take an order immediately after the price action signal forms' (p.134)",
+      "label": "EXISTING_SPEC"
+    }
+  ]
+}
