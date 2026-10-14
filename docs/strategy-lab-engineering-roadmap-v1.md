@@ -4,6 +4,24 @@ Parent specification: docs/strategy-lab-customer-audit-contract-v1.md
 Owner intent: internal GoldThinker bulk independent XAUUSD strategy tests first; customer-grade testing portal subsequently.
 Safety boundary: do not change production signal worker, GoldThinker execution, Super Signals or brokerage. Every engine change is reviewed on separate PRs.
 
+## MANDATORY DELIVERY POLICY — REAL BUILDS, NO MOCK COMPLETION (owner directive, 14 October 2026)
+
+This is an actual engineering programme. The type and deliverable of each numbered day are binding:
+
+- **BUILD day:** implement production-intended working source code and integrations in AIDY's isolated development branch, plus tests and evidence. A specification or sample mock-up alone is NOT completion.
+- **RESEARCH/AUDIT day:** inspect genuine source systems, repository code, recorded operations and/or verified external data; deliver a fact-checked report with links to evidence. Historical acceptance logs are not proof of current service access.
+- **TEST/VERIFICATION day:** run actual tests in the required environment (including real historical BigQuery/R2 or other live infrastructure whenever the acceptance criterion demands it). A simulated fixture can demonstrate a component's behaviour but never substitute for an explicitly required real-data, broker-parity or operational verification.
+- **REPORT/PORTAL day:** deliver actual end-to-end report rendering, security boundaries or customer-facing behaviour as specified, not design screenshots alone.
+- **Mixed day:** satisfy ALL relevant categories, not the easiest one.
+
+**Gate rule:** Do not mark a day PASSED because files were written, a CI test merely started, a synthetic fixture passed, or a plan exists. The day must satisfy its actual defined pass criteria. Record commit SHA, exact tests/run URLs, input/data provenance, output digests, blockers and limitations. If not all pass, status = PARTIAL / BLOCKED / FAILED and continue work on that same day. No calendar-based automatic progression. Never invent performance, data access, licensing, parity or customer readiness.
+
+**Production protection:** 'real build' means code intended for the finished service, not permission to modify live AIDY decision logic, GoldThinker terminals, brokerage, or customer environments without separate explicit owner authorisation. Work in isolated branches; preserve existing integrity and evidence-semantic gates.
+
+**Status accounting:** keep distinct (a) day-level evidence PASS, (b) stage-level technical acceptance, (c) owner's stage approval, and (d) production deployment. Never imply these are the same. Owner/admin uses the same verified test engine as customers, with billing exemption only.
+
+**Daily handover:** update Notion's NOW / NEXT / BLOCKERS / COMPLETED, link source/PR/run evidence, and state clearly what was actually built and tested versus still only designed. This policy supersedes any weaker description of 'done' elsewhere in this roadmap.
+
 ## How we work (repeat for EVERY batch)
 
 1. **Discover** actual relevant code, dataset and operational evidence. Mark PRESENT/ABSENT/UNKNOWN; don't infer successful deployment from docs/tests alone.
