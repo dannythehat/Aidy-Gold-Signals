@@ -28,9 +28,11 @@ def inputs():
     quote=QUOTE.read_bytes()
     tape=QuoteTape.from_snapshot(quote,expected_sha256=sha256(quote).hexdigest())
     candle=CANDLES.read_bytes()
-    return dict(closed_bar_source=candle,expected_closed_bar_sha256=sha256(candle).hexdigest(),
-                quote_tape=tape,broker_profile=BrokerProfile.from_wire(obj),
-                broker_source_bytes=bs)
+    return {"closed_bar_source":candle,
+            "expected_closed_bar_sha256":sha256(candle).hexdigest(),
+            "quote_tape":tape,
+            "broker_profile":BrokerProfile.from_wire(obj),
+            "broker_source_bytes":bs}
 
 
 def test_complete_real_pipeline_produces_10008_30(tmp_path):
