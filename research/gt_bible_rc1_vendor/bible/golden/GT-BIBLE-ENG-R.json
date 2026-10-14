@@ -1,0 +1,65 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-ENG-R",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "ENG-R-01",
+   "note": "bull engulfing at the lower boundary; stop min(2001.50, 2001.00, 2000.50)-0.20; risk 4.90 reward 14.80",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2004.00",
+      "h": "2004.50",
+      "l": "2001.50",
+      "c": "2002.00"
+     },
+     {
+      "o": "2001.80",
+      "h": "2005.50",
+      "l": "2001.00",
+      "c": "2005.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "AT_LOWER",
+     "lower": {
+      "lo": "2000.50",
+      "hi": "2001.50"
+     },
+     "upper": {
+      "lo": "2020.00",
+      "hi": "2021.00"
+     }
+    },
+    "htf": {
+     "D1": {
+      "state": "RANGE_BOUNDED"
+     },
+     "W1": {
+      "state": "RANGE_BOUNDED"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "2005.20"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2005.20",
+     "stop": "2000.30",
+     "target": "2020.00",
+     "rr": "148/49"
+    }
+   }
+  }
+ ]
+}
