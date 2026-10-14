@@ -1,6 +1,6 @@
 # B03 Day 11 — BrokerProfile v1: evidence-bound XAUUSD contract
 
-**Status: CODE WRITTEN, AWAITING CI.** This is isolated Strategy Lab code on the existing draft research branch; it cannot access brokerage credentials, customer trades, positions or MT5.
+**Status: DAY 11 TECHNICAL BUILD PASSED — CI verified 14 October 2026.** This is isolated Strategy Lab code on the existing draft research branch; it cannot access brokerage credentials, customer trades, positions or MT5.
 
 ## Built
 - `src/aidy/strategy_lab_broker_profile.py` defines immutable typed **BrokerProfile v1** and strict `from_wire`, `from_json`, `to_json` / `to_wire` contracts.
@@ -28,5 +28,9 @@ CI tests independently check round-trip canonical JSON, SHA-matched exact source
 4. This module is a data contract and exact arithmetic helpers, **not** a production-approved broker engine. Day 13 will implement actual commission/swap/slippage application and reconciled USD journal.
 
 ## Acceptance record
-- Source and fixture hashes, exact CI run link, test count and result to be filled **only after real green CI**.
+- [Passing GitHub Day11 acceptance](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38534845981), job `115755118189`: **76 tests passed**, strict Ruff/source compilation passed (one nonfatal pytest configuration warning). Pass commit `bcfd48c8a6eeb8e2cd07658bb4c512ca050b4325`.
+- Genuine test-input SHA-256: `1302931d9cc35a04d979b178e113cd6bf06315d1a1c75850d7f4403ba3dc44df` (`day11_illustrative_broker_observation.json`, `sha256sum` in CI).
+- Canonical test BrokerProfile SHA-256: `b7b4de379b6073995b8aca89e5b5ee871c43e011c8c0af5f1cd03b3f82fba53b`.
+- Independent test arithmetic reconciled USD0.100/tick for 0.1 lots and USD265.0 initial margin at USD2650/oz and 100:1 example leverage. This is synthetic fixture arithmetic only; no Vantage or other broker claims.
+- Output: `ILLUSTRATIVE_SOURCE_MATCHED`, `source_exact_fields_match=true`, `real_broker_terms_qualified=false`. Source SHA matches supplied bytes, not independent provider authenticity. No broker access/credentials or production changes.
 - Day 11 technical **schema/contract/source-identity** gate and separate **real broker qualification** gate must not be conflated.
