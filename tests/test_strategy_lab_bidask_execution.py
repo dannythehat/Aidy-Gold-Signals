@@ -1,7 +1,6 @@
 """Day12 executable bid/ask test vectors: never assume broker executable prices."""
 from __future__ import annotations
 
-import copy
 import json
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -83,7 +82,7 @@ def test_long_independent_known_answer_exact_bid_ask():
     assert trade.exit.filled_at_utc == END + timedelta(seconds=1)
     assert trade.exit.quote_index == 3
     assert trade.gross_quote_side_usd == Decimal("9.00")
-    assert trade.gross_ticks == Decimal("90")
+    assert trade.gross_ticks == Decimal(90)
     assert trade.entry.observed_spread == Decimal("0.10")
     assert not trade.costs_included and not trade.real_broker_terms_qualified
 
@@ -95,7 +94,7 @@ def test_short_independent_known_answer_exact_bid_ask():
     assert trade.exit.transaction_side == "buy"
     assert trade.exit.fill_price == Decimal("2651.10")
     assert trade.gross_quote_side_usd == Decimal("-11.00")
-    assert trade.gross_ticks == Decimal("-110")
+    assert trade.gross_ticks == Decimal(-110)
     assert trade.entry.quote_index == 1 and trade.exit.quote_index == 3
 
 
@@ -148,7 +147,7 @@ def test_snapshot_rejects_wrong_digest_and_modified_data():
 
 def test_manual_forged_quote_tape_is_not_trusted():
     original = tape()
-    modified_quote = replace(original.quotes[1], ask=Decimal("2660"))
+    modified_quote = replace(original.quotes[1], ask=Decimal(2660))
     forged = replace(original, quotes=(
         original.quotes[0], modified_quote, *original.quotes[2:]
     ))
@@ -160,8 +159,8 @@ def test_exact_close_time_quote_is_never_a_same_timestamp_fill():
     long = run()
     assert long.entry.filled_at_utc > START
     assert long.exit.filled_at_utc > END
-    assert long.entry.base_bid == Decimal("2650")
-    assert long.exit.base_bid == Decimal("2651")
+    assert long.entry.base_bid == Decimal(2650)
+    assert long.exit.base_bid == Decimal(2651)
 
 
 @pytest.mark.parametrize("direction", ["LONG", "sell", "", "buy"])
