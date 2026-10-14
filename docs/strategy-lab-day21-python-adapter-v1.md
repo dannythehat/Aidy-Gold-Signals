@@ -69,5 +69,10 @@ strict Ruff, Day21 hostile-source rejection tests, Day20 regression and
 independent synthetic signal parity, then **actual merge to `main`** and update
 of the real Notion Day21 row. This does not confer B06 stage or owner sign-off.
 
-**Evidence to insert only after CI and merge:** immutable run URL, job ID, count,
-source hash, merge SHA, and any limitations.
+**Verified day-level technical acceptance (14 October 2026): PASS.**
+
+- [GitHub Actions Day21 acceptance, run 38562202791](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38562202791), job `115845796004`: **177 Day08/09/20/21 tests PASSED**, strict Ruff and compilation PASS (one non-fatal existing pytest `asyncio_mode` configuration warning).
+- [PR #266 merged into main](https://github.com/dannythehat/Aidy-Gold-Signals/pull/266); source/test HEAD `4c161e77ccfefb6e458d040a27a569fe6c7d2c2e`, verified main squash commit `e8e60a599c8316e5abb023dd2aea32954c9e366e`.
+- Frozen internal Python source SHA256 `06db12a5c067fedf4d61a30596886e1844913f4870d1e4d3e16a0189f439b3fa`; source-bound canonical typed spec SHA256 `75b5eb7883b97c6c5dd1bcf438a62bb36f37f6bf6bcca5bbf7ddc98db10c5553`; source predicate AST SHA256 `c5afb4334aad2beff8f74255c946c3f3f4a1e0b68c2a847aacac863cdbe0bc4e`.
+- Independent closed M5 synthetic signal timestamps matched: `2026-10-14T12:10:00Z` and `2026-10-14T12:30:00Z`. `untrusted_source_executed=false` and `independent_third_party_platform_parity=false` verified in CI.
+- Day21 accepted only for the **strict no-exec AST-only predicate subset**, not a general-purpose Python sandbox, not unrestricted script execution and not original platform EMA/broker parity.
