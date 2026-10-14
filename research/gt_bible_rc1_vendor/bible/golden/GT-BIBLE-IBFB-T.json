@@ -1,0 +1,400 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-IBFB-T",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "IBFB-T-01",
+   "note": "sweep above the mother, close back inside: sell; stop 2011.00+0.20; risk 3.30 reward 6.90",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2011.00",
+      "l": "2004.00",
+      "c": "2008.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_DOWN"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2000.00",
+      "hi": "2001.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2007.90"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2007.90",
+     "stop": "2011.20",
+     "target": "2001.00",
+     "rr": "23/11"
+    }
+   }
+  },
+  {
+   "id": "IBFB-T-02",
+   "note": "a non-piercing candle before the sweep is allowed (window 3)",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2009.00",
+      "l": "2001.00",
+      "c": "2005.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2011.00",
+      "l": "2004.00",
+      "c": "2008.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_DOWN"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2000.00",
+      "hi": "2001.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2007.90"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2007.90",
+     "stop": "2011.20",
+     "target": "2001.00",
+     "rr": "23/11"
+    }
+   }
+  },
+  {
+   "id": "IBFB-T-03",
+   "note": "the sweep is on the bearish side; the bullish strategy does not fire",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2011.00",
+      "l": "2004.00",
+      "c": "2008.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2000.00",
+      "hi": "2001.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2007.90"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "SWEEP_WRONG_SIDE"
+    ]
+   }
+  },
+  {
+   "id": "IBFB-T-04",
+   "note": "both sides pierced",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2011.00",
+      "l": "1999.00",
+      "c": "2005.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_DOWN"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2000.00",
+      "hi": "2001.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2007.90"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "SWEEP_BOTH_SIDES"
+    ]
+   }
+  },
+  {
+   "id": "IBFB-T-05",
+   "note": "closed outside the mother: a breakout, not a false breakout",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2006.00",
+      "h": "2012.00",
+      "l": "2004.00",
+      "c": "2011.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_DOWN"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2000.00",
+      "hi": "2001.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2007.90"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_SWEEP"
+    ]
+   }
+  },
+  {
+   "id": "IBFB-T-06",
+   "note": "nothing pierced within 3 candles",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2009.00",
+      "h": "2010.00",
+      "l": "2000.00",
+      "c": "2001.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2007.00",
+      "l": "2003.00",
+      "c": "2006.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2006.00",
+      "l": "2003.00",
+      "c": "2005.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2006.00",
+      "l": "2003.00",
+      "c": "2005.00"
+     },
+     {
+      "o": "2004.00",
+      "h": "2006.00",
+      "l": "2003.00",
+      "c": "2005.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_DOWN"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP"
+    ],
+    "obstacles": [
+     {
+      "lo": "2000.00",
+      "hi": "2001.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2007.90"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_SWEEP"
+    ]
+   }
+  }
+ ]
+}
