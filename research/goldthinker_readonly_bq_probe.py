@@ -30,7 +30,7 @@ def main() -> None:
     SELECT
       EXTRACT(YEAR FROM open_time_utc) AS calendar_year,
       timeframe,
-      COUNT(*) AS rows,
+      COUNT(*) AS row_count,
       COUNT(DISTINCT research_identity) AS unique_research_ids,
       COUNT(DISTINCT candle_key) AS unique_candle_keys,
       COUNTIF(pit_eligible) AS pit_eligible_rows,
@@ -73,7 +73,7 @@ def main() -> None:
             {
                 "year": r.calendar_year,
                 "timeframe": r.timeframe,
-                "rows": r.rows,
+                "rows": r.row_count,
                 "unique_research_ids": r.unique_research_ids,
                 "unique_candle_keys": r.unique_candle_keys,
                 "pit_eligible_rows": r.pit_eligible_rows,
