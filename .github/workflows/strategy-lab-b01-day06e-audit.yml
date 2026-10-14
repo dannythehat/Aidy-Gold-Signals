@@ -1,4 +1,5 @@
 name: Strategy Lab Tick Archive R2 Independent Reconciliation
+# Reconcile after actual per-month SHA-verified missing-file recovery
 on:
   pull_request:
     branches: [main]
