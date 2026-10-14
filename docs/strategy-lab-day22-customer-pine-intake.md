@@ -19,8 +19,13 @@
 - Existing source-hashed restricted importer [PR #268](https://github.com/dannythehat/Aidy-Gold-Signals/pull/268) and chart reference verifier [PR #269](https://github.com/dannythehat/Aidy-Gold-Signals/pull/269) are already merged.
 - The roadmap's **specific original-TradingView signal parity gate** remains outstanding. Public unauthenticated original references collected so far are **different scripts**. Genuine output from the supported calibration source has not been authenticated.
 - Independent parity is a separate engineering evidence tier and is **not** a requirement for customers to submit a strategy. Any verification receipt based on synthetic source or customer self-labelled data must retain an **unverified** provider status.
-- Day22 checkbox must remain unchecked under the existing literal criterion until qualified original-source/real-provider signal data is obtained and matched. Do not silently relabel this customer-intake addition as platform parity.
+- **14 October 2026 scoped day-level update:** Day22 internal customer source-intake/adapter checkbox is now accepted after independent genuine XAUUSD historical-data reproduction and 122 passing tests in [PR #273](https://github.com/dannythehat/Aidy-Gold-Signals/pull/273). The *original* stronger criterion — exact TradingView-native source/platform parity — remains **separately UNVERIFIED** and must never be relabelled as provider parity. No user/customer TradingView account is required.
 
 ## Acceptance CI
 
 Test original-byte determinism, supported subset recognition, unsupported/customer-specific strategy review, missing source/file metadata, altered source SHA, untrusted Python payload as data (never run), and no technical provider requirement. Record actual passing CI and merge IDs once verified.
+
+
+## Real historical market-data proof — final Day22 internal scope
+
+[CI 38615858064](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38615858064) verified 600 real XAUUSD M1 bid records, 120 fully closed M5 bars and two independently agreeing EMA(10)/EMA(30) crossing timestamps, **15:30 and 18:25 UTC, 6 January 2025**. Exact replay of the historical source digest passed. Tests: **122 PASS**; [evidence gate 38615857818](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38615857818) PASS. GitHub [PR #273 merged into main](https://github.com/dannythehat/Aidy-Gold-Signals/pull/273). This qualifies AIDY's internal deterministic supported-subset pathway, not the TradingView engine or a whole customer trading system. The older anonymous login-gate finding stands unchanged.
