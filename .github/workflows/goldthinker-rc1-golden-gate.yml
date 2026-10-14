@@ -1,0 +1,41 @@
+name: AIDY GoldThinker RC1 pinned golden gate
+
+# Frozen GT-BIBLE 2.0 research gate. Never change GoldThinker or AIDY live systems.
+on:
+  push:
+    branches:
+      - research/goldthinker-historical-readonly-20261014
+    paths:
+      - research/goldthinker_rc1_golden_gate.py
+      - .github/workflows/goldthinker-rc1-golden-gate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout AIDY research branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Checkout exact immutable GoldThinker commit
+        uses: actions/checkout@v4
+        with:
+          repository: dannythehat/GoldThinker
+          ref: a15ec4cec1c8c0f06e53befe4b22b55c75da000c
+          path: goldthinker_ref
+          persist-credentials: false
+      - name: Verify manifest hashes and all 43 golden reference cases
+        run: python research/goldthinker_rc1_golden_gate.py
+      - name: Archive reproducibility attestation only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goldthinker-rc1-pinned-golden-reference
+          path: artifacts/goldthinker_rc1_golden_gate.json
+          if-no-files-found: ignore
+          retention-days: 14
