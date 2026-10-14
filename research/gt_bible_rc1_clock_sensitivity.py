@@ -38,11 +38,15 @@ ORDER BY open_time_utc
 """
 
 MODES={
+    "ASSUMED_US_DST_EET_EEST":"US_NEW_YORK_DAYS",
     "ASSUMED_EU_DST_EET_EEST":"Europe/Athens",
     "SENSITIVITY_FIXED_UTC_PLUS_2":timezone(timedelta(hours=2)),
     "SENSITIVITY_FIXED_UTC_PLUS_3":timezone(timedelta(hours=3)),
 }
 MINS={"H1":60,"H4":240,"D1":1440}
+# Provisional sensitivity only: permit observed partial H4/D1 candles;
+# never assume missing minutes have any unobserved prices.
+MIN_OBSERVED_RATIO={"H1":1.0,"H4":0.70,"D1":0.70}
 SIDES=("BULL","BEAR")
 PATS=("P03","P06","P07","P09","P22")
 
@@ -85,13 +89,20 @@ def key_for(t,tf):
 
 
 def candle_buckets(minutes,tz):
-    if isinstance(tz,str):
+    use_us = tz == "US_NEW_YORK_DAYS"
+    if isinstance(tz,str) and not use_us:
         tz=ZoneInfo(tz)
+    ny=ZoneInfo("America/New_York") if use_us else None
     # Stream UTC-ordered M1 through wall-clock bucket IDs. A DST fall-back can
     # revisit an hour bucket: use a dictionary, not sequential run segmentation.
     store={tf:{} for tf in MINS}
     for utc,o,h,l,c in minutes:
-        wall=utc.astimezone(tz)
+        if use_us:
+            # US DST UTC+3 summer / UTC+2 winter = UNVERIFIED hypothesis.
+            is_us_dst=bool(utc.astimezone(ny).dst())
+            wall=utc.astimezone(timezone(timedelta(hours=3 if is_us_dst else 2)))
+        else:
+            wall=utc.astimezone(tz)
         for tf in MINS:
             k=key_for(wall,tf)
             b=store[tf].get(k)
@@ -116,9 +127,13 @@ def candle_buckets(minutes,tz):
         # buckets (missing/repeated hour) are censored, not fabricated.
         for b in bars:
             b["full"]=b["n"]==MINS[tf]
+            b["usable"]=b["n"]>=MINS[tf]*MIN_OBSERVED_RATIO[tf]
         counts[tf]={"all_buckets":len(bars),
                     "fully_observed":sum(b["full"] for b in bars),
-                    "partial_or_dst_ambiguous":sum(not b["full"] for b in bars)}
+                    "partial_or_dst_ambiguous":sum(not b["full"] for b in bars),
+                    "partial_but_accepted_provisionally":sum(b["usable"] and not b["full"] for b in bars),
+                    "coverage_qualified_buckets":sum(b["usable"] for b in bars),
+                    "coverage_threshold":MIN_OBSERVED_RATIO[tf]}
         output[tf]=bars
     return output,counts
 
@@ -129,7 +144,7 @@ def true_range_at(bars,i):
 
 
 def atr_before(bars,i):
-    if i<15 or not all(b["full"] for b in bars[i-15:i]):
+    if i<15 or not all(b["usable"] for b in bars[i-15:i]):
         return None
     return F(sum((true_range_at(bars,k) for k in range(i-14,i)),Decimal(0))) / 14
 
@@ -156,17 +171,17 @@ def census(bars_by_tf):
         # Candidate i is the signal bar. P22 has 2 prior bars minimum.
         for i in range(18,n-4):
             cur=bars[i]
-            if not cur["full"]:
+            if not cur["usable"]:
                 continue
             year=cur["t"].year
             if year not in (2024,2025):
                 continue
-            if not all(b["full"] for b in bars[i-6:i]):
+            if not all(b["usable"] for b in bars[i-6:i]):
                 continue
             prev_dir=("UP" if bars[i-1]["c"]>bars[i-6]["c"]
                       else "DOWN" if bars[i-1]["c"]<bars[i-6]["c"] else "FLAT")
             next4=bars[i+1:i+5]
-            eligible=len(next4)==4 and all(b["full"] for b in next4)
+            eligible=len(next4)==4 and all(b["usable"] for b in next4)
             if eligible:
                 fwd=next4[-1]["c"]-cur["c"]
                 for side in SIDES:
@@ -189,7 +204,7 @@ def census(bars_by_tf):
                             attr[("P03",side,str(year),tf)]["not_evaluable"]+=1
             prev=bars[i-1]
             atr_2=atr_before(bars,i-1)
-            if not prev["full"] or atr_2 is None:
+            if not prev["usable"] or atr_2 is None:
                 continue
             pair=[{k:F(b[k]) for k in ("o","h","l","c")} for b in (prev,cur)]
             for side,pid in (("BULL","P06"),("BEAR","P07")):
@@ -210,7 +225,7 @@ def census(bars_by_tf):
             # Evaluate only snapshots ending on the actual piercing bar.
             for nback in (2,3,4):
                 first=i-nback
-                if first<15 or not all(x["full"] for x in bars[first:i+1]):
+                if first<15 or not all(x["usable"] for x in bars[first:i+1]):
                     continue
                 mother=bars[first]
                 inside=bars[first+1]
@@ -266,10 +281,13 @@ def main():
             "aidy_m1_rows":len(minutes),
             "source":"2024-2025 HistData M1 bid OHLC, retrospective only",
             "source_cost_bytes":job,
+            "coverage_thresholds":MIN_OBSERVED_RATIO,
             "limitations":[
                 "Three simulated broker time-mappings are unverified; not claimed to be historical Vantage clocks",
                 "RC1 clause geometry + true-range ATR only; no confirmed as-of trend/levels/W1 agreement/RR/decision gates",
-                "Conservative full-M1 bucket requirement; legitimate partial Sunday/Friday market bars excluded",
+                "H1 needs full minute coverage; H4 and D1 with >=70% observed minutes only as a PROVISIONAL SENSITIVITY ARM",
+                "Missing minutes in a partial H4 or D1 bar can hide the true open/high/low; never claim executable strategy results",
+                "Both EU and US DST calendar assumptions are unverified against Vantage 2024-2025 offsets",
                 "All-bar same-calendar-year/timeframe/side forward baseline, not proper regime matching nor untouched holdout",
                 "First-pierce P22 matched only to mother+inside patterns; overlapping candidates not independent trades",
                 "Forward close after four completed bars: no market orders, costs, SL/TP ordering, ASK or P&L",
