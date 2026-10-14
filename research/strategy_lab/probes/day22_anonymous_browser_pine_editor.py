@@ -46,9 +46,19 @@ async def main() -> None:
             result["pine_accessible_button_count"]=await candidates.count()
             if await candidates.count()>0:
                 await candidates.first.click(timeout=12000)
-                await page.wait_for_timeout(4000)
+                await page.wait_for_timeout(9000)
                 result["editor_clicked"]=True
-                body=(await page.locator("body").inner_text())[:50000].lower()
+                body_original=(await page.locator("body").inner_text())[:50000]
+                result["body_after_text"]=body_original[:6000]
+                result["after_url"]=page.url
+                result["dialog_count"]=await page.get_by_role("dialog").count()
+                result["textarea_count"]=await page.locator("textarea").count()
+                result["contenteditable_count"]=await page.locator("[contenteditable='true']").count()
+                result["monaco_count"]=await page.locator(".monaco-editor").count()
+                result["iframe_count"]=await page.locator("iframe").count()
+                result["iframe_hosts"]=[(item.url.split("/")[2] if len(item.url.split("/"))>2 else "") for item in page.frames][:15]
+                result["text_titles_after"]=await page.locator("[role='tab']").all_text_contents()
+                body=body_original.lower()
                 result["editor_after_click_visible"]="add to chart" in body or "create new" in body
                 result["login_after_click_visible"]="sign in" in body or "log in" in body
                 result["pine_after_click_buttons"]=[n[:60] for n in (await page.locator("button").all_text_contents()) if "chart" in n.lower() or "pine" in n.lower()][:30]
