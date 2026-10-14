@@ -7,7 +7,9 @@ whether an unauthenticated script editor seems accessible.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+from pathlib import Path
 from playwright.async_api import async_playwright
 
 URL = "https://www.tradingview.com/chart/?symbol=OANDA%3AXAUUSD&interval=5"
@@ -78,6 +80,52 @@ async def main() -> None:
                     """els => els.map(e => ({class:e.className,aria:e.getAttribute('aria-label'),
                         role:e.getAttribute('role'),value_length:e.value.length}))"""
                 )
+                # User-approved original-platform parity experiment: insert AIDY's
+                # exact repo-pinned Pine source into this ephemeral anonymous chart.
+                source = Path("research/strategy_lab/fixtures/day22_tradingview_exportable_v6.pine.txt").read_bytes()
+                result["attempted_pine_sha256"] = hashlib.sha256(source).hexdigest()
+                result["attempted_pine_bytes"] = len(source)
+                editor = page.locator("textarea.inputarea").first
+                await editor.focus()
+                await page.keyboard.press("ControlOrMeta+A")
+                await page.keyboard.insert_text(source.decode("utf-8"))
+                await page.wait_for_timeout(4000)
+                result["script_text_inserted_visible"] = await page.get_by_text(
+                    "AIDY_FAST_EMA", exact=False
+                ).count() > 0
+                result["text_area_value_len_after"] = await editor.evaluate(
+                    "(e) => e.value.length"
+                )
+                result["add_to_chart_button_count"] = await page.locator(
+                    "button[title='Add to chart']"
+                ).count()
+                try:
+                    await page.locator("button[title='Add to chart']").first.click(timeout=12000)
+                    result["add_to_chart_clicked"] = True
+                    await page.wait_for_timeout(12000)
+                    rendered = (await page.locator("body").inner_text(timeout=12000))
+                    result["after_submit_body_tail"] = rendered[-6200:]
+                    result["script_name_visible_after_submit"] = (
+                        "AIDY TV evidence XAUUSD M5" in rendered
+                    )
+                    result["add_to_chart_button_title"] = await page.locator(
+                        "button[title='Add to chart']"
+                    ).count()
+                    result["after_submit_dialog_count"] = await page.get_by_role("dialog").count()
+                    result["after_submit_dom"] = await page.locator(
+                        "button, [role='button'], [title], [aria-label]"
+                    ).evaluate_all(
+                        """elements => elements.map(e => ({
+                            text:(e.innerText || '').trim().slice(0,60),
+                            title:(e.getAttribute('title')||'').slice(0,85),
+                            aria:(e.getAttribute('aria-label')||'').slice(0,85)
+                        })).filter(o => /chart|script|pine|save|sign|log|compile|error|indicator|export|download/i.test(
+                            o.text + o.title + o.aria
+                        )).slice(-35)"""
+                    )
+                except Exception as exc:
+                    result["add_to_chart_error"] = str(exc)[:330]
+
         except Exception as exc:
             result["exception"]={"type":type(exc).__name__,"message":str(exc)[:280]}
         finally:
