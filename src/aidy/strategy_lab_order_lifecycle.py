@@ -7,7 +7,7 @@ ineligible. Orders cannot fill after expiry. Does not model stop/target paths.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
