@@ -1,0 +1,294 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-PIN-R",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "PIN-R-01",
+   "note": "pin at the lower boundary; stop below the boundary 1993.50-0.20; target upper boundary lo 2020.00; risk 7.80 reward 18.90",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "AT_LOWER",
+     "lower": {
+      "lo": "1993.50",
+      "hi": "1994.50"
+     },
+     "upper": {
+      "lo": "2020.00",
+      "hi": "2021.00"
+     }
+    },
+    "htf": {
+     "D1": {
+      "state": "RANGE_BOUNDED"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2001.10",
+     "stop": "1993.30",
+     "target": "2020.00",
+     "rr": "63/26"
+    },
+    "level_sources": [
+     "RANGE_BOUNDARY"
+    ],
+    "target_source": "RANGE_BOUNDARY"
+   }
+  },
+  {
+   "id": "PIN-R-02",
+   "note": "inside the range (p.160)",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "INTERIOR",
+     "lower": {
+      "lo": "1993.50",
+      "hi": "1994.50"
+     },
+     "upper": {
+      "lo": "2020.00",
+      "hi": "2021.00"
+     }
+    },
+    "htf": {
+     "D1": {
+      "state": "RANGE_BOUNDED"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NOT_AT_BOUNDARY"
+    ]
+   }
+  },
+  {
+   "id": "PIN-R-03",
+   "note": "weekly trend against the buy",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "AT_LOWER",
+     "lower": {
+      "lo": "1993.50",
+      "hi": "1994.50"
+     },
+     "upper": {
+      "lo": "2020.00",
+      "hi": "2021.00"
+     }
+    },
+    "htf": {
+     "D1": {
+      "state": "RANGE_BOUNDED"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "HTF_DISAGREE"
+    ]
+   }
+  },
+  {
+   "id": "PIN-R-04",
+   "note": "daily choppy",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "AT_LOWER",
+     "lower": {
+      "lo": "1993.50",
+      "hi": "1994.50"
+     },
+     "upper": {
+      "lo": "2020.00",
+      "hi": "2021.00"
+     }
+    },
+    "htf": {
+     "D1": {
+      "state": "CHOP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "HTF_DISAGREE"
+    ]
+   }
+  },
+  {
+   "id": "PIN-R-05",
+   "note": "not a range",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "RANGE_BOUNDED"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "OWN_STATE",
+     "NOT_AT_BOUNDARY"
+    ]
+   }
+  },
+  {
+   "id": "PIN-R-06",
+   "note": "bear pin at the upper boundary; stop max(2007.00, 2007.50)+0.20; target lower boundary hi 1981.00",
+   "snapshot": {
+    "tf": "D1",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2000.20",
+      "h": "2007.00",
+      "l": "2000.00",
+      "c": "2000.10"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "AT_UPPER",
+     "lower": {
+      "lo": "1980.00",
+      "hi": "1981.00"
+     },
+     "upper": {
+      "lo": "2006.50",
+      "hi": "2007.50"
+     }
+    },
+    "htf": {
+     "W1": {
+      "state": "RANGE_BOUNDED"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [],
+    "entry_price": "1999.90"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "1999.90",
+     "stop": "2007.70",
+     "target": "1981.00",
+     "rr": "63/26"
+    }
+   }
+  }
+ ]
+}
