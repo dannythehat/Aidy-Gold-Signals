@@ -6,7 +6,9 @@ from decimal import Decimal as D
 import pytest
 
 from aidy.strategy_lab_protective_exits import (
-    ProtectedPosition, QuoteBar, resolve_protective_exit,
+    ProtectedPosition,
+    QuoteBar,
+    resolve_protective_exit,
 )
 
 FRI=datetime(2026,10,16,20,tzinfo=UTC)
@@ -28,12 +30,12 @@ def bar(*, start=None,bopen=2650,bhigh=2655,blow=2645,bclose=2651,spread=1):
 
 
 @pytest.mark.parametrize("direction,barargs,reason,fill",[
-    ("long",dict(blow=2639),"stop","2640"),
-    ("long",dict(bhigh=2671),"target","2670"),
-    ("long",dict(blow=2639,bhigh=2671),"stop_ambiguous","2640"),
-    ("short",dict(bhigh=2660),"stop","2660"),
-    ("short",dict(blow=2628),"target","2630"),
-    ("short",dict(bhigh=2660,blow=2628),"stop_ambiguous","2660"),
+    ("long",{"blow":2639},"stop","2640"),
+    ("long",{"bhigh":2671},"target","2670"),
+    ("long",{"blow":2639,"bhigh":2671},"stop_ambiguous","2640"),
+    ("short",{"bhigh":2660},"stop","2660"),
+    ("short",{"blow":2628},"target","2630"),
+    ("short",{"bhigh":2660,"blow":2628},"stop_ambiguous","2660"),
 ])
 def test_intrabar_directions_are_adverse_first(direction,barargs,reason,fill):
     outcome=resolve_protective_exit(pos(direction),(bar(**barargs),))
@@ -43,10 +45,10 @@ def test_intrabar_directions_are_adverse_first(direction,barargs,reason,fill):
 
 
 @pytest.mark.parametrize("direction,args,reason,price",[
-    ("long",dict(bopen=2625,bhigh=2635,blow=2620,bclose=2630),"stop_gap","2625"),
-    ("long",dict(bopen=2685,bhigh=2690,blow=2680,bclose=2682),"target_gap","2670"),
-    ("short",dict(bopen=2670,bhigh=2675,blow=2665,bclose=2671),"stop_gap","2671"),
-    ("short",dict(bopen=2620,bhigh=2625,blow=2615,bclose=2621),"target_gap","2630"),
+    ("long",{"bopen":2625,"bhigh":2635,"blow":2620,"bclose":2630},"stop_gap","2625"),
+    ("long",{"bopen":2685,"bhigh":2690,"blow":2680,"bclose":2682},"target_gap","2670"),
+    ("short",{"bopen":2670,"bhigh":2675,"blow":2665,"bclose":2671},"stop_gap","2671"),
+    ("short",{"bopen":2620,"bhigh":2625,"blow":2615,"bclose":2621},"target_gap","2630"),
 ])
 def test_weekend_gap_exit_gap_rule(direction,args,reason,price):
     outcome=resolve_protective_exit(pos(direction),(bar(start=MON,**args),))
