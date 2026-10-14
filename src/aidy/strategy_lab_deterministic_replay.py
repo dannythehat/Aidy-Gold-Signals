@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
 
 from aidy.strategy_lab_cash_ledger import CashJournal
 
