@@ -1,0 +1,149 @@
+{
+  "schema_version": "aidy.strategy_spec.v1",
+  "strategy_id": "sample_ema_cross",
+  "revision": 1,
+  "title": "Illustrative EMA(10/30) closed-bar crossover",
+  "candidate_type": "complete_mechanical",
+  "origin": {
+    "author": "AIDY Strategy Lab illustrative fixture — not a third-party result",
+    "source_url": null,
+    "source_language": "written_rules",
+    "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_snapshot_ref": null,
+    "licence": "internal_fixture_only",
+    "claimed_performance": null,
+    "interpretation_notes": [
+      "ILLUSTRATIVE ONLY — strict parser and tests; not independently reproduced trading rules or a profitability claim"
+    ],
+    "unresolved_questions": []
+  },
+  "market": {
+    "symbol": "XAUUSD",
+    "signal_timeframe": "M5",
+    "data_source": "histdata:generic_ascii_m1",
+    "source_clock": "EST_FIXED_UTC_MINUS_05",
+    "price_basis": "bid"
+  },
+  "warmup_closed_bars": 50,
+  "indicators": [
+    {
+      "id": "fast_ema",
+      "kind": "EMA",
+      "timeframe": "M5",
+      "price_field": "close",
+      "period": 10,
+      "additional_parameters": {}
+    },
+    {
+      "id": "slow_ema",
+      "kind": "EMA",
+      "timeframe": "M5",
+      "price_field": "close",
+      "period": 30,
+      "additional_parameters": {}
+    }
+  ],
+  "long": {
+    "entry": {
+      "enabled": true,
+      "combination": "ALL",
+      "predicates": [
+        {
+          "left": {
+            "kind": "indicator",
+            "reference": "fast_ema",
+            "field": "value",
+            "offset_closed_bars": 0
+          },
+          "operator": "cross_above",
+          "right": {
+            "kind": "indicator",
+            "reference": "slow_ema",
+            "field": "value",
+            "offset_closed_bars": 0
+          }
+        }
+      ]
+    },
+    "exit": {
+      "stop_loss": {
+        "mode": "ticks",
+        "value": "120",
+        "indicator_id": null
+      },
+      "take_profit": {
+        "mode": "ticks",
+        "value": "240",
+        "indicator_id": null
+      },
+      "trailing_stop": null,
+      "partial_exits": [],
+      "maximum_holding_bars": 48,
+      "close_on_opposite_signal": false,
+      "close_on_session_end": true
+    }
+  },
+  "short": {
+    "entry": {
+      "enabled": false,
+      "combination": "ALL",
+      "predicates": []
+    },
+    "exit": {
+      "stop_loss": null,
+      "take_profit": null,
+      "trailing_stop": null,
+      "partial_exits": [],
+      "maximum_holding_bars": null,
+      "close_on_opposite_signal": false,
+      "close_on_session_end": false
+    }
+  },
+  "sessions": {
+    "timezone": "UTC",
+    "allowed": [
+      {
+        "weekday": 0,
+        "start_hhmm": "07:00",
+        "end_hhmm": "21:00"
+      },
+      {
+        "weekday": 1,
+        "start_hhmm": "07:00",
+        "end_hhmm": "21:00"
+      },
+      {
+        "weekday": 2,
+        "start_hhmm": "07:00",
+        "end_hhmm": "21:00"
+      },
+      {
+        "weekday": 3,
+        "start_hhmm": "07:00",
+        "end_hhmm": "21:00"
+      },
+      {
+        "weekday": 4,
+        "start_hhmm": "07:00",
+        "end_hhmm": "21:00"
+      }
+    ],
+    "excluded_dates": [],
+    "flat_outside_sessions": true
+  },
+  "sizing": {
+    "mode": "risk_percent_equity",
+    "fixed_lots": null,
+    "risk_percent_equity": "1"
+  },
+  "portfolio": {
+    "max_positions": 1,
+    "allow_hedging": false,
+    "allow_pyramiding": false,
+    "max_total_risk_percent": "2"
+  },
+  "execution": {
+    "signal_evaluation": "closed_bar_only",
+    "entry_execution": "next_tradable_quote"
+  }
+}
