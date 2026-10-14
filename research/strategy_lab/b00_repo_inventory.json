@@ -1,0 +1,96 @@
+{
+  "audit": "B00-Day01",
+  "date": "2026-10-14",
+  "scope": "read-only GitHub source inventory",
+  "main_tree_sha": "199ebb9c6738d5cceeebe76c122e5b8a8ca7685c",
+  "file_counts": {
+    "total": 723,
+    "src": 167,
+    "tests": 157,
+    "scripts": 85,
+    "docs": 79,
+    "github_workflows_and_related": 119,
+    "migrations": 32,
+    "ops": 37
+  },
+  "present_code": [
+    {
+      "category": "market-data/backfill",
+      "path": "src/aidy/historical_backfill.py",
+      "status": "PRESENT_SOURCE; live data access untested"
+    },
+    {
+      "category": "data/market recorder",
+      "path": "src/aidy/market_recorder.py",
+      "status": "PRESENT_SOURCE"
+    },
+    {
+      "category": "outcome analysis",
+      "path": "src/aidy/trade_outcomes.py",
+      "status": "PRESENT_SOURCE; not account P&L simulator"
+    },
+    {
+      "category": "frozen experimental replay",
+      "path": "src/aidy/replay_evaluation.py",
+      "status": "PRESENT_SOURCE; not arbitrary user strategy execution"
+    },
+    {
+      "category": "trial registration",
+      "path": "src/aidy/research_integrity.py",
+      "status": "PRESENT_SOURCE"
+    },
+    {
+      "category": "paper lifecycle",
+      "path": "src/aidy/paper_simulator.py",
+      "status": "PRESENT_SOURCE; R-only not USD brokerage simulation"
+    },
+    {
+      "category": "controlled strategy promotion",
+      "path": "src/aidy/strategy_promotion.py",
+      "status": "PRESENT_SOURCE; does not enable real-money trading"
+    },
+    {
+      "category": "application/runtime entry",
+      "path": "src/entry.py",
+      "status": "PRESENT_SOURCE; live runtime not probed"
+    },
+    {
+      "category": "testing framework",
+      "path": "pyproject.toml",
+      "status": "PRESENT_SOURCE; Python >=3.13, pytest, ruff"
+    }
+  ],
+  "historical_evidence": {
+    "file": "ops/day5-live-acceptance-evidence.md",
+    "accepted_at": "2026-08-19",
+    "m1_2024": 355592,
+    "m1_2025": 353951,
+    "m1_total": 709543,
+    "bid_ohlc": true,
+    "utc_conversion": "HistData fixed EST UTC-05:00 with no DST",
+    "research_store": "aidy-signals.aidy_analytics_test.research_candles",
+    "observed_live_access_in_this_audit": false
+  },
+  "architecture": {
+    "runtime": "Cloudflare Workers",
+    "operational_state": "Cloudflare D1",
+    "raw_archive": "Cloudflare R2",
+    "research_warehouse": "Google BigQuery",
+    "production_trading_boundary": "no broker/MT5 live-money authority in AIDY"
+  },
+  "gaps": [
+    "Customer StrategySpec compiler/import NOT VERIFIED",
+    "Broker-profile USD fill simulator NOT VERIFIED",
+    "Full historical bid/ask ticks for 2024–2025 NOT VERIFIED",
+    "Customer-level USD equity/cash trade ledger NOT VERIFIED",
+    "End-to-end external strategy audit PDF NOT VERIFIED",
+    "Customer-tenant security and billing NOT VERIFIED",
+    "Commercial licence suitability UNKNOWN",
+    "Current BigQuery historical table accessibility UNKNOWN"
+  ],
+  "limitations": [
+    "No current live Cloudflare, R2, or BigQuery execution was performed",
+    "Code inventory is structural, not pytest execution or security penetration testing",
+    "Git main tree reference is a tree SHA, not a claimed signed release"
+  ]
+}
