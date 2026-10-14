@@ -1,6 +1,5 @@
 """Day16 lot-grid/margin and partial exit adversarial reconciliation."""
 import json
-from datetime import UTC
 from decimal import Decimal as D
 from hashlib import sha256
 from pathlib import Path
