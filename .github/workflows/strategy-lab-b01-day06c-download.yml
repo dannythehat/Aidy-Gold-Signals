@@ -1,0 +1,28 @@
+name: Strategy Lab Day06C Real HistData Tick Download
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/b01_day06c_download_tick_pilot.py
+      - .github/workflows/strategy-lab-b01-day06c-download.yml
+permissions:
+  contents: read
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet httpx
+      - name: Download genuine 2024-01 XAUUSD bid ask tick archive
+        run: PYTHONPATH=src python scripts/b01_day06c_download_tick_pilot.py
+      - name: Store untouched archive and hashes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xauusd-histdata-ticks-2024-01
+          path: artifacts/bidask_download/
+          retention-days: 30
