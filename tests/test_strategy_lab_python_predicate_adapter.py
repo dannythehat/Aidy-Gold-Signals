@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from datetime import timedelta
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
 
 import pytest
+from test_strategy_lab_written_rule_intake import inputs, samples
 
 from aidy.strategy_lab_python_predicate_adapter import (
     ADAPTER_VERSION,
@@ -16,8 +16,6 @@ from aidy.strategy_lab_python_predicate_adapter import (
     compare_python_with_spec,
     evaluate_restricted_python,
 )
-from aidy.strategy_lab_written_rule_intake import ClosedIndicatorSample
-from test_strategy_lab_written_rule_intake import inputs, samples
 
 FIXTURE = (Path(__file__).parents[1] / "research" / "strategy_lab"
            / "fixtures" / "day21_internal_python_signal.py.txt")
@@ -35,7 +33,7 @@ def candidate(source_bytes: bytes | None = None):
     spec["origin"]["source_sha256"] = sha256(code).hexdigest()
     spec["origin"]["source_snapshot_ref"] = SOURCE_REF
     spec["origin"]["interpretation_notes"] = [
-        "Day21 INTERNAL signal-only Python fixture; remaining exit and sizing rules "
+        "Day21 INTERNAL signal-only Python fixture; remaining exit and sizing rules " +
         "come from separately reviewed StrategySpec; no original-platform parity."
     ]
     return spec
@@ -119,24 +117,24 @@ def test_deterministic_source_hash_receipt_and_cross():
     "open('untrusted.txt', 'w')\n" + source().decode(),
     "x = 1\n" + source().decode(),
     source().decode() + "\nprint('side effect')\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
-    "    __import__('os').system('touch escaped.txt')\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
+    "    __import__('os').system('touch escaped.txt')\n" +
     "    return fast_prev <= slow_prev and fast_now > slow_now\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    while True:\n        pass\n    return True\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return eval('True')\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return fast_now.__class__ is Decimal\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return [x for x in range(10)]\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return fast_prev <= slow_prev and fast_now > slow_now and True\n",
     "@property\n" + source().decode(),
-    "def signal(fast_prev,slow_prev,fast_now,slow_now, **kwargs):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now, **kwargs):\n" +
     "    return fast_prev <= slow_prev and fast_now > slow_now\n",
     "def signal(*args):\n    return True\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    x = True\n    return fast_prev <= slow_prev and fast_now > slow_now\n",
     "async " + source().decode(),
 ])
@@ -146,15 +144,15 @@ def test_hostile_and_general_python_forms_are_rejected_not_executed(payload):
 
 
 @pytest.mark.parametrize("payload", [
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return fast_prev < slow_prev and fast_now > slow_now\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return fast_prev <= slow_prev and fast_now >= slow_now\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return fast_prev <= slow_prev or fast_now > slow_now\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return fast_now > slow_now\n",
-    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n"
+    "def signal(fast_prev,slow_prev,fast_now,slow_now):\n" +
     "    return fast_prev <= slow_prev and fast_prev <= slow_prev\n",
 ])
 def test_other_rule_semantics_rejected_instead_of_inferred(payload):
