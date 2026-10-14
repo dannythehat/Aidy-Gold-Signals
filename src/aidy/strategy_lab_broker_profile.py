@@ -45,7 +45,7 @@ def _id(value: Any, name: str) -> str:
 def _dec(value: Any, name: str, *, allow_negative: bool = False,
          allow_zero: bool = False) -> Decimal:
     if isinstance(value, (bool, float)) or not isinstance(value, (str, int, Decimal)):
-        raise ValueError(f"{name}: use exact decimal text/integer, never float or bool")
+        raise ValueError(f"{name}: use exact decimal text/integer, never float or bool")  # noqa: TRY004
     try:
         number = Decimal(str(value))
     except (ValueError, InvalidOperation) as exc:
@@ -68,7 +68,7 @@ def _stamp(value: Any, name: str) -> datetime:
     if not raw.endswith("Z"):
         raise ValueError(f"{name}: exact UTC Z suffix required")
     try:
-        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(raw)
     except ValueError as exc:
         raise ValueError(f"{name}: invalid ISO timestamp") from exc
     if dt.tzinfo is None or dt.utcoffset() != timedelta(0):
