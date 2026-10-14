@@ -200,7 +200,8 @@ def test_exit_signal_before_entry_or_before_fill_fails():
 
 def test_no_quote_after_signal_fails_closed():
     with pytest.raises(ValueError, match="no quote"):
-        run(entry=END + timedelta(minutes=1))
+        run(entry=END + timedelta(minutes=1),
+            exit_at=END + timedelta(minutes=2))
 
 
 def test_quote_stale_at_weekend_or_market_gap_fails():
