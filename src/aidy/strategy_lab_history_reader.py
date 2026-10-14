@@ -6,11 +6,12 @@ fully closed and made only from verified native HistData M1 rows. No writes.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from aidy.strategy_lab_data_quality import Bar, SourceContract, validate_bars
 
@@ -152,7 +153,7 @@ def _read_rows(rows: Iterable[Mapping[str, Any]], window: Window) -> ReadResult:
     # continuous window MUST be present. Do not manufacture a market-open flag.
     gaps = validate_bars(native, SourceContract(
         EXPECTED_SOURCE, "XAUUSD", 1, "bid", EXPECTED_CLOCK,
-        EXPECTED_DERIVATION, sorted(archives)[0]
+        EXPECTED_DERIVATION, min(archives)
     ))
     if gaps:
         raise ValueError("unclassified M1 gaps; cannot infer closed period")
