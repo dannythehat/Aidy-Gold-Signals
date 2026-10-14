@@ -44,7 +44,7 @@ def _closed_at(value: datetime) -> datetime:
 
 def _decimal(value: Any, name: str, *, zero_ok: bool = False) -> Decimal:
     if isinstance(value, (bool, float)) or not isinstance(value, (str, int, Decimal)):
-        raise ValueError(f"{name}: exact decimal string required")
+        raise ValueError(f"{name}: exact decimal string required")  # noqa: TRY004
     try:
         number = Decimal(str(value))
     except (ValueError, InvalidOperation) as exc:
@@ -265,7 +265,7 @@ def research_round_trip(
                                    "BROKER_EVIDENCE_MATCHED_UNATTESTED"):
         raise ValueError("broker profile evidence not source-matched or costs incomplete")
     if not isinstance(quote_tape, QuoteTape):
-        raise ValueError("expected frozen QuoteTape")
+        raise ValueError("expected frozen QuoteTape")  # noqa: TRY004
     # Recheck quote data after dataclass construction so external callers cannot
     # bypass the source parser by manually constructing trusted-looking objects.
     # Verify original bytes and parsed values, not merely a user-supplied hash.
