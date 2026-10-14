@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from datetime import timedelta
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
@@ -33,8 +32,8 @@ def make_spec(original: bytes | None = None):
     raw["origin"]["source_sha256"] = sha256(source_bytes).hexdigest()
     raw["origin"]["source_snapshot_ref"] = SOURCE_REF
     raw["origin"]["interpretation_notes"] = [
-        "Internal Pine signal-fragment example only, other exit/size rules "
-        "not in this Pine source and never automatically ported."
+        ("Internal Pine signal-fragment example only, other exit/size rules "
+         "not in this Pine source and never automatically ported.")
     ]
     return raw
 
