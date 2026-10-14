@@ -63,7 +63,6 @@ def test_realistic_unhandled_customer_script_returns_reconstruction_questions(sc
     assert not result.signal_adapter_supported
     assert not result.full_strategy_reproduction_qualified
     assert result.customer_questions
-    assert result.original if False else True
 
 
 @pytest.mark.parametrize(("snippet", "expected"), [
