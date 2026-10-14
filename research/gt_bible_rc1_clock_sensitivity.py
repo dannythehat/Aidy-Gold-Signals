@@ -131,7 +131,7 @@ def true_range_at(bars,i):
 def atr_before(bars,i):
     if i<15 or not all(b["full"] for b in bars[i-15:i]):
         return None
-    return F(sum((true_range_at(bars,k) for k in range(i-14,i)),Decimal(0)),14)
+    return F(sum((true_range_at(bars,k) for k in range(i-14,i)),Decimal(0))) / 14
 
 
 def count_signal(store,typ,side,year,tf,prior,delta):
