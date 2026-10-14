@@ -1,0 +1,26 @@
+name: Strategy Lab Day19 First End to End Reference CI
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_reference_run.py
+      - tests/test_strategy_lab_reference_run.py
+      - research/strategy_lab/fixtures/day19_internal_closed_m1.json
+      - .github/workflows/strategy-lab-day19-reference.yml
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -q pytest ruff tzdata
+      - run: |
+          python -m compileall -q src/aidy/strategy_lab_reference_run.py tests/test_strategy_lab_reference_run.py
+          ruff check src/aidy/strategy_lab_reference_run.py tests/test_strategy_lab_reference_run.py
+      - name: Independent end-to-end journal regression
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_reference_run.py tests/test_strategy_lab_order_lifecycle.py tests/test_strategy_lab_cash_ledger.py tests/test_strategy_lab_deterministic_replay.py
+      - run: sha256sum research/strategy_lab/fixtures/day19_internal_closed_m1.json research/strategy_lab/fixtures/day11_illustrative_broker_observation.json research/strategy_lab/fixtures/day12_illustrative_bidask_quotes.json
