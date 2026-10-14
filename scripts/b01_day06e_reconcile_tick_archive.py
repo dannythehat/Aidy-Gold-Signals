@@ -90,10 +90,12 @@ def r2_catalog(account_id: str, api_token: str) -> dict[str, dict]:
 
 
 def audit() -> dict:
+    manifest_read_error = None
     try:
         archive = previous_manifests(os.environ["GITHUB_TOKEN"])
     except (OSError, RuntimeError, ValueError, KeyError, zipfile.BadZipFile) as exc:
-        raise RuntimeError(f"GITHUB_MANIFEST_ACCESS_{type(exc).__name__}") from exc
+        archive = {}
+        manifest_read_error = f"GITHUB_MANIFEST_ACCESS_{type(exc).__name__}"
     try:
         remotely_listed = r2_catalog(os.environ["CLOUDFLARE_ACCOUNT_ID"],
                                      os.environ["CLOUDFLARE_API_TOKEN"])
@@ -105,7 +107,7 @@ def audit() -> dict:
             period = f"{year:04d}{mon:02d}"
             name = f"HISTDATA_COM_ASCII_XAUUSD_T_{period}.zip"
             key = f"{PREFIX}{period}/{name}"
-            reported = archive[period]
+            reported = archive.get(period) or {}
             obj = remotely_listed.get(key)
             verified = bool(
                 obj and reported.get("status") == "ARCHIVED_R2"
@@ -127,6 +129,7 @@ def audit() -> dict:
                 "manifest_payload_sha256": reported.get("source_payload_sha256"),
                 "manifest_tick_count": reported.get("tick_rows"),
                 "metadata_matches_manifest": verified,
+                "remote_nonempty_object": bool(obj and int(obj.get("size",0)) > 500),
             })
     return {
         "observed_at": datetime.now(UTC).isoformat(),
@@ -137,7 +140,9 @@ def audit() -> dict:
         "verified_metadata_and_manifest": sum(m["metadata_matches_manifest"] for m in months),
         "remote_present": sum(m["remote_exists"] for m in months),
         "pending_periods": [m["period"] for m in months if not m["metadata_matches_manifest"]],
-        "verification_level": "Cloudflare remote object list + source manifest SHA/size; full remote object bytes not rehashed",
+        "github_manifest_access": "PASS" if not manifest_read_error else manifest_read_error,
+        "remote_nonempty_objects": sum(m["remote_nonempty_object"] for m in months),
+        "verification_level": "Cloudflare remote object list; source manifest hash/size comparison ONLY when GH manifests accessible. Full object bytes not rehashed",
         "months": months,
     }
 
@@ -146,7 +151,7 @@ def main() -> int:
     OUTPUT.parent.mkdir(exist_ok=True, parents=True)
     try:
         result = audit()
-        result["status"] = "PASS" if result["verified_metadata_and_manifest"] >= 71 else "PARTIAL"
+        result["status"] = "PASS" if result["verified_metadata_and_manifest"] >= 71 else "REMOTE_LISTED"
         print(json.dumps({k:v for k,v in result.items() if k != "months"}, sort_keys=True))
     except Exception as e:
         result = {"status":"BLOCKED", "error_class": type(e).__name__,
