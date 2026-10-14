@@ -1,0 +1,47 @@
+name: Strategy Lab Full Historical Gold Tick Acquisition
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/b01_day06d_full_year_histdata_archive.py
+      - .github/workflows/strategy-lab-b01-day06d-full-download.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: strategy-lab-full-tick-acquisition
+  cancel-in-progress: false
+
+jobs:
+  download:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        year: [2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install downloader dependencies
+        run: python -m pip install --quiet httpx
+      - name: Download, verify and archive to private R2
+        run: PYTHONPATH=src python scripts/b01_day06d_full_year_histdata_archive.py --year ${{ matrix.year }}
+      - name: Preserve per-month evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-tick-manifest-${{ matrix.year }}
+          path: artifacts/${{ matrix.year }}/manifest.json
+          retention-days: 30
