@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from datetime import datetime, timedelta
+from decimal import Decimal
 from hashlib import sha256
 from typing import Any
 
@@ -136,6 +136,24 @@ def intake_written_rules(
         for pointer in paths:
             if claimed[pointer] != _pointer(material, pointer):
                 raise ValueError(f"rule value contradicts confirmed mapping: {group}/{pointer}")
+    # A supplementary literal guard catches a reviewer accidentally binding
+    # source passages with a *different* numerical stop, target, or warmup.
+    # This is not semantic NLP; exact source-author intent remains review-gated.
+    literal_checks = {
+        "warmup": str(spec.warmup_closed_bars),
+        "indicators": f"({spec.indicators[0].period})",
+        "long_stop": format(spec.long.exit.stop_loss.value, "f")
+            if spec.long.exit.stop_loss else "",
+        "long_target": format(spec.long.exit.take_profit.value, "f")
+            if spec.long.exit.take_profit else "",
+        "long_hold": str(spec.long.exit.maximum_holding_bars),
+        "sizing": format(spec.sizing.risk_percent_equity, "f")
+            if spec.sizing.risk_percent_equity else "",
+        "portfolio": format(spec.portfolio.max_total_risk_percent, "f"),
+    }
+    for group, literal in literal_checks.items():
+        if not literal or literal not in evidence[group]["source_excerpt"]:
+            raise ValueError(f"explicit source literal does not match declared {group} value")
     # Day09 validates completeness but has no source-semantic understanding.
     assessment = assess_rule_completeness(spec, source_snapshot=source_bytes)
     if not assessment.ready_for_later_reproduction:
