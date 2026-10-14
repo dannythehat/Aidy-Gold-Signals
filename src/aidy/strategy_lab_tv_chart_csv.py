@@ -35,7 +35,7 @@ TOL = Decimal("0.0005")
 
 def _decimal(raw: str, field: str) -> Decimal:
     if not isinstance(raw, str):
-        raise ValueError(f"{field}: required exact decimal text")
+        raise ValueError(f"{field}: required exact decimal text")  # noqa: TRY004
     try:
         x = Decimal(raw)
     except (ValueError, InvalidOperation) as exc:
@@ -47,12 +47,12 @@ def _decimal(raw: str, field: str) -> Decimal:
 
 def _utc_open(raw: str) -> datetime:
     if not isinstance(raw, str):
-        raise ValueError("export chart time missing")
+        raise ValueError("export chart time missing")  # noqa: TRY004
     try:
         if raw.isdigit():
             stamp = datetime.fromtimestamp(int(raw), tz=UTC)
         else:
-            stamp = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            stamp = datetime.fromisoformat(raw)
     except (OverflowError, ValueError) as exc:
         raise ValueError("unsupported chart export time") from exc
     if stamp.tzinfo is None or stamp.utcoffset() != timedelta(0):
@@ -103,7 +103,7 @@ def verify_tv_chart_csv(
     chart_interval: str,
 ) -> TvChartCsvCheck:
     if not isinstance(admitted, PineSubset):
-        raise ValueError("source-bound Pine strategy admission required")
+        raise ValueError("source-bound Pine strategy admission required")  # noqa: TRY004
     if not admitted.source_bytes.decode("utf-8").endswith(PLOT_SUFFIX):
         raise ValueError("Pine source lacks exact native chart CSV plot instrumentation")
     if not isinstance(csv_bytes, bytes) or not 0 < len(csv_bytes) <= MAX_CSV_BYTES:
