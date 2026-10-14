@@ -1,0 +1,35 @@
+name: Strategy Lab Tick Archive R2 Independent Reconciliation
+# Reconcile after actual per-month SHA-verified missing-file recovery
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/b01_day06e_reconcile_tick_archive.py
+      - .github/workflows/strategy-lab-b01-day06e-audit.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Reconcile original manifests against actual R2 object list
+        run: python scripts/b01_day06e_reconcile_tick_archive.py
+      - name: Preserve full per-month evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-tick-r2-reconciliation-before
+          path: artifacts/gold_tick_reconciliation_before.json
+          retention-days: 30

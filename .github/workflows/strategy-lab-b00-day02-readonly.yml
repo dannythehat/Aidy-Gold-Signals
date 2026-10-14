@@ -1,0 +1,45 @@
+name: AIDY Strategy Lab B00 Day 02 Read-only Warehouse Proof
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/b00_day02_readonly_warehouse_probe.py"
+      - ".github/workflows/strategy-lab-b00-day02-readonly.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: strategy-lab-b00-day02-readonly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  warehouse-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      AIDY_BIGQUERY_DATASET: aidy_analytics_test
+      AIDY_BIGQUERY_LOCATION: EU
+      AIDY_B00_MAX_BYTES: "1000000000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install only BigQuery read client
+        run: python -m pip install --quiet 'google-cloud-bigquery>=3.42,<4' 'google-auth>=2,<3'
+      - name: Run bounded SELECT-only proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/b00_day02_readonly_warehouse_probe.py --out artifacts/b00_day02_warehouse.json
+      - name: Publish aggregate proof, including on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b00-day02-warehouse-aggregate-proof
+          path: artifacts/b00_day02_warehouse.json
+          retention-days: 30

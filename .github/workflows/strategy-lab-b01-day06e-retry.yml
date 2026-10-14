@@ -1,0 +1,64 @@
+name: Strategy Lab Missing Gold Tick Month Recovery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/b01_day06e_targeted_tick_recovery.py
+      - src/aidy/strategy_lab_tick_source_audit.py
+      - tests/test_strategy_lab_tick_source_audit.py
+      - .github/workflows/strategy-lab-b01-day06e-retry.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: strategy-lab-targeted-missing-tick-recovery
+  cancel-in-progress: false
+
+jobs:
+  test-source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet httpx pytest ruff
+      - name: Compile, lint and test source preservation
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_tick_source_audit.py scripts/b01_day06e_targeted_tick_recovery.py tests/test_strategy_lab_tick_source_audit.py
+          ruff check src/aidy/strategy_lab_tick_source_audit.py scripts/b01_day06e_targeted_tick_recovery.py tests/test_strategy_lab_tick_source_audit.py
+          PYTHONPATH=src pytest -q tests/test_strategy_lab_tick_source_audit.py
+  retry-only-missing:
+    needs: test-source-audit
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        period: ['202010', '202110', '202210', '202310', '202410', '202510', '202606', '202607', '202608', '202609']
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install actual HistData reader dependency
+        run: python -m pip install --quiet httpx
+      - name: Recover missing month without touching existing archives
+        run: PYTHONPATH=src python scripts/b01_day06e_targeted_tick_recovery.py --period ${{ matrix.period }}
+      - name: Save per-month source diagnostics and checksums
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gold-tick-retry-${{ matrix.period }}
+          path: artifacts/retries/${{ matrix.period }}/manifest.json
+          retention-days: 30

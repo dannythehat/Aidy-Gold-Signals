@@ -1,0 +1,72 @@
+name: Strategy Lab B03 Day11 Broker Profile Acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_broker_profile.py
+      - tests/test_strategy_lab_broker_profile.py
+      - research/strategy_lab/fixtures/day11_illustrative_broker_observation.json
+      - docs/strategy-lab-b03-day11-broker-profile-v1.md
+      - .github/workflows/strategy-lab-b03-day11.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-broker-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install quality/test tools
+        run: python -m pip install --quiet pytest ruff tzdata
+      - name: Compile source and enforce strict lint
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_broker_profile.py tests/test_strategy_lab_broker_profile.py
+          ruff check src/aidy/strategy_lab_broker_profile.py tests/test_strategy_lab_broker_profile.py
+      - name: Source identity and exact broker-contract tests
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_broker_profile.py
+      - name: Freeze evidence SHA256 and demonstrate exact arithmetic
+        run: |
+          sha256sum research/strategy_lab/fixtures/day11_illustrative_broker_observation.json
+          PYTHONPATH=src python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          from aidy.strategy_lab_broker_profile import BrokerProfile, qualify_broker_profile
+
+          path = Path("research/strategy_lab/fixtures/day11_illustrative_broker_observation.json")
+          raw = path.read_bytes()
+          document = json.loads(raw)
+          document.pop("evidence_kind")
+          document.update({
+            "schema_version":"aidy.broker_profile.v1",
+            "profile_id":"synthetic_xauusd_standard","revision":1,
+            "provenance":{
+              "evidence_kind":"internal_fixture",
+              "source_reference":str(path),
+              "source_sha256":hashlib.sha256(raw).hexdigest(),
+              "captured_at_utc":"2026-10-14T14:10:00Z",
+              "evidence_label":"illustrative_not_live",
+            },
+          })
+          obj = BrokerProfile.from_wire(document)
+          q = qualify_broker_profile(obj, raw)
+          assert q.state == "ILLUSTRATIVE_SOURCE_MATCHED", q.issues
+          assert obj.usd_per_tick("0.1") == __import__("decimal").Decimal("0.1")
+          assert obj.initial_margin_usd("2650.00","0.1") == __import__("decimal").Decimal("265")
+          assert q.real_broker_terms_qualified is False
+          print(json.dumps({
+            "test_status":"PASS",
+            "source_sha256":hashlib.sha256(raw).hexdigest(),
+            "profile_sha256":q.profile_sha256,
+            "source_exact_fields_match":q.evidence_fields_matched,
+            "account_usd_per_tick_for_0_1_lots":str(obj.usd_per_tick("0.1")),
+            "illustrative_initial_margin_usd":str(obj.initial_margin_usd("2650","0.1")),
+            "broker":obj.broker_id,"real_broker_terms_qualified":False,
+            "live_broker_access":False,
+          },sort_keys=True))
+          PY

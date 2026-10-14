@@ -1,0 +1,20 @@
+# AIDY INTERNAL TEST FIXTURE ONLY — NOT A THIRD-PARTY STRATEGY.
+# No source-platform parity or returns are claimed.
+
+Instrument XAUUSD. Source HistData Generic ASCII native M1 bid OHLC with
+fixed EST UTC-05 source clock. Signal timeframe M5. UTC sessions Monday
+through Friday from 07:00 inclusive until 21:00 exclusive, and flatten at
+session end. Warm up for 50 fully closed M5 candles.
+
+Compute EMA(10) and EMA(30) on closed M5 close prices. Enter one long when
+EMA(10) crosses above EMA(30) on a fully closed M5 bar. Execute at next
+tradable quote (not at a known signal close). Never enter short positions.
+Initial long stop: 120 broker-defined ticks from entry. Take profit:
+240 ticks from entry. Maximum hold 48 closed signal-timeframe bars.
+Close at the end of the active permitted session.
+
+Risk 1% of equity at the initial stop, maximum portfolio risk 2%,
+maximum one position, no hedging, no pyramiding.
+
+Market source parity, precise EMA implementation, tick size, source
+session closures and fill/fee costs are not evidenced by this fixture.

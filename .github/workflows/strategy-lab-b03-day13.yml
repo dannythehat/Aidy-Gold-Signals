@@ -1,0 +1,83 @@
+name: Strategy Lab B03 Day13 Fees Funding Acceptance
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_fees_funding.py
+      - tests/test_strategy_lab_fees_funding.py
+      - docs/strategy-lab-b03-day13-fees-funding-v1.md
+      - .github/workflows/strategy-lab-b03-day13.yml
+      - src/aidy/strategy_lab_broker_profile.py
+      - src/aidy/strategy_lab_bidask_execution.py
+
+permissions:
+  contents: read
+
+jobs:
+  verify-cash-costs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install test and exact quality dependencies
+        run: python -m pip install --quiet pytest ruff tzdata
+      - name: Compile and strict Ruff
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_fees_funding.py tests/test_strategy_lab_fees_funding.py
+          ruff check src/aidy/strategy_lab_fees_funding.py tests/test_strategy_lab_fees_funding.py
+      - name: Full B03 Day11,12,13 integration regression
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_broker_profile.py tests/test_strategy_lab_bidask_execution.py tests/test_strategy_lab_fees_funding.py
+      - name: Independent cash examples and SHA of original synthetic sources
+        run: |
+          sha256sum research/strategy_lab/fixtures/day11_illustrative_broker_observation.json research/strategy_lab/fixtures/day12_illustrative_bidask_quotes.json
+          PYTHONPATH=src:tests python - <<'PY'
+          import hashlib
+          import json
+          from decimal import Decimal
+          from pathlib import Path
+          from test_strategy_lab_fees_funding import intraday, overnight
+
+          expected = {
+              "intraday_long": (intraday("long"), "8.30"),
+              "intraday_short": (intraday("short"), "-11.70"),
+              "overnight_long": (overnight("long"), "-2.30"),
+              "overnight_short": (overnight("short"), "-1.39"),
+          }
+          results = {}
+          for name, (result, net) in expected.items():
+              assert result.net_usd == Decimal(net), (name, result.net_usd)
+              assert result.net_usd == (
+                  result.quote_gross_usd
+                  + sum((event.usd for event in result.events), Decimal(0))
+              )
+              assert not result.broker_attested
+              assert not result.provider_calendar_qualified
+              results[name] = {
+                  "gross_usd":str(result.quote_gross_usd),
+                  "commission_usd":str(result.commission_usd),
+                  "slippage_usd":str(result.slippage_usd),
+                  "funding_usd":str(result.funding_usd),
+                  "net_usd":str(result.net_usd),
+                  "events":len(result.events),
+                  "result_sha256":hashlib.sha256(result.to_json().encode()).hexdigest(),
+              }
+          root=Path("research/strategy_lab/fixtures")
+          source_hashes={
+              p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+              for p in (
+                  root / "day11_illustrative_broker_observation.json",
+                  root / "day12_illustrative_bidask_quotes.json",
+              )
+          }
+          print(json.dumps({
+              "status":"PASS", "result_type":"internal_illustrative_only",
+              "real_broker_terms_verified":False,
+              "vendor_holiday_calendar_verified":False,
+              "actual_trade_executed":False,
+              "sources_sha256":source_hashes,
+              "case_results":results,
+          }, sort_keys=True))
+          PY

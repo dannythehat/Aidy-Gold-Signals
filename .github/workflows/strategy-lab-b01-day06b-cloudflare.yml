@@ -1,0 +1,24 @@
+name: Strategy Lab Day06B Cloudflare Metadata
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/strategy-lab-b01-day06b-cloudflare.yml
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read Cloudflare R2 bucket catalogue
+        run: npx --yes wrangler@4 r2 bucket list
+      - name: Read archived gold object pointers from D1
+        run: npx --yes wrangler@4 d1 execute aidy-ops-test --remote --json --command "SELECT COUNT(*) AS archived_count, MIN(created_at) AS earliest, MAX(created_at) AS latest FROM archive_outbox WHERE status='archived' AND archive_key LIKE 'gold/%'"

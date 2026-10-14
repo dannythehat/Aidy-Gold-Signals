@@ -1,0 +1,35 @@
+name: AIDY Strategy Lab B00 Day02 R2 Read-only Verification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/b00_day02_readonly_r2_probe.py
+      - .github/workflows/strategy-lab-b00-day02-r2-readonly.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  r2-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify archived gold object by reading D1 and R2 only
+        run: python scripts/b00_day02_readonly_r2_probe.py
+      - name: Preserve aggregate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b00-day02-r2-readonly-proof
+          path: artifacts/b00_day02_r2.json
+          retention-days: 30

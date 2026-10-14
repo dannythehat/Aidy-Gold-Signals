@@ -1,0 +1,13 @@
+{
+  "probe": "b00_day02_r2_read_only_v1",
+  "observed_at_utc": "2026-10-14T05:31:56.652377+00:00",
+  "status": "PASS",
+  "archive_key": "gold/snapshots/2026/10/14/20261014T052800.574000Z-2a243131-ea8c-4e39-bfc9-076ae05bc47f-53318ed755dd6164ebb45bf7c0ddc14f413c7affc18c3ac47d5363b3d77c7998.json",
+  "bucket": "aidy-memory-test",
+  "object_bytes": 5629,
+  "object_sha256": "619c6094bcf336e0fe0fbf4ec48c130fac625cd62b905854551e913f14cdb5cd",
+  "read_only": true,
+  "workflow_run": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38517118361",
+  "scope": "D1 archived gold snapshot referenced key, actual R2 GET; NOT 2024/25 BigQuery candles in R2",
+  "notes": "Transcribed from successful Actions log; original artifact stored in run."
+}
