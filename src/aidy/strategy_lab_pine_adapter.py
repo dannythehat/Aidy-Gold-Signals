@@ -33,7 +33,11 @@ PINE_SOURCE_RE = re.compile(
     r'slowEma = ta\.ema\(close, (?P<slow>[1-9][0-9]{0,2})\)\n'
     r'longSignal = barstate\.isconfirmed and ta\.crossover\(fastEma, slowEma\)\n'
     r'if longSignal\n'
-    r'    strategy\.entry\("Long", strategy\.long\)\n?\Z',
+    r'    strategy\.entry\("Long", strategy\.long\)'
+    r'(?:\nplot\(fastEma, "AIDY_FAST_EMA", display=display\.data_window\)'
+    r'\nplot\(slowEma, "AIDY_SLOW_EMA", display=display\.data_window\)'
+    r'\nplot\(longSignal \? 1 : 0, "AIDY_LONG_SIGNAL", display=display\.data_window\))?'
+    r'\n?\Z',
 )
 FIXTURE_SOURCE = "internal_synthetic"
 
