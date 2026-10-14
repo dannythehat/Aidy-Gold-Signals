@@ -52,7 +52,7 @@ def main() -> int:
         result["replay_bigquery_job_id"] = repeat_job
         result["status"] = "PASS"
         result["scope"] = "Live 2025-01-06 M1 / M5 / M15 / H1 / H4 validated replay, not full session/holiday calendar"
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - retain explicit blocked evidence
         result = {"status": "BLOCKED", "error_type": type(exc).__name__,
                   "message": str(exc)[:400]}
     out.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
