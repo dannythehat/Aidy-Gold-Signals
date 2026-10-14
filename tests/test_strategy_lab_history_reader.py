@@ -44,10 +44,10 @@ def test_realistic_m5_aggregate_and_time_availability():
     result = _read_rows(rows(), window())
     assert result.native_m1_rows == 15
     assert len(result.bars) == 3
-    assert result.bars[0].open == Decimal("2650")
-    assert result.bars[0].high == Decimal("2656")
-    assert result.bars[0].low == Decimal("2649")
-    assert result.bars[0].close == Decimal("2655")
+    assert result.bars[0].open == Decimal(2650)
+    assert result.bars[0].high == Decimal(2656)
+    assert result.bars[0].low == Decimal(2649)
+    assert result.bars[0].close == Decimal(2655)
     assert result.bars[0].available_at_utc == START + timedelta(minutes=5)
     assert result.pit_eligible is False
     assert result.source_archive_hashes == (SHA,)
