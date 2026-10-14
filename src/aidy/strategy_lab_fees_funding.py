@@ -9,14 +9,19 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, time, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from hashlib import sha256
 
 from aidy.strategy_lab_bidask_execution import (
-    QuoteTape, ResearchRoundTrip, SpreadScenario, research_round_trip,
+    QuoteTape,
+    ResearchRoundTrip,
+    SpreadScenario,
+    research_round_trip,
 )
 from aidy.strategy_lab_broker_profile import (
-    BrokerProfile, clock_server_time, qualify_broker_profile,
+    BrokerProfile,
+    clock_server_time,
+    qualify_broker_profile,
 )
 
 CENT = Decimal("0.01")
@@ -61,7 +66,7 @@ class CostedRoundTrip:
                 return v.astimezone(UTC).isoformat().replace("+00:00", "Z")
             if isinstance(v, dict):
                 return {k: clean(item) for k, item in v.items()}
-            if isinstance(v, list):
+            if isinstance(v, (list, tuple)):
                 return [clean(item) for item in v]
             return v
         return clean(asdict(self))
