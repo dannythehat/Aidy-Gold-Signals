@@ -89,6 +89,7 @@ def main() -> None:
         raise SystemExit("Duplicate research identities")
     summary = defaultdict(lambda: {"shapes": 0, "forward_complete": 0, "forward_favourable": 0, "forward_flat": 0, "signed_4bar_R_total": Decimal(0)})
     source_counts = {}
+    baselines = defaultdict(lambda: {"n": 0, "favourable": 0})
     for tf, bars in sorted(items.items()):
         bars.sort(key=lambda x: x["t"])
         if len(set(b["t"] for b in bars)) != len(bars):
@@ -97,9 +98,20 @@ def main() -> None:
         segments = []
         seg = []
         for b in bars:
-            if seg and int((b["t"] - seg[-1]["t"]).total_seconds()) != TIMES[tf] * 60:
-                segments.append(seg)
-                seg = []
+            if seg:
+                previous = seg[-1]["t"]
+                delta_mins = int((b["t"] - previous).total_seconds() // 60)
+                regular = delta_mins == TIMES[tf]
+                # Friday-to-Sunday / Friday-to-Monday D1 gaps are expected
+                # Gold-market closures. Other gaps remain censored.
+                expected_d1_weekend = (
+                    tf == "D1" and previous.weekday() == 4
+                    and ((b["t"].weekday() == 6 and delta_mins == 2880)
+                         or (b["t"].weekday() == 0 and delta_mins == 4320))
+                )
+                if not regular and not expected_d1_weekend:
+                    segments.append(seg)
+                    seg = []
             seg.append(b)
         if seg:
             segments.append(seg)
@@ -112,6 +124,13 @@ def main() -> None:
                 # Five previous completed-bar net close direction. A descriptive proxy, NOT market structure.
                 prior_direction = "UP" if prev["c"] > segment[i-6]["c"] else ("DOWN" if prev["c"] < segment[i-6]["c"] else "FLAT")
                 year = cur["t"].year
+                if i + LOOKAHEAD < len(segment) and cur["h"] > cur["l"]:
+                    forward_delta = segment[i+LOOKAHEAD]["c"] - cur["c"]
+                    for baseline_side, factor in (("BULL", Decimal(1)), ("BEAR", Decimal(-1))):
+                        base = baselines[(str(year),tf,prior_direction,baseline_side)]
+                        base["n"] += 1
+                        if factor*forward_delta > 0:
+                            base["favourable"] += 1
                 for pattern, side in detect(cur, prev, atr_proxy):
                     key = (str(year), tf, pattern, side, prior_direction)
                     agg = summary[key]
@@ -131,6 +150,8 @@ def main() -> None:
     for key, v in sorted(summary.items()):
         year, tf, pattern, side, prior_direction = key
         n = v["forward_complete"]
+        baseline = baselines.get((year,tf,prior_direction,side))
+        baseline_pct = round(100*baseline["favourable"]/baseline["n"],2) if baseline and baseline["n"] else None
         data.append({
             "year": int(year), "timeframe": tf,
             "pattern": pattern, "side": side,
@@ -140,6 +161,7 @@ def main() -> None:
             "four_bar_forward_favourable": v["forward_favourable"],
             "four_bar_forward_flat": v["forward_flat"],
             "directional_followthrough_pct": round(100*v["forward_favourable"]/n, 2) if n else None,
+            "same_tf_year_prior_direction_all_bar_baseline_pct": baseline_pct,
             "mean_signed_forward_close_move_in_signal_range_units": round(float(v["signed_4bar_R_total"]/n), 4) if n else None,
         })
     totals = defaultdict(lambda: {"shapes": 0, "evaluable": 0, "favourable": 0})
@@ -157,9 +179,10 @@ def main() -> None:
         "status":"EXPLORATORY_ONLY",
         "source":"AIDY accepted 2024-25 retrospective HistData bid candles",
         "candidate_source":"GoldThinker canonical.py P03 / P06-P07 / P09-like independent screening, additional doji observation",
-        "source_caveats":["This is a separate shape screener, NOT GoldThinker canonical engine parity", "Prior-14-bar mean range proxy is NOT GoldThinker ATR", "Previous-five-close direction is NOT market-structure trend", "Four subsequent completed same-timeframe bars, no gap bridging", "No entry, stop, target, fills, spread, swap or PnL", "2024-25 entire period used for discovery; holdout NOT intact", "Shape patterns overlap, not independent trade opportunities"],
+        "source_caveats":["This is a separate shape screener, NOT GoldThinker canonical engine parity", "Prior-14-bar mean range proxy is NOT GoldThinker ATR", "Previous-five-close direction is NOT market-structure trend", "Four subsequent completed same-timeframe bars, no abnormal gap bridging; D1 expected Friday-to-Sunday/Monday closures allowed", "No entry, stop, target, fills, spread, swap or PnL", "2024-25 entire period used for discovery; holdout NOT intact", "Shape patterns overlap, not independent trade opportunities"],
         "observed_utc":datetime.now(timezone.utc).isoformat(),
         "source_counts":source_counts,
+        "baseline_groups":len(baselines),
         "total_source_research_identities":len(source_ids),
         "billed_bytes":job.total_bytes_billed,
         "group_rows":data,
