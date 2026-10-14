@@ -1,0 +1,830 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-PIN-T",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "PIN-T-01",
+   "note": "bull pin with trend at flip+SMA21; stop 1994.00-0.20; nearest level above entry 2016.00 (2030 ignored); risk 7.30 reward 14.90",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2001.10",
+     "stop": "1993.80",
+     "target": "2016.00",
+     "rr": "149/73"
+    },
+    "arm": "PRIMARY",
+    "level_sources": [
+     "FLIP",
+     "SMA21"
+    ],
+    "target_source": "ZONE:H4"
+   }
+  },
+  {
+   "id": "PIN-T-02",
+   "note": "bear pin with trend at zone; stop 2007.00+0.20; target = hi of 1984-1985; risk 7.30 reward 14.90",
+   "snapshot": {
+    "tf": "D1",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2000.20",
+      "h": "2007.00",
+      "l": "2000.00",
+      "c": "2000.10"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "ZONE"
+    ],
+    "obstacles": [
+     {
+      "lo": "1984.00",
+      "hi": "1985.00",
+      "source": "ZONE:W1"
+     }
+    ],
+    "entry_price": "1999.90"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "1999.90",
+     "stop": "2007.20",
+     "target": "1985.00",
+     "rr": "149/73"
+    },
+    "arm": "PRIMARY"
+   }
+  },
+  {
+   "id": "PIN-T-03",
+   "note": "M15 is never a signal timeframe (p.70, 83)",
+   "snapshot": {
+    "tf": "M15",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "TF_NOT_ALLOWED"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-04",
+   "note": "H1 research arm: only D1 must agree",
+   "snapshot": {
+    "tf": "H1",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2001.10",
+     "stop": "1993.80",
+     "target": "2016.00",
+     "rr": "149/73"
+    },
+    "arm": "RESEARCH_ARM"
+   }
+  },
+  {
+   "id": "PIN-T-05",
+   "note": "body 4.90 > 0.33R and lower wick 2.00 < 0.66R",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "1996.00",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_SHAPE"
+    ],
+    "failing_clauses": [
+     "B<=0.33R",
+     "LW>=0.66R"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-06",
+   "note": "signal timeframe not trending",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "RANGE_BOUNDED",
+     "position": "INTERIOR",
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "OWN_STATE"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-07",
+   "note": "weekly against the trade (p.70-74)",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "HTF_DISAGREE"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-08",
+   "note": "weekly state not computable",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "HTF_UNAVAILABLE"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-09",
+   "note": "no trend-set level at the pin low",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "RANGE_BOUNDARY"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_LEVEL"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-10",
+   "note": "all failing setup gates are reported in order",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "OWN_STATE",
+     "NO_LEVEL"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-11",
+   "note": "reward 13.90 / risk 7.30 = 1.904 below 2",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2015.00",
+      "hi": "2016.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "RR_BELOW_2"
+    ],
+    "order": {
+     "entry": "2001.10",
+     "stop": "1993.80",
+     "target": "2015.00",
+     "rr": "139/73"
+    }
+   }
+  },
+  {
+   "id": "PIN-T-12",
+   "note": "a level straddling the entry is the nearest obstacle (A-04)",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2000.50",
+      "hi": "2002.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "TARGET_ALREADY_PASSED"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-13",
+   "note": "no level above the entry",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "1980.00",
+      "hi": "1981.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2001.10"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_TARGET"
+    ]
+   }
+  },
+  {
+   "id": "PIN-T-14",
+   "note": "fill gapped below the stop",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2000.80",
+      "h": "2001.00",
+      "l": "1994.00",
+      "c": "2000.90"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "FLIP",
+     "SMA21"
+    ],
+    "obstacles": [
+     {
+      "lo": "2030.00",
+      "hi": "2031.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "2016.00",
+      "hi": "2017.00",
+      "source": "ZONE:H4"
+     },
+     {
+      "lo": "1990.00",
+      "hi": "1991.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "1993.50"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "ENTRY_BEYOND_STOP"
+    ]
+   }
+  }
+ ]
+}
