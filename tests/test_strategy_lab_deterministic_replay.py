@@ -1,6 +1,5 @@
 """Day18 deterministic manifest, SQLite replay, and malicious tamper vectors."""
 import copy
-import json
 import sqlite3
 from decimal import Decimal as D
 from hashlib import sha256
