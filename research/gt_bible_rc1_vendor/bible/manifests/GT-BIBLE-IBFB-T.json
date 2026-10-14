@@ -1,0 +1,186 @@
+{
+  "manifest_format": "goldthinker.bible.manifest/1",
+  "manifest_id": "GT-BIBLE-IBFB-T",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "kind": "STRATEGY",
+  "execution_class": "EXECUTABLE",
+  "family": "INSIDE FALSE BREAK",
+  "common": "GT-BIBLE-COMMON",
+  "sides": [
+    "BULL",
+    "BEAR"
+  ],
+  "summary": "With-trend inside bar false breakout (stop hunt) at a level; enter after the sweep candle closes.",
+  "sources": [
+    {
+      "page": 137,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "An inside bar is two candlesticks, the first one is called the mother candle, it is big and large, and the second one is smaller and it is located inside of the mother bar."
+    },
+    {
+      "page": 138,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "the second small bar is completely contained by the first one which is the opposite of the engulfing bar pattern."
+    },
+    {
+      "page": 148,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "This price action signal is formed when price breaks out from the inside bar pattern and then quickly reverses to close within the range of the mother bar."
+    },
+    {
+      "page": 149,
+      "label": "SOURCE_CHART",
+      "quote": "diagram: the false-breakout candle's wick pierces beyond the mother extreme and its body closes back inside"
+    },
+    {
+      "page": 150,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "This setup can be considered as a continuation pattern if it is traded with the trend."
+    },
+    {
+      "page": 151,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "-Support and resistance levels, and supply and demand areas -Fibonacci retracement levels, particularly, the 50% and 61% retracement levels. -21 moving averages and trend lines in trending markets"
+    },
+    {
+      "page": 157,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "You place a selling order after the close of the break bar, and you set your stop loss above it, your profit target is the next support level."
+    },
+    {
+      "page": 154,
+      "label": "SOURCE_CHART",
+      "quote": "XAUUSD Daily downtrend: inside bar false breakout at the 50-61.8% retracement"
+    }
+  ],
+  "geometry": {
+    "engine": "goldthinker.patterns.canonical.detect",
+    "pattern_id": "P22",
+    "formation_bars": "mother + inside + sweep candle within the next 3",
+    "clauses": {
+      "BULL": [
+        "H2<H1",
+        "L2>L1",
+        "first piercing candle k in 3..5 pierces below L1 only and closes inside [L1,H1]"
+      ],
+      "BEAR": [
+        "H2<H1",
+        "L2>L1",
+        "first piercing candle k in 3..5 pierces above H1 only and closes inside [L1,H1]"
+      ]
+    },
+    "extreme": {
+      "BULL": "min(L1, L2, Lk)",
+      "BEAR": "max(H1, H2, Hk)"
+    },
+    "signal_bar": "the sweep candle k",
+    "sources": [
+      {
+        "page": 137,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "An inside bar is two candlesticks, the first one is called the mother candle, it is big and large, and the second one is smaller and it is located inside of the mother bar."
+      },
+      {
+        "page": 138,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "the second small bar is completely contained by the first one which is the opposite of the engulfing bar pattern."
+      },
+      {
+        "page": 148,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "This price action signal is formed when price breaks out from the inside bar pattern and then quickly reverses to close within the range of the mother bar."
+      },
+      {
+        "page": 149,
+        "label": "SOURCE_CHART",
+        "quote": "diagram: the false-breakout candle's wick pierces beyond the mother extreme and its body closes back inside"
+      }
+    ],
+    "interpretation_ids": [
+      "I-17"
+    ]
+  },
+  "timeframes": {
+    "signal": [
+      "H4",
+      "D1"
+    ],
+    "research_arm": [
+      "H1"
+    ],
+    "interpretation_ids": [
+      "I-24"
+    ]
+  },
+  "market_structure": {
+    "own_state": {
+      "BULL": [
+        "TREND_UP"
+      ],
+      "BEAR": [
+        "TREND_DOWN"
+      ]
+    },
+    "alignment": "TREND",
+    "sources": [
+      {
+        "page": 141,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "you will only look for selling opportunities"
+      }
+    ],
+    "interpretation_ids": [
+      "I-01",
+      "I-09",
+      "I-10"
+    ]
+  },
+  "level": {
+    "set": "trend_level_set",
+    "at": "geometry.extreme",
+    "minimum": 1,
+    "sources": [
+      {
+        "page": 151,
+        "label": "SOURCE_CHART",
+        "quote": "CADJPY H4: inside bar false breakout at support-becomes-resistance"
+      }
+    ]
+  },
+  "entry": {
+    "type": "MARKET_NEXT_TICK",
+    "price": "the first executable tick after the signal candle completes (BUY ask / SELL bid)",
+    "valid_bars": 0,
+    "interpretation_ids": [
+      "I-28"
+    ]
+  },
+  "stop": {
+    "anchor": {
+      "BULL": "sweep candle low",
+      "BEAR": "sweep candle high"
+    },
+    "sources": [
+      {
+        "page": 157,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "you set your stop loss above it"
+      }
+    ],
+    "interpretation_ids": [
+      "I-12"
+    ]
+  },
+  "target": {
+    "rule": "NEXT_LEVEL",
+    "interpretation_ids": [
+      "I-11"
+    ]
+  },
+  "min_rr": 2,
+  "invalidation": [
+    "none after entry"
+  ],
+  "golden_vectors": "bible/golden/GT-BIBLE-IBFB-T.json"
+}
