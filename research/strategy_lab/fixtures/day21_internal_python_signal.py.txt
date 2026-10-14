@@ -1,0 +1,2 @@
+def signal(fast_prev, slow_prev, fast_now, slow_now):
+    return fast_prev <= slow_prev and fast_now > slow_now
