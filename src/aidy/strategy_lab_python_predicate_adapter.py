@@ -146,11 +146,15 @@ def admit_python_predicate(
     Other entry, exit, sizing and session rules MUST be supplied as exact spec
     metadata and separately source-reviewed.
     """
-    expression = _source_tree(source_bytes)
+    # Verify pinned source identity BEFORE interpreting any AST. Changes to
+    # source text fail on provenance first, even if their new syntax is invalid.
+    if not isinstance(source_bytes, bytes) or not 0 < len(source_bytes) <= SOURCE_BYTE_LIMIT:
+        raise ValueError("original Python source must be bounded bytes")
     if not isinstance(expected_source_sha256, str) or (
         sha256(source_bytes).hexdigest() != expected_source_sha256
     ):
         raise ValueError("original Python strategy source SHA256 mismatch")
+    expression = _source_tree(source_bytes)
     spec = StrategySpec.from_json(spec_json)
     if (not _is_supported_cross(spec)
         or spec.origin.source_language != "python"
