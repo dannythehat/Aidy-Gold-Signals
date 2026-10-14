@@ -114,7 +114,7 @@ def main() -> int:
             project=credential["project_id"], location="EU",
             credentials=service_account.Credentials.from_service_account_info(credential),
         )
-        start = datetime(2025, 1, 6, 13, tzinfo=UTC)
+        start = datetime(2025, 1, 6, 11, tzinfo=UTC)
         end = start + timedelta(minutes=600)
         window = Window(start, end, end, 5)
         result, job_id = read_bigquery_window(client, window)
