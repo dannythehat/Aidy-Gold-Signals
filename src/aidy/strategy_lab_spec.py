@@ -65,8 +65,8 @@ def _int(value: Any, name: str, *, minimum: int = 0, maximum: int = 100_000) -> 
 
 def _decimal(value: Any, name: str, *, allow_zero: bool = False) -> Decimal:
     # Integers are allowed but binary floats and bools are not — money/risk exactness.
-    if isinstance(value, bool) or isinstance(value, float) or not isinstance(value, (str, int, Decimal)):
-        raise ValueError(f"{name} requires exact decimal text or integer")
+    if isinstance(value, (bool, float)) or not isinstance(value, (str, int, Decimal)):
+        raise ValueError(f"{name} requires exact decimal text or integer")  # noqa: TRY004
     try:
         parsed = Decimal(str(value))
     except (InvalidOperation, ValueError) as exc:
@@ -84,7 +84,7 @@ def _bool(value: Any, name: str) -> bool:
 
 def _array(value: Any, name: str) -> list[Any]:
     if not isinstance(value, list):
-        raise ValueError(f"{name} must be an array")
+        raise ValueError(f"{name} must be an array")  # noqa: TRY004
     return value
 
 
@@ -312,7 +312,7 @@ class StrategySpec:
             ids.add(identifier)
             params = i["additional_parameters"]
             if not isinstance(params, dict):
-                raise ValueError("additional_parameters must be object")
+                raise ValueError("additional_parameters must be object")  # noqa: TRY004
             additional = []
             for key, val in sorted(params.items()):
                 _id(key, "indicator parameter")
