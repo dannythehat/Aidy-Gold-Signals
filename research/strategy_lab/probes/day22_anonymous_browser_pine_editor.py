@@ -62,6 +62,22 @@ async def main() -> None:
                 result["editor_after_click_visible"]="add to chart" in body or "create new" in body
                 result["login_after_click_visible"]="sign in" in body or "log in" in body
                 result["pine_after_click_buttons"]=[n[:60] for n in (await page.locator("button").all_text_contents()) if "chart" in n.lower() or "pine" in n.lower()][:30]
+                result["editor_controls"] = await page.locator("button, [role='button'], [title], [aria-label]").evaluate_all(
+                    """elements => elements.map(e => ({
+                        tag:e.tagName, text:(e.innerText || '').trim().slice(0,65),
+                        title:(e.getAttribute('title')||'').slice(0,90),
+                        aria:(e.getAttribute('aria-label')||'').slice(0,90),
+                        data:(e.getAttribute('data-name')||'').slice(0,70),
+                    })).filter(o =>
+                        /chart|script|pine|save|compile|publish|apply|add|run/i.test(
+                            o.text + o.title + o.aria + o.data
+                        )
+                    ).slice(-55)"""
+                )
+                result["editor_textareas"] = await page.locator("textarea").evaluate_all(
+                    """els => els.map(e => ({class:e.className,aria:e.getAttribute('aria-label'),
+                        role:e.getAttribute('role'),value_length:e.value.length}))"""
+                )
         except Exception as exc:
             result["exception"]={"type":type(exc).__name__,"message":str(exc)[:280]}
         finally:
