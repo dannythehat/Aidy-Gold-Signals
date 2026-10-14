@@ -10,7 +10,7 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from hashlib import sha256
 from pathlib import Path
 
@@ -24,7 +24,7 @@ def _money(x: Decimal) -> Decimal:
 
 def _positive(value: str) -> Decimal:
     if not isinstance(value,str):
-        raise ValueError("exact Decimal string required")
+        raise ValueError("exact Decimal string required")  # noqa: TRY004
     try:
         x=Decimal(value)
     except (ValueError,ArithmeticError) as exc:
