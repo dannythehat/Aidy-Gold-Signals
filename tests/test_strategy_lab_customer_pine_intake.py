@@ -104,7 +104,7 @@ def test_incomplete_version_or_declaration_gives_question_not_fake_results(raw):
 
 def test_source_hash_changes_when_customer_edits_one_char():
     original=read_source()
-    changed=original.replace(b"EMA crossover",b"EMA-cross-over")
+    changed=original.replace(b"ta.crossover",b"ta.crossunder")
     assert inspect_customer_pine(original).source_sha256!=inspect_customer_pine(changed).source_sha256
     assert inspect_customer_pine(changed).status=="RULE_RECONSTRUCTION_REQUIRED"
 
