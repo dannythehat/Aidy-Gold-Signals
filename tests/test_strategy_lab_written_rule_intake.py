@@ -5,7 +5,6 @@ user's personal sign-off, not a claim of provider/source-platform parity.
 """
 from __future__ import annotations
 
-import copy
 import json
 from decimal import Decimal
 from hashlib import sha256
@@ -107,7 +106,7 @@ def test_independent_closed_price_series_signals_equal_original_source():
 
 
 def test_non_crossing_flat_market_emits_no_signals():
-    flat = tuple(Decimal("2650") for _ in range(90))
+    flat = tuple(Decimal(2650) for _ in range(90))
     assert written_source_signal_indices(original_source(), flat) == ()
     assert strategy_spec_signal_indices(admission().spec, flat) == ()
 
