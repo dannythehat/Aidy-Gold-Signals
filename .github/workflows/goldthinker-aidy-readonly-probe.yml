@@ -8,6 +8,7 @@ on:
       - research/goldthinker-historical-readonly-20261014
     paths:
       - .github/workflows/goldthinker-aidy-readonly-probe.yml
+      - research/goldthinker_readonly_bq_probe.py
   workflow_dispatch:
 
 permissions:
