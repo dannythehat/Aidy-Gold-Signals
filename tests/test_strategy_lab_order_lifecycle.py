@@ -76,7 +76,7 @@ def test_limit_waits_for_later_marketable_quote():
 
 
 def test_expiry_is_terminal_and_no_future_quote_leaks():
-    result = run(order("buy","limit",Decimal("2640")))
+    result = run(order("buy","limit",Decimal(2640)))
     assert result.state == "expired"
     assert result.events[-1].at_utc == CLOSE+timedelta(seconds=30)
     assert result.events[-1].quote_index is None
@@ -102,7 +102,7 @@ def test_invalid_intents_rejected(part):
 
 
 @pytest.mark.parametrize("limit",[
-    Decimal("2650.001"),Decimal("-1"),Decimal("NaN"),None,
+    Decimal("2650.001"),Decimal(-1),Decimal("NaN"),None,
 ])
 def test_invalid_limit_rejected(limit):
     with pytest.raises(ValueError):
