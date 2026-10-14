@@ -1,0 +1,99 @@
+{
+  "format": "goldthinker.bible.index/1",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "hash_rule": "sha256 of canonical JSON: json.dumps(obj, sort_keys=True, separators=(',', ':'), ensure_ascii=False) in UTF-8",
+  "bundle_sha256": "5dd0fdd440d673f358887b490f4b411f059b0fcc0b6955655da7796cc3394c80",
+  "manifests": [
+    {
+      "manifest_id": "GT-BIBLE-COMMON",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "COMMON_RULEBOOK",
+      "execution_class": null,
+      "file": "bible/manifests/GT-BIBLE-COMMON.json",
+      "sha256": "7b69ce26b6b5bb4c6ee3de2d18fec33019ed286256ed8c0b1c753a0a77f0163e"
+    },
+    {
+      "manifest_id": "GT-BIBLE-CT-W",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "RECORD_ONLY",
+      "file": "bible/manifests/GT-BIBLE-CT-W.json",
+      "sha256": "905e4e907187ee87127465874e1494965a553ac8d04f5b07cd3f3044e0034500"
+    },
+    {
+      "manifest_id": "GT-BIBLE-ENG-R",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-ENG-R.json",
+      "sha256": "45dafd6d2b8bb3aca1dd6bf15bcc89189d97ce16b1fba98877623a8cf2d57823"
+    },
+    {
+      "manifest_id": "GT-BIBLE-ENG-T",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-ENG-T.json",
+      "sha256": "b032f2524b628a74b75333bea77720a235a86b290ddcc6890397b6ead60b3222"
+    },
+    {
+      "manifest_id": "GT-BIBLE-IB-T",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-IB-T.json",
+      "sha256": "e6af4bb79b4c17971b8e8e486b560e03d2ba949fbef393d0441325b3236f826e"
+    },
+    {
+      "manifest_id": "GT-BIBLE-IBFB-R",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-IBFB-R.json",
+      "sha256": "8a0fde8993925afdcc8b9617bbd46f0fbb371b18dc76481e36985ea726ee3505"
+    },
+    {
+      "manifest_id": "GT-BIBLE-IBFB-T",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-IBFB-T.json",
+      "sha256": "857b369fe8bf2f6df6916e2f796fe49854ae69a08793d81c667b6479453f517e"
+    },
+    {
+      "manifest_id": "GT-BIBLE-PIN-R",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-PIN-R.json",
+      "sha256": "9149d251861379a3e4f92d3d56ce2117e2a099d8b1a322bd225e5bb1334e84f1"
+    },
+    {
+      "manifest_id": "GT-BIBLE-PIN-T",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-PIN-T.json",
+      "sha256": "b0a9fdde364cec588868782a222c608257c72f573b94285b8feb89eb2379fbf2"
+    },
+    {
+      "manifest_id": "GT-BIBLE-PIN-T50",
+      "version": "2.0.0-rc1",
+      "status": "RC1_FOR_REVIEW",
+      "kind": "STRATEGY",
+      "execution_class": "EXECUTABLE",
+      "file": "bible/manifests/GT-BIBLE-PIN-T50.json",
+      "sha256": "fecd09692bca3f1b1924e91d8f202e498c1aed813d4eb6fae34fab8a71a01e8e"
+    }
+  ]
+}
