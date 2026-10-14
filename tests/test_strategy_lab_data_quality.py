@@ -1,7 +1,15 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+
 import pytest
-from aidy.strategy_lab_data_quality import Bar, SourceContract, validate_bars, fingerprint, closed_source_bar_available_at
+
+from aidy.strategy_lab_data_quality import (
+    Bar,
+    SourceContract,
+    closed_source_bar_available_at,
+    fingerprint,
+    validate_bars,
+)
 
 CONTRACT = SourceContract("histdata","XAUUSD",1,"bid","EST_FIXED_UTC_MINUS_05",
                           "aidy_histdata_source_aligned_v1","a"*64)
