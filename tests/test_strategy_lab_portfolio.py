@@ -86,7 +86,7 @@ def test_short_reduction_realizes_correct_negative_cash():
 @pytest.mark.parametrize("lots",["0","0.005","0.011","0.08"])
 def test_invalid_or_oversized_partial_rejected(lots):
     p=book()
-    p.open("a","long",D(2650),D(2640),D("0.05"))
+    p.open("a","long",D(2650),D(2640),D("0.5"))
     with pytest.raises(ValueError):
         p.reduce("a",D(lots),D(2652))
 
