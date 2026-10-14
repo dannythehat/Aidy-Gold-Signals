@@ -76,6 +76,22 @@ def main():
                     "slug": slug, "source_sha256":result["source_sha256"],
                     "original_public_source":original[:3500],
                 },sort_keys=True))
+            if (result["status"] == "SOURCE_AND_REPORT_READ"
+                and slug == "5q4PsY3a-XAUUSD-Scalping-AGRESIV"
+                and trades):
+                from datetime import UTC, datetime
+                ordered = sorted((t["e"]["tm"], t["e"].get("c", ""))
+                                 for t in trades if isinstance(t, dict)
+                                 and isinstance(t.get("e"), dict)
+                                 and type(t["e"].get("tm")) is int)
+                print("TV_GOLD_TRADE_CLOCK_RANGE", json.dumps({
+                    "count":len(ordered),
+                    "earliest":datetime.fromtimestamp(ordered[0][0]/1000, UTC).isoformat(),
+                    "latest":datetime.fromtimestamp(ordered[-1][0]/1000, UTC).isoformat(),
+                    "last_three":[
+                        (datetime.fromtimestamp(t/1000, UTC).isoformat(),label)
+                        for t,label in ordered[-3:]],
+                },sort_keys=True))
             outcomes.append(result)
             print("TV_REFERENCE_PROBE", json.dumps(result, sort_keys=True))
     print("TV_PROBE_SUMMARY", json.dumps({
