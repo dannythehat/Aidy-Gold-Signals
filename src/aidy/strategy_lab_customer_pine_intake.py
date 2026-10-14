@@ -38,7 +38,7 @@ _BLOCKING_FEATURES = (
      "Contains advanced programme state or iteration outside the verified signal-only subset."),
 )
 _VERSION = re.compile(r"(?m)^//@version=([0-9]+)\s*$")
-_DECLARATION = re.compile(r"\b(?:strategy|indicator|library)\s*\(")
+_DECLARATION = re.compile(r"\b(strategy|indicator|library)\s*\(")
 _ENTRY = re.compile(r"\bstrategy\.entry\s*\(")
 _CONTROLLED_DOC_TYPE = frozenset({"pine_source_upload", "source_text_paste"})
 
