@@ -68,13 +68,6 @@ def main():
                 })
             if (result["status"] == "SOURCE_AND_REPORT_READ"
                 and slug == "5q4PsY3a-XAUUSD-Scalping-AGRESIV"
-                and isinstance(original, str)):
-                print("OPEN_PINE_SOURCE_M5_GOLD", json.dumps({
-                    "slug": slug, "source_sha256":result["source_sha256"],
-                    "original_public_source":original[:3500],
-                },sort_keys=True))
-            if (result["status"] == "SOURCE_AND_REPORT_READ"
-                and slug == "5q4PsY3a-XAUUSD-Scalping-AGRESIV"
                 and trades):
                 from datetime import UTC, datetime
                 ordered = sorted((t["e"]["tm"], t["e"].get("c", ""))
