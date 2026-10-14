@@ -1,11 +1,11 @@
 # B00 / Day 03 — Prioritised gap register and decision gate
 Date: 2026-10-14
-Status: DRAFT pending R2 Day02 proof and owner acceptance.
+Status: DRAFT gap register complete; R2 and BigQuery checks passed; owner B00 acceptance pending.
 
 ## Evidence-linked baseline
 - [Day01 repo audit](b00_day01_architecture_audit.md) establishes structural source inventory, not successful production use.
 - [Day02 BigQuery proof](b00_day02_warehouse_proof.json) verifies actual 2024=355592, 2025=353951 M1 bid-OHLC rows in `aidy-signals.aidy_analytics_test.research_candles` on 2026-10-14. One SELECT-only read; identity counts and zero null OHLC.
-- [Day02 R2 proof](b00_day02_r2_proof.json) pending; do not call the entire B00 stage passed without it and owner approval.
+- [Day02 R2 proof](b00_day02_r2_proof.json) verified on 2026-10-14 for an existing archived gold snapshot object; this does not establish historical M1 storage in R2. B00 stage remains pending owner acceptance.
 - Existing [Day27 spread research](../../docs/day27-historical-spread-j3-contract.md) uses Dec2024/Jan2025 tick quotes; not full 2-year broker executable ticks.
 - [Day46 simulator contract](../../docs/day46-paper-simulator-invalidation-contract.md) explicitly says R units only, no position size/account currency.
 - [Day37 replay contract](../../docs/day37-frozen-replay-cpcv-contract.md) contains credible anti-leakage research primitives; does not execute arbitrary customer strategies.
@@ -31,7 +31,7 @@ Status: DRAFT pending R2 Day02 proof and owner acceptance.
 ## Proposed gate disposition
 - Day 01 PASS: source inventory.
 - Day 02 BigQuery PASS: real historical table accessible.
-- Day 02 R2: pending independent read-only object check.
+- Day 02 R2 PASS: existing D1-referenced live gold snapshot retrieved read-only from R2; 5,629 bytes; SHA-256 in linked proof.
 - Day 03: draft gap register complete; stage B00 not yet OWNER ACCEPTED.
 - NEXT after B00 acceptance: B01 data/clock/source qualification and B02 StrategySpec schema in parallel.
 - Existing AIDY live feed, GoldThinker and brokerage are NOT modified.
