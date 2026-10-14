@@ -19,6 +19,6 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install unofficial read-only public TradingView report SDK
-        run: python -m pip install --quiet tradingview-sdk
+        run: python -m pip install --quiet 'selectolax>=0.3,<0.4' tradingview-sdk
       - name: Probe two public published TradingView strategies and reports
         run: python research/strategy_lab/probes/day22_read_public_tradingview_reference.py
