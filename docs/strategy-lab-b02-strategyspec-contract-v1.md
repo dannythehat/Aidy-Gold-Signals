@@ -1,6 +1,6 @@
 # B02 Day 08 — Canonical StrategySpec v1 (actual implementation)
 
-Status: implementation awaiting CI verification. Research branch only; does not execute orders or user code.
+Status: **DAY 08 IMPLEMENTED AND CI PASSED (2026-10-14)**. Research branch only; no production deployment, order execution or user-code execution.
 
 ## Implemented interface
 - `src/aidy/strategy_lab_spec.py`: frozen, typed `StrategySpec` object graph, `from_wire`, `from_json`, `to_wire`, `to_json`.
@@ -23,6 +23,13 @@ Status: implementation awaiting CI verification. Research branch only; does not 
 2. Full JSON example fixture round-trips without data loss and with deterministic canonical textual representation.
 3. Focused positive/negative tests pass in GitHub CI with Ruff/source compilation.
 4. Document commit and CI URL after results are actually observed.
+
+## Verified acceptance record — 14 October 2026
+
+- [Successful full Day 08 workflow](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38526223342), job `115727085660`: compiled, Ruff passed, **60 automated tests passed** (one warning), illustrative JSON fixture imported and deterministically round-tripped.
+- Input fixture SHA-256, directly computed by GitHub CI: `3bad6f58a1849e6035407e21cdd8e2eedcd52ba8d29c1861a14274de43beb045`.
+- Source version used in passing CI: commit `b9752beb2a410c69d2bb31f6baef616fd3da064b`; schema implementation `src/aidy/strategy_lab_spec.py`.
+- Source fixture is **synthetic and illustrative**: no actual publisher-authored strategy was verified, no strategy signals were executed, no historical trades were made and no returns were calculated. This satisfies Day 08's strict contract/examples gate, **not** B02's full rule-completeness/parity/version-hash acceptance.
 
 ## Next
 Day 09 rule completeness validator + independent no-lookahead declarations; Day 10 canonical content hash / version registry, after Day 09 acceptance.
