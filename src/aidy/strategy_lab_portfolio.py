@@ -131,7 +131,7 @@ class Portfolio:
         raw=(exit_price-p.entry_price)*sign*c.contract_ounces_per_lot*close_lots
         pnl=raw.quantize(CENT,rounding=ROUND_HALF_UP)
         # Retain exact margin for remaining size, avoid cent drift on multiple reductions.
-        left_margin=p.reserved_margin_usd*remain/p.lots_open
+        left_margin=p.reserved_margin_usd*remain/p.lots_remaining
         updated=replace(p,lots_remaining=remain,
                         reserved_margin_usd=left_margin,
                         realized_usd=p.realized_usd+pnl)
