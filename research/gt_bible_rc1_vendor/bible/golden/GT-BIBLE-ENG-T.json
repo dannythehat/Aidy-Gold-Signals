@@ -1,0 +1,304 @@
+{
+ "format": "goldthinker.bible.golden/1",
+ "manifest_id": "GT-BIBLE-ENG-T",
+ "manifest_version": "2.0.0-rc1",
+ "conventions": "expected values computed by hand, not by the implementation; ATR 4.00 -> G_BUFFER max(0.20, 0.05*4.00) = 0.20; tick 0.01; rr as exact fraction",
+ "vectors": [
+  {
+   "id": "ENG-T-01",
+   "note": "bull engulfing with trend at SMA8+Fib; stop min(L1,L2)=2001.00-0.20; risk 4.40 reward 8.80 = exactly 2",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2004.00",
+      "h": "2004.50",
+      "l": "2001.50",
+      "c": "2002.00"
+     },
+     {
+      "o": "2001.80",
+      "h": "2005.50",
+      "l": "2001.00",
+      "c": "2005.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "SMA8",
+     "FIB_50_618"
+    ],
+    "obstacles": [
+     {
+      "lo": "2014.00",
+      "hi": "2015.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2005.20"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2005.20",
+     "stop": "2000.80",
+     "target": "2014.00",
+     "rr": "2"
+    }
+   }
+  },
+  {
+   "id": "ENG-T-02",
+   "note": "bear engulfing with trend; stop max(H1,H2)=2006.00+0.20; risk 5.40 reward 10.80",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BEAR",
+    "bars": [
+     {
+      "o": "2002.00",
+      "h": "2005.50",
+      "l": "2001.50",
+      "c": "2004.00"
+     },
+     {
+      "o": "2004.20",
+      "h": "2006.00",
+      "l": "2000.50",
+      "c": "2001.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_DOWN"
+     },
+     "W1": {
+      "state": "TREND_DOWN"
+     }
+    },
+    "levels_at_extreme": [
+     "ZONE"
+    ],
+    "obstacles": [
+     {
+      "lo": "1989.00",
+      "hi": "1990.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2000.80"
+   },
+   "expect": {
+    "decision": "TRADE",
+    "reasons": [],
+    "order": {
+     "entry": "2000.80",
+     "stop": "2006.20",
+     "target": "1990.00",
+     "rr": "2"
+    }
+   }
+  },
+  {
+   "id": "ENG-T-03",
+   "note": "first candle bullish: not opposite colours (p.109, 111); the other clauses still hold",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2002.00",
+      "h": "2004.50",
+      "l": "2001.50",
+      "c": "2004.00"
+     },
+     {
+      "o": "2001.80",
+      "h": "2005.50",
+      "l": "2001.00",
+      "c": "2005.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "SMA8",
+     "FIB_50_618"
+    ],
+    "obstacles": [
+     {
+      "lo": "2014.00",
+      "hi": "2015.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2005.20"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "NO_SHAPE"
+    ],
+    "failing_clauses": [
+     "K1 bear"
+    ]
+   }
+  },
+  {
+   "id": "ENG-T-04",
+   "note": "counter-trend engulfing (the old SRC-CB reading) is refused",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2004.00",
+      "h": "2004.50",
+      "l": "2001.50",
+      "c": "2002.00"
+     },
+     {
+      "o": "2001.80",
+      "h": "2005.50",
+      "l": "2001.00",
+      "c": "2005.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_DOWN",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "SMA8",
+     "FIB_50_618"
+    ],
+    "obstacles": [
+     {
+      "lo": "2014.00",
+      "hi": "2015.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2005.20"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "OWN_STATE"
+    ]
+   }
+  },
+  {
+   "id": "ENG-T-05",
+   "note": "reward 8.79 / risk 4.40 = 1.9977",
+   "snapshot": {
+    "tf": "H4",
+    "side": "BULL",
+    "bars": [
+     {
+      "o": "2004.00",
+      "h": "2004.50",
+      "l": "2001.50",
+      "c": "2002.00"
+     },
+     {
+      "o": "2001.80",
+      "h": "2005.50",
+      "l": "2001.00",
+      "c": "2005.00"
+     }
+    ],
+    "atr": "4.00",
+    "tick": "0.01",
+    "own": {
+     "state": "TREND_UP",
+     "position": null,
+     "lower": null,
+     "upper": null
+    },
+    "htf": {
+     "D1": {
+      "state": "TREND_UP"
+     },
+     "W1": {
+      "state": "TREND_UP"
+     }
+    },
+    "levels_at_extreme": [
+     "SMA8",
+     "FIB_50_618"
+    ],
+    "obstacles": [
+     {
+      "lo": "2013.99",
+      "hi": "2015.00",
+      "source": "ZONE:H4"
+     }
+    ],
+    "entry_price": "2005.20"
+   },
+   "expect": {
+    "decision": "NO_TRADE",
+    "reasons": [
+     "RR_BELOW_2"
+    ],
+    "order": {
+     "entry": "2005.20",
+     "stop": "2000.80",
+     "target": "2013.99",
+     "rr": "879/440"
+    }
+   }
+  }
+ ]
+}
