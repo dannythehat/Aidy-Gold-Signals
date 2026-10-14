@@ -1,0 +1,186 @@
+{
+  "manifest_format": "goldthinker.bible.manifest/1",
+  "manifest_id": "GT-BIBLE-ENG-R",
+  "version": "2.0.0-rc1",
+  "status": "RC1_FOR_REVIEW",
+  "kind": "STRATEGY",
+  "execution_class": "EXECUTABLE",
+  "family": "ENGULF",
+  "common": "GT-BIBLE-COMMON",
+  "sides": [
+    "BULL",
+    "BEAR"
+  ],
+  "summary": "Engulfing at a confirmed range boundary; target the opposite boundary.",
+  "sources": [
+    {
+      "page": 125,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "you can't apply the same techniques that you use in trending market to trade engulfing bar patterns in range bound markets."
+    },
+    {
+      "page": 127,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "the first strategy is going to be about trading this price action pattern from major support and resistance levels"
+    },
+    {
+      "page": 134,
+      "label": "SOURCE_EXPLICIT",
+      "quote": "major demand and supply zones are the best price levels in sideways markets."
+    }
+  ],
+  "geometry": {
+    "engine": "goldthinker.patterns.canonical.detect",
+    "pattern_id": {
+      "BULL": "P06",
+      "BEAR": "P07"
+    },
+    "formation_bars": 2,
+    "signal_bar": "the engulfing (second) candle",
+    "clauses": {
+      "BULL": [
+        "K1 bear",
+        "K2 bull",
+        "O2<=C1",
+        "C2>=O1",
+        "B2>B1",
+        "B1>0.05R1"
+      ],
+      "BEAR": [
+        "K1 bull",
+        "K2 bear",
+        "O2>=C1",
+        "C2<=O1",
+        "B2>B1",
+        "B1>0.05R1"
+      ]
+    },
+    "extreme": {
+      "BULL": "min(L1, L2)",
+      "BEAR": "max(H1, H2)"
+    },
+    "flags_recorded": [
+      "B2>=2*B1",
+      "wicks engulfed (outside bar)"
+    ],
+    "sources": [
+      {
+        "page": 109,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "This reversal candlestick pattern consists of two opposite colored bodies in which the second body engulfs or covers entirely the first one"
+      },
+      {
+        "page": 111,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "the first body is entirely engulfed by the second one."
+      },
+      {
+        "page": 111,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The second real body is the opposite of the first real body."
+      }
+    ],
+    "not_used": [
+      {
+        "page": 16,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The engulfing bar can engulf more than one previous candle, but to be considered an engulfing bar, at least one candle must be fully consumed."
+      },
+      {
+        "page": 19,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "The color of the bodies is not important."
+      }
+    ],
+    "interpretation_ids": [
+      "I-18"
+    ]
+  },
+  "timeframes": {
+    "signal": [
+      "H4",
+      "D1"
+    ],
+    "research_arm": [
+      "H1"
+    ],
+    "interpretation_ids": [
+      "I-24"
+    ]
+  },
+  "market_structure": {
+    "own_state": {
+      "BULL": [
+        "RANGE_BOUNDED"
+      ],
+      "BEAR": [
+        "RANGE_BOUNDED"
+      ]
+    },
+    "own_position": {
+      "BULL": "AT_LOWER",
+      "BEAR": "AT_UPPER"
+    },
+    "alignment": "RANGE",
+    "sources": [
+      {
+        "page": 127,
+        "label": "SOURCE_EXPLICIT",
+        "quote": "we can't identify major support levels and resistance. You have to stay away"
+      }
+    ],
+    "interpretation_ids": [
+      "I-02",
+      "I-20"
+    ]
+  },
+  "level": {
+    "set": "range_level_set",
+    "at": "geometry.extreme",
+    "minimum": 1,
+    "sources": [
+      {
+        "page": 133,
+        "label": "SOURCE_CHART",
+        "quote": "USDJPY Daily range: bullish engulfing in the demand area, stop below the area, target the next resistance"
+      }
+    ]
+  },
+  "entry": {
+    "type": "MARKET_NEXT_TICK",
+    "price": "the first executable tick after the signal candle completes (BUY ask / SELL bid)",
+    "valid_bars": 0,
+    "interpretation_ids": [
+      "I-28"
+    ]
+  },
+  "stop": {
+    "anchor": {
+      "BULL": "min(L1, L2, lower boundary lo)",
+      "BEAR": "max(H1, H2, upper boundary hi)"
+    },
+    "interpretation_ids": [
+      "I-12",
+      "I-21"
+    ]
+  },
+  "target": {
+    "rule": "OPPOSITE_BOUNDARY",
+    "price": {
+      "BULL": "upper boundary lo",
+      "BEAR": "lower boundary hi"
+    },
+    "interpretation_ids": [
+      "I-22"
+    ]
+  },
+  "min_rr": 2,
+  "invalidation": [
+    "none after entry"
+  ],
+  "not_modelled": [
+    "range breakout/pullback (p.128)",
+    "false breakout of the boundary with an engulfing (p.128-129): needs a pre-registered false-break definition"
+  ],
+  "golden_vectors": "bible/golden/GT-BIBLE-ENG-R.json"
+}
