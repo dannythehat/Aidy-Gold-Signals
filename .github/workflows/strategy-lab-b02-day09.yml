@@ -1,0 +1,63 @@
+name: Strategy Lab B02 Day09 Rule Completeness Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_rule_validator.py
+      - tests/test_strategy_lab_rule_validator.py
+      - research/strategy_lab/fixtures/day09_internal_source_rules.txt
+      - docs/strategy-lab-b02-day09-rule-completeness-contract-v1.md
+      - .github/workflows/strategy-lab-b02-day09.yml
+      - src/aidy/strategy_lab_spec.py
+
+permissions:
+  contents: read
+
+jobs:
+  reject-incomplete-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install isolated test dependencies
+        run: python -m pip install --quiet pytest ruff
+      - name: Static quality and source parsing
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_rule_validator.py tests/test_strategy_lab_rule_validator.py
+          ruff check src/aidy/strategy_lab_rule_validator.py tests/test_strategy_lab_rule_validator.py
+      - name: Run full Day08 and Day09 focused tests
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_spec.py tests/test_strategy_lab_rule_validator.py
+      - name: Print SHA256 of real internal test source
+        run: sha256sum research/strategy_lab/fixtures/day09_internal_source_rules.txt
+      - name: Demonstrate complete and blocked admission outcomes
+        run: |
+          PYTHONPATH=src python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          from aidy.strategy_lab_spec import StrategySpec
+          from aidy.strategy_lab_rule_validator import assess_rule_completeness
+
+          root = Path("research/strategy_lab/fixtures")
+          source = (root / "day09_internal_source_rules.txt").read_bytes()
+          draft = json.loads((root / "strategy_spec_v1_sample.json").read_text())
+          rejected = assess_rule_completeness(StrategySpec.from_wire(draft), source_snapshot=source)
+          assert rejected.state == "BLOCKED"
+          draft["origin"]["source_snapshot_ref"] = "research/strategy_lab/fixtures/day09_internal_source_rules.txt"
+          draft["origin"]["source_sha256"] = hashlib.sha256(source).hexdigest()
+          accepted = assess_rule_completeness(StrategySpec.from_wire(draft), source_snapshot=source)
+          assert accepted.state == "RULES_COMPLETE_SOURCE_MATCHED"
+          print(json.dumps({
+              "status": "PASS",
+              "illustrative_sample_without_source_state": rejected.state,
+              "internally_sourced_fixture_state": accepted.state,
+              "source_sha256": hashlib.sha256(source).hexdigest(),
+              "canonical_spec_sha256": accepted.spec_sha256,
+              "original_source_is_third_party": False,
+              "backtest_executed": False,
+          }, sort_keys=True))
+          PY
