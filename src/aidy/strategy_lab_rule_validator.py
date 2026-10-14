@@ -10,6 +10,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
 from hashlib import sha256
+from itertools import pairwise
 from typing import Any
 
 from aidy.strategy_lab_spec import Operand, Predicate, Signal, StrategySpec
@@ -165,7 +166,7 @@ def assess_rule_completeness(
             by_weekday[w.weekday].append((w.start_hhmm, w.end_hhmm))
     for weekday, ranges in by_weekday.items():
         ordered = sorted(ranges)
-        if any(left[1] > right[0] for left, right in zip(ordered, ordered[1:])):
+        if any(left[1] > right[0] for left, right in pairwise(ordered)):
             block("OVERLAPPING_SESSIONS", f"sessions.allowed.weekday_{weekday}", "Overlapping windows have undefined priority.")
 
     for name, side, other in (("long", spec.long, spec.short), ("short", spec.short, spec.long)):
