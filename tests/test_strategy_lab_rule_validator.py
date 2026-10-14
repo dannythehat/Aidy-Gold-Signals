@@ -109,8 +109,7 @@ def test_source_bytes_are_mandatory_and_bound_to_sha(kind, source, expected):
     (lambda d: d["long"]["entry"]["predicates"][0].update(
         right={"kind": "constant", "reference": "2650", "field": "value",
                "offset_closed_bars": 0}), "CROSS_SEMANTICS_UNQUALIFIED"),
-    (lambda d: d["long"]["entry"].update(
-        enabled=False, predicates=[]), "NO_ENABLED_ENTRIES"),
+    (lambda d: d.update(long=copy.deepcopy(d["short"])), "NO_ENABLED_ENTRIES"),
 ])
 def test_ambiguous_or_incomplete_rule_is_blocked(mutator, expected):
     data = complete_wire()
