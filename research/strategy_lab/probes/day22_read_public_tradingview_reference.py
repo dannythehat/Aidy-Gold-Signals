@@ -82,6 +82,27 @@ def main():
                         (datetime.fromtimestamp(t/1000, UTC).isoformat(),label)
                         for t,label in ordered[-3:]],
                 },sort_keys=True))
+            if (result["status"] == "SOURCE_AND_REPORT_READ"
+                and slug == "5q4PsY3a-XAUUSD-Scalping-AGRESIV"):
+                try:
+                    native_trades=page.report.trades
+                    entry_times=sorted(int(x["e"]["tm"]) for x in native_trades
+                                       if isinstance(x,dict) and isinstance(x.get("e"),dict)
+                                       and "tm" in x["e"])
+                    result["trade_first_epoch_ms"]=entry_times[0] if entry_times else None
+                    result["trade_last_epoch_ms"]=entry_times[-1] if entry_times else None
+                    result["trade_latest_8_epoch_ms"]=entry_times[-8:]
+                    hist=tv.get_bars("OANDA:XAUUSD", "5", bars=1500)
+                    rows=list(hist)
+                    result["native_m5_bars_count"]=len(rows)
+                    result["native_m5_first_epoch_s"]=rows[0].time if rows else None
+                    result["native_m5_last_epoch_s"]=rows[-1].time if rows else None
+                    result["native_m5_latest_3"]=[
+                        {"time":x.time,"open":x.open,"high":x.high,"low":x.low,"close":x.close}
+                        for x in rows[-3:]
+                    ]
+                except Exception as exc:
+                    result["bar_probe_exception"]=type(exc).__name__ + ": " + str(exc)[:300]
             outcomes.append(result)
             print("TV_REFERENCE_PROBE", json.dumps(result, sort_keys=True))
     print("TV_PROBE_SUMMARY", json.dumps({
