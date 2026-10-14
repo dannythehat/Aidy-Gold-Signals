@@ -15,8 +15,12 @@ from tradingview_sdk import TradingView
 
 
 SLUGS = (
+    "5Q1KJZuZ-XAUUSD-M5-Hybrid-EMA-9-15-Partial-TP-Runner",
+    "NX1lrLtL-EMA-Pullback-Dual-Crossover-Pro-EA-v14-XAUUSD",
+    "V7pgMYj7-EMA-Pullback-Dual-Crossover-Pro-Strategy",
+    "5q4PsY3a-XAUUSD-Scalping-AGRESIV",
+    "JjQLyuRb-EMA-9-21-Cross-Touch-Breakout-BOT-Enter-System",
     "FM0NqXZL-GOLD-EMA-Crossover-Strategy",
-    "sxJejjdy-EMA-Crossover-Strategy",
 )
 
 
