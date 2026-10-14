@@ -54,17 +54,14 @@ def audit_source_tick_zip(path: Path, expected_period: str) -> SourceTickAudit:
             if len(fields) < 3:
                 raise ValueError(f"Missing bid/ask columns at source row {n}")
             ts = fields[0].strip()
-            try:
-                quote = parse_tick_fields(ts, fields[1], fields[2])
-            except ValueError:
-                if not SECONDS_ONLY.fullmatch(ts):
-                    raise
-                # The source's fixed-EST timezone is explicit; never use system DST.
-                parsed = datetime.strptime(ts, "%Y%m%d %H%M%S").replace(tzinfo=EST_FIXED)
-                quote = parse_tick_fields(
-                    parsed.strftime("%Y%m%d %H%M%S") + "000", fields[1], fields[2]
-                )
+            # %S%f can misparse a seconds-only source timestamp as a
+            # shorter seconds field plus a spurious fractional second.
+            # Branch on exact source format BEFORE parsing.
+            if SECONDS_ONLY.fullmatch(ts):
+                quote = parse_tick_fields(ts + "000", fields[1], fields[2])
                 seconds_only += 1
+            else:
+                quote = parse_tick_fields(ts, fields[1], fields[2])
             timestamp = quote.source_tick_time_utc
             if timestamp.astimezone(EST_FIXED).strftime("%Y%m") != expected_period:
                 raise ValueError(f"Source tick outside requested month at row {n}")
