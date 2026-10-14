@@ -90,6 +90,7 @@ class QuoteTape:
     symbol: str
     source_clock: str
     source_identity: str
+    snapshot_bytes: bytes
 
     @classmethod
     def from_snapshot(cls, raw: bytes, *, expected_sha256: str) -> QuoteTape:
@@ -141,7 +142,7 @@ class QuoteTape:
             quotes.append(BidAskQuote(at, bid, ask, i))
             previous = at
         return cls(tuple(quotes), digest, archive, wire["source_class"], "XAUUSD",
-                   source_clock, origin)
+                   source_clock, origin, raw)
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,16 +268,12 @@ def research_round_trip(
         raise ValueError("expected frozen QuoteTape")
     # Recheck quote data after dataclass construction so external callers cannot
     # bypass the source parser by manually constructing trusted-looking objects.
-    if not quote_tape.quotes or quote_tape.symbol != "XAUUSD":
-        raise ValueError("invalid quote tape")
-    if not isinstance(quote_tape.snapshot_sha256, str) or HASH.fullmatch(
-        quote_tape.snapshot_sha256
-    ) is None:
-        raise ValueError("unfrozen quote snapshot")
-    if any(q.index != i or q.ask < q.bid or q.bid <= 0 or (
-            i and q.at_utc <= quote_tape.quotes[i - 1].at_utc
-        ) for i, q in enumerate(quote_tape.quotes)):
-        raise ValueError("corrupt/unordered quote tape")
+    # Verify original bytes and parsed values, not merely a user-supplied hash.
+    # Manual dataclass reconstruction cannot forge a matching snapshot.
+    if quote_tape != QuoteTape.from_snapshot(
+        quote_tape.snapshot_bytes, expected_sha256=quote_tape.snapshot_sha256
+    ):
+        raise ValueError("quote tape differs from pinned original source bytes")
     if direction not in ("long", "short"):
         raise ValueError("direction must be long or short")
     if not validated.is_valid_lot(lots):
