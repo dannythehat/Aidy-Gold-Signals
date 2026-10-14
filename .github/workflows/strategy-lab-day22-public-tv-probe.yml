@@ -1,5 +1,6 @@
 name: Day22 Read-Only Published TradingView Reference Probe
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
