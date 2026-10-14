@@ -13,13 +13,11 @@ import subprocess
 import time
 import urllib.parse
 import urllib.request
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from aidy.historical_spread import (
-    HistDataTickPeriod, download_histdata_tick_period,
-    iter_histdata_ticks, tick_archive_meta,
-)
+from aidy.historical_spread import HistDataTickPeriod, download_histdata_tick_period
+from aidy.strategy_lab_tick_source_audit import audit_source_tick_zip
 
 MISSING_PERIODS = frozenset({
     "202010", "202110", "202210", "202310", "202410", "202510",
@@ -27,7 +25,6 @@ MISSING_PERIODS = frozenset({
 })
 BUCKET = "aidy-memory-test"
 PREFIX = "strategy-lab/histdata/xauusd/ticks/"
-EST_FIXED = timezone(timedelta(hours=-5))
 
 
 def remote_metadata(key: str) -> dict | None:
@@ -95,24 +92,20 @@ def acquire(period_str: str, workdir: Path) -> dict:
                 time.sleep(6 * attempt)
         if source_path is None:
             raise RuntimeError("SOURCE_PATH_MISSING")
-        step = "archive_hash"
-        meta = tick_archive_meta(source_path)
-        step = "tick_parse"
-        count = 0
-        first = last = None
-        for tick in iter_histdata_ticks(source_path):
-            count += 1
-            first = first or tick.source_tick_time_utc
-            last = tick.source_tick_time_utc
-            if tick.source_tick_time_utc.astimezone(EST_FIXED).strftime("%Y%m") != period_str:
-                raise RuntimeError("WRONG_SOURCE_TICK_MONTH")
-        if count < 1000 or first is None or last is None:
-            raise RuntimeError("SOURCE_HAS_TOO_FEW_TICKS")
+        step = "tick_source_audit"
+        verified_source = audit_source_tick_zip(source_path, period_str)
         evidence.update({
-            "tick_rows":count, "source_zip_sha256":meta.source_file_sha256,
-            "source_payload_sha256":meta.source_payload_sha256,
-            "source_zip_bytes":source_path.stat().st_size,
-            "first_tick_utc":first.isoformat(), "last_tick_utc":last.isoformat(),
+            "tick_rows": verified_source.tick_rows,
+            "source_zip_sha256": verified_source.source_zip_sha256,
+            "source_payload_sha256": verified_source.payload_sha256,
+            "source_zip_bytes": source_path.stat().st_size,
+            "source_out_of_order_pairs": verified_source.out_of_order_pairs,
+            "source_second_precision_rows": verified_source.second_precision_rows,
+            "source_tick_order_qualified": verified_source.chronological,
+            "first_tick_utc": verified_source.first_tick_utc.isoformat(),
+            "last_tick_utc": verified_source.last_tick_utc.isoformat(),
+            "min_tick_utc": verified_source.minimum_tick_utc.isoformat(),
+            "max_tick_utc": verified_source.maximum_tick_utc.isoformat(),
         })
         step = "r2_put"
         result = run_cmd("npx", "--yes", "wrangler@4", "r2", "object", "put",
@@ -126,21 +119,22 @@ def acquire(period_str: str, workdir: Path) -> dict:
                            BUCKET + "/" + key, "--remote", "--file", str(reread))
         if response.returncode:
             raise RuntimeError("R2_READBACK_FAILED")
-        if archive_sha(reread) != meta.source_file_sha256:
+        if archive_sha(reread) != verified_source.source_zip_sha256:
             raise RuntimeError("R2_READBACK_SHA_MISMATCH")
         reread.unlink()
         step = "r2_final_catalog"
         confirmed = remote_metadata(key)
         if confirmed is None or int(confirmed.get("size", 0)) != source_path.stat().st_size:
             raise RuntimeError("R2_OBJECT_METADATA_MISMATCH")
-        evidence.update({"status": "ARCHIVED_AND_SHA_VERIFIED_R2",
+        evidence.update({"status": "ARCHIVED_AND_SHA_VERIFIED_R2" if verified_source.chronological else
+                                 "ARCHIVED_R2_WITH_ORDER_ANOMALIES_SHA_VERIFIED",
                          "remote_bytes":confirmed["size"], "remote_etag":confirmed.get("etag")})
         source_path.unlink()
         return evidence
     except Exception as exc:  # noqa: BLE001 - preserve structured recovery evidence
         evidence.update({"status": "FAILED", "last_stage":step,
                          "error_type":type(exc).__name__})
-        if step == "tick_parse" and isinstance(exc, ValueError):
+        if step == "tick_source_audit" and isinstance(exc, ValueError):
             message = str(exc)
             if "not time ordered" in message:
                 evidence["reason"] = "SOURCE_NONMONOTONIC_TICK_ORDER"
@@ -175,7 +169,8 @@ def main() -> int:
     (root / "manifest.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, sort_keys=True))
     return 0 if result["status"] in (
-        "ARCHIVED_AND_SHA_VERIFIED_R2", "ALREADY_PRESENT_REMOTE"
+        "ARCHIVED_AND_SHA_VERIFIED_R2",
+        "ARCHIVED_R2_WITH_ORDER_ANOMALIES_SHA_VERIFIED", "ALREADY_PRESENT_REMOTE"
     ) else 1
 
 
