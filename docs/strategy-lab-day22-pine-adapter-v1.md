@@ -2,6 +2,16 @@
 
 **Engineering status: implementation submitted; complete Day22 acceptance remains BLOCKED until original TradingView output evidence is independently obtained and compared.**
 
+## Product contract — inbound customer submissions (owner clarification, 14 October 2026)
+
+**AIDY is a customer-led independent testing service.** Customers come **to AIDY** with a trading strategy; AIDY must accept supplied strategy materials (written rules, uploaded source code and files, or a source link), clarify missing or ambiguous requirements in ordinary language, reproduce the supported rules independently, test them against qualified market/broker assumptions, and report reproducible results with provenance and limitations. Researching publicly available strategies ourselves is an **optional separate research activity**, not the customer acquisition model.
+
+**Never require the owner or a customer to become a TradingView user, learn Pine Script, procure chart exports, or manage platform-specific technical workflows merely to submit a strategy.** TradingView is only one possible origin for customer-provided source. If a customer supplies only rules or a script, we can build an independently testable interpretation for supported rules. Any claim that we exactly match TradingView's proprietary execution/indicator behaviour requires independent comparative evidence and must be labelled **unverified** without it. That optional fidelity tier is per submission/reference and cannot be confused with the customer-facing intake contract.
+
+Today's restricted Pine importer is **not a general Pine translation service**. It handles a narrow verified syntax subset and correctly blocks unsupported scripts; production B10 customer intake and additional adapter capabilities remain to be built. Do not treat passing synthetic acceptance fixtures as complete TradingView-platform replication.
+
+**Day22 original platform-parity calibration** remains an engineering qualification issue under the roadmap's explicit acceptance criterion; it is not an obligation on customers or the owner to export data, nor a reason to reframe AIDY as an outbound strategy-hunting business.
+
 ## What is actually built
 
 - `src/aidy/strategy_lab_pine_adapter.py`: `admit_pine_subset(...)`, `pine_predicate_signals(...)`, `compare_pine_to_spec(...)`, and `compare_pine_reference(...)`.
