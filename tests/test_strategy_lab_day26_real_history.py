@@ -5,9 +5,9 @@ from dataclasses import replace
 from datetime import timedelta
 
 import pytest
+from test_strategy_lab_oos_protocol import sample_history
 
 from scripts.strategy_lab.day26_sealed_oos_real_history import audit
-from test_strategy_lab_oos_protocol import sample_history
 
 
 def test_complete_registered_history_oos_has_fixed_folds_and_single_reveal():
