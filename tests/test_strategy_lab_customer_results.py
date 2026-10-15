@@ -1,7 +1,6 @@
 """Day37: authenticated customer research history, versions and downloads."""
 import hashlib
 import io
-import json
 import sqlite3
 import zipfile
 
