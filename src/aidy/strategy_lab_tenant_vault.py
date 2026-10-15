@@ -15,9 +15,9 @@ import secrets
 import sqlite3
 import time
 import uuid
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable
 
 from aidy.strategy_lab_customer_intake import prepare_intake, verify_draft
 
