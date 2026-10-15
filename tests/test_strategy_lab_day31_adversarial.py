@@ -172,7 +172,7 @@ def test_zero_trades_produce_unknown_not_misleading_zero_percent():
     assert not no_trades["goldthinker_publication_permitted"]
     with pytest.raises(ValueError, match="only empty"):
         no_trade_analysis([{"net_usd": "10.00"}])
-    with pytest.raises(ValueError, match="untrusted"):
+    with pytest.raises(TypeError, match="untrusted"):
         no_trade_analysis(None)
 
 
