@@ -39,7 +39,7 @@ def _source_url(value: object) -> str | None:
     if value is None:
         return None
     if not isinstance(value, str):
-        raise ValueError("source URL must be literal link")
+        raise TypeError("source URL must be literal link")
     parsed = urlparse(value)
     if (parsed.scheme != "https" or not parsed.hostname
             or parsed.username or parsed.password
