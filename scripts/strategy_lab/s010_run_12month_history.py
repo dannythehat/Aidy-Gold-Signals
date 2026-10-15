@@ -4,6 +4,7 @@ No data export of secret credentials. Source dataset is retrospective HistData B
 actual bid/ask tick source of publisher is unavailable. Costs are modelled.
 """
 from __future__ import annotations
+
 import csv
 import hashlib
 import json
@@ -20,6 +21,7 @@ from aidy.strategy_lab_s010_backtest import (
     STRESS,
     simulate,
 )
+
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "artifacts/strategy_lab/s010_paid_customer_example"
 TABLE = "aidy-signals.aidy_analytics_test.research_candles"
