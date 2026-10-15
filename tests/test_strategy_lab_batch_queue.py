@@ -167,7 +167,7 @@ def test_expired_dead_letter_after_max_attempts(db):
 
 
 @pytest.mark.parametrize("result", [
-    {"job_id": "bad", "synthetic_diagnostic_score_bps": 1, "source_kind": SYNTHETIC},
+    {"job_id": "wrong_job", "synthetic_diagnostic_score_bps": 1, "source_kind": SYNTHETIC},
     {"synthetic_diagnostic_score_bps": 1, "source_kind": SYNTHETIC},
     {"job_id": "bad", "synthetic_diagnostic_score_bps": 2.5, "source_kind": SYNTHETIC},
     {"job_id": "bad", "synthetic_diagnostic_score_bps": 1001, "source_kind": SYNTHETIC},
