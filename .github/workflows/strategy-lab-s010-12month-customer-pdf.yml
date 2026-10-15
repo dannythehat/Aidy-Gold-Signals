@@ -1,0 +1,83 @@
+name: S010 Full 2025 Gold Historical Backtest and Customer PDF
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_s010_backtest.py
+      - scripts/strategy_lab/s010_run_12month_history.py
+      - scripts/strategy_lab/s010_render_customer_pdf.py
+      - tests/test_strategy_lab_s010_backtest.py
+      - docs/research-s010-full-2025-customer-report.md
+      - .github/workflows/strategy-lab-s010-12month-customer-pdf.yml
+permissions:
+  contents: read
+jobs:
+  research-and-full-pdf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: \${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install research and PDF renderer (read-only data source)
+        run: |
+          python -m pip install --quiet 'google-cloud-bigquery>=3.42,<4' pandas numpy reportlab matplotlib pillow pypdf pytest ruff
+      - name: Strict syntax and 2025 model regressions
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_s010_backtest.py scripts/strategy_lab/s010_run_12month_history.py scripts/strategy_lab/s010_render_customer_pdf.py tests/test_strategy_lab_s010_backtest.py
+          ruff check src/aidy/strategy_lab_s010_backtest.py scripts/strategy_lab/s010_run_12month_history.py scripts/strategy_lab/s010_render_customer_pdf.py tests/test_strategy_lab_s010_backtest.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_strategy_lab_s010_backtest.py tests/test_strategy_lab_history_reader.py
+      - name: Run independently over ALL TWELVE real 2025 XAUUSD historical months
+        id: actual_data
+        continue-on-error: true
+        run: PYTHONPATH=src:. python scripts/strategy_lab/s010_run_12month_history.py
+      - name: Generate paying-customer-style PDF only after verified actual source
+        if: steps.actual_data.outcome == 'success'
+        run: PYTHONPATH=src:. python scripts/strategy_lab/s010_render_customer_pdf.py
+      - name: Validate genuine PDF, 12 months and complete ledger
+        if: steps.actual_data.outcome == 'success'
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from pypdf import PdfReader
+          p=Path('artifacts/strategy_lab/s010_paid_customer_example')
+          r=json.loads((p/'full_independent_research.json').read_text())
+          assert r['status']=='PASS_REAL_12_MONTH_HISTORICAL_RESEARCH'
+          assert len(r['source_receipts'])==12
+          assert r['independently_qualified_profitable'] is False
+          assert r['paper_and_live_broker_orders']==0
+          for m in r['source_receipts']:
+              assert m['observed_native_m1_rows']>0 and m['complete_h1']>=200 and len(m['query_job_id'])>=8
+          for sc in r['scenarios'].values():
+              assert len(sc['monthly'])==12
+              assert sc['closed_trades']==len(sc['trades'])
+          pdf=p/'GOLDTHINKER_S010_2025_Full_Independent_Research_Report.pdf'
+          assert pdf.exists() and pdf.stat().st_size>15_000
+          pages=PdfReader(pdf).pages
+          assert len(pages)>=8, f'Expected substantial customer report, only {len(pages)} pages'
+          words='\n'.join(page.extract_text() or '' for page in pages)
+          for label in ('Executive review','Strategy specification','drawdown','Monthly','closed-trade ledger','reproducibility','risk disclosures','2025','S010','NOT VERIFIED','NO PROTECTIVE STOP'):
+              assert label.lower() in words.lower(), f'Missing required evidence: {label}'
+          print('VALID_CUSTOMER_REPORT',json.dumps({
+              'pdf_pages':len(pages),'pdf_bytes':pdf.stat().st_size,
+              'months':12,'trades':r['scenarios']['published_3p28x_base']['closed_trades'],
+              'sample_size_h1':r['scenarios']['published_3p28x_base']['bars'],
+              'source_sha256':r['research_sha256'],
+          },sort_keys=True))
+          PY
+      - name: Fail if no genuine source-validated 12-month proof
+        if: steps.actual_data.outcome != 'success'
+        run: |
+          echo 'AIDY blocked the real 2025 experiment; no customer-profit PDF allowed.' >&2
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: GoldThinker-S010-2025-Customer-Report-And-Source-Evidence
+          path: artifacts/strategy_lab/s010_paid_customer_example/
+          retention-days: 90
+          if-no-files-found: error
