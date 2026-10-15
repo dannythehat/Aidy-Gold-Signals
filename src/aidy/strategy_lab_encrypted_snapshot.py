@@ -62,12 +62,12 @@ class EncryptedSnapshot:
     def create(self, *, operator_key: bytes, destination: Path) -> dict:
         self._controls._operator(operator_key)
         dest = _safe_new_path(destination)
-        with sqlite3.connect(self._controls._vault._path) as source:
-            with sqlite3.connect(":memory:") as memory:
-                source.backup(memory)
-                if memory.execute("PRAGMA quick_check").fetchone()[0] != "ok":
-                    raise OperationsRejected("SQLite memory snapshot integrity failed")
-                plaintext = memory.serialize()
+        with (sqlite3.connect(self._controls._vault._path) as source,
+              sqlite3.connect(":memory:") as memory):
+            source.backup(memory)
+            if memory.execute("PRAGMA quick_check").fetchone()[0] != "ok":
+                raise OperationsRejected("SQLite memory snapshot integrity failed")
+            plaintext = memory.serialize()
         if not 1 <= len(plaintext) <= MAX_BACKUP_SIZE:
             raise OperationsRejected("Snapshot requires separately reviewed streaming backup")
         nonce = secrets.token_bytes(12)
