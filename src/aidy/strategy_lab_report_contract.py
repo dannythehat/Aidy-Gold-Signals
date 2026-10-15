@@ -25,7 +25,7 @@ def _hash(obj: object) -> str:
 def _stamp(s: str) -> datetime:
     if not isinstance(s, str) or not s.endswith("Z"):
         raise ValueError("UTC Z timestamp required")
-    parsed = datetime.fromisoformat(s.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(s)
     if parsed.utcoffset() != timedelta(0):
         raise ValueError("non-UTC report timestamp")
     return parsed
