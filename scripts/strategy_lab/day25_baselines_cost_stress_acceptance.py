@@ -38,7 +38,7 @@ def build_source_bundle():
         },
     })
     profile = BrokerProfile.from_wire(raw)
-    quotes_source = (FIXTURE / "day12_illustrative_bidask_quotes.json").read_bytes()
+    quotes_source = (FIXTURE / "day25_illustrative_two_window_bidask_quotes.json").read_bytes()
     quotes = QuoteTape.from_snapshot(
         quotes_source, expected_sha256=sha256(quotes_source).hexdigest()
     )
@@ -64,6 +64,8 @@ def audit() -> dict:
                 quote_tape=quotes, source_candle_sha256=cand_sha,
                 entry_signal_closed_at_utc=START,
                 exit_signal_closed_at_utc=START+timedelta(minutes=5),
+                naive_session_entry_closed_at_utc=START+timedelta(minutes=10),
+                naive_session_exit_closed_at_utc=START+timedelta(minutes=15),
             )
             matched.append(proof)
             reference_runs.append(ref)
@@ -71,12 +73,14 @@ def audit() -> dict:
             raise ValueError("independent Day19 journals or comparator outputs differ")
         check = matched[0]
         expected = (
-            ("base", "8.30", "-11.70"),
-            ("adverse", "7.54", "-12.46"),
-            ("severe", "6.60", "-13.40"),
+            ("base", "8.30", "-11.70", "18.30", "-10.00"),
+            ("adverse", "7.54", "-12.46", "17.54", "-10.00"),
+            ("severe", "6.60", "-13.40", "16.60", "-10.00"),
         )
         if tuple((x.name, str(x.candidate_net_usd),
-                  str(x.blind_clock_short_net_usd))
+                  str(x.blind_clock_short_net_usd),
+                  str(x.independently_scheduled_same_session_long_net_usd),
+                  str(x.candidate_minus_scheduled_naive_usd))
                  for x in check.scenario_results) != expected:
             raise ValueError("manually known Day25 cost stress values differ")
         if any(x.matched_exposure_difference_usd != 0 or
@@ -97,6 +101,8 @@ def audit() -> dict:
             "day19_verified_final_cash_usd": "10008.30",
             "reference_journal_tip_sha256": reference_runs[0].journal_tip_sha256,
             "benchmark_and_stress": check.to_wire(),
+            "scheduled_naive_same_session_tested": True,
+            "independent_real_market_benchmark_qualified": False,
             "independent_strategy_benchmark_completed": False,
             "genuine_strategy_alpha_qualified": False,
             "live_or_real_broker_attested": False,
