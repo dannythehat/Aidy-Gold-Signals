@@ -153,7 +153,7 @@ def test_wrong_candidate_window_and_selection_rejected(tmp_path, time_change):
         compare(inputs, exit_signal_closed_at_utc=END+time_change)
 
 
-@pytest.mark.parametrize("bad", [Decimal("-1"), Decimal("0.99"), Decimal("5.01"), Decimal("NaN"), 1.5, True])
+@pytest.mark.parametrize("bad", [Decimal(-1), Decimal("0.99"), Decimal("5.01"), Decimal("NaN"), 1.5, True])
 def test_cost_multiplier_validation_refuses_unsafe_or_untestable_values(bad):
     profile, broker, tape, _ = build_source_bundle()
     with pytest.raises(ValueError, match="multiplier"):
