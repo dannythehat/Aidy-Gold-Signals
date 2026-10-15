@@ -190,7 +190,7 @@ class CustomerResults:
             _, tenant = self._vault._principal(con, token)
             jobs = con.execute(
                 "SELECT id,draft_id,stage,version,created,source_sha256 "
-                "FROM customer_jobs WHERE tenant_id=? ORDER BY created,id",
+                "FROM customer_jobs WHERE tenant_id=? ORDER BY created,draft_id,version,id",
                 (tenant,),
             ).fetchall()
             return [dict(j) for j in jobs]
