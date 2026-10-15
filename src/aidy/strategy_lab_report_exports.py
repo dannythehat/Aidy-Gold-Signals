@@ -13,8 +13,6 @@ from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 from pypdf import PdfReader
@@ -23,8 +21,13 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import (
-    Image, PageBreak, Paragraph, SimpleDocTemplate,
-    Spacer, Table, TableStyle,
+    Image,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
 )
 
 from aidy.strategy_lab_report_contract import PERIODS, verify_canonical_report
@@ -75,13 +78,13 @@ def _hash(data: bytes) -> str:
 
 def _csv_cell(value: object) -> str:
     if not isinstance(value, (str, int)):
-        raise ValueError("CSV field requires trusted primitive")
+        raise TypeError("CSV field requires trusted primitive")
     s = str(value)
-    if s.startswith(("=", "+", "-", "@", "\t", "\r")):
-        # Money values have their own fixed Decimal source checks; only text
-        # enters this routine and must never execute as spreadsheet formula.
-        if not (s.startswith("-") and _is_negative_money(s)):
-            raise ValueError("unsafe spreadsheet formula or control payload")
+    # Numeric negatives are legitimate; customer-supplied formula-like text is not.
+    if s.startswith(("=", "+", "-", "@", "\t", "\r")) and not (
+        s.startswith("-") and _is_negative_money(s)
+    ):
+        raise ValueError("unsafe spreadsheet formula or control payload")
     return s
 
 
