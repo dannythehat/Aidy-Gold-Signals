@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from hashlib import sha256
 
@@ -51,6 +51,8 @@ class ScenarioResult:
     independent_blind_clock_long_net_usd: Decimal
     matched_exposure_difference_usd: Decimal
     blind_clock_short_net_usd: Decimal
+    independently_scheduled_same_session_long_net_usd: Decimal
+    candidate_minus_scheduled_naive_usd: Decimal
     source_quote_snapshot_sha256: str
     broker_profile_sha256: str
 
@@ -66,6 +68,7 @@ class BaselineAudit:
     reference_journal_tip_sha256: str
     scenario_results: tuple[ScenarioResult, ...]
     accounting_control_pass: bool
+    scheduled_naive_same_session_tested: bool = True
     independent_strategy_benchmark_completed: bool = False
     genuine_strategy_alpha_qualified: bool = False
     native_broker_execution_verified: bool = False
@@ -137,6 +140,8 @@ def compare_day19_fixed_window(
     source_candle_sha256: str,
     entry_signal_closed_at_utc,
     exit_signal_closed_at_utc,
+    naive_session_entry_closed_at_utc,
+    naive_session_exit_closed_at_utc,
 ) -> BaselineAudit:
     """Audit one Day19 candidate against clock-only controls on the same tape.
 
@@ -161,6 +166,20 @@ def compare_day19_fixed_window(
             or exit_signal_closed_at_utc.utcoffset() != timedelta(0)
             or exit_signal_closed_at_utc - entry_signal_closed_at_utc != timedelta(minutes=5)):
         raise ValueError("frozen session/time exposure mismatch")
+    # The second naive strategy is independently precommitted to 14:10-14:15
+    # UTC and ignores the candidate's indicator. Five minutes exposure,
+    # identical lots, direction, day and UTC session hour; no hindsight
+    # selection, no replaying candidate's signals under a new name.
+    if (naive_session_entry_closed_at_utc != datetime(2026, 10, 14, 14, 10, tzinfo=UTC)
+            or naive_session_exit_closed_at_utc != datetime(2026, 10, 14, 14, 15, tzinfo=UTC)
+            or quote_tape.source_identity != "day25_internal_two_predeclared_intra_session_windows_v1"):
+        raise ValueError("predeclared blind-clock session comparator schedule/source mismatch")
+    if (naive_session_entry_closed_at_utc <= exit_signal_closed_at_utc
+            or naive_session_entry_closed_at_utc.hour != entry_signal_closed_at_utc.hour
+            or naive_session_entry_closed_at_utc.date() != entry_signal_closed_at_utc.date()
+            or naive_session_exit_closed_at_utc - naive_session_entry_closed_at_utc
+               != exit_signal_closed_at_utc - entry_signal_closed_at_utc):
+        raise ValueError("naive baseline must have same-hour exposure and duration")
     results = []
     for name, ticks, multiplier in POLICY:
         gross, commission, slip, funding, candidate_net, fingerprint = _scenario_pnl(
@@ -186,6 +205,13 @@ def compare_day19_fixed_window(
             exit_closed=exit_signal_closed_at_utc,
             extra_ticks_per_side=ticks, cash_multiplier=multiplier,
         )
+        _, _, _, _, scheduled_long, _ = _scenario_pnl(
+            profile, broker_source_bytes, quote_tape,
+            direction="long", lots="0.1",
+            entry_closed=naive_session_entry_closed_at_utc,
+            exit_closed=naive_session_exit_closed_at_utc,
+            extra_ticks_per_side=ticks, cash_multiplier=multiplier,
+        )
         if (name == "base" and (
             gross != reference.gross_usd
             or commission != reference.commissions_usd
@@ -199,7 +225,8 @@ def compare_day19_fixed_window(
         results.append(ScenarioResult(
             name, ticks, multiplier, gross, commission, slip, funding,
             candidate_net, naive_long, candidate_net - naive_long,
-            naive_short, quote_tape.snapshot_sha256, fingerprint,
+            naive_short, scheduled_long, candidate_net - scheduled_long,
+            quote_tape.snapshot_sha256, fingerprint,
         ))
     if any(results[i].candidate_net_usd < results[i+1].candidate_net_usd
            for i in range(len(results)-1)):
