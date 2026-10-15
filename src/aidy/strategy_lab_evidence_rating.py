@@ -204,7 +204,7 @@ def rate_strategy_evidence(
     if len(findings) != len(FACTOR_WEIGHTS):
         raise ValueError("exactly original nine independent factors required")
     if any(not isinstance(x, FactorFinding) for x in findings):
-        raise ValueError("factor evidence must use typed reviewed findings")  # noqa: TRY004
+        raise ValueError("factor evidence must use typed reviewed findings")
     for expected, finding in zip(FACTOR_WEIGHTS, findings, strict=True):
         finding.validate()
         if finding.factor != expected[0]:
