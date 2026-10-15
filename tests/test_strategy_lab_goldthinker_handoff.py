@@ -5,6 +5,7 @@ from copy import deepcopy
 from dataclasses import replace
 
 import pytest
+from test_strategy_lab_evidence_rating import example, full
 
 from aidy.strategy_lab_goldthinker_handoff import (
     ResearchEvidence,
@@ -14,7 +15,6 @@ from aidy.strategy_lab_goldthinker_handoff import (
     issue_internal_receipt,
     prepare_private_handoff,
 )
-from test_strategy_lab_evidence_rating import example, full
 
 KEY = b"test-only-fixed-32-byte-key-never-use-in-production"
 OTHER_KEY = b"separately-generated-test-only-secret-key-000000000"
