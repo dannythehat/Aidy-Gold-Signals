@@ -1,0 +1,70 @@
+name: Strategy Lab Day32 Private Batch Queue Reliability
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_batch_queue.py
+      - scripts/strategy_lab/day32_100_job_acceptance.py
+      - tests/test_strategy_lab_batch_queue.py
+      - docs/strategy-lab-day32-private-batch-reliability.md
+      - .github/workflows/strategy-lab-day32-batches.yml
+
+permissions:
+  contents: read
+
+jobs:
+  day32-private-batch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install strict Python checks and isolated prior protocol regressions
+        run: python -m pip install --quiet pytest ruff
+      - name: Enforce syntax and Ruff on all Day32 files
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_batch_queue.py scripts/strategy_lab/day32_100_job_acceptance.py tests/test_strategy_lab_batch_queue.py
+          ruff check src/aidy/strategy_lab_batch_queue.py scripts/strategy_lab/day32_100_job_acceptance.py tests/test_strategy_lab_batch_queue.py
+      - name: Run 100-job reliability fixture and queue adversarial tests
+        run: PYTHONPATH=src:tests:. python -m pytest -q tests/test_strategy_lab_batch_queue.py
+      - name: Execute TWO independent fully restarted 100-job batches
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day32_100_job_acceptance.py
+      - name: Verify 100 unique synthetic results, all quotas and source chain
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          original=Path('artifacts/strategy_lab/day32_batch_queue_acceptance.json')
+          result=Path('artifacts/strategy_lab/day32_100_synthetic_results.json')
+          a=json.loads(original.read_text())
+          rows=json.loads(result.read_text())
+          assert a["status"]=="PASS", a
+          assert a["scope"]=="PRIVATE_100_SYNTHETIC_JOBS_ONLY"
+          assert a["unique_completed"]==len(rows)==100
+          assert len({r["job_id"] for r in rows})==100
+          assert a["deduplicated_submissions"]==20
+          assert a["overflow_blocked"] is True
+          assert a["stale_worker_completions_fenced"]==4
+          assert a["synthetic_retry_recoveries"]==6
+          assert a["observed_peak_workers"]<=a["max_parallel_workers"]==4
+          assert a["observed_peak_family_workers"]<=2
+          assert a["number_of_trial_families"]==10
+          assert a["real_trading_alpha_verified"] is False
+          assert a["goldthinker_paper_accounts"]==0
+          sha=hashlib.sha256(json.dumps(rows,sort_keys=True,separators=(",", ":")).encode()).hexdigest()
+          assert sha==a["results_sha256"]
+          assert a["event_count"]>=300
+          print('All 100 synthetic jobs independently reproducible: no trading alpha claimed.')
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day32-100-private-synthetic-jobs-durable-evidence
+          path: |
+            artifacts/strategy_lab/day32_batch_queue_acceptance.json
+            artifacts/strategy_lab/day32_100_synthetic_results.json
+          retention-days: 90
