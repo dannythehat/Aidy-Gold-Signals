@@ -7,8 +7,12 @@ import tempfile
 from pathlib import Path
 
 from aidy.strategy_lab_batch_queue import (
-    LEASE_MS, MAX_INFLIGHT, MAX_NONTERMINAL, SYNTHETIC,
-    Experiment, ResearchQueue,
+    LEASE_MS,
+    MAX_INFLIGHT,
+    MAX_NONTERMINAL,
+    SYNTHETIC,
+    Experiment,
+    ResearchQueue,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
