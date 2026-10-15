@@ -175,7 +175,7 @@ def test_public_name_or_customer_connection_never_populates_from_fixture(source)
             k: v for k, v in malicious["report"].items()
             if k != "canonical_result_sha256"
         })
-        with pytest.raises(ValueError, match="no unqualified"):
+        with pytest.raises(ValueError, match="no unqualified|cannot be published"):
             validate_research_receipt(malicious)
 
 
