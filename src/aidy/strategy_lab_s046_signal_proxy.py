@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from itertools import pairwise
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from itertools import pairwise
 
 from aidy.strategy_lab_history_reader import ClosedBar
 
