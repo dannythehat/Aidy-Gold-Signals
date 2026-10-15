@@ -24,3 +24,35 @@ The Drive entry lists **"RULES LOCKED? NO"**, stop/target **MISSING**, sizing **
 
 - [Research PR](https://github.com/dannythehat/Aidy-Gold-Signals/pulls?q=is%3Apr+S046) — no writeback to the original Drive Results $10K ledger until an owner-reviewed actual complete trading system and costed broker-parity backtest exist.
 - Exact generated output: `artifacts/strategy_lab/s046_signal_research/experiment_result.json`, `closed_bar_signal_events.csv` if real data accepted, stored as CI workflow artifact.
+
+## First real historical research result — 15 October 2026
+
+[**First actual signal-only CI run 38735029524 PASS**](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38735029524) with **25 tests passed**, strict Ruff and Python syntax compilation; original BigQuery historical XAUUSD native M1 BID source read/replayed independently twice per pre-registered day and verified immutable digest/source archive contract, no missing-minute repair and no brokerage interaction.
+
+[**Download primary evidence JSON + trade-FREE closed-bar signal CSV (artifact #11972765633)**](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38735029524/artifacts/11972765633)
+
+| Frozen measure | Genuine read-only signal proxy observation |
+| --- | --- |
+| Pre-registered UTC dates | 2025-01-07, 2025-01-08 |
+| Native source XAUUSD bid M1 | 2,520 real verified consecutive candles |
+| Completed XAUUSD M5 | 504 (252 per date) |
+| Total sweep signals (public-description proxy only) | **3** |
+| Bearish high sweeps | **3** |
+| Bullish low sweeps | **0** |
+| Asia completed-session sweeps | **2** |
+| London completed-session sweeps | **1** |
+| New York sweep coverage | **NO after-close observations**; cannot infer absence of signals |
+| Day Jan 7 events | 1 |
+| Day Jan 8 events | 2 |
+| Real SELECT jobs | 4 (twice for each date, distinct IDs) |
+| Real source validation | 2 distinct day's digests, identical independent replay |
+| Deterministic event-research digest | `db1d6d6d80cecbbe55618c0e5edb4813df2e70b7b9fc41a2158105572f7f6b52` |
+| Original MQL5 source-code parity | NOT VERIFIED |
+| Strategy exits, stops, position sizing | MISSING |
+| Strategy trades/win rate/net $10K P&L | **NOT CALCULABLE; BLANK (not zero)** |
+| Paper/live orders | 0 |
+| GoldThinker product qualification | NOT ELIGIBLE |
+
+**No independent profitable strategy has been verified.** The sample is very small, has no full NY session aftermath, no code-level original indicator parity and predates the indicator's published 3 October 2026 strategy description, so no prospective out-of-sample validation. Treat it as AIDY's first **read-only data-backed rule-proxy experiment**, not a strategy backtest. Nothing in the 83-row original Drive $10K scoreboard may be marked VERIFIED based on this.
+
+Initial CI runs failed lint; the violations were fixed with strict checks rather than silenced. [Source research PR #308](https://github.com/dannythehat/Aidy-Gold-Signals/pull/308).
