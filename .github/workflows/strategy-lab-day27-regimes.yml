@@ -1,0 +1,44 @@
+name: Strategy Lab Day27 As-Of Market Regime Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_regimes.py
+      - scripts/strategy_lab/day27_real_market_regime_audit.py
+      - tests/test_strategy_lab_regimes.py
+      - tests/test_strategy_lab_day27_real_history.py
+      - docs/strategy-lab-day27-asof-market-regimes.md
+      - .github/workflows/strategy-lab-day27-regimes.yml
+
+permissions:
+  contents: read
+
+jobs:
+  day27-asof-regime-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install tests and Google BigQuery read-only client
+        run: python -m pip install --quiet pytest ruff 'google-cloud-bigquery>=3.42,<4'
+      - name: Enforce Ruff and compilation
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_regimes.py scripts/strategy_lab/day27_real_market_regime_audit.py tests/test_strategy_lab_regimes.py tests/test_strategy_lab_day27_real_history.py
+          ruff check src/aidy/strategy_lab_regimes.py scripts/strategy_lab/day27_real_market_regime_audit.py tests/test_strategy_lab_regimes.py tests/test_strategy_lab_day27_real_history.py
+      - name: Causal regime, DST, sample gating and earlier OOS/data regressions
+        run: |
+          PYTHONPATH=src:tests:. python -m pytest -q tests/test_strategy_lab_regimes.py tests/test_strategy_lab_day27_real_history.py tests/test_strategy_lab_oos_protocol.py tests/test_strategy_lab_day26_real_history.py tests/test_strategy_lab_day22_real_history.py tests/test_strategy_lab_baselines_stress.py
+      - name: Reproduce point-in-time labels on two real frozen BigQuery reads
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day27_real_market_regime_audit.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day27-real-histdata-point-in-time-regimes-folds-and-unknown-news
+          path: artifacts/strategy_lab/day27_real_market_regime_audit.json
+          retention-days: 90
