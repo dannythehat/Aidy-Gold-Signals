@@ -286,5 +286,7 @@ def rate_strategy_evidence(
         else "WITHHELD_UNQUALIFIED_OR_INCOMPLETE",
         governance, optimisation, action,
         tuple(missing), tuple(vetoes), findings, FACTOR_WEIGHTS,
-        qualified and not vetoes and score is not None,
+        qualified and not vetoes and score is not None
+        and basis.observed_net_expectancy_usd > 0
+        and basis.observed_benchmark_edge_usd > 0,
     )
