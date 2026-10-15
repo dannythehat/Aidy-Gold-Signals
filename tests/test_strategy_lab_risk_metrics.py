@@ -50,15 +50,15 @@ def test_exact_four_trade_net_expectancy_pf_monthly_and_equity(tmp_path):
     ]
     assert got.closed_trades == 4 and got.wins == 2 and got.losses == 2
     assert got.breakeven == 0
-    assert got.win_rate_percent == Decimal("50")
+    assert got.win_rate_percent == Decimal(50)
     assert got.expectancy_net_usd_per_trade == Decimal("3.25")
     assert got.profit_factor == Decimal(24) / Decimal(11)
     assert got.profit_factor_status == "DEFINED"
-    assert got.realized_gross_usd == Decimal("15")
-    assert got.transaction_costs_usd == Decimal("-2")
-    assert got.net_profit_usd == Decimal("13")
-    assert got.final_cash_usd == got.final_equity_usd == Decimal("10013")
-    assert got.max_observed_drawdown_usd == Decimal("6")
+    assert got.realized_gross_usd == Decimal(15)
+    assert got.transaction_costs_usd == Decimal(-2)
+    assert got.net_profit_usd == Decimal(13)
+    assert got.final_cash_usd == got.final_equity_usd == Decimal(10013)
+    assert got.max_observed_drawdown_usd == Decimal(6)
     assert Decimal("0.05") < got.max_observed_drawdown_percent < Decimal("0.07")
     assert [(v.month_utc, v.net_usd) for v in got.monthly] == [
         ("2026-09", Decimal("4.00")), ("2026-10", Decimal("9.00"))
