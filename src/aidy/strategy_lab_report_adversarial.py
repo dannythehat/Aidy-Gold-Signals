@@ -7,7 +7,6 @@ Human stage signoff is a separate explicit owner action, never self-attested.
 from __future__ import annotations
 
 import csv
-import json
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
@@ -16,7 +15,10 @@ from pypdf import PdfReader
 
 from aidy.strategy_lab_report_contract import PERIODS
 from aidy.strategy_lab_report_exports import (
-    STRESS_HEADER, TRADE_HEADER, _decimal, validate_research_receipt,
+    STRESS_HEADER,
+    TRADE_HEADER,
+    _decimal,
+    validate_research_receipt,
     verify_export_bundle,
 )
 
@@ -158,8 +160,7 @@ def _check_pdf_parity(out: Path, report: dict) -> int:
         ))
     for name, weight in report["research"]["evidence_rating"]["factor_weights"]:
         mandatory.extend((name.replace("_", " ").title(), str(weight)))
-    for digest in report["provenance"]["source_sha256"].values():
-        mandatory.append(digest)
+    mandatory.extend(report["provenance"]["source_sha256"].values())
     if any(value not in text for value in mandatory):
         raise ValueError("PDF missing original journal amount, factor, or provenance")
     return len(reader.pages)
@@ -200,7 +201,7 @@ def independent_report_audit(out: Path, receipt: dict) -> dict:
 def no_trade_analysis(trades: list[dict]) -> dict:
     """Abstain on empty history; no 0%-win-rate or profitable claims."""
     if not isinstance(trades, list):
-        raise ValueError("untrusted trade source")
+        raise TypeError("untrusted trade source")
     if trades:
         raise ValueError("only empty trade evidence uses NO_TRADES state")
     return {
