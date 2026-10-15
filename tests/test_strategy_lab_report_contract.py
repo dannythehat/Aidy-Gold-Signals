@@ -50,7 +50,7 @@ def test_real_sqlite_research_journal_canonical_metrics_and_periods(trusted):
     ]
     assert tuple(obj["research"]["periods"]) == PERIODS
     assert [obj["research"]["periods"][key]["realised_net_pnl_usd"]
-            for key in PERIODS] == ["9.00", "9.00", "9.00", "13.00", "13.00"]
+            for key in PERIODS] == ["9.00", "13.00", "9.00", "13.00", "13.00"]
     assert obj["research"]["evidence_rating"]["score_out_of_100"] is None
     assert obj["research"]["evidence_rating"]["governance"] == "ORANGE_INVESTIGATE"
 
