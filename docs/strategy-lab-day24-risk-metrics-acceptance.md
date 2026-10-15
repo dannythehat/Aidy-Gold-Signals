@@ -23,4 +23,11 @@ CI `.github/workflows/strategy-lab-day24-metrics.yml` runs strict Ruff, compilea
 
 **Stage boundaries:** Day25 benchmarks and cost stress, Day26 out-of-sample, Day27 regime, Day28 evidence rating and future B08 report APIs are NOT completed by this day. No live broker orders, production signal decisions, Cloudflare objects, strategy profitability reports or account deployments are modified.
 
-**Final CI/merge and acceptance evidence must be added after the real GitHub workflow passes.**
+## Final Day24 verified engineering acceptance — 15 October 2026
+
+- **Day-level technical PASS:** source build [PR #277 merged into protected main](https://github.com/dannythehat/Aidy-Gold-Signals/pull/277) as squash `8f514a053fc7981b392e9a3a0dc9bc31d949d576`.
+- **Successful real CI:** [GitHub Actions 38686277850](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38686277850), **47 tests PASSED**, Ruff and Python compilation PASS, end-to-end double-database SQLite test PASS. [Evidence semantics gate 38686277835](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38686277835) PASS. Earlier lint-only attempts failed, were repaired and rerun before merge.
+- **Immutable input identity:** internal known-answer fixture SHA256 `9c7050a7857549d33cd1e354c5840b2e06120fc5216f3b3e17b4996043a39952`; canonical Day18 event-manifest SHA256 `b6274f33a4fe8abf0271d5e27439875bc35fc877f47d7952f42e8beac969af3b`; both independently replayed on-disk Day17 SQLite journals have the same final tip SHA256 `04abd2abf5716c58202bb09c38173c71362308617643ceb1a8d8d1ed137281a4`.
+- **Exact observed golden metrics:** gross $15, fees -$2, net +$13, starting $10,000 -> final cash/equity $10,013; 4 closed trades, 2 winners, 2 losers, 50% win rate, net expectancy $3.25/trade, profit factor exactly 24/11, max mark/event sampled drawdown $6 (~0.05994%), Sep +$4 and Oct +$9. Unqualified annualised Sharpe remains null.
+- **Non-negotiable caveat:** the original source events are internally authored synthetic exercises. The comparison is not a real historical edge, broker fill equivalence, true intrabar drawdown, daily-risk-adjusted Sharpe or an independently authenticated trading account. No live trading, customer accounts or production decisions changed. B07 stage approval and Days25 onward separate.
+
