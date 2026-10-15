@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from hashlib import sha256
+from itertools import pairwise
 from zoneinfo import ZoneInfo
 
 from aidy.strategy_lab_history_reader import ClosedBar, ReadResult
@@ -166,7 +167,7 @@ def _classify(bars: tuple[ClosedBar, ...], index: int,
     ):
         raise ValueError("future quote used by regime")
     total_movement = sum(
-        (abs(cur - prev) for prev, cur in zip(closes[:-1], closes[1:], strict=False)),
+        (abs(cur - prev) for prev, cur in pairwise(closes)),
         Decimal(0),
     )
     efficiency = (
