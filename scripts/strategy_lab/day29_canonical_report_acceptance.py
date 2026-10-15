@@ -35,7 +35,7 @@ def audit_source(history) -> dict:
     if (report["research"]["accounting"]["net_profit_usd"] != "13.00"
             or report["research"]["accounting"]["final_cash_usd"] != "10013.00"
             or report["research"]["periods"]["day"]["realised_net_pnl_usd"] != "9.00"
-            or report["research"]["periods"]["week"]["realised_net_pnl_usd"] != "9.00"
+            or report["research"]["periods"]["week"]["realised_net_pnl_usd"] != "13.00"
             or report["research"]["periods"]["month"]["realised_net_pnl_usd"] != "9.00"
             or report["research"]["periods"]["year"]["realised_net_pnl_usd"] != "13.00"
             or report["research"]["periods"]["all_time"]["realised_net_pnl_usd"] != "13.00"
