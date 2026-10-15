@@ -2,8 +2,9 @@
 import json
 import tempfile
 from pathlib import Path
-from aidy.strategy_lab_tenant_vault import TenantVault
+
 from aidy.strategy_lab_operational_controls import OperationalControls
+from aidy.strategy_lab_tenant_vault import TenantVault
 
 with tempfile.TemporaryDirectory() as d:
     v=TenantVault(Path(d)/"db.sqlite",encryption_key=b"K"*32,token_pepper=b"P"*32,provision_key=b"U"*32)
