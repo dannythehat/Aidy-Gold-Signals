@@ -17,3 +17,11 @@ The status of Day38, Day39 and Day40 remains PARTIAL/PARTIAL/NO_GO after these s
 - Day39 encrypted local 2-tenant roundtrip and tamper tests: MUST PASS
 - Day39 separate-runner encrypted synthetic artifact drill: MUST PASS; production remote restore false
 - Original gold BID BigQuery immutable source double-read: MUST PASS; 83 candidates untouched
+
+## Verified technical acceptance — 15 October 2026
+
+- [Original hardening CI 38730326733](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38730326733) **PASS**: first runner ran **304 pytest tests PASS** (1 unrelated pytest warning), strict Ruff / Python compilation and untouched genuine original XAUUSD BID read-only historical source replay, held-back 83 candidates and 0 real strategy-profit experiments. Created only encrypted synthetic backup bytes for cross-runner transfer.
+- **Second independent runner** downloaded the GitHub Actions encrypted fixture and restored the full synthetic tenant database with two individually signed-in users; both other-tenant access attempts denied, sqlite quick_check passed. Source fixture plaintext was not uploaded. This demonstrates encrypted artifact transport and restore across separate runners, **not production cloud disaster-recovery certification**.
+- [Original Day40 regression CI 38730326915](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38730326915) **PASS**, including adversarial no-GO when all raw flags are true. [Independent semantic gate 38730326787](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38730326787) **PASS**.
+- First attempt [38730234905](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38730234905) failed the actual strict SIM117 nested-with lint gate, fixed and rerun successfully; not suppressed.
+- [PR #307](https://github.com/dannythehat/Aidy-Gold-Signals/pull/307) merges only after final documentation change passes CI again. **The original Day38–40 remain unchecked.**
