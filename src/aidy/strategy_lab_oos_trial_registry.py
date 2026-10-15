@@ -147,11 +147,11 @@ class TrialRegistry:
         with sqlite3.connect(self.path) as db:
             db.execute("BEGIN IMMEDIATE")
             self._verify(db)
+            digest = self._append(db, trial_key, "register", obj)
             db.execute("""
                 INSERT INTO trial_family_reservations(source_sha256,family,trial_key)
                 VALUES (?,?,?)
             """, (review.source_sha256, family, trial_key))
-            digest = self._append(db, trial_key, "register", obj)
             db.commit()
         return digest
 
