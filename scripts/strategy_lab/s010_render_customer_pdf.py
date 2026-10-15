@@ -21,6 +21,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from aidy.strategy_lab_s010_backtest import STARTING_USD
 from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer,
     Table, TableStyle, PageBreak, Image, KeepTogether, HRFlowable,
