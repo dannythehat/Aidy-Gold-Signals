@@ -15,6 +15,7 @@ import secrets
 import sqlite3
 import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable
 
@@ -40,11 +41,15 @@ def _canonical(value: object) -> bytes:
                       allow_nan=False).encode("utf-8")
 
 
-def _open_db(path: Path) -> sqlite3.Connection:
+@contextmanager
+def _open_db(path: Path):
     con = sqlite3.connect(str(path), timeout=5, isolation_level=None)
-    con.row_factory = sqlite3.Row
-    con.execute("PRAGMA foreign_keys=ON")
-    return con
+    try:
+        con.row_factory = sqlite3.Row
+        con.execute("PRAGMA foreign_keys=ON")
+        yield con
+    finally:
+        con.close()
 
 
 class TenantVault:
@@ -237,9 +242,11 @@ class TenantVault:
         if row is None:
             raise AccessDenied("Access denied")
         aad = f"{SCHEMA}|{tenant}|{record_id}".encode()
+        from cryptography.exceptions import InvalidTag
+
         try:
             raw = self._aes.decrypt(row["blob"][:12], row["blob"][12:], aad)
-        except (ValueError, Exception) as exc:
+        except (InvalidTag, ValueError) as exc:
             # Never expose AES error details or another tenant's record.
             raise AccessDenied("Access denied") from exc
         if not hmac.compare_digest(hashlib.sha256(raw).hexdigest(), row["payload_sha256"]):
