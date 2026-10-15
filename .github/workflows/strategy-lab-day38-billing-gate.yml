@@ -1,0 +1,63 @@
+name: Strategy Lab Day38 Preview Entitlements (NO PAYMENT CLAIM)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_compute_entitlements.py
+      - tests/test_strategy_lab_compute_entitlements.py
+      - scripts/strategy_lab/day38_billing_preview_acceptance.py
+      - docs/strategy-lab-day38-billing-gate.md
+      - .github/workflows/strategy-lab-day38-billing-gate.yml
+
+permissions:
+  contents: read
+
+jobs:
+  day38-internal-meter-partial-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install private verification dependencies
+        run: python -m pip install --quiet pytest ruff 'cryptography>=43,<47' 'google-cloud-bigquery>=3.42,<4'
+      - name: Strict new billing source lint
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_compute_entitlements.py tests/test_strategy_lab_compute_entitlements.py scripts/strategy_lab/day38_billing_preview_acceptance.py
+          ruff check src/aidy/strategy_lab_compute_entitlements.py tests/test_strategy_lab_compute_entitlements.py scripts/strategy_lab/day38_billing_preview_acceptance.py
+      - name: Internal cap/idempotency/owner-free tests plus Day35-37 and prior research regression
+        run: |
+          PYTHONPATH=src:tests:. python -m pytest -q tests/test_strategy_lab_compute_entitlements.py tests/test_strategy_lab_customer_results.py tests/test_strategy_lab_tenant_vault.py tests/test_strategy_lab_customer_intake.py tests/test_strategy_lab_goldthinker_handoff.py tests/test_strategy_lab_owner_dashboard.py tests/test_strategy_lab_batch_queue.py tests/test_strategy_lab_evidence_rating.py tests/test_strategy_lab_report_contract.py tests/test_strategy_lab_oos_protocol.py tests/test_strategy_lab_regimes.py
+      - name: Emit owner preview meter and payment blocker record
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day38_billing_preview_acceptance.py
+      - name: Real read-only original history double-replay and 83 untested register
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day34_private_handoff_acceptance.py
+      - name: Enforce original Day38 true external sandbox gate remains BLOCKED
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("artifacts/strategy_lab/day38/billing_preview_acceptance.json").read_text())
+          r=json.loads(Path("artifacts/strategy_lab/day34_handoff_acceptance.json").read_text())
+          assert p["status"]=="PARTIAL_EXTERNAL_PAYMENT_BLOCKED"
+          assert p["owner_billing_exemption_preview_test"]=="PASS"
+          assert not p["real_provider_connected"] and p["real_sandbox_payment"]=="NOT_RUN"
+          assert p["go_live_allowed"] is False and not p["real_customer_subscription_price_set"]
+          assert r["status"]=="PASS" and r["original_untested_gold_edge_sources"]==83
+          assert r["real_qualifying_strategy_exports"]==0
+          assert len(r["source_bigquery_job_ids"])==2
+          print("B11 partial preview meter only. Actual sandbox transaction never simulated as real.")
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day38-actual-meter-partial-sandbox-blocker
+          path: |
+            artifacts/strategy_lab/day38/
+            artifacts/strategy_lab/day34_handoff_acceptance.json
+          retention-days: 90
