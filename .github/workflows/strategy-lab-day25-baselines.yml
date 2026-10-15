@@ -7,6 +7,7 @@ on:
       - src/aidy/strategy_lab_baselines_stress.py
       - tests/test_strategy_lab_baselines_stress.py
       - scripts/strategy_lab/day25_baselines_cost_stress_acceptance.py
+      - research/strategy_lab/fixtures/day25_illustrative_two_window_bidask_quotes.json
       - docs/strategy-lab-day25-baselines-and-cost-stress.md
       - .github/workflows/strategy-lab-day25-baselines.yml
 
