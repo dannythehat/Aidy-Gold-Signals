@@ -10,9 +10,15 @@ import json
 import os
 from datetime import UTC, datetime
 from pathlib import Path
+
 import pandas as pd
+
 from aidy.strategy_lab_s010_backtest import (
-    BASE, ORIGINAL_LEVERAGE, STRESS, STARTING_USD, simulate,
+    BASE,
+    ORIGINAL_LEVERAGE,
+    STARTING_USD,
+    STRESS,
+    simulate,
 )
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "artifacts/strategy_lab/s010_paid_customer_example"
@@ -198,7 +204,7 @@ def main()->int:
             "unlevered_ending_usd":low["ending_marked_equity_usd"],
         },sort_keys=True),flush=True)
         return 0
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - mandatory archived blocker, no fake PASS
         blockers["error_type"]=type(exc).__name__
         blockers["error"]=str(exc)[:380]
         (OUT/"blocked_result.json").write_text(
