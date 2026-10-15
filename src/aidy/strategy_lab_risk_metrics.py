@@ -11,7 +11,6 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from decimal import Decimal
-from hashlib import sha256
 from pathlib import Path
 from urllib.parse import quote
 
@@ -249,14 +248,11 @@ def compute_ledger_metrics(
         v = journal._rebuild(records[:i+1])
         last_view = v
         if i > 0:
-            if v.equity_usd > equity_peak:
-                equity_peak = v.equity_usd
+            equity_peak = max(equity_peak, v.equity_usd)
             dd = equity_peak - v.equity_usd
             pct = dd / equity_peak * Decimal(100)
-            if dd > max_dd_usd:
-                max_dd_usd = dd
-            if pct > max_dd_pct:
-                max_dd_pct = pct
+            max_dd_usd = max(max_dd_usd, dd)
+            max_dd_pct = max(max_dd_pct, pct)
 
     finalize_pending()
     if last_view is None or trade is not None or last_view.open_positions:
