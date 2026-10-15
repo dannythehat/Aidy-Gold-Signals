@@ -21,11 +21,10 @@ The original source, licence and runner qualification controls remain separate. 
 
 No real customer has provided consent. Never infer GoldThinker live/paper trade capability, Elite 20, company revenue, research-qualified GREEN results, or subscription permission from this component. Do not test original 83 candidate strategies for profit until the complete 40-day build and owner audit.
 
-## Evidence gate
+## Audited scoped acceptance — 15 October 2026
 
-Implementation source PR, test CI and semantic gate must all PASS and be merged to protected main before Day37 is called scoped technical pass. Stage owner acceptance / production deployment remain distinct.
-
-- PR / merge: PENDING
-- Scoped CI, total tests and actual source replay: PENDING
-- Authenticated production customer HTTP portal: NOT BUILT
-- Owner B10 stage approval: NOT GIVEN
+- [Day37 original security/source CI 38724913514](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38724913514) **283 tests PASS**, strict Ruff/compile, private two-user isolation and six cross-tenant export attacks rejected; authenticated ZIP replay byte-identical. Original read-only XAUUSD BID historical source replayed twice by original Day34 acceptance with 83 candidates still untested and 0 real qualification exports.
+- First CI attempt failed Ruff B023 due test-only late-bound lambda closures; fixed, rerun then uncovered report version list sorting by random identifiers; fixed to sort original submission versions. These were real gate failures, not hidden.
+- Original secure customer result export remains synthetic-only or research-blocked; no public site or customer P&L invented.
+- [PR #303](https://github.com/dannythehat/Aidy-Gold-Signals/pull/303) is source for the implementation. Evidence semantic gate and protected-main merge must be verified again after this documentation commit.
+- No full B10 owner stage acceptance, public deployment, actual API ingress or independent funded pilot.
