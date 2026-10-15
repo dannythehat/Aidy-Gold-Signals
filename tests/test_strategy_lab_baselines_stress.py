@@ -66,7 +66,6 @@ def test_real_sqlite_day19_account_reference_matches_baseline_and_stress(tmp_pat
     assert not report.genuine_strategy_alpha_qualified
     assert not report.independent_strategy_benchmark_completed
     assert not report.native_broker_execution_verified
-    assert report.to_json() == compare(example(tmp_path/"again")).to_json() if False else True
 
 
 def test_each_cost_component_has_one_unambiguous_source(tmp_path):
