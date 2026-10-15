@@ -12,7 +12,6 @@ import io
 import json
 import re
 import secrets
-import sqlite3
 import zipfile
 
 from aidy.strategy_lab_tenant_vault import AccessDenied, TenantVault, _canonical, _open_db
