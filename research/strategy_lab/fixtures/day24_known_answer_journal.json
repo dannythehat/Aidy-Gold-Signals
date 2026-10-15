@@ -1,0 +1,204 @@
+{
+  "schema": "aidy.day24.known_answer.v1",
+  "source_type": "INTERNAL_SYNTHETIC_RESEARCH_FIXTURE_NOT_TRADING",
+  "broker_source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "ounces_per_lot": "1",
+  "events": [
+    {
+      "key": "capital",
+      "at_utc": "2026-09-30T11:00:00Z",
+      "kind": "deposit",
+      "data": {
+        "usd": "10000.00"
+      }
+    },
+    {
+      "key": "mark_open_1",
+      "at_utc": "2026-09-30T11:01:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "100.00",
+        "ask": "100.00"
+      }
+    },
+    {
+      "key": "open_1",
+      "at_utc": "2026-09-30T11:01:00Z",
+      "kind": "open",
+      "data": {
+        "id": "research_trade_1",
+        "direction": "long",
+        "price": "100.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "mark_close_1",
+      "at_utc": "2026-09-30T11:02:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "110.00",
+        "ask": "110.00"
+      }
+    },
+    {
+      "key": "close_1",
+      "at_utc": "2026-09-30T11:02:00Z",
+      "kind": "close",
+      "data": {
+        "id": "research_trade_1",
+        "price": "110.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "charge_1",
+      "at_utc": "2026-09-30T11:02:00Z",
+      "kind": "commission",
+      "data": {
+        "usd": "-0.50"
+      }
+    },
+    {
+      "key": "mark_open_2",
+      "at_utc": "2026-09-30T11:03:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "100.00",
+        "ask": "100.00"
+      }
+    },
+    {
+      "key": "open_2",
+      "at_utc": "2026-09-30T11:03:00Z",
+      "kind": "open",
+      "data": {
+        "id": "research_trade_2",
+        "direction": "long",
+        "price": "100.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "mark_close_2",
+      "at_utc": "2026-09-30T11:04:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "95.00",
+        "ask": "95.00"
+      }
+    },
+    {
+      "key": "close_2",
+      "at_utc": "2026-09-30T11:04:00Z",
+      "kind": "close",
+      "data": {
+        "id": "research_trade_2",
+        "price": "95.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "charge_2",
+      "at_utc": "2026-09-30T11:04:00Z",
+      "kind": "commission",
+      "data": {
+        "usd": "-0.50"
+      }
+    },
+    {
+      "key": "mark_open_3",
+      "at_utc": "2026-10-01T11:01:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "100.00",
+        "ask": "100.00"
+      }
+    },
+    {
+      "key": "open_3",
+      "at_utc": "2026-10-01T11:01:00Z",
+      "kind": "open",
+      "data": {
+        "id": "research_trade_3",
+        "direction": "long",
+        "price": "100.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "mark_close_3",
+      "at_utc": "2026-10-01T11:02:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "115.00",
+        "ask": "115.00"
+      }
+    },
+    {
+      "key": "close_3",
+      "at_utc": "2026-10-01T11:02:00Z",
+      "kind": "close",
+      "data": {
+        "id": "research_trade_3",
+        "price": "115.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "charge_3",
+      "at_utc": "2026-10-01T11:02:00Z",
+      "kind": "commission",
+      "data": {
+        "usd": "-0.50"
+      }
+    },
+    {
+      "key": "mark_open_4",
+      "at_utc": "2026-10-01T11:03:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "100.00",
+        "ask": "100.00"
+      }
+    },
+    {
+      "key": "open_4",
+      "at_utc": "2026-10-01T11:03:00Z",
+      "kind": "open",
+      "data": {
+        "id": "research_trade_4",
+        "direction": "long",
+        "price": "100.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "mark_close_4",
+      "at_utc": "2026-10-01T11:04:00Z",
+      "kind": "mark",
+      "data": {
+        "bid": "95.00",
+        "ask": "95.00"
+      }
+    },
+    {
+      "key": "close_4",
+      "at_utc": "2026-10-01T11:04:00Z",
+      "kind": "close",
+      "data": {
+        "id": "research_trade_4",
+        "price": "95.00",
+        "lots": "1"
+      }
+    },
+    {
+      "key": "charge_4",
+      "at_utc": "2026-10-01T11:04:00Z",
+      "kind": "commission",
+      "data": {
+        "usd": "-0.50"
+      }
+    }
+  ]
+}
