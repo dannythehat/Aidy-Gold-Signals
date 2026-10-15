@@ -17,7 +17,7 @@ from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from aidy.strategy_lab_operational_controls import OperationalControls, OperationsRejected
-from aidy.strategy_lab_tenant_vault import AccessDenied, TenantVault
+from aidy.strategy_lab_tenant_vault import AccessDenied
 
 MAGIC = b"AIDY-SQLITE-SNAPSHOT-V1\n"
 AAD = b"AIDY|DAY39|ENCRYPTED_SNAPSHOT|V1"
