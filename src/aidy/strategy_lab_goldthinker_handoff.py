@@ -11,11 +11,13 @@ import hashlib
 import hmac
 import json
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from decimal import Decimal
 
 from aidy.strategy_lab_evidence_rating import (
-    EvidenceBasis, FactorFinding, rate_strategy_evidence,
+    EvidenceBasis,
+    FactorFinding,
+    rate_strategy_evidence,
 )
 
 SCHEMA = "aidy.strategy_lab.goldthinker_review_handoff.v1"
@@ -145,7 +147,7 @@ def evaluate_receipt(receipt: dict, server_key: bytes) -> dict:
         raise ValueError("untrusted or modified evidence receipt")
     original = receipt["evidence"]
     if not isinstance(original, dict):
-        raise ValueError("malformed attested evidence body")
+        raise TypeError("malformed attested evidence body")
     basis = original["evidence_basis"]
     source = EvidenceBasis(**{
         **basis,
