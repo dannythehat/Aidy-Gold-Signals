@@ -21,7 +21,7 @@ Day29 records a deterministic original-receipt-derived `run_id` and `canonical_r
 ### Acceptance and test targets
 
 - The Day24 synthetic known answer starts at `$10,000`, produces actual replayed trade amounts `+$9.50, -$5.50, +$14.50, -$5.50`, costs `-$2.00`, gross `+$15.00`, net `+$13.00`, ending `$10,013`. These are **toy cash ledger samples only**, not gold trading profitability.
-- Sample as-of `2026-10-01T11:04:00Z`: realised Day `+$9.00`; Week `+$9.00`; Month `+$9.00`; Year `+$13.00`; All Time `+$13.00`, with each exact number recalculated from the original journal's four synthetic trades and labelled as such.
+- Sample as-of `2026-10-01T11:04:00Z`: realised Day `+$9.00`; Week `+$13.00`; Month `+$9.00`; Year `+$13.00`; All Time `+$13.00`, with each exact number recalculated from the original journal's four synthetic trades and labelled as such.
 - The same example retains `GoldThinker name = null`, `join = false`, `published = false`, `forward paper P&L = null`, `Elite20 combined P&L = null`, nine-factor evidence score `null`, ORANGE, actual PDF/CSV/charts `DAY30_NOT_BUILT`.
 - Adversarial tests must fail on changed ledger cash total, costs, closed trades, duplicate trade ID, bogus journal or cross-stage SHA, attempted GREEN score, future-dated closings, non-UTC as-of, tampered paper money/publication flags and missing provenance. Original Day24–28 regression suite runs in CI as well.
 
