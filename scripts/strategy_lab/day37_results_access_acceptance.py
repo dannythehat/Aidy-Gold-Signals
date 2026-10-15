@@ -55,13 +55,13 @@ def main() -> None:
         for i in (0, 1):
             outsider, _tenant, _job, _file = accounts[i]
             other = accounts[1 - i]
-            for attack in [
-                lambda: results.job_history(outsider, other[2]),
-                lambda: results.download(outsider, other[3]),
-                lambda: results.export_job_zip(outsider, other[2]),
+            for check, target in [
+                (results.job_history, other[2]),
+                (results.download, other[3]),
+                (results.export_job_zip, other[2]),
             ]:
                 try:
-                    attack()
+                    check(outsider, target)
                 except AccessDenied:
                     rejected += 1
         assert rejected == 6
