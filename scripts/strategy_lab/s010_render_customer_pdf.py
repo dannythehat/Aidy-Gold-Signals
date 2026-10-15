@@ -13,18 +13,16 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import pandas as pd
+from aidy.strategy_lab_s010_backtest import STARTING_USD
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
-from aidy.strategy_lab_s010_backtest import STARTING_USD
 from reportlab.platypus import (
     BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer,
-    Table, TableStyle, PageBreak, Image, KeepTogether, HRFlowable,
+    Table, TableStyle, PageBreak, Image, HRFlowable,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -366,7 +364,7 @@ def run():
 
     def footer(canvas,doc):
         canvas.saveState()
-        width,height=A4
+        width,_=A4
         canvas.setStrokeColor(PALE)
         canvas.line(19*mm,15*mm,width-19*mm,15*mm)
         canvas.setFont("Helvetica",7)
