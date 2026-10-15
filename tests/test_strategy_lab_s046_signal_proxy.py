@@ -16,7 +16,7 @@ START = datetime(2025, 1, 7, tzinfo=UTC)
 def bar(minute, *, high="101", low="99", close="100"):
     at = START + timedelta(minutes=minute)
     return ClosedBar(
-        at, at + timedelta(minutes=5), Decimal("100"),
+        at, at + timedelta(minutes=5), Decimal(100),
         Decimal(high), Decimal(low), Decimal(close),
     )
 
