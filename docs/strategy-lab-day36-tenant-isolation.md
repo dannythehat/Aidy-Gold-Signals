@@ -20,11 +20,17 @@ Production requires separately deployed OIDC/MFA or equivalent identity, abuse/r
 
 No hosted customer tenancy, no real-money trading, no paper accounts, no AIDY-generated profitability verdicts, no customer billing, no verified third-party source rights and no GoldThinker Elite20 have been deployed. Keep all 83 original candidates untouched pending full programme plus independent audit.
 
-## Acceptance status
+## Audited scoped acceptance (15 October 2026)
 
-Scoped Day36 completion remains **PENDING** until actual GitHub CI, original real history/source checks, evidence gate and protected-main merge can be verified. A synthetic two-user local implementation does not automatically establish a secure public beta or complete owner-accepted B10 stage.
+**Original implementation CI PASS** at source head ca88f83fe7f7839c08ccf6ed37d96a7b3519503c:
+- [Day36 actual security and source CI run 38723690441](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38723690441): **272 automated tests PASS**, strict Ruff and Python compile PASS, two-user synthetic private encrypted vault probe PASS, source-immutability acceptance PASS; actual original Day34 read-only BigQuery historical gold source replayed twice and original 83 Gold Edge candidates **NOT** profitability-tested.
+- [Evidence Semantic Change Gate 38723690472](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38723690472): PASS.
+- One initial attempt [38723557373](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38723557373) correctly FAILED strict lint for a typing import; it was corrected before this PASS.
+- Unrelated broad Day53 worker/adapter checks on the same head returned **FAIL**, including a Python test-import/path collection failure in the worker workflow. They are NOT represented as passing, and must be tracked independently rather than changing unrelated production code under B10 scope.
+- Original secure source SHA/P&L guards still report 83 untested strategies, 0 independently evidence-qualified, no paper/live/customer deployment. The two-user demonstration is synthetic test accounts only.
 
-- Implementation PR: PENDING
-- Original CI / merged SHA: PENDING
-- Real customer hosted penetration test: NOT RUN
-- Owner stage acceptance and public deployment: NOT APPROVED
+**Scope truth:** Dedicated original Day36 checks pass. This does not certify a production-hosted customer authentication service, actual malware sandbox, physical erasure from backups, multi-node ops, a live tenant service or completion of full B10 customer-product stage.
+
+**PR:** [#302 — Day36 private tenant privacy build](https://github.com/dannythehat/Aidy-Gold-Signals/pull/302).
+**Protected-main merge:** PENDING verification after final documentation CI.
+**Owner B10 stage sign-off / launch:** NOT APPROVED.
