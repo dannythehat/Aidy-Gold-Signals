@@ -10,10 +10,8 @@ import json
 from pathlib import Path
 
 from aidy.strategy_lab_report_exports import build_export_bundle, verify_export_bundle
-from scripts.strategy_lab.day29_canonical_report_acceptance import (
-    OUT as DAY29_OUT,
-    main as day29_main,
-)
+from scripts.strategy_lab.day29_canonical_report_acceptance import OUT as DAY29_OUT
+from scripts.strategy_lab.day29_canonical_report_acceptance import main as day29_main
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "artifacts/strategy_lab/day30"
