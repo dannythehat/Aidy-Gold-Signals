@@ -182,7 +182,7 @@ def _classify(bars: tuple[ClosedBar, ...], index: int,
         trend = "transitional"
     bps = sum((
         abs(cur - prev) / prev * Decimal(10000)
-        for prev, cur in zip(closes[:-1], closes[1:], strict=False)
+        for prev, cur in pairwise(closes)
     ), Decimal(0)) / Decimal(n)
     vol = (
         "low" if bps < policy.low_vol_mean_abs_return_bps
