@@ -1,0 +1,42 @@
+name: Strategy Lab Day25 Matched Baselines and Cost Stress
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_baselines_stress.py
+      - tests/test_strategy_lab_baselines_stress.py
+      - scripts/strategy_lab/day25_baselines_cost_stress_acceptance.py
+      - research/strategy_lab/fixtures/day25_illustrative_two_window_bidask_quotes.json
+      - docs/strategy-lab-day25-baselines-and-cost-stress.md
+      - .github/workflows/strategy-lab-day25-baselines.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test-day25-comparators:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install exact gate dependencies
+        run: python -m pip install --quiet pytest ruff
+      - name: Compile and strict Ruff
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_baselines_stress.py scripts/strategy_lab/day25_baselines_cost_stress_acceptance.py tests/test_strategy_lab_baselines_stress.py
+          ruff check src/aidy/strategy_lab_baselines_stress.py scripts/strategy_lab/day25_baselines_cost_stress_acceptance.py tests/test_strategy_lab_baselines_stress.py
+      - name: Day12/13/17/18/19/24 regression and Day25 matched exposure failure tests
+        run: |
+          PYTHONPATH=src:tests:. python -m pytest -q tests/test_strategy_lab_baselines_stress.py tests/test_strategy_lab_bidask_execution.py tests/test_strategy_lab_fees_funding.py tests/test_strategy_lab_cash_ledger.py tests/test_strategy_lab_deterministic_replay.py tests/test_strategy_lab_reference_run.py tests/test_strategy_lab_risk_metrics.py
+      - name: Execute synthetic Day19 SQLite evidence and matched baseline cost stress
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day25_baselines_cost_stress_acceptance.py
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day25-two-sqlite-source-pinned-matched-exposure-cost-stress
+          path: artifacts/strategy_lab/day25_baselines_cost_stress_acceptance.json
+          retention-days: 90
