@@ -6,11 +6,6 @@ from dataclasses import replace
 
 import pytest
 
-from aidy.strategy_lab_evidence_rating import (
-    FACTOR_WEIGHTS,
-    EvidenceBasis,
-    FactorFinding,
-)
 from aidy.strategy_lab_goldthinker_handoff import (
     ResearchEvidence,
     check_handoff,
@@ -138,10 +133,13 @@ def test_copying_external_claimed_qualification_flags_unsupported():
 
 
 def test_nonpositive_edge_cannot_be_transferred_even_when_nine_factors_perfect():
+    from decimal import Decimal
+
     candidate = qualified(test_fixture=False)
-    basis = replace(candidate.evidence_basis, observed_benchmark_edge_usd=0)
-    with pytest.raises(ValueError):
-        issue_internal_receipt(replace(candidate, evidence_basis=basis), KEY)
+    basis = replace(candidate.evidence_basis, observed_benchmark_edge_usd=Decimal(0))
+    result = evaluate_receipt(sign(replace(candidate, evidence_basis=basis)), KEY)
+    assert result["research_rating"]["governance"] == "RED_REJECT"
+    assert not result["eligible_for_separate_human_review"]
 
 
 def test_unverified_review_rights_block_goldthinker_handoff():
