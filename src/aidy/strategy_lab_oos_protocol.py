@@ -105,7 +105,8 @@ class SealedOOS:
     This is an API/operational seal, NOT an OS-level security sandbox against
     a researcher with raw warehouse privileges; production isolation is future.
     """
-    def __init__(self, history: ReadResult, policy: OOSPolicy = OOSPolicy()) -> None:
+    def __init__(self, history: ReadResult, policy: OOSPolicy | None = None) -> None:
+        policy = policy if policy is not None else OOSPolicy()
         policy.validate()
         bars = history.bars
         if (history.provenance != "retrospective_history" or history.pit_eligible
@@ -164,12 +165,12 @@ class SealedOOS:
             cutoff = val[0].decision_at_utc
             from datetime import datetime
 
-            cutoff_at = datetime.fromisoformat(cutoff.replace("Z", "+00:00")) - (
+            cutoff_at = datetime.fromisoformat(cutoff) - (
                 self.policy.embargo_bars * STEP
             )
             eligible = tuple(x for x in dev[:start] if
                              datetime.fromisoformat(
-                                 x.outcome_available_at_utc.replace("Z", "+00:00")
+                                 x.outcome_available_at_utc
                              ) <= cutoff_at)
             if len(eligible) < self.policy.minimum_training:
                 raise ValueError("purged fold no longer has adequate train observations")
