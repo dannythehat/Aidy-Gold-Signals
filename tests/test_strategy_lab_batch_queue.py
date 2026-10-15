@@ -7,8 +7,11 @@ from dataclasses import replace
 import pytest
 
 from aidy.strategy_lab_batch_queue import (
-    MAX_ATTEMPTS, MAX_INFLIGHT, MAX_NONTERMINAL, SYNTHETIC,
-    Experiment, ResearchQueue,
+    MAX_ATTEMPTS,
+    MAX_INFLIGHT,
+    MAX_NONTERMINAL,
+    SYNTHETIC,
+    ResearchQueue,
 )
 from scripts.strategy_lab.day32_100_job_acceptance import exercise, outcome, spec
 
