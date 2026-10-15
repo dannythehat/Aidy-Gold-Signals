@@ -12,7 +12,7 @@ import json
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 SCHEMA = "aidy.strategy_lab.private_batch_queue.v1"
 SYNTHETIC = "INTERNAL_SYNTHETIC_DIAGNOSTIC_ONLY"
@@ -136,7 +136,7 @@ class ResearchQueue:
         if version == 0:
             self.conn.execute("PRAGMA user_version=32")
 
-    def __enter__(self) -> ResearchQueue:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:
