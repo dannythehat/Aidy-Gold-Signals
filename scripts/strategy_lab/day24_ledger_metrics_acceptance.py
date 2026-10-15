@@ -70,7 +70,7 @@ def main() -> int:
                     or report.final_cash_usd != Decimal("10013.00")
                     or report.final_equity_usd != Decimal("10013.00")
                     or report.expectancy_net_usd_per_trade != Decimal("3.25")
-                    or report.win_rate_percent != Decimal("50")
+                    or report.win_rate_percent != Decimal(50)
                     or report.profit_factor != Decimal(24) / Decimal(11)
                     or report.max_observed_drawdown_usd != Decimal("6.00")
                     or [(m.month_utc, m.closed_trades, m.net_usd) for m in report.monthly] != [
