@@ -10,7 +10,10 @@ import json
 from pathlib import Path
 
 from aidy.strategy_lab_customer_intake import (
-    RULE_FIELDS, IntakeRejected, prepare_intake, verify_draft,
+    RULE_FIELDS,
+    IntakeRejected,
+    prepare_intake,
+    verify_draft,
 )
 
 ROOT = Path(__file__).resolve().parents[2]
