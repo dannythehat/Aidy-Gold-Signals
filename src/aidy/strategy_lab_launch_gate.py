@@ -1,4 +1,4 @@
-"""Day40 immutable readiness decision: no synthetic pilot can be promoted."""
+"""Day40: advisory checklist is never proof of consent, a sandbox charge or launch."""
 from __future__ import annotations
 
 import hashlib
@@ -19,14 +19,20 @@ def evaluate_launch(evidence: dict) -> dict:
         raise ValueError("Missing or extra hard launch gates")
     if any(type(value) is not bool for value in evidence.values()):
         raise ValueError("Hard gates require independently evidenced booleans")
-    # No incoming 'test fixture passed' may turn into trusted real-world proof.
+    # Raw booleans are assertions, NOT authenticated evidence receipts. Even every
+    # value=True is untrusted and cannot promote a research build to GO.
     blockers = sorted(name for name in GATES if evidence[name] is False)
+    unverified = sorted(name for name in GATES if evidence[name] is True)
     report = {
-        "status": "GO" if not blockers else "NO_GO",
-        "original_40_day_program_complete": not blockers,
+        "status": "NO_GO",
+        "original_40_day_program_complete": False,
+        "unverified_assertions": unverified,
+        "verified_external_evidence_count": 0,
+        "evidence_origin": "UNTRUSTED_BOOLEAN_CHECKLIST",
         "missing_gates": blockers,
         "automated_trade_or_public_launch_authority": False,
         "owner_explicit_deployment_approval_separate": True,
+        "trusted_external_receipt_verifier_implemented": False,
     }
     report["sha256"] = hashlib.sha256(json.dumps(
         report, sort_keys=True, separators=(",", ":"),
