@@ -1,0 +1,98 @@
+name: Strategy Lab Final Security Gate Hardening
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_launch_gate.py
+      - src/aidy/strategy_lab_encrypted_snapshot.py
+      - tests/test_strategy_lab_launch_gate.py
+      - tests/test_strategy_lab_encrypted_snapshot.py
+      - scripts/strategy_lab/day39_encrypted_restore_drill.py
+      - docs/strategy-lab-day39-day40-hardening.md
+      - .github/workflows/strategy-lab-day39-day40-hardening.yml
+
+permissions:
+  contents: read
+
+jobs:
+  encrypted-fixture-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install strict tests and unchanged original gold-history source adapter
+        run: python -m pip install --quiet pytest ruff 'cryptography>=43,<47' 'google-cloud-bigquery>=3.42,<4'
+      - name: Strict syntax lint for actual source, original hardening tests, fixtures
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_encrypted_snapshot.py src/aidy/strategy_lab_launch_gate.py tests/test_strategy_lab_encrypted_snapshot.py tests/test_strategy_lab_launch_gate.py scripts/strategy_lab/day39_encrypted_restore_drill.py
+          ruff check src/aidy/strategy_lab_encrypted_snapshot.py src/aidy/strategy_lab_launch_gate.py tests/test_strategy_lab_encrypted_snapshot.py tests/test_strategy_lab_launch_gate.py scripts/strategy_lab/day39_encrypted_restore_drill.py
+      - name: Genuine cross-tenant encrypted restore and untrusted launch assertions plus Days28-40 regressions
+        run: |
+          PYTHONPATH=src:tests:. python -m pytest -q tests/test_strategy_lab_encrypted_snapshot.py tests/test_strategy_lab_launch_gate.py tests/test_strategy_lab_operational_controls.py tests/test_strategy_lab_compute_entitlements.py tests/test_strategy_lab_customer_results.py tests/test_strategy_lab_tenant_vault.py tests/test_strategy_lab_customer_intake.py tests/test_strategy_lab_goldthinker_handoff.py tests/test_strategy_lab_owner_dashboard.py tests/test_strategy_lab_batch_queue.py tests/test_strategy_lab_evidence_rating.py tests/test_strategy_lab_report_contract.py tests/test_strategy_lab_oos_protocol.py tests/test_strategy_lab_regimes.py
+      - name: Original qualified BigQuery XAUUSD historical replay and untouched 83
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day34_private_handoff_acceptance.py
+      - name: Create only encrypted synthetic private data artifact; NEVER upload source SQLite
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day39_encrypted_restore_drill.py make
+      - name: Prevent forged Go status and real-strategy claims
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("artifacts/strategy_lab/day34_handoff_acceptance.json").read_text())
+          m=json.loads(Path("artifacts/strategy_lab/day39/remote_runner_manifest.json").read_text())
+          assert p["status"]=="PASS" and p["original_untested_gold_edge_sources"]==83
+          assert p["real_systems_tested_for_profit"]==p["real_qualifying_strategy_exports"]==0
+          assert len(p["source_bigquery_job_ids"])==2
+          assert not m["production_remote_restore_certified"]
+          assert not Path("artifacts/strategy_lab/day39/synthetic_source.sqlite").exists()
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aidy-day39-encrypted-synthetic-only
+          path: |
+            artifacts/strategy_lab/day39/remote_runner_fixture.enc
+            artifacts/strategy_lab/day39/remote_runner_manifest.json
+          retention-days: 30
+          if-no-files-found: error
+
+  independent-runner-restore:
+    needs: encrypted-fixture-export
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install cryptographic restore dependency
+        run: python -m pip install --quiet 'cryptography>=43,<47'
+      - uses: actions/download-artifact@v4
+        with:
+          name: aidy-day39-encrypted-synthetic-only
+          path: artifacts/strategy_lab/day39/
+      - name: Restore and cross-tenant proof on INDEPENDENT runner from downloaded encrypted bytes
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day39_encrypted_restore_drill.py restore
+      - name: Confirm this is only a synthetic pilot prerequisite; production recovery still not tested
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=json.loads(Path("artifacts/strategy_lab/day39/synthetic_remote_restore_result.json").read_text())
+          assert p["status"]=="PASS_SYNTHETIC_REMOTE_ARTIFACT_RESTORE"
+          assert p["restored_private_drafts"]==2 and p["cross_tenant_attacks_rejected"]==2
+          assert p["production_remote_restore_certified"] is False
+          assert p["actual_customer_pilot"] is False and p["real_sandbox_payment"] is False
+          assert p["day38_39_40_original_acceptance"]=="BLOCKED"
+          print("Cross-runner encrypted synthetic artifact verified; no false production DR.")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: day39-independently-restored-synthetic-evidence
+          path: artifacts/strategy_lab/day39/synthetic_remote_restore_result.json
+          retention-days: 30
