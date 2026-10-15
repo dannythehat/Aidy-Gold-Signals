@@ -88,8 +88,7 @@ def main() -> int:
             "status": "BLOCKED", "error_type": type(exc).__name__,
             "message": str(exc)[:400], "customer_website_published": False,
         }
-    ACCEPT.write_text(json.dumps(proof, indent=2, sort_keys=True)+"
-",
+    ACCEPT.write_text(json.dumps(proof, indent=2, sort_keys=True)+"\n",
                       encoding="utf-8")
     print(json.dumps(proof, sort_keys=True))
     return 0 if proof["status"] == "PASS" else 1
