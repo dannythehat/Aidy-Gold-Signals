@@ -67,6 +67,7 @@ def exercise(path: Path) -> tuple[dict, list[dict]]:
     if fenced != MAX_INFLIGHT:
         raise ValueError("stale crash completion was permitted")
     failures = rounds = 0
+    previously_failed: set[str] = set()
     peak_workers = peak_family = 0
     successes_since_restart = 0
     while q.counts()["SUCCEEDED"] < 100:
@@ -86,11 +87,12 @@ def exercise(path: Path) -> tuple[dict, list[dict]]:
         families = [job["source"]["family_id"] for job in ready]
         peak_family = max(peak_family, *(families.count(k) for k in set(families)))
         for job in ready:
-            if failures < 6:
+            if failures < 6 and job["job_id"] not in previously_failed:
                 if q.fail(job["job_id"], job["lease_token"], now,
                           "SYNTHETIC_EXECUTION_ERROR") != "QUEUED":
                     raise ValueError("retry exhausted prematurely")
                 failures += 1
+                previously_failed.add(job["job_id"])
             else:
                 q.finish(job["job_id"], job["lease_token"], now,
                          outcome(job["job_id"]))
