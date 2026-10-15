@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from dataclasses import asdict
 from hashlib import sha256
 from pathlib import Path
 
@@ -35,7 +34,7 @@ def _seal_event(prev_sha: str, key: str, kind: str, payload: str) -> str:
 class TrialRegistry:
     def __init__(self, path: Path) -> None:
         if not isinstance(path, Path):
-            raise ValueError("trial registry requires on-disk SQLite path")
+            raise ValueError("trial registry requires on-disk SQLite path")  # noqa: TRY004
         self.path = path
 
     def initialize(self) -> None:
@@ -85,7 +84,7 @@ class TrialRegistry:
                 raise ValueError("tampered research trial event SHA256 chain")
             payload = json.loads(row["payload_json"])
             if not isinstance(payload, dict):
-                raise ValueError("untrusted trial payload")
+                raise ValueError("untrusted trial payload")  # noqa: TRY004
             kind, key = row["kind"], row["trial_key"]
             if kind == "register":
                 if key in seen:
