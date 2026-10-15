@@ -7,10 +7,11 @@ established here. The two cancellation settings are explicit research choices
 """
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
+from itertools import pairwise
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Iterable
 
 from aidy.strategy_lab_history_reader import ClosedBar
 
@@ -51,7 +52,7 @@ def scan_completed_session_sweeps(bars: Iterable[ClosedBar]) -> tuple[Signal, ..
             or bar.available_at_utc != bar.open_time_utc + timedelta(minutes=5)
             for bar in seq)
             or any(y.open_time_utc - x.open_time_utc != timedelta(minutes=5)
-                   for x, y in zip(seq, seq[1:]))):
+                   for x, y in pairwise(seq))):
         raise ValueError("Only continuous, fully closed, same-day UTC BID M5 allowed")
     start_day = datetime(day.year, day.month, day.day, tzinfo=UTC)
     signals: list[Signal] = []
@@ -85,7 +86,7 @@ def scan_completed_session_sweeps(bars: Iterable[ClosedBar]) -> tuple[Signal, ..
                 elif bar.close > hi:  # Explicit cancel-after-breakout mode
                     high_active = False
             if low_active:
-                if bar.low < lo and lo < bar.close < hi:
+                if bar.low < lo < bar.close < hi:
                     signals.append(Signal(
                         "S046", label, "BULLISH", str(lo),
                         bar.open_time_utc.isoformat(),
