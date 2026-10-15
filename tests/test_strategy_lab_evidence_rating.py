@@ -71,3 +71,101 @@ def test_verified_negative_expectancy_or_benchmark_vetoes_green():
 def test_bad_evidence_cannot_silently_claim_full_qualifications():
     with pytest.raises(ValueError, match="synthetic or bid-only"):
         rate_strategy_evidence(replace(example(), origin="retrospective_bid_only"), full())
+
+
+@pytest.mark.parametrize(("field", "replacement"), [
+    ("actual_bid_ask_costed_trades_independently_replayed", False),
+    ("chronological_oos_trading_independently_verified", False),
+    ("fair_benchmark_independently_verified", False),
+    ("full_trial_family_independently_registered", False),
+    ("historical_source_independently_verified", False),
+    ("verified_costed_trade_ledger_sha256", None),
+    ("oos_holdout_trial_tip_sha256", None),
+    ("fair_matched_benchmark_sha256", None),
+    ("original_run_sha256", None),
+    ("historical_trades", 29),
+    ("observed_net_expectancy_usd", None),
+    ("observed_benchmark_edge_usd", None),
+])
+def test_any_missing_genuine_qualification_denies_scoring(field, replacement):
+    result = rate_strategy_evidence(replace(example(), **{field: replacement}), full())
+    assert result.score_out_of_100 is None
+    assert not result.optimisation_suggestions_eligible
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("observed_net_expectancy_usd", Decimal("-0.01")),
+    ("observed_benchmark_edge_usd", Decimal("-2.00")),
+    ("independently_verified_unacceptable_risk", True),
+])
+def test_measured_economic_or_risk_failure_is_red_not_green(field, value):
+    r = rate_strategy_evidence(replace(example(), **{field: value}), full())
+    assert r.governance == "RED_REJECT"
+    assert r.veto_reasons and not r.optimisation_suggestions_eligible
+
+
+@pytest.mark.parametrize(("index", "awarded"), [
+    (0, 20), (1, 10), (3, 6), (4, 6), (8, 3),
+])
+def test_mandatory_key_green_factor_not_overridden_by_total(index, awarded):
+    points = list(WEIGHTS)
+    points[index] = awarded
+    r = rate_strategy_evidence(example(), full(tuple(points)))
+    assert r.score_out_of_100 is not None
+    assert r.governance != "GREEN_HIGH_PRIORITY"
+    assert not r.optimisation_suggestions_eligible
+
+
+def test_orange_and_red_hypothetical_complete_policy_examples():
+    orange = rate_strategy_evidence(example(), full((21, 11, 7, 7, 7, 6, 3, 3, 4)))
+    assert orange.score_out_of_100 == 69
+    assert orange.governance == "ORANGE_INVESTIGATE"
+    red = rate_strategy_evidence(example(), full((10, 5, 2, 2, 2, 2, 1, 1, 1)))
+    assert red.score_out_of_100 == 26
+    assert red.governance == "RED_REJECT"
+
+
+@pytest.mark.parametrize("invalid", [-1, 31, 7.5, True, None, Decimal(3)])
+def test_invalid_earned_points_cannot_be_counted(invalid):
+    factors = list(full())
+    factors[0] = replace(factors[0], awarded_points=invalid)
+    with pytest.raises(ValueError, match="bounded"):
+        rate_strategy_evidence(example(), tuple(factors))
+
+
+def test_unqualified_factor_with_non_null_data_fails_closed():
+    factors = list(full())
+    factors[3] = replace(factors[3], status="UNKNOWN", awarded_points=0)
+    with pytest.raises(ValueError, match="null"):
+        rate_strategy_evidence(example(), tuple(factors))
+
+
+def test_duplicate_or_missing_factor_and_duplicate_receipt_are_denied():
+    with pytest.raises(ValueError, match="exactly"):
+        rate_strategy_evidence(example(), full()[:-1])
+    rows = list(full())
+    rows[1] = replace(rows[1], factor=rows[0].factor)
+    with pytest.raises(ValueError, match="ordering"):
+        rate_strategy_evidence(example(), tuple(rows))
+    rows = list(full())
+    rows[1] = replace(rows[1], source_sha256=rows[0].source_sha256)
+    with pytest.raises(ValueError, match="independent"):
+        rate_strategy_evidence(example(), tuple(rows))
+
+
+@pytest.mark.parametrize(("field", "value"), [
+    ("historical_trades", True),
+    ("historical_trades", -2),
+    ("historical_source_independently_verified", 1),
+    ("historical_input_sha256", "bad"),
+    ("observed_net_expectancy_usd", Decimal("NaN")),
+    ("observed_benchmark_edge_usd", 3.1),
+])
+def test_invalid_input_origin_count_or_non_finite_economics_fails(field, value):
+    with pytest.raises(ValueError):
+        rate_strategy_evidence(replace(example(), **{field: value}), full())
+
+
+def test_zero_trades_cannot_report_real_net_returns():
+    with pytest.raises(ValueError, match="zero trades"):
+        rate_strategy_evidence(replace(example(), historical_trades=0), full())
