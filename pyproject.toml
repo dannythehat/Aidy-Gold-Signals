@@ -32,6 +32,9 @@ postgres-reference = [
 offline-pdf-research = [
   "pdfplumber>=0.11",
 ]
+strategy-lab-private-vault = [
+  "cryptography>=43,<47",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

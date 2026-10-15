@@ -1,0 +1,66 @@
+name: Strategy Lab Day36 Tenant Privacy Security
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/aidy/strategy_lab_tenant_vault.py'
+      - 'tests/test_strategy_lab_tenant_vault.py'
+      - 'scripts/strategy_lab/day36_tenant_security_acceptance.py'
+      - 'docs/strategy-lab-day36-tenant-isolation.md'
+      - '.github/workflows/strategy-lab-day36-tenant-isolation.yml'
+      - 'pyproject.toml'
+
+permissions:
+  contents: read
+
+jobs:
+  day36-two-user-privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install isolated security tests and unchanged original source adapter
+        run: python -m pip install --quiet pytest ruff 'cryptography>=43,<47' 'google-cloud-bigquery>=3.42,<4'
+      - name: Strict syntax and source security lint
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_tenant_vault.py tests/test_strategy_lab_tenant_vault.py scripts/strategy_lab/day36_tenant_security_acceptance.py
+          ruff check src/aidy/strategy_lab_tenant_vault.py tests/test_strategy_lab_tenant_vault.py scripts/strategy_lab/day36_tenant_security_acceptance.py
+      - name: Actual two-user and adversarial tenant tests plus prior Day35 and Day34 regression
+        run: |
+          PYTHONPATH=src:tests:. python -m pytest -q tests/test_strategy_lab_tenant_vault.py tests/test_strategy_lab_customer_intake.py tests/test_strategy_lab_goldthinker_handoff.py tests/test_strategy_lab_owner_dashboard.py tests/test_strategy_lab_batch_queue.py tests/test_strategy_lab_evidence_rating.py tests/test_strategy_lab_report_contract.py tests/test_strategy_lab_oos_protocol.py tests/test_strategy_lab_regimes.py
+      - name: Generate actual two-user isolation acceptance packet
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day36_tenant_security_acceptance.py
+      - name: Original real XAUUSD BID history and unchanged 83 candidates (NO strategy profit tests)
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day34_private_handoff_acceptance.py
+      - name: Fail closed if original qualification was invented
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          v=json.loads(Path("artifacts/strategy_lab/day36/tenant_acceptance.json").read_text())
+          p=json.loads(Path("artifacts/strategy_lab/day34_handoff_acceptance.json").read_text())
+          assert v["status"]=="SCOPED_SYNTHETIC_PASS"
+          assert v["tenants_created"]==2 and v["adversarial_access_checks_rejected"]==4
+          assert not v["authenticated_public_server_deployed"]
+          assert v["real_strategy_backtests_executed"]==0
+          assert p["status"]=="PASS"
+          assert p["original_untested_gold_edge_sources"]==83
+          assert p["real_systems_tested_for_profit"]==0
+          assert p["real_qualifying_strategy_exports"]==0
+          assert len(p["source_bigquery_job_ids"])==2
+          print("B10 Day36 scoped isolation & original research guardrails verified")
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day36-scoped-tenant-security-evidence
+          path: |
+            artifacts/strategy_lab/day36/
+            artifacts/strategy_lab/day34_handoff_acceptance.json
+          retention-days: 90
