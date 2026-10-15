@@ -41,6 +41,8 @@ def compare(inputs, **changes):
         "reference": reference, "profile": profile, "broker_source_bytes": broker,
         "quote_tape": tape, "source_candle_sha256": digest,
         "entry_signal_closed_at_utc": START, "exit_signal_closed_at_utc": END,
+        "naive_session_entry_closed_at_utc": START+timedelta(minutes=10),
+        "naive_session_exit_closed_at_utc": START+timedelta(minutes=15),
     }
     args.update(changes)
     return compare_day19_fixed_window(**args)
@@ -66,6 +68,13 @@ def test_real_sqlite_day19_account_reference_matches_baseline_and_stress(tmp_pat
     assert not report.genuine_strategy_alpha_qualified
     assert not report.independent_strategy_benchmark_completed
     assert not report.native_broker_execution_verified
+    assert report.scheduled_naive_same_session_tested
+    assert [s.independently_scheduled_same_session_long_net_usd
+            for s in report.scenario_results] == [
+                Decimal("18.30"), Decimal("17.54"), Decimal("16.60"),
+            ]
+    assert [s.candidate_minus_scheduled_naive_usd
+            for s in report.scenario_results] == [Decimal(-10)]*3
 
 
 def test_each_cost_component_has_one_unambiguous_source(tmp_path):
@@ -99,6 +108,8 @@ def test_two_independent_real_day19_ledgers_give_identical_hashes_and_reports():
     assert proof["independent_disk_backed_cash_journals"] == 2
     assert proof["day19_verified_final_cash_usd"] == "10008.30"
     assert proof["benchmark_and_stress"]["genuine_strategy_alpha_qualified"] is False
+    assert proof["scheduled_naive_same_session_tested"]
+    assert not proof["independent_real_market_benchmark_qualified"]
     assert len(proof["reference_journal_tip_sha256"]) == 64
 
 
@@ -162,6 +173,17 @@ def test_spread_stress_rejects_negative_non_integer_and_absurd_values():
                 entry_closed=START, exit_closed=END,
                 extra_ticks_per_side=invalid, cash_multiplier=Decimal(1),
             )
+
+
+def test_advance_registration_of_naive_schedule_and_source_is_enforced(tmp_path):
+    original = example(tmp_path)
+    for delta in (timedelta(minutes=1), timedelta(minutes=-1)):
+        with pytest.raises(ValueError, match="predeclared"):
+            compare(
+                original,
+                naive_session_entry_closed_at_utc=START+timedelta(minutes=10)+delta,
+            )
+    assert compare(original).scenario_results[0].candidate_minus_scheduled_naive_usd < 0
 
 
 def test_outdated_timing_data_fails_no_fill_instead_of_guessing():
