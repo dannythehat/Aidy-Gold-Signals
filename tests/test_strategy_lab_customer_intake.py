@@ -7,7 +7,11 @@ from pathlib import Path
 import pytest
 
 from aidy.strategy_lab_customer_intake import (
-    RULE_FIELDS, IntakeRejected, prepare_intake, validate_link, verify_draft,
+    RULE_FIELDS,
+    IntakeRejected,
+    prepare_intake,
+    validate_link,
+    verify_draft,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
