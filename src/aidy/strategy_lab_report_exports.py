@@ -571,7 +571,7 @@ def build_export_bundle(receipt: dict, out: Path) -> dict:
     if not 3 <= len(original) <= 8:
         raise ValueError("finished PDF failed length/raster sanity requirements")
     for index in range(len(original)):
-        img = original[index].render(scale=1.6).to_pil().convert("RGB")
+        img = original[index].render(scale=2.0).to_pil().convert("RGB")
         if img.width < 800 or img.height < 1000 or not (
             ImageStat.Stat(img).stddev[0] > 6
         ):
