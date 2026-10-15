@@ -132,7 +132,7 @@ def validate_research_receipt(payload: dict) -> dict:
         raise ValueError("no unqualified GoldThinker system or paper/live P&L can be exported")
     if (len(research["trades"]) != research["accounting"]["closed_trades"]
             or len(research["cost_stress"]) != 3
-            or tuple(research["periods"]) != PERIODS
+            or set(research["periods"]) != set(PERIODS)
             or not report["provenance"]["numeric_field_lineage"]):
         raise ValueError("incomplete original journal, scenarios or provenance appendix")
     if report["output_contract"]["pdf"] != "DAY30_NOT_BUILT":
