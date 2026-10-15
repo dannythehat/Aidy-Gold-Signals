@@ -26,6 +26,7 @@ from aidy.strategy_lab_reference_run import ReferenceResult
 
 CENT = Decimal("0.01")
 SCHEMA = "aidy.strategy_lab.matched_baselines_cost_stress.v1"
+FROZEN_DAY19_RULE_SHA256 = "eca04b10e9138b883c300a7f3f70f65f361256f3bb0d45c97041b0d1fbf94a75"
 POLICY = (
     ("base", 0, Decimal(1)),
     ("adverse", 2, Decimal("1.5")),
@@ -146,12 +147,13 @@ def compare_day19_fixed_window(
     """
     if not isinstance(reference, ReferenceResult):
         raise ValueError("required genuine Day19 internal reference receipt")  # noqa: TRY004
-    if (reference.actual_broker_attested or not reference.rule_sha256
+    if (reference.actual_broker_attested or reference.rule_sha256 != FROZEN_DAY19_RULE_SHA256
             or reference.closed_candle_sha256 != source_candle_sha256
             or reference.quote_sha256 != quote_tape.snapshot_sha256
             or reference.opening_cash_usd != Decimal(10000)
             or reference.closing_cash_usd != Decimal("10008.30")
             or reference.net_usd != Decimal("8.30")
+            or not reference.journal_tip_sha256 or len(reference.journal_tip_sha256) != 64
             or reference.entry_utc != entry_signal_closed_at_utc + timedelta(seconds=1)
             or reference.exit_utc != exit_signal_closed_at_utc + timedelta(seconds=1)):
         raise ValueError("Day19 reference is not the frozen known-answer fixture")
