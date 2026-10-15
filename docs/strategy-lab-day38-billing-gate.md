@@ -20,10 +20,10 @@
 
 **Verdict:** Engineering preview meter can pass its own tests, but original Day38 is **NOT PASSED**, B11 stage NOT ACCEPTED, public pricing NOT CONFIGURED, real sandbox payment NOT RUN. No real customer subscription, independent performance claims or trading product launch. This cannot be counted as one of the 40 completed days.
 
-## Evidence
+## Verified bounded engineering evidence (15 October 2026)
 
-- Source PR: PENDING
-- CI, actual source replay, synthetic unit tests: PENDING
-- Actual provider sandbox transaction: BLOCKED pending provider connection and owner approval
-- Protected-main isolated code merge: PENDING
-- Full Day38 PASS / owner stage acceptance: NOT CLAIMED
+- [Day38 actual private ledger CI 38725793287](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38725793287) **291 tests PASS**, strict Ruff/compile PASS, internal owner preview compute account, capped unit debit, replay and private tenant tests PASS, original Day34 read-only BigQuery XAUUSD historical BID replays twice and original 83 candidates STILL NOT TESTED.
+- Original strict CI attempt failed for an unused imported module; corrected and retested. [Evidence semantic gate](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38725793222) independently checked at original successful source head.
+- Explicit machine acceptance record: PARTIAL_EXTERNAL_PAYMENT_BLOCKED, real_sandbox_payment=NOT_RUN, real_provider_connected=false, real_customer_charges=0, real_customer_subscription_price_set=false, go_live_allowed=false.
+- [PR #304](https://github.com/dannythehat/Aidy-Gold-Signals/pull/304) holds the isolated implementation. Final documentation CI and protected-main merge to be verified independently.
+- **Day38 remains NOT PASSED**, regardless of isolated 291 tests. No real processor credentials, checkout, test-mode subscription/charge, price or owner go-live approval.
