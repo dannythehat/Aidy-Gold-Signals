@@ -1,0 +1,63 @@
+name: Strategy Lab Day37 Private Customer Result Exports
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_customer_results.py
+      - tests/test_strategy_lab_customer_results.py
+      - scripts/strategy_lab/day37_results_access_acceptance.py
+      - docs/strategy-lab-day37-customer-results.md
+      - .github/workflows/strategy-lab-day37-customer-results.yml
+
+permissions:
+  contents: read
+
+jobs:
+  day37-result-privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install scoped strict tests plus original source client
+        run: python -m pip install --quiet pytest ruff 'cryptography>=43,<47' 'google-cloud-bigquery>=3.42,<4'
+      - name: Check syntax and strict Ruff on new result security code
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_customer_results.py tests/test_strategy_lab_customer_results.py scripts/strategy_lab/day37_results_access_acceptance.py
+          ruff check src/aidy/strategy_lab_customer_results.py tests/test_strategy_lab_customer_results.py scripts/strategy_lab/day37_results_access_acceptance.py
+      - name: Assert two-user isolation, identical repeatable downloads, source safety and prior regression
+        run: |
+          PYTHONPATH=src:tests:. python -m pytest -q tests/test_strategy_lab_customer_results.py tests/test_strategy_lab_tenant_vault.py tests/test_strategy_lab_customer_intake.py tests/test_strategy_lab_goldthinker_handoff.py tests/test_strategy_lab_owner_dashboard.py tests/test_strategy_lab_batch_queue.py tests/test_strategy_lab_evidence_rating.py tests/test_strategy_lab_report_contract.py tests/test_strategy_lab_oos_protocol.py tests/test_strategy_lab_regimes.py
+      - name: Generate private per-tenant locked access and exact ZIP acceptance
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day37_results_access_acceptance.py
+      - name: Rerun actual original two BigQuery read-only source acquisitions (no performance testing)
+        run: PYTHONPATH=src:. python scripts/strategy_lab/day34_private_handoff_acceptance.py
+      - name: Assert no fabricated real client trades/research verdicts
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("artifacts/strategy_lab/day37/results_access_acceptance.json").read_text())
+          p=json.loads(Path("artifacts/strategy_lab/day34_handoff_acceptance.json").read_text())
+          assert a["status"]=="SCOPED_SYNTHETIC_PASS" and a["tenants"]==2
+          assert a["cross_tenant_access_attempts_rejected"]==6
+          assert a["real_strategy_tests"]==a["real_customer_results"]==0
+          assert not a["customer_site_hosted"] and a["paper_or_live_orders"]==0
+          assert p["status"]=="PASS" and p["original_untested_gold_edge_sources"]==83
+          assert p["real_qualifying_strategy_exports"]==0
+          assert len(p["source_bigquery_job_ids"])==2
+          print("Day37 privacy/exports and research abstention: PASS")
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: day37-private-customer-results-evidence
+          path: |
+            artifacts/strategy_lab/day37/
+            artifacts/strategy_lab/day34_handoff_acceptance.json
+          retention-days: 90
