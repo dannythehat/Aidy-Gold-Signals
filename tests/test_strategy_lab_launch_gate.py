@@ -29,6 +29,19 @@ def test_every_missing_gate_blocks():
 
 def test_full_true_is_hypothetical_not_deployment_authorisation():
     r = evaluate_launch(dict.fromkeys(GATES, True))
-    assert r["status"] == "GO"
+    assert r["status"] == "NO_GO"
+    assert r["verified_external_evidence_count"] == 0
+    assert set(r["unverified_assertions"]) == set(GATES)
+    assert r["original_40_day_program_complete"] is False
     assert r["automated_trade_or_public_launch_authority"] is False
     assert r["owner_explicit_deployment_approval_separate"] is True
+
+
+def test_no_single_unverified_true_assertion_can_trigger_launch():
+    for gate in GATES:
+        claims = dict.fromkeys(GATES, False)
+        claims[gate] = True
+        decision = evaluate_launch(claims)
+        assert decision["status"] == "NO_GO"
+        assert decision["unverified_assertions"] == [gate]
+        assert decision["trusted_external_receipt_verifier_implemented"] is False
