@@ -6,7 +6,12 @@ from decimal import Decimal
 
 import pytest
 
-from aidy.strategy_lab_evidence_rating import FACTOR_WEIGHTS, EvidenceBasis, FactorFinding, rate_strategy_evidence
+from aidy.strategy_lab_evidence_rating import (
+    FACTOR_WEIGHTS,
+    EvidenceBasis,
+    FactorFinding,
+    rate_strategy_evidence,
+)
 
 WEIGHTS = (30, 15, 10, 10, 10, 10, 5, 5, 5)
 HASHES = tuple(f"{i:064x}" for i in range(1, 16))
