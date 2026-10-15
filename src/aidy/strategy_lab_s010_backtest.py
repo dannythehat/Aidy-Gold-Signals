@@ -10,7 +10,6 @@ HistData, not replication of author's unavailable private BID/ASK tick CSVs.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from math import sqrt
 
 import numpy as np
