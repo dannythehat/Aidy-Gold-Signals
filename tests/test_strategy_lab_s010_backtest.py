@@ -5,7 +5,11 @@ import pandas as pd
 import pytest
 
 from aidy.strategy_lab_s010_backtest import (
-    BASE, STRESS, Costs, derive_signals, simulate,
+    BASE,
+    STRESS,
+    Costs,
+    derive_signals,
+    simulate,
 )
 
 
