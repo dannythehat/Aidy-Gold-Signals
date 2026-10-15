@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 from aidy.strategy_lab_owner_dashboard import (
-    build_snapshot, export_dashboard, verify_snapshot,
+    build_snapshot,\n    export_dashboard,\n    verify_snapshot,
 )
 from scripts.strategy_lab.day29_canonical_report_acceptance import (
     OUT as DAY29_OUT,
