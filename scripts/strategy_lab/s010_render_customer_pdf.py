@@ -15,15 +15,24 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from aidy.strategy_lab_s010_backtest import STARTING_USD
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
-    BaseDocTemplate, Frame, PageTemplate, Paragraph, Spacer,
-    Table, TableStyle, PageBreak, Image, HRFlowable,
+    BaseDocTemplate,
+    Frame,
+    HRFlowable,
+    Image,
+    PageBreak,
+    PageTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
 )
+
+from aidy.strategy_lab_s010_backtest import STARTING_USD
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT/"artifacts/strategy_lab/s010_paid_customer_example"
