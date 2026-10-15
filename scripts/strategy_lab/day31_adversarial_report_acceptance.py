@@ -19,15 +19,15 @@ from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 
 from aidy.strategy_lab_report_adversarial import (
-    audit_outcome_json, independent_report_audit, no_trade_analysis,
+    audit_outcome_json,
+    independent_report_audit,
+    no_trade_analysis,
     write_review_packet,
 )
 from aidy.strategy_lab_report_contract import _hash
 from scripts.strategy_lab.day29_canonical_report_acceptance import OUT as DAY29_OUT
-from scripts.strategy_lab.day30_actual_exports_acceptance import (
-    OUT as DAY30_OUT,
-    main as day30_main,
-)
+from scripts.strategy_lab.day30_actual_exports_acceptance import OUT as DAY30_OUT
+from scripts.strategy_lab.day30_actual_exports_acceptance import main as day30_main
 
 ROOT = Path(__file__).resolve().parents[2]
 EVIDENCE = ROOT/"artifacts/strategy_lab/day31_adversarial_acceptance.json"
