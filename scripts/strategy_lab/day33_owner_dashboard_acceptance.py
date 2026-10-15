@@ -11,7 +11,9 @@ import tempfile
 from pathlib import Path
 
 from aidy.strategy_lab_owner_dashboard import (
-    build_snapshot,\n    export_dashboard,\n    verify_snapshot,
+    build_snapshot,
+    export_dashboard,
+    verify_snapshot,
 )
 from scripts.strategy_lab.day29_canonical_report_acceptance import (
     OUT as DAY29_OUT,
@@ -86,7 +88,8 @@ def main() -> int:
             "status": "BLOCKED", "error_type": type(exc).__name__,
             "message": str(exc)[:400], "customer_website_published": False,
         }
-    ACCEPT.write_text(json.dumps(proof, indent=2, sort_keys=True)+"\n",
+    ACCEPT.write_text(json.dumps(proof, indent=2, sort_keys=True)+"
+",
                       encoding="utf-8")
     print(json.dumps(proof, sort_keys=True))
     return 0 if proof["status"] == "PASS" else 1
