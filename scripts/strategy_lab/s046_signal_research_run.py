@@ -11,7 +11,7 @@ import hashlib
 import json
 import os
 from dataclasses import asdict
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from aidy.strategy_lab_history_reader import Window, read_bigquery_window
