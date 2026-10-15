@@ -22,9 +22,8 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
-from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
-    Image, KeepTogether, PageBreak, Paragraph, SimpleDocTemplate,
+    Image, PageBreak, Paragraph, SimpleDocTemplate,
     Spacer, Table, TableStyle,
 )
 
@@ -474,12 +473,13 @@ def verify_export_bundle(out: Path, receipt: dict) -> dict:
         if (name != Path(name).name or name not in {
             "canonical_result.json", "trades.csv", "cost_scenarios.csv",
             "equity_curve.png", "cost_stress.png", "research_report.pdf",
+            "report_preview_page1.png",
         }):
             raise ValueError("unexpected export file")
         blob = (out/name).read_bytes()
         if _hash(blob) != entry["sha256"] or len(blob) != entry["bytes"]:
             raise ValueError("export file SHA / length mismatch")
-    if len(manifest["files"]) != 6:
+    if len(manifest["files"]) != 7:
         raise ValueError("export bundle is missing mandatory files")
     if json.loads((out/"canonical_result.json").read_text(encoding="utf-8")) != report:
         raise ValueError("JSON report does not agree with journal-derived contract")
@@ -525,7 +525,7 @@ def verify_export_bundle(out: Path, receipt: dict) -> dict:
     if any(s not in text for s in must_print):
         raise ValueError("PDF lacks original journal numbers or scientific warnings")
     from PIL import Image as PILImage
-    for name in ("equity_curve.png", "cost_stress.png"):
+    for name in ("equity_curve.png", "cost_stress.png", "report_preview_page1.png"):
         with PILImage.open(out/name) as image:
             image.verify()
         with PILImage.open(out/name) as image:
@@ -560,9 +560,25 @@ def build_export_bundle(receipt: dict, out: Path) -> dict:
     cost_chart(out/"cost_stress.png", report)
     _build_pdf(out/"research_report.pdf", report,
                out/"equity_curve.png", out/"cost_stress.png")
+    # Render the ACTUAL finished PDF via independent pdfium, not a designed
+    # substitute image. Inspect all pages for blank/failed raster output.
+    import pypdfium2 as pdfium
+    from PIL import ImageStat
+    original = pdfium.PdfDocument(str(out/"research_report.pdf"))
+    if not 3 <= len(original) <= 8:
+        raise ValueError("finished PDF failed length/raster sanity requirements")
+    for index in range(len(original)):
+        img = original[index].render(scale=1.6).to_pil().convert("RGB")
+        if img.width < 800 or img.height < 1000 or not (
+            ImageStat.Stat(img).stddev[0] > 6
+        ):
+            raise ValueError("PDF page rendered empty or unreadable")
+        if index == 0:
+            img.save(out/"report_preview_page1.png")
     filenames = (
         "canonical_result.json", "trades.csv", "cost_scenarios.csv",
         "equity_curve.png", "cost_stress.png", "research_report.pdf",
+        "report_preview_page1.png",
     )
     manifest = {
         "schema": SCHEMA, "canonical_run_id": report["run_id"],
