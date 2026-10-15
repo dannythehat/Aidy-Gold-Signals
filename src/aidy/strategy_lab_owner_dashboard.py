@@ -20,7 +20,8 @@ EXPECTED_SOURCE = "14EbIPxW5ZeueRX0vz0i6qG7BmlosL04x8-xXl3Hh6N4"
 NOT_TESTED = "NOT TESTED"
 NONE = "—"
 VALID_SOURCES = frozenset(("github.com", "www.tradingview.com",
-                           "tradingview.com", "www.mql5.com", "mql5.com"))
+                           "tradingview.com", "in.tradingview.com",
+                           "www.mql5.com", "mql5.com", "papers.ssrn.com"))
 
 
 def _digest(value: object) -> str:
