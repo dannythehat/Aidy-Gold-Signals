@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; connect-src 'none'">
+<title>AIDY | Strategy Intake Draft — Private Prototype</title>
+<style>
+:root{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#ecf0f8;background:#0b1320}
+*{box-sizing:border-box}body{margin:0}a{color:#e7bd78}.wrap{max-width:990px;margin:auto;padding:26px 22px}
+header{background:#131f2e;border-bottom:1px solid #334158}
+.title{font-size:clamp(27px,4vw,43px);margin:10px 0;color:#f3d29a}
+.kicker{color:#d5a956;font-size:12px;font-weight:800;letter-spacing:.12em}
+p{line-height:1.6;color:#bec9d9}.warning{border-left:3px solid #d9a754;background:#272318;padding:12px 18px;border-radius:4px}
+section{border:1px solid #2d3c53;background:#142031;border-radius:12px;margin:18px 0;padding:20px}
+h2{font-size:20px;margin:0 0 14px}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media(max-width:720px){.fields{grid-template-columns:1fr}}
+label{display:block;font-size:13px;font-weight:650;color:#e3e9f5;margin:0 0 6px}
+input,select,textarea{width:100%;background:#0c1828;color:#f5f5f7;border:1px solid #435069;border-radius:7px;padding:11px;font:inherit}
+textarea{min-height:82px;resize:vertical}#paste{min-height:150px}
+.hint{color:#95a7c0;font-size:12px;margin:5px 0 0}.wide{grid-column:1/-1}
+button{border:1px solid #bc9356;background:#e8ba72;color:#162034;font-weight:750;border-radius:8px;padding:12px 18px;cursor:pointer}
+button.secondary{background:#18293e;color:#f2ce8a}
+#result{white-space:pre-wrap;overflow-wrap:anywhere;background:#0c1724;border:1px solid #3d5068;padding:16px;border-radius:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px;max-height:310px;overflow:auto}
+.small{font-size:12px;color:#b8c9d8}.tag{padding:5px 8px;border:1px solid #705c3a;color:#f0ca87;border-radius:5px;display:inline-block;font-size:12px}
+.green{color:#93d2b5}.red{color:#f4ab9a}
+#upload-row,#link-row,#template-row{display:none}
+footer{font-size:12px;color:#879ab3;padding:24px 0}
+</style></head><body>
+<header><div class="wrap"><div class="kicker">PRIVATE BUILD · DAY 35 · NO CUSTOMER BACKEND</div>
+<h1 class="title">AIDY Strategy Intake</h1><p>Provide trading-system rules for a future independent research review. <strong>GoldThinker</strong> is the future customer brand; AIDY is the research engine.</p>
+<div class="warning"><strong>Draft mode only.</strong> This HTML runs entirely on your device. It does not upload, store, execute, backtest, paper-trade or publish your strategy. Downloaded drafts are NOT server-verified. Never include API keys, passwords or brokerage credentials.</div></div></header>
+<main class="wrap">
+<form id="form" novalidate>
+<section><h2>01 · Source material</h2><div class="fields">
+<div class="wide"><label for="title">Working research title</label><input id="title" maxlength="120" required placeholder="e.g. London-range breakout concept"></div>
+<div><label for="mode">How are you providing the strategy?</label><select id="mode">
+<option value="paste">Paste rules or strategy text</option>
+<option value="upload">Upload an inert text file</option>
+<option value="link">Give an HTTPS source link</option>
+<option value="template">Start from a blank research template</option>
+</select></div>
+<div><label for="rights">Rights declaration</label>
+<select id="rights"><option value="no">Not yet declared</option>
+<option value="yes">I have permission to submit this for research review</option></select>
+<p class="hint">This is a declaration, NOT a verified licence or publication permission.</p></div>
+<div class="wide" id="paste-row"><label for="paste">Pasted original strategy rules</label><textarea id="paste" maxlength="65536" placeholder="Paste the original exact system instructions. This is never executed."></textarea></div>
+<div class="wide" id="upload-row"><label for="upload">Text file (.txt, .md, .pine, .json; max 64 KiB)</label>
+<input id="upload" type="file" accept=".txt,.md,.pine,.json,text/plain,text/markdown,application/json">
+<p class="hint">EXE, ZIP, PDF, images and scripts other than inert .pine text are not supported in Day 35.</p></div>
+<div class="wide" id="link-row"><label for="link">Original public HTTPS strategy link</label>
+<input id="link" maxlength="2048" placeholder="https://github.com/author/project">
+<p class="hint">No remote URL is fetched; AIDY will need to independently review the content in a future workflow.</p></div>
+<div class="wide" id="template-row"><label for="template">Research questionnaire template</label>
+<select id="template"><option value="breakout">Breakout concept</option><option value="trend_pullback">Trend pullback</option><option value="mean_reversion">Mean reversion</option><option value="session_range">Session-range system</option></select>
+<p class="hint">Templates are prompts, not pre-tested trading strategies.</p></div>
+</div></section>
+<section><h2>02 · Describe the exact rules</h2>
+<p>Leave unknown fields blank. AIDY will flag each missing rule instead of guessing or inventing a profitable strategy.</p><div class="fields">
+<div><label for="market">Instrument</label><select id="market"><option value="">Not yet specified</option><option value="XAUUSD">XAUUSD / Gold</option></select></div>
+<div><label for="timeframe">Original timeframe</label><select id="timeframe"><option value="">Not yet specified</option><option>M1</option><option>M5</option><option>M15</option><option>M30</option><option>H1</option><option>H4</option><option>D1</option></select></div>
+<div><label for="trade_direction">Long / short / both?</label><input id="trade_direction" maxlength="2000" placeholder="Specify exact eligible directions"></div>
+<div><label for="entry_rules">Entry and confirmation</label><textarea id="entry_rules" maxlength="2000"></textarea></div>
+<div><label for="exit_rules">Exit and invalidation</label><textarea id="exit_rules" maxlength="2000"></textarea></div>
+<div><label for="stop_loss_rule">Stop-loss rule</label><textarea id="stop_loss_rule" maxlength="2000"></textarea></div>
+<div><label for="take_profit_rule">Target / alternative exit</label><textarea id="take_profit_rule" maxlength="2000"></textarea></div>
+<div><label for="position_sizing_rule">Position sizing and risk</label><textarea id="position_sizing_rule" maxlength="2000"></textarea></div>
+<div><label for="trading_session_and_timezone">Trading session and timezone / DST</label><textarea id="trading_session_and_timezone" maxlength="2000"></textarea></div>
+<div><label for="execution_and_cost_assumptions">Broker execution / spreads / slippage / costs</label><textarea id="execution_and_cost_assumptions" maxlength="2000"></textarea></div>
+</div></section>
+<section><h2>03 · Validate a local draft</h2>
+<p>Review missing rules; download a JSON draft for a future trusted AIDY intake service. No backtest begins here.</p>
+<button type="submit">Check completeness (no submission)</button>
+<button type="button" id="download" class="secondary" disabled>Download draft JSON</button>
+<p id="status" aria-live="polite">Nothing validated yet.</p>
+<div id="result" role="status" aria-live="polite">Your rule gaps and safe review state will appear here.</div>
+</section></form><footer>PRIVATE OFFLINE PROTOTYPE · Not a live customer submission service. No automatic GoldThinker production or brokerage connection. Source rights and original rules require independent verification.</footer></main>
+<script>
+"use strict";
+(function(){
+  const $=id=>document.getElementById(id),form=$("form");
+  const fields=["market","timeframe","trade_direction","entry_rules","exit_rules","stop_loss_rule",
+    "take_profit_rule","position_sizing_rule","trading_session_and_timezone","execution_and_cost_assumptions"];
+  const hints={
+    market:"Confirm XAUUSD as the market",timeframe:"Specify the original timeframe",
+    trade_direction:"State long, short or both and precise conditions",
+    entry_rules:"Give objective entry and confirmation rules",
+    exit_rules:"Give objective exit and invalidation rules",
+    stop_loss_rule:"State an exact stop or an explicitly justified absence",
+    take_profit_rule:"State exact targets or alternative exit logic",
+    position_sizing_rule:"State position sizing and risk limits",
+    trading_session_and_timezone:"Specify session hours, timezone and DST",
+    execution_and_cost_assumptions:"Specify spread, fees, fills and slippage"};
+  const templates={breakout:"Breakout concept — supply exact rules.",trend_pullback:"Trend pullback concept — supply exact rules.",
+    mean_reversion:"Mean reversion concept — supply exact rules.",session_range:"Session range concept — define timezone and DST."};
+  let last=null;
+  function refresh(){
+    const mode=$("mode").value;
+    for(const k of ["paste","upload","link","template"])$(k+"-row").style.display=(k===mode?"block":"none");
+    $("download").disabled=true;last=null;$("status").textContent="Choose your source and check completeness.";
+  }
+  $("mode").addEventListener("change",refresh);refresh();
+  const reject=(message)=>{throw new Error(message)};
+  function clean(s,max,allowEmpty=false){
+    if(typeof s!=="string"||s.length>max||(!allowEmpty&&!s.trim())||/\x00|[\x01-\x08\x0b\x0c\x0e-\x1f]/.test(s)
+      ||/<\s*\/?\s*(script|iframe|object|embed|svg|html)\b/i.test(s)
+      ||/(api[_-]?key|secret[_-]?key|password|access[_-]?token)\s*[:=]\s*\S{8,}/i.test(s))
+      reject("Unsafe, missing or oversized text. Never paste credentials or active HTML.");
+    return s.trim();
+  }
+  function toHex(b){return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("")}
+  async function sha(b){return toHex(await crypto.subtle.digest("SHA-256",b))}
+  const te=new TextEncoder();
+  async function source(){
+    const mode=$("mode").value;
+    if(mode==="paste"){
+      const value=clean($("paste").value,65536),bytes=te.encode(value);
+      if(bytes.length>65536)reject("Paste is over 64 KiB");
+      return {kind:mode,inert_text:value,original_sha256:await sha(bytes),url:null,source_name:null};
+    }
+    if(mode==="template"){
+      const name=$("template").value,body=templates[name];
+      if(!body)reject("Unsupported template");
+      return {kind:mode,template_id:name,inert_text:body,original_sha256:await sha(te.encode(body)),url:null};
+    }
+    if(mode==="link"){
+      const value=clean($("link").value,2048);
+      let url;try{url=new URL(value)}catch{reject("Invalid URL")}
+      if(url.protocol!=="https:"||url.username||url.password||url.port&&!["443"].includes(url.port)
+          ||url.hash||url.hostname==="localhost"||url.hostname.endsWith(".local")
+          ||/^(\d+\.){3}\d+$/.test(url.hostname)||/[\\\s]/.test(value)
+          ||/(token|secret|password|auth|key)=/i.test(url.search))reject("Only clean public HTTPS source links");
+      return {kind:mode,url:value,remote_content_fetched:false,inert_text:null,
+        original_sha256:await sha(te.encode(value))};
+    }
+    if(mode==="upload"){
+      const file=$("upload").files[0];
+      if(!file||file.size<1||file.size>65536||!/\.(txt|md|pine|json)$/i.test(file.name))
+        reject("Only .txt, .md, .pine or .json files, no larger than 64 KiB");
+      const bytes=new Uint8Array(await file.arrayBuffer());
+      if(bytes.includes(0)||bytes[0]===77&&bytes[1]===90||bytes[0]===80&&bytes[1]===75
+        ||bytes[0]===127&&bytes[1]===69||bytes[0]===37&&bytes[1]===80
+        ||bytes[0]===137&&bytes[1]===80)reject("Binary or archived upload rejected");
+      let value;try{value=new TextDecoder("utf-8",{fatal:true}).decode(bytes)}catch{reject("UTF-8 text only")}
+      return {kind:mode,source_name:file.name,inert_text:clean(value,65536),
+        original_sha256:await sha(bytes),url:null};
+    }
+    reject("Unsupported source");
+  }
+  form.addEventListener("submit",async function(e){
+    e.preventDefault();last=null;$("download").disabled=true;
+    try{
+      const name=clean($("title").value,120);
+      if(!/^[a-z0-9 _.'()-]{3,120}$/i.test(name))reject("Use a simple research title (3–120 characters)");
+      const src=await source(),rules={},missing=[];
+      for(const key of fields){
+        rules[key]=clean($(key).value,2000,true);
+        if(!rules[key])missing.push({field:key,guidance:hints[key]});
+      }
+      const payload={schema:"aidy.strategy_lab.strategy_intake.v1",
+        research_engine:"AIDY",future_customer_brand:"GoldThinker",
+        submission_title:name,source:src,rules,missing_rules:missing,
+        status:missing.length?"INCOMPLETE_RULES":"AWAITING_INDEPENDENT_RULE_REVIEW",
+        submitter_rights_declaration:$("rights").value==="yes",
+        actual_licence_verified:false,tenant_authenticated:false,trusted_server_accepted:false,
+        strategy_rules_verified:false,eligible_for_production:false,aidy_research_executed:false,
+        real_xauusd_profit_evaluated:false,goldthinker_named_or_joinable:false,
+        paper_or_live_trading_enabled:false};
+      last=payload;
+      $("status").textContent=missing.length?missing.length+" missing rule fields — not research-ready":
+        "All form fields completed. Independent rule review still required; no testing has started.";
+      $("result").textContent=missing.length?missing.map(x=>"• "+x.field+": "+x.guidance).join("\n"):
+        "AWAITING INDEPENDENT RULE REVIEW\nNo broker or paper action is authorised. This local draft is NOT server-verified.";
+      $("download").disabled=false;
+    }catch(err){$("status").textContent="Rejected input";$("result").textContent=err.message||"Unsafe submission rejected"}
+  });
+  $("download").addEventListener("click",function(){
+    if(!last)return;
+    const blob=new Blob([JSON.stringify(last,null,2)+"\n"],{type:"application/json"});
+    const a=document.createElement("a"),url=URL.createObjectURL(blob);
+    a.href=url;a.download="aidy-strategy-intake-DRAFT.json";document.body.appendChild(a);a.click();a.remove();
+    URL.revokeObjectURL(url);
+  });
+})();
+</script></body></html>
