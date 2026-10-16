@@ -15,7 +15,7 @@ import json
 import math
 import re
 import zipfile
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 
 FORMAT = "aidy.crossfire.2021.tick_utc_h1_bidask_v1"
