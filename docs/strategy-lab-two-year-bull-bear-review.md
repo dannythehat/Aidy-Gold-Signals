@@ -1,0 +1,20 @@
+# GoldThinker — two contrasting full-year markets BEFORE AI improvements
+
+**Owner-approved sequence (16 October 2026):** Test original strategy for one full year; if profitable, test unchanged rules for a DIFFERENT full year with contrary gold price regime; only if BOTH genuine 12-month results are profitable should GoldThinker diagnose actual loss/risk opportunities, selectively propose at most two tiny changes, rerun the second year, and cross-check the exact same edit on the first year. Show original and modified reports and explain better/worse/no improvement. If no targeted flaw exists, explicitly state no change suggested. Never replace the original. No automatic live or paper deployment.
+
+## S010: frozen two-year sequence
+
+1. **2025 — initial BULL market:** completed genuine full-year AIDY BID-price research; WGC LBMA PM gold **+67%** in 2025: https://www.gold.org/goldhub/research/gold-market-commentary-december-2025 . Original S010 [full-year research PR #309](https://github.com/dannythehat/Aidy-Gold-Signals/pull/309): 83 closed modelled trades, marked return +150.328%, max drawdown −33.671%, USD 10,000 initial; **not verified broker-net** (no actual ASK, swaps or hard stopout).
+2. **2021 — unchanged DOWN/SIDEWAYS market:** WGC LBMA PM annual gold return approximately **−4.3%**; traded a broad range, not a continuous bear trend: https://www.gold.org/goldhub/research/gold-outlook-2022 . Run original S010 MA12/34 RSI14 3.28x without adjustments, same complete-source, cost and reporting policy. **NOT YET RUN.** We have all 12 original 2021 HistData BID/ASK ZIP archives in private Cloudflare R2, but full 2021 chronological normalized derived data and BigQuery warehouse availability are UNVERIFIED. Raw archive possession is NOT a second-year backtest: https://github.com/dannythehat/Aidy-Gold-Signals/blob/main/research/strategy_lab/b01_day06f_81_month_archive_recovery.md
+3. **Only if 2021 results also profitable:** diagnose a genuine structural risk weakness visible in the actual two-year trades. Preregister at most two small interpretable proposals (e.g., protective initial stop based on *previous* closed ATR, or lower leverage). No indiscriminate RSI/moving-average threshold search.
+4. Test frozen single tweak on 2021 then cross-check EXACT SAME edit and execution-cost model on 2025. **2025 already inspected; this is NOT a sealed blind out-of-sample check.** Reproduce the original exactly before running comparisons.
+5. Report original 2025 bull result, original 2021 down-year result, regime context and data sources, full trade/risk ledgers for both years, exact reason for change, variant-minus-original net P&L and maximum drawdown, win/loss, execution costs and whether improvement replicated across both market regimes. If no difference or worse, include failed trial and retain original. Both source and variant cannot automatically become live systems.
+6. More extensive next stage: 2022 mixed/range market and a genuinely unseen later holdout (or forward paper trading), after original history and broker costs are prepared.
+
+## Technical gate
+
+File: src/aidy/strategy_lab_two_year_bull_bear.py. Immutable year evidence, source/rule/cost fingerprints, the frozen S010 2025->2021 order and contrasting annual market conditions. No 2021 numbers can be invented: absent second report yields AWAIT_UNCHANGED_2021_DOWN_YEAR. Both annual baselines must be profitable after consistently declared costs before selective diagnostic testing. Variants must use exactly the same rule hash across the two years, preserve original report identity and produce separate comparison results. No auto-promotion.
+
+CI: .github/workflows/strategy-lab-two-year-bull-bear-review.yml with source and adversarial tests.
+
+**Current actual state:** Only 2025 S010 has a complete modelled research report. The 2021 down-market year is still awaiting actual normalized source ingestion and a full unmodified backtest. Any 2025-only exploratory adjustment is NOT an approved GoldThinker enhancement under this new rule. Market-regime validation and historical profitability do not establish live broker executable prices.
