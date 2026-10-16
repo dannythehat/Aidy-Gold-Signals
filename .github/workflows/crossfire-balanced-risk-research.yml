@@ -1,0 +1,54 @@
+name: CROSSFIRE Hourly Balanced Risk Verified Historical Replay
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_crossfire_balanced_guard.py
+      - scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
+      - .github/workflows/crossfire-balanced-risk-research.yml
+      - docs/crossfire-2025-2026-hourly-risk-guard.md
+permissions:
+  contents: read
+  actions: read
+jobs:
+  reproduce-real-price-model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install deterministic research dependencies
+        run: python -m pip install --quiet numpy pandas ruff
+      - name: Verify Python syntax and undefined identifiers
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_crossfire_balanced_guard.py scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
+          ruff check --select F src/aidy/strategy_lab_crossfire_balanced_guard.py scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
+      - name: Retrieve VERIFIED original 2025 S010 archive (no synthetic candles)
+        uses: actions/download-artifact@v4
+        with:
+          name: GoldThinker-S010-2025-Customer-Report-And-Source-Evidence
+          run-id: 38745844838
+          github-token: ${{ github.token }}
+          path: artifacts/input/2025
+      - name: Retrieve VERIFIED 2026 Jan-Sep source ASK/BID H1 archive
+        uses: actions/download-artifact@v4
+        with:
+          name: CROSSFIRE-S010-2026-REAL-HOLDOUT-3-VERSIONS
+          run-id: 38851611865
+          github-token: ${{ github.token }}
+          path: artifacts/input/2026
+      - name: Replay frozen 2025 and 2026 complete H1 source, check original + old guard to cent
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py \
+            --h1-2025 artifacts/input/2025/source_verified_2025_h1_bid.csv \
+            --h1-2026 artifacts/input/2026/verified_2026_bidask_h1.csv \
+            --out artifacts/strategy_lab/crossfire_balance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CROSSFIRE-H1-BALANCED-RISK-ORIGINAL-REPRODUCED-2025-2026
+          path: artifacts/strategy_lab/crossfire_balance/
+          if-no-files-found: error
+          retention-days: 90
