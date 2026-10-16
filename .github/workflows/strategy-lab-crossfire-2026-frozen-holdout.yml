@@ -1,0 +1,87 @@
+name: CROSSFIRE Frozen 2026 Holdout Original vs ATR3 vs SMA200
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_crossfire_tick_2021.py
+      - scripts/strategy_lab/crossfire_2021_derive_month.py
+      - scripts/strategy_lab/crossfire_2026_holdout.py
+      - src/aidy/strategy_lab_crossfire_2026_variants.py
+      - tests/test_strategy_lab_crossfire_2026_variants.py
+      - .github/workflows/strategy-lab-crossfire-2026-frozen-holdout.yml
+      - docs/crossfire-2026-frozen-holdout-study.md
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff pandas numpy
+      - name: Check frozen variants, parser and unchanged S010 regression tests
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_crossfire_tick_2021.py src/aidy/strategy_lab_crossfire_2026_variants.py scripts/strategy_lab/crossfire_2021_derive_month.py scripts/strategy_lab/crossfire_2026_holdout.py tests/test_strategy_lab_crossfire_2026_variants.py
+          ruff check src/aidy/strategy_lab_crossfire_tick_2021.py scripts/strategy_lab/crossfire_2021_derive_month.py scripts/strategy_lab/crossfire_2026_holdout.py tests/test_strategy_lab_crossfire_2026_variants.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_strategy_lab_crossfire_2026_variants.py tests/test_strategy_lab_s010_backtest.py tests/test_strategy_lab_crossfire_2021_ticks.py
+  real-archived-month:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        period: ['202512','202601','202602','202603','202604','202605','202606','202607','202608','202609']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PERIOD: ${{ matrix.period }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read original R2 archive, convert to verified H1, never modify ZIP
+        run: |
+          mkdir -p "artifacts/strategy_lab/crossfire_2026_source/${PERIOD}"
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${PERIOD}/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip" --remote --file "/tmp/CROSSFIRE_SOURCE_${PERIOD}.zip"
+          PYTHONPATH=src:. python scripts/strategy_lab/crossfire_2021_derive_month.py --period "$PERIOD" --archive "/tmp/CROSSFIRE_SOURCE_${PERIOD}.zip" --output "artifacts/strategy_lab/crossfire_2026_source/${PERIOD}"
+          rm -f "/tmp/CROSSFIRE_SOURCE_${PERIOD}.zip"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crossfire-2026-${{ matrix.period }}
+          path: artifacts/strategy_lab/crossfire_2026_source/${{ matrix.period }}/
+          retention-days: 30
+          if-no-files-found: warn
+  nine-month-frozen-comparison:
+    needs: real-archived-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: crossfire-2026-*
+          path: artifacts/strategy_lab/crossfire_2026_source/
+          merge-multiple: false
+      - run: python -m pip install --quiet pandas numpy
+      - name: Frozen three-source variants on 9 complete real Jan-Sep2026 months
+        run: PYTHONPATH=src:. python scripts/strategy_lab/crossfire_2026_holdout.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CROSSFIRE-S010-2026-REAL-HOLDOUT-3-VERSIONS
+          path: artifacts/strategy_lab/crossfire_2026_holdout_result/
+          retention-days: 90
+          if-no-files-found: error
