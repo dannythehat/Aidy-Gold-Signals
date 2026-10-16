@@ -78,7 +78,7 @@ def derive_signals(bars: pd.DataFrame) -> pd.DataFrame:
     return x.reset_index(drop=True)
 
 
-def simulate(bars: pd.DataFrame, leverage: float, costs: Costs) -> dict:
+def simulate(bars: pd.DataFrame, leverage: float, costs: Costs, *, verified_signal_override: tuple[int, ...] | None = None) -> dict:
     """Marked-equity returns, actual rounded USD and per-oz cost ledger.
 
     Signal at completed bar i close; fill at bar i+1 open. Fills are modelled
