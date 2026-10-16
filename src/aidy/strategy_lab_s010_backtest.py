@@ -196,7 +196,8 @@ def simulate(bars: pd.DataFrame, leverage: float, costs: Costs, *, verified_sign
              "unrealised_gross_usd":round(q*(last_bid-float(opened["entry_bid"])),2),
              "will_need_future_opposite_crossover":True}
     return {
-        "method":METHOD,"initial_usd":STARTING_USD,
+        "method":METHOD if verified_signal_override is None else "LAB_DONCHIAN_20_10_H1_V1",
+        "initial_usd":STARTING_USD,
         "leverage":leverage,
         "costs":vars(costs),
         "start_utc":marks[0]["time"],"end_utc":marks[-1]["time"],
