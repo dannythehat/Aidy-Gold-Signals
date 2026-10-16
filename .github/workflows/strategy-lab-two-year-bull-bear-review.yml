@@ -1,0 +1,45 @@
+name: GoldThinker Two-Year Bull and Down-Market Research Gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_two_year_bull_bear.py
+      - tests/test_strategy_lab_two_year_bull_bear.py
+      - docs/strategy-lab-two-year-bull-bear-review.md
+      - .github/workflows/strategy-lab-two-year-bull-bear-review.yml
+permissions:
+  contents: read
+jobs:
+  two-regime-evidence-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pure evidence validator tests
+        run: python -m pip install --quiet pytest ruff
+      - name: Prove original unchanged until both real years confirmed
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_two_year_bull_bear.py tests/test_strategy_lab_two_year_bull_bear.py
+          ruff check src/aidy/strategy_lab_two_year_bull_bear.py tests/test_strategy_lab_two_year_bull_bear.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_strategy_lab_two_year_bull_bear.py
+      - name: Require explicit blocked 2021 source until data actually available
+        run: |
+          PYTHONPATH=src:. python - <<'PY'
+          from decimal import Decimal
+          from aidy.strategy_lab_two_year_bull_bear import (
+              YearReport, eligibility,
+          )
+          first=YearReport(
+              2025,'bull_year','S010','a'*64,'b'*64,'c'*64,'d'*64,
+              12,Decimal(10000),Decimal('15032.76'),Decimal('150.328'),
+              Decimal('-33.671'),83,Decimal('1.66'),Decimal('-5710'),
+              False,Decimal('3.28'),
+          )
+          proof=eligibility(first)
+          assert proof['status']=='AWAIT_UNCHANGED_2021_DOWN_YEAR'
+          assert proof['improvements_allowed'] is False
+          print('S010_NOW: 2025 = HISTORICALLY RESEARCHED, 2021 = NOT YET INGESTED OR BACKTESTED; NO RETROSPECTIVE TWEAK APPROVED')
+          PY
