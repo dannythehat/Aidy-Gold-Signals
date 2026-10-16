@@ -11,9 +11,9 @@ import json
 import re
 import sqlite3
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable
 
 TENANT_ID = re.compile(r"[0-9a-f]{32}\Z")
 TEST_SESSION = re.compile(r"cs_test_[A-Za-z0-9]{8,150}\Z")
@@ -49,7 +49,7 @@ class SandboxPaymentIntake:
         clock: Callable[[], int] = lambda: int(time.time()),
     ):
         if not isinstance(database, Path):
-            raise ValueError("Expected existing tenant SQLite database path")
+            raise TypeError("Expected existing tenant SQLite database path")
         if (
             not isinstance(webhook_secret, bytes)
             or len(webhook_secret) < 24
