@@ -90,6 +90,17 @@ def simulate(bars: pd.DataFrame, leverage: float, costs: Costs, *, verified_sign
     if not 0 < leverage <= 4:
         raise ValueError("leverage out of reviewed range")
     x = derive_signals(bars)
+    # Trusted, repository-defined alternative research signal only.
+    # Untrusted submitted strategies must not enter this interface.
+    if verified_signal_override is not None:
+        if (not isinstance(verified_signal_override, tuple)
+                or len(verified_signal_override) != len(x)
+                or any(type(s) is not int or s not in (-1, 0, 1)
+                       for s in verified_signal_override)):
+            raise ValueError("Invalid predeclared full-length signal trace")
+        if any(verified_signal_override[:20]):
+            raise ValueError("Signals precede required Donchian warmup")
+        x["signal"] = list(verified_signal_override)
     equity = STARTING_USD
     q = 0.0
     last_bid: float | None = None
