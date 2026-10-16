@@ -1,0 +1,40 @@
+name: Strategy Lab B11 Optional Test Webhook Intake (NOT PAYMENT)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_sandbox_payment_intake.py
+      - tests/test_strategy_lab_sandbox_payment_intake.py
+      - docs/strategy-lab-day38-sandbox-webhook-intake.md
+      - .github/workflows/strategy-lab-day38-sandbox-webhook-intake.yml
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-signed-sandbox-fixture-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff
+      - name: Strict compile and lint
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_sandbox_payment_intake.py tests/test_strategy_lab_sandbox_payment_intake.py
+          ruff check src/aidy/strategy_lab_sandbox_payment_intake.py tests/test_strategy_lab_sandbox_payment_intake.py
+      - name: Authenticate synthetic signed events; never activate payment
+        run: PYTHONPATH=src python -m pytest -q tests/test_strategy_lab_sandbox_payment_intake.py
+      - name: Assert receipt journal cannot promote paid access
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/aidy/strategy_lab_sandbox_payment_intake.py').read_text()
+          assert '"paid_access_unlocked": False' in p
+          assert '"original_day38_passed": False' in p
+          assert '"public_launch_allowed": False' in p
+          print('Day38 external provider/payment acceptance remains BLOCKED')
+          PY
