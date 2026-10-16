@@ -78,7 +78,7 @@ def derive_signals(bars: pd.DataFrame) -> pd.DataFrame:
     return x.reset_index(drop=True)
 
 
-def simulate(bars: pd.DataFrame, leverage: float, costs: Costs) -> dict:
+def simulate(bars: pd.DataFrame, leverage: float, costs: Costs, *, verified_signal_override: tuple[int, ...] | None = None) -> dict:
     """Marked-equity returns, actual rounded USD and per-oz cost ledger.
 
     Signal at completed bar i close; fill at bar i+1 open. Fills are modelled
@@ -90,6 +90,17 @@ def simulate(bars: pd.DataFrame, leverage: float, costs: Costs) -> dict:
     if not 0 < leverage <= 4:
         raise ValueError("leverage out of reviewed range")
     x = derive_signals(bars)
+    # Trusted, repository-defined alternative research signal only.
+    # Untrusted submitted strategies must not enter this interface.
+    if verified_signal_override is not None:
+        if (not isinstance(verified_signal_override, tuple)
+                or len(verified_signal_override) != len(x)
+                or any(type(s) is not int or s not in (-1, 0, 1)
+                       for s in verified_signal_override)):
+            raise ValueError("Invalid predeclared full-length signal trace")
+        if any(verified_signal_override[:20]):
+            raise ValueError("Signals precede required Donchian warmup")
+        x["signal"] = list(verified_signal_override)
     equity = STARTING_USD
     q = 0.0
     last_bid: float | None = None
@@ -185,7 +196,8 @@ def simulate(bars: pd.DataFrame, leverage: float, costs: Costs) -> dict:
              "unrealised_gross_usd":round(q*(last_bid-float(opened["entry_bid"])),2),
              "will_need_future_opposite_crossover":True}
     return {
-        "method":METHOD,"initial_usd":STARTING_USD,
+        "method":METHOD if verified_signal_override is None else "LAB_DONCHIAN_20_10_H1_V1",
+        "initial_usd":STARTING_USD,
         "leverage":leverage,
         "costs":vars(costs),
         "start_utc":marks[0]["time"],"end_utc":marks[-1]["time"],
@@ -204,8 +216,15 @@ def simulate(bars: pd.DataFrame, leverage: float, costs: Costs) -> dict:
         "net_closed_trade_usd":round(sum(net_closed),2),
         "open_position":o,"monthly":monthly,
         "trades":trades,"equity":marks,
-        "risk_flags":["No strategy stop-loss", "3.28x leverage",
-                      "No leverage margin call or financing model",
-                      "HistData BID-only, synthetic ASK costs",
-                      "Unverified original publisher tick-level replication"],
+        "risk_flags": (
+            ["No strategy stop-loss", "3.28x leverage",
+             "No leverage margin call or financing model",
+             "HistData BID-only, synthetic ASK costs",
+             "Unverified original publisher tick-level replication"]
+            if verified_signal_override is None else
+            ["Lab-defined rules; not independently sourced from catalogue",
+             "No protective stop or source platform parity",
+             "No broker financing or margin-stopout modelling",
+             "HistData BID-only; illustrative ASK execution costs"]
+        ),
     }
