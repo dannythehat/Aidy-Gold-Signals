@@ -17,7 +17,11 @@ from pathlib import Path
 import pandas as pd
 
 from aidy.strategy_lab_s010_backtest import (
-    BASE, ORIGINAL_LEVERAGE, STARTING_USD, STRESS, simulate,
+    BASE,
+    ORIGINAL_LEVERAGE,
+    STARTING_USD,
+    STRESS,
+    simulate,
 )
 
 EXPECTED = tuple([202012] + [202100 + n for n in range(1, 13)])
@@ -158,7 +162,7 @@ def main()->int:
         summary=collect(folder,out)
         print("CROSSFIRE_2021_GENUINE_RESULT",json.dumps(summary,sort_keys=True),flush=True)
         return 0
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - preserve genuine source blocker artifact
         blocked={
             "status":"BLOCKED_REAL_2021_SOURCE_OR_RULES",
             "error_type":type(exc).__name__,"error":str(exc)[:400],
