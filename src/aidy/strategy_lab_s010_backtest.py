@@ -216,8 +216,15 @@ def simulate(bars: pd.DataFrame, leverage: float, costs: Costs, *, verified_sign
         "net_closed_trade_usd":round(sum(net_closed),2),
         "open_position":o,"monthly":monthly,
         "trades":trades,"equity":marks,
-        "risk_flags":["No strategy stop-loss", "3.28x leverage",
-                      "No leverage margin call or financing model",
-                      "HistData BID-only, synthetic ASK costs",
-                      "Unverified original publisher tick-level replication"],
+        "risk_flags": (
+            ["No strategy stop-loss", "3.28x leverage",
+             "No leverage margin call or financing model",
+             "HistData BID-only, synthetic ASK costs",
+             "Unverified original publisher tick-level replication"]
+            if verified_signal_override is None else
+            ["Lab-defined rules; not independently sourced from catalogue",
+             "No protective stop or source platform parity",
+             "No broker financing or margin-stopout modelling",
+             "HistData BID-only; illustrative ASK execution costs"]
+        ),
     }
