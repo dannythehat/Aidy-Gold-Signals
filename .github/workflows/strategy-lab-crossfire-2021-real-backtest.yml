@@ -1,0 +1,86 @@
+name: CROSSFIRE S010 Real 2021 Down-Market Original Backtest
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/strategy_lab_crossfire_tick_2021.py
+      - scripts/strategy_lab/crossfire_2021_derive_month.py
+      - scripts/strategy_lab/crossfire_2021_collect_and_backtest.py
+      - tests/test_strategy_lab_crossfire_2021_ticks.py
+      - .github/workflows/strategy-lab-crossfire-2021-real-backtest.yml
+      - docs/crossfire-2021-original-down-regime-test.md
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff pandas numpy
+      - name: Check parser and S010 regression tests
+        run: |
+          python -m compileall -q src/aidy/strategy_lab_crossfire_tick_2021.py scripts/strategy_lab/crossfire_2021_derive_month.py scripts/strategy_lab/crossfire_2021_collect_and_backtest.py tests/test_strategy_lab_crossfire_2021_ticks.py
+          ruff check src/aidy/strategy_lab_crossfire_tick_2021.py scripts/strategy_lab/crossfire_2021_derive_month.py scripts/strategy_lab/crossfire_2021_collect_and_backtest.py tests/test_strategy_lab_crossfire_2021_ticks.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_strategy_lab_crossfire_2021_ticks.py tests/test_strategy_lab_s010_backtest.py
+  real-archived-month:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        period: ['202012','202101','202102','202103','202104','202105','202106','202107','202108','202109','202110','202111','202112']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PERIOD: ${{ matrix.period }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read original R2 archive, convert to verified H1, never modify ZIP
+        run: |
+          mkdir -p "artifacts/strategy_lab/crossfire_2021_source/${PERIOD}"
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${PERIOD}/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip" --remote --file "/tmp/CROSSFIRE_SOURCE_${PERIOD}.zip"
+          PYTHONPATH=src:. python scripts/strategy_lab/crossfire_2021_derive_month.py --period "$PERIOD" --archive "/tmp/CROSSFIRE_SOURCE_${PERIOD}.zip" --output "artifacts/strategy_lab/crossfire_2021_source/${PERIOD}"
+          rm -f "/tmp/CROSSFIRE_SOURCE_${PERIOD}.zip"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crossfire-2021-${{ matrix.period }}
+          path: artifacts/strategy_lab/crossfire_2021_source/${{ matrix.period }}/
+          retention-days: 30
+          if-no-files-found: warn
+  full-year-unchanged-original:
+    needs: real-archived-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: crossfire-2021-*
+          path: artifacts/strategy_lab/crossfire_2021_source/
+          merge-multiple: false
+      - run: python -m pip install --quiet pandas numpy
+      - name: Unchanged source MA12/34 RSI14 on 12 months of real 2021 candles
+        run: PYTHONPATH=src:. python scripts/strategy_lab/crossfire_2021_collect_and_backtest.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: CROSSFIRE-S010-2021-REAL-DOWN-YEAR-BACKTEST
+          path: artifacts/strategy_lab/crossfire_2021_full_result/
+          retention-days: 90
+          if-no-files-found: error
