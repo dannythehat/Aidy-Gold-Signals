@@ -1,0 +1,52 @@
+# CROSSFIRE S010 — H1-updated risk sizing research, 2025 and 2026 only
+
+Owner brief: reduce original gold system's 33%/44% historical drawdown while protecting strong profitability; approximately 10% per month is an aspirational return, **not** a monthly guarantee or a selection target to overfit.
+
+## Real source and original parity
+
+- 2025 verified HistData native M1 BID -> 5866 fully sourced H1 candles: [frozen original real-data workflow](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38745844838).
+- 2026 Jan-Sep verified original R2 HistData BID/ASK -> 4382 fully sourced H1 candles: [frozen 2026 workflow](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/38851611865).
+- 2020 and 2021 explicitly **excluded** from the risk-balance exercise per owner.
+- Source trading rules unchanged: original long-only MA12/34 crossover with RSI14 filter, opposite crossover exits, original max 3.28x exposure.
+- Validate exact 2025 +$15,032.76 and 2026 +$8,573.74 original model, **and** reproduce prior entry-only guard to cent (2025 +$7,641.47, 2026 +$9,312.00). A drift is CI FAIL.
+
+## The two identified risk-design gaps
+
+Previously we applied 50% sizing while marked account DD >=10%, restoring at DD <5%. But flag state was only updated at new-entry times. That stale logic crippled 2025 recovery.
+
+**Balanced H1 rule (one changed risk-management dimension):** Update the DD flag on every **completed H1** mark, then size the *next* new entries at 1.64x if DD>=10%; return to 3.28x when DD<5%. NO retroactive lookahead, no automatic resize of existing positions, no new direction, SMA or RSI changes.
+
+Also tested exactly two targeted alternatives against that balanced rule: a gentler 2.46x new-entry brake and an extra one-time 50% reduction of a currently held position at the next H1 open after DD>=10%. This is a bounded mechanism comparison, not an unrestricted backtest parameter sweep.
+
+## Independently reproduced price-model comparisons
+
+| Version | 2025 P&L (USD10k start) | 2025 H1 marked DD | 2026 P&L (USD10k start) | 2026 H1 marked DD |
+|---|---:|---:|---:|---:|
+| Original 3.28x | +$15,032.76 | -33.67% | +$8,573.74 | -44.07% |
+| Previous stale/entry-only guard | +$7,641.47 | -32.56% | +$9,312.00 | -24.90% |
+| **H1-updated half-size new-entry guard** | **+$10,048.65** | **-22.07%** | **+$10,542.25** | **-28.83%** |
+| Gentler 75% exposure (2.46x) | +$12,528.68 | -27.96% | +$9,587.42 | -36.75% |
+| H1-half new entry + one-time half of held trade | +$11,306.03 | -16.16% | +$5,790.53 | -19.85% |
+
+HistData recorded ASK-entry sensitivity in 2026: original +$8,145.56 / -44.52%; H1-updated balanced guard +$10,244.60 / -29.12%. ASK is genuine third-party historic quote but not verified executable Vantage ASK. Fixed adverse slip and commission remain scenario assumptions.
+
+2025 balanced guard 8/12 months positive and only 4/12 returned >=10%. 2026 balanced guard 5/9 months positive and only 3/9 >=10%, with large positive January-March and losing April-June/September. **No claim of consistent monthly income**.
+
+Extra H1-low drawdown diagnostic (held longs marked to worst H1 BID low): 2025 balanced -22.37%; 2026 balanced -29.50%; this is NOT broker stopout certification.
+
+## Required risk boundary before controlled $10k MT5 paper
+
+- Historical simulations pre-viewed 2025/2026; this optimisation is **retrospective**, not genuinely unseen out-of-sample validation.
+- There is NO verified Vantage broker overnight swap table, executable spread/volume slippage, full contract/margin terms and stopout/liquidation engine, and no account-level stop-loss guarantee.
+- Especially important: an open position already at 3.28x can move violently before H1 close; the sizing rule only affects **new** trades. The peak-equity brake does not cap ultimate liquidation.
+- A paper implementation must read account balance/equity and per-position exposure, reconcile end-of-candle UTC/MT5 broker clock, persist high-water mark across crashes, and include a separate hard overall risk kill-switch with owner-reviewed margin rules.
+- No MT5 demo account has been started and no broker order may be placed by this research workflow. Individual GoldThinker subscription remains **LOCKED**.
+
+## Reproduce
+
+- [Source engine](../src/aidy/strategy_lab_crossfire_balanced_guard.py)
+- [Runner](../scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py)
+- [Historical two-source artifact CI](../.github/workflows/crossfire-balanced-risk-research.yml)
+- [Drive tracker](https://docs.google.com/spreadsheets/d/1ri94tJaaEiPGbhRaFyA12kUUl4l3enP3jzOepX1RCsU/edit) tab `15_DRAWDOWN_RESEARCH`: append new experiments without overwriting older or original rows.
+
+**Outcome: historically promising risk-balanced hypothesis, not production or paper qualification.**
