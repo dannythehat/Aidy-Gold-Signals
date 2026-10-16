@@ -25,7 +25,7 @@ jobs:
       - name: Check frozen variants, parser and unchanged S010 regression tests
         run: |
           python -m compileall -q src/aidy/strategy_lab_crossfire_tick_2021.py src/aidy/strategy_lab_crossfire_2026_variants.py scripts/strategy_lab/crossfire_2021_derive_month.py scripts/strategy_lab/crossfire_2026_holdout.py tests/test_strategy_lab_crossfire_2026_variants.py
-          ruff check src/aidy/strategy_lab_crossfire_tick_2021.py scripts/strategy_lab/crossfire_2021_derive_month.py scripts/strategy_lab/crossfire_2026_holdout.py tests/test_strategy_lab_crossfire_2026_variants.py
+          ruff check src/aidy/strategy_lab_crossfire_tick_2021.py src/aidy/strategy_lab_crossfire_2026_variants.py scripts/strategy_lab/crossfire_2021_derive_month.py scripts/strategy_lab/crossfire_2026_holdout.py tests/test_strategy_lab_crossfire_2026_variants.py
           PYTHONPATH=src:. python -m pytest -q tests/test_strategy_lab_crossfire_2026_variants.py tests/test_strategy_lab_s010_backtest.py tests/test_strategy_lab_crossfire_2021_ticks.py
   real-archived-month:
     needs: validate
