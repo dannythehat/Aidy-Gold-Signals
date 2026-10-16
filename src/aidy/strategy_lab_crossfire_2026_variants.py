@@ -67,7 +67,10 @@ def replay(raw: pd.DataFrame, variant: str, *, costs: Costs = BASE) -> dict:
             equity += qty * (opening_bid - last_bid)
         previous_signal = int(df.iloc[i - 1]["signal"]) if i else 0
 
-        def close_trade(exit_bid: float, reason: str) -> None:
+        def close_trade(
+            exit_bid: float, reason: str,
+            *, opening_bid: float = opening_bid, at: str = at,
+        ) -> None:
             nonlocal qty, open_trade, equity, paid_cost, stop_events
             assert open_trade is not None
             paid_at_exit = qty * (
