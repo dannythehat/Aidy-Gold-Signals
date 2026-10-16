@@ -24,13 +24,13 @@ def source(year=2025, **override):
         original_report_hash=("c" if year == 2025 else "d") * 64,
         real_source_hash=("e" if year == 2025 else "f") * 64,
         completed_real_months=12,
-        starting_usd=Decimal("10000"),
-        net_usd=Decimal("5000"),
-        return_pct=Decimal("50"),
-        max_drawdown_pct=Decimal("-33"),
+        starting_usd=Decimal(10000),
+        net_usd=Decimal(5000),
+        return_pct=Decimal(50),
+        max_drawdown_pct=Decimal(-33),
         trades=83,
         profit_factor=Decimal("1.66"),
-        worst_trade_usd=Decimal("-5000"),
+        worst_trade_usd=Decimal(-5000),
         has_protective_stop=False,
         leverage=Decimal("3.28"),
     )
@@ -47,7 +47,7 @@ def variant(original, *, key="atr3_stop", net="5500", dd="-29", h="g"):
         independently_replayed=True,
         full_real_year=True,
         net_usd=Decimal(net),
-        return_pct=Decimal("55"),
+        return_pct=Decimal(55),
         max_drawdown_pct=Decimal(dd),
     )
 
@@ -72,7 +72,7 @@ def test_2021_down_year_then_passes_only_if_unchanged_and_profitable():
 
 
 @pytest.mark.parametrize("changes", [
-    {"net_usd": Decimal("-10")},
+    {"net_usd": Decimal(-10)},
     {"completed_real_months": 11},
     {"execution_cost_hash": "f" * 64},
     {"rule_hash": "f" * 64},
@@ -95,10 +95,10 @@ def test_two_bull_years_do_not_count_as_two_different_regimes():
 
 
 def test_structurally_healthy_original_needs_no_ai_tweaks():
-    a = source(has_protective_stop=True, leverage=Decimal("1"),
-               max_drawdown_pct=Decimal("-9"), worst_trade_usd=Decimal("-50"))
-    b = source(2021, has_protective_stop=True, leverage=Decimal("1"),
-               max_drawdown_pct=Decimal("-10"), worst_trade_usd=Decimal("-40"))
+    a = source(has_protective_stop=True, leverage=Decimal(1),
+               max_drawdown_pct=Decimal(-9), worst_trade_usd=Decimal(-50))
+    b = source(2021, has_protective_stop=True, leverage=Decimal(1),
+               max_drawdown_pct=Decimal(-10), worst_trade_usd=Decimal(-40))
     assert eligibility(a, b)["improvements_allowed"]
     assert targeted_diagnosis(a, b) == []
 
