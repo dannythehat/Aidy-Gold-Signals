@@ -16,7 +16,9 @@ from pathlib import Path
 import pandas as pd
 
 from aidy.strategy_lab_crossfire_2026_variants import (
-    RESEARCH_CONTRACT, VARIANT_KEYS, replay,
+    RESEARCH_CONTRACT,
+    VARIANT_KEYS,
+    replay,
 )
 from aidy.strategy_lab_crossfire_tick_2021 import FORMAT
 from aidy.strategy_lab_s010_backtest import BASE, STRESS
