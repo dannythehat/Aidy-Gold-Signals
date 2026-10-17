@@ -1,0 +1,51 @@
+name: AIDY Release Obsolete Deploy Acceptance Lock
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/aidy-release-obsolete-deploy-20261017.yml
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  release-lock:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Confirm exact stale deployment identity before cancelling
+        shell: bash
+        run: |
+          set -euo pipefail
+          info="$(gh api /repos/dannythehat/Aidy-Gold-Signals/actions/runs/39001249855)"
+          actual_sha="$(echo "$info" | jq -r .head_sha)"
+          workflow="$(echo "$info" | jq -r .name)"
+          state="$(echo "$info" | jq -r .status)"
+          echo "old_run=39001249855 workflow=$workflow state=$state"
+          if [ "$actual_sha" != "c6e32764ab82c4cafa40cfb6158e3d27ed3d473c" ] || [ "$workflow" != "AIDY Provider Research Read Deploy" ]; then
+            echo "Exact deployment identity differs; no change" >&2
+            exit 1
+          fi
+          if [ "$state" = "completed" ]; then
+            echo "Old run already completed; no cancellation necessary"
+          elif [ "$state" = "in_progress" ]; then
+            # Previous Deploy succeeded; only old Build-24 shadow proof is stuck.
+            step="$(gh api /repos/dannythehat/Aidy-Gold-Signals/actions/runs/39001249855/jobs --jq '.jobs[0].steps[] | select(.name=="Deploy") | .conclusion')"
+            echo "old_deploy_step_conclusion=$step"
+            if [ "$step" != "success" ]; then
+              echo "Never cancel mid-deployment" >&2
+              exit 1
+            fi
+            gh api -X POST /repos/dannythehat/Aidy-Gold-Signals/actions/runs/39001249855/cancel > /dev/null
+            echo "cancel_requested=true"
+          else
+            echo "Unexpected old-run state; no cancellation" >&2
+            exit 1
+          fi
+          gh api /repos/dannythehat/Aidy-Gold-Signals/actions/runs/39002446566 \
+            --jq '{new_run_id:.id,new_run_state:.status,new_run_conclusion:.conclusion,new_head_sha:.head_sha}'
