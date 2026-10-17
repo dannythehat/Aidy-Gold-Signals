@@ -1,0 +1,156 @@
+name: AIDY Read-only Historical Ops Closeout Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/aidy-readonly-ops-closeout.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-cloudflare-read:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+      D1_ROWS_READ_ALERT_THRESHOLD: "3250000"
+      D1_ROWS_READ_FREE_LIMIT: "5000000"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read-only D1 outbox and capture heartbeat (no issue or data writes)
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          report = {"kind": "read_only_observation_not_remediation",
+                    "observed_at_utc": datetime.now(UTC).isoformat(),
+                    "production_health_certified": False, "sections": {}}
+          path = Path("artifacts/aidy-readonly-closeout.json")
+
+          def query(sql):
+              endpoint = ("https://api.cloudflare.com/client/v4/accounts/"
+                          + os.environ["CLOUDFLARE_ACCOUNT_ID"] + "/d1/database/"
+                          + os.environ["AIDY_D1_DATABASE_ID"] + "/query")
+              request = urllib.request.Request(
+                  endpoint, data=json.dumps({"sql": sql, "params": []}).encode(),
+                  headers={"Authorization": "Bearer " + os.environ["CLOUDFLARE_API_TOKEN"],
+                           "Content-Type": "application/json"})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = json.load(response)
+              if not payload.get("success"):
+                  raise RuntimeError("D1 rejected read-only query")
+              results = payload.get("result") or []
+              if len(results) != 1:
+                  raise RuntimeError("Unexpected Cloudflare D1 envelope")
+              return results[0].get("results") or []
+
+          queries = {
+              "gold_outbox": """SELECT created_at,attempts FROM archive_outbox
+                  INDEXED BY ix_archive_outbox_pending WHERE status='pending'
+                  ORDER BY created_at,id LIMIT 26""",
+              "cross_market_outbox": """SELECT created_at,attempts
+                  FROM cross_market_archive_outbox
+                  INDEXED BY ix_cross_market_archive_outbox_pending
+                  WHERE status='pending' ORDER BY created_at,id LIMIT 26""",
+              "capture": """SELECT completed_at_utc FROM twelve_data_request_ledger
+                  INDEXED BY idx_twelve_data_request_ledger_completion_success
+                  WHERE completed_at_utc IS NOT NULL
+                  AND status='succeeded' AND request_kind='scheduled_capture'
+                  ORDER BY completed_at_utc DESC LIMIT 1""",
+              "provider_context": """SELECT captured_at FROM market_snapshots
+                  INDEXED BY idx_market_snapshots_provider_context_scheduled_success
+                  WHERE symbol='XAUUSD' AND market_data_source='twelve_data'
+                    AND capture_status='complete'
+                    AND json_extract(data_availability_json,'$.request_kind')='scheduled_capture'
+                    AND json_extract(data_availability_json,'$.request_ledger_status')='succeeded'
+                  ORDER BY captured_at DESC,id DESC LIMIT 1""",
+          }
+          problems = []
+          for kind, sql in queries.items():
+              try:
+                  rows = query(sql)
+                  if kind.endswith("outbox"):
+                      oldest = rows[0]["created_at"] if rows else None
+                      max_attempts = max((int(row.get("attempts") or 0) for row in rows), default=0)
+                      report["sections"][kind] = {
+                          "bounded_pending_rows": len(rows),
+                          "cap_hit": len(rows) >= 26, "oldest_pending_at": oldest,
+                          "maximum_attempts_in_sample": max_attempts}
+                  else:
+                      report["sections"][kind] = {
+                          "latest_completed_utc": (list(rows[0].values())[0] if rows else None)}
+              except Exception as exc:
+                  report["sections"][kind] = {"read_error": type(exc).__name__}
+                  problems.append(kind)
+          report["read_status"] = "ERROR" if problems else "ALL_QUERIES_SUCCEEDED"
+          path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n",
+                          encoding="utf-8")
+          print(json.dumps(report, indent=2, sort_keys=True))
+          if problems:
+              raise SystemExit(1)
+          PY
+      - name: Previous full UTC day D1 usage (historical observation only)
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          DAY="$(date -u -d 'yesterday' +%F)"
+          python scripts/aidy_d1_budget_monitor.py \
+            --day "$DAY" --max-attempts 2 \
+            --diagnostic artifacts/aidy-previous-full-day-rows-read.json
+      - name: Diagnose dominant D1 query families without fetching table data
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 insights aidy-ops-test \
+            --sort-type=sum --sort-by=reads --sort-direction=DESC \
+            --limit=15 --time-period=1d --json > /tmp/aidy-d1-insights-raw.json
+          python - <<'PY'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+          obj = json.loads(Path('/tmp/aidy-d1-insights-raw.json').read_text())
+          if not isinstance(obj, list):
+              raise ValueError("Unexpected D1 insights JSON")
+          summary = []
+          for item in obj:
+              sql = str(item.get('query', ''))
+              tables = re.findall(r'\b(?:FROM|JOIN)\s+["' + "'" + r']?([A-Za-z_][A-Za-z_0-9]*)',
+                                  sql, flags=re.I)
+              summary.append({
+                  'sql_sha256': hashlib.sha256(sql.encode()).hexdigest(),
+                  'tables': sorted(set(tables)),
+                  'total_rows_read': int(item.get('totalRowsRead') or 0),
+                  'executions': int(item.get('numberOfTimesRun') or 0),
+                  'average_rows_read': float(item.get('avgRowsRead') or 0),
+              })
+          result = {'scope': 'last_1d_rolling_insights_not_full_utc_day',
+                    'sampled_top_query_families': summary,
+                    'no_query_text_exported': True}
+          Path('artifacts/aidy-d1-insights-families.json').write_text(
+              json.dumps(result, indent=2, sort_keys=True)+'\n')
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
+      - name: Retain sanitised read-only receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-ops-readonly-closure-receipts
+          path: |
+            artifacts/aidy-readonly-closeout.json
+            artifacts/aidy-previous-full-day-rows-read.json
+            artifacts/aidy-d1-insights-families.json
+          if-no-files-found: warn
+          retention-days: 14
