@@ -56,6 +56,17 @@ jobs:
               return results[0].get("results") or []
 
           queries = {
+              "gold_archive_delivery_states": """SELECT status,delivery_state,
+                         COUNT(*) AS count,
+                         SUM(CASE WHEN archived_at IS NULL THEN 1 ELSE 0 END) AS missing_archive_timestamp,
+                         MIN(created_at) AS oldest_created_at
+                  FROM archive_outbox INDEXED BY ix_archive_outbox_delivery_due
+                  WHERE delivery_state IN ('pending','backoff','dead_letter')
+                  GROUP BY status,delivery_state""",
+              "cross_archive_delivery_states": """SELECT delivery_state,COUNT(*) AS count
+                  FROM cross_market_archive_outbox INDEXED BY ix_cross_market_archive_outbox_delivery_due
+                  WHERE delivery_state IN ('pending','backoff','dead_letter')
+                  GROUP BY delivery_state""",
               "gold_outbox": """SELECT created_at,attempts FROM archive_outbox
                   INDEXED BY ix_archive_outbox_pending WHERE status='pending'
                   ORDER BY created_at,id LIMIT 26""",
@@ -80,7 +91,14 @@ jobs:
           for kind, sql in queries.items():
               try:
                   rows = query(sql)
-                  if kind.endswith("outbox"):
+                  if kind.endswith("delivery_states"):
+                      report["sections"][kind] = {
+                          str(row.get('status','')) + ':' + str(row['delivery_state']): {
+                              'count': int(row['count']),
+                              'missing_archive_timestamp': int(row.get('missing_archive_timestamp') or 0),
+                              'oldest_created_at': row.get('oldest_created_at')
+                          } for row in rows}
+                  elif kind.endswith("outbox"):
                       oldest = rows[0]["created_at"] if rows else None
                       max_attempts = max((int(row.get("attempts") or 0) for row in rows), default=0)
                       report["sections"][kind] = {
@@ -115,7 +133,7 @@ jobs:
           set -euo pipefail
           npx --yes wrangler@4 d1 insights aidy-ops-test \
             --sort-type=sum --sort-by=reads --sort-direction=DESC \
-            --limit=15 --time-period=1d --json > /tmp/aidy-d1-insights-raw.json
+            --limit=15 --time-period=1h --json > /tmp/aidy-d1-insights-raw.json
           python - <<'PY'
           import hashlib
           import json
@@ -136,7 +154,7 @@ jobs:
                   'executions': int(item.get('numberOfTimesRun') or 0),
                   'average_rows_read': float(item.get('avgRowsRead') or 0),
               })
-          result = {'scope': 'last_1d_rolling_insights_not_full_utc_day',
+          result = {'scope': 'last_1h_rolling_insights_not_full_utc_day',
                     'sampled_top_query_families': summary,
                     'no_query_text_exported': True}
           Path('artifacts/aidy-d1-insights-families.json').write_text(
