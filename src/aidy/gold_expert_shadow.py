@@ -1013,12 +1013,18 @@ class D1GoldExpertShadowStore:
               ON s.cycle_view_id=v.cycle_view_id
             WHERE s.cycle_view_id IS NULL
               AND v.decided_at_utc>=?
+              AND v.decided_at_utc>=?
               AND v.decided_at_utc<=?
+              -- Frozen expert votes are prospective only when committed
+              -- before the outcome window actually starts.
+              AND v.window_start_utc>?
             ORDER BY v.decided_at_utc
             LIMIT ?
             """
         ).bind(
             activated.isoformat(),
+            (now - timedelta(minutes=15)).isoformat(),
+            now.isoformat(),
             now.isoformat(),
             max(1, min(int(limit), 20)),
         ).all()
@@ -1357,6 +1363,42 @@ class D1GoldExpertShadowStore:
             "future_values_used": False,
         }
 
+    async def heartbeat_shadow_summary(
+        self,
+        *,
+        as_of_utc: datetime,
+    ) -> dict[str, Any]:
+        """Cheap scheduler status; the full historical report is on-demand only.
+
+        The minute cron must never rebuild every historical gate accuracy and
+        baseline simply to record that the research observer is still alive.
+        Public provider scorecards continue to use scorecard_snapshot unchanged.
+        """
+        now = _utc(as_of_utc, name="as_of_utc")
+        row = _row(
+            await self._d1.prepare(
+                """
+                SELECT cycle_view_id,meta_view_json
+                FROM aidy_gold_expert_shadow_cycles
+                WHERE decided_at_utc<=?
+                ORDER BY decided_at_utc DESC
+                LIMIT 1
+                """
+            ).bind(now.isoformat()).first()
+        )
+        if row is None:
+            return {
+                "state": "no_prospective_shadow_cycle_yet",
+                "latest_cycle_view_id": None,
+                "latest_meta_direction": None,
+            }
+        meta = _json(row.get("meta_view_json"), default={})
+        return {
+            "state": "active",
+            "latest_cycle_view_id": str(row["cycle_view_id"]),
+            "latest_meta_direction": str(meta.get("direction") or "abstain"),
+        }
+
     async def scorecard_snapshot(
         self,
         *,
@@ -1521,7 +1563,7 @@ async def sync_gold_expert_shadow(
     activation = await store.ensure_activation(now_utc=now)
     scoring = await store.score_resolved_cycles(now_utc=now)
     creation = await store.create_new_cycles(now_utc=now)
-    scorecard = await store.scorecard_snapshot(as_of_utc=now)
+    heartbeat = await store.heartbeat_shadow_summary(as_of_utc=now)
     result = {
         "shadow_version": GOLD_EXPERT_SHADOW_VERSION,
         "scorecard_version": GOLD_EXPERT_SCORECARD_VERSION,
@@ -1529,13 +1571,9 @@ async def sync_gold_expert_shadow(
         "activated_at_utc": activation.isoformat(),
         "scoring": scoring,
         "creation": creation,
-        "scorecard_state": scorecard.get("state"),
-        "latest_cycle_view_id": scorecard.get("latest_cycle_view_id"),
-        "latest_meta_direction": (
-            (scorecard.get("latest_aidy_view") or {}).get("direction")
-            if isinstance(scorecard.get("latest_aidy_view"), Mapping)
-            else None
-        ),
+        "scorecard_state": heartbeat["state"],
+        "latest_cycle_view_id": heartbeat["latest_cycle_view_id"],
+        "latest_meta_direction": heartbeat["latest_meta_direction"],
         "research_only": True,
         "formal_forward_authority": False,
         "live_money_execution_allowed": False,
