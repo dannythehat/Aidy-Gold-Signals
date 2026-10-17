@@ -36,7 +36,7 @@ def test_gold_shadow_indexed_history_keeps_all_original_rows_and_order() -> None
     db.executemany(
         "INSERT INTO aidy_gold_expert_shadow_health_history VALUES (?,?)",
         (
-            (f"2026-09-{1 + i // 240:02d}T{i % 24:02d}:00:00+00:00",
+            (f"2026-09-{1 + i // 240:02d}T{i % 24:02d}:{(i // 24) % 10:02d}:00+00:00",
              "2026-09-01T00:00:00+00:00" if i == 44 else None)
             for i in range(3000)
         ),
