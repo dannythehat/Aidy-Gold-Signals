@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   independent-cloudflare-read:
@@ -56,6 +57,12 @@ jobs:
               return results[0].get("results") or []
 
           queries = {
+              # No COUNT(*) over the historical shadow-health log; a bounded
+              # newest-first record sample remains index-driven and cheap.
+              "shadow_recent_sample": """SELECT observed_at_utc,status,error_type
+                  FROM aidy_gold_expert_shadow_health_history
+                  INDEXED BY idx_gold_expert_shadow_health_history_observed
+                  ORDER BY observed_at_utc DESC LIMIT 5""",
               "shadow_latest_observation": """SELECT observed_at_utc,status,error_type,
                          substr(error_message,1,250) AS error_message,latest_cycle_decided_at_utc
                   FROM aidy_gold_expert_shadow_health_history
@@ -117,6 +124,15 @@ jobs:
                           "bounded_pending_rows": len(rows),
                           "cap_hit": len(rows) >= 26, "oldest_pending_at": oldest,
                           "maximum_attempts_in_sample": max_attempts}
+                  elif kind == "shadow_recent_sample":
+                      report["sections"][kind] = {
+                          "latest_five": [
+                              {"observed_at_utc": row.get("observed_at_utc"),
+                               "status": row.get("status"),
+                               "error_type": row.get("error_type")}
+                              for row in rows
+                          ]
+                      }
                   elif kind.startswith("shadow_") or kind.startswith("cycle_"):
                       report["sections"][kind] = rows[0] if rows else {"no_rows": True}
                   else:
@@ -186,3 +202,14 @@ jobs:
             artifacts/aidy-d1-insights-families.json
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Inspect recent protected-main Cloudflare deploy workflow outcomes
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh run list --workflow aidy-provider-research-read-deploy.yml \
+            --branch main --limit 6 \
+            --json databaseId,createdAt,headSha,status,conclusion,url \
+            --jq '.[] | {run_id:.databaseId,created_at:.createdAt,head_sha:.headSha,status:.status,conclusion:.conclusion,url:.url}'
