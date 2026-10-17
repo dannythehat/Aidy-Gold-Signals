@@ -160,14 +160,16 @@ WITH latest_success AS (
     COALESCE(SUM(CASE WHEN delivery_state='backoff' THEN 1 ELSE 0 END),0) AS backoff_count,
     COALESCE(SUM(CASE WHEN delivery_state='dead_letter' THEN 1 ELSE 0 END),0) AS dead_letter_count,
     MIN(CASE WHEN delivery_state!='archived' THEN created_at END) AS oldest_unarchived_utc
-  FROM archive_outbox
+  FROM archive_outbox INDEXED BY ix_archive_outbox_delivery_due
+  WHERE delivery_state IN ('pending','backoff','dead_letter')
 ), cross_archive_stats AS (
   SELECT
     COALESCE(SUM(CASE WHEN delivery_state='pending' THEN 1 ELSE 0 END),0) AS pending_count,
     COALESCE(SUM(CASE WHEN delivery_state='backoff' THEN 1 ELSE 0 END),0) AS backoff_count,
     COALESCE(SUM(CASE WHEN delivery_state='dead_letter' THEN 1 ELSE 0 END),0) AS dead_letter_count,
     MIN(CASE WHEN delivery_state!='archived' THEN created_at END) AS oldest_unarchived_utc
-  FROM cross_market_archive_outbox
+  FROM cross_market_archive_outbox INDEXED BY ix_cross_market_archive_outbox_delivery_due
+  WHERE delivery_state IN ('pending','backoff','dead_letter')
 )
 SELECT
   s.completed_at_utc AS latest_scheduled_success_utc,
