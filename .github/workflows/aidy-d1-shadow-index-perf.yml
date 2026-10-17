@@ -1,0 +1,70 @@
+name: AIDY D1 Shadow Ledger Indexed Query Safety
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - migrations/d1/0029_gold_expert_shadow_read_indexes.sql
+      - tests/test_aidy_shadow_index_migration.py
+      - .github/workflows/aidy-d1-shadow-index-perf.yml
+  push:
+    branches: [main]
+    paths:
+      - migrations/d1/0029_gold_expert_shadow_read_indexes.sql
+
+permissions:
+  contents: read
+
+jobs:
+  index-query-plan-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify unchanged immutable/PIT results and physical SQLite query plan
+        run: |
+          python -m pip install --quiet pytest ruff
+          ruff check tests/test_aidy_shadow_index_migration.py
+          python -m pytest -q tests/test_aidy_shadow_index_migration.py
+
+  apply-additive-indexes-to-d1:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: index-query-plan-regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply idempotent indexes to original AIDY D1 (no data row updates)
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          npx --yes wrangler@4 d1 execute aidy-ops-test --remote \
+            --file=migrations/d1/0029_gold_expert_shadow_read_indexes.sql
+      - name: Verify exactly three new indexes available remotely
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 execute aidy-ops-test --remote \
+            --command="SELECT name FROM sqlite_master WHERE type='index' AND name IN ('ix_aidy_gold_expert_outcome_gate_resolved','ix_aidy_gold_expert_outcome_type_resolved','ix_aidy_gold_expert_shadow_last_frozen') ORDER BY name;" \
+            --json > /tmp/aidy-index-presence.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/aidy-index-presence.json',encoding='utf-8'))
+          rows=d[0]['results']
+          names={row['name'] for row in rows}
+          required={
+              'ix_aidy_gold_expert_outcome_gate_resolved',
+              'ix_aidy_gold_expert_outcome_type_resolved',
+              'ix_aidy_gold_expert_shadow_last_frozen',
+          }
+          assert names==required, (names,required)
+          print('three_aidy_shadow_read_indexes_verified=true')
+          PY
