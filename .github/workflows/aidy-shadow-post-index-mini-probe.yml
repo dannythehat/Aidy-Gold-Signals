@@ -1,0 +1,57 @@
+name: AIDY Minimal Post-index Shadow Health Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/aidy-shadow-post-index-mini-probe.yml
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Read two small D1 diagnostics only
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          endpoint=(
+            "https://api.cloudflare.com/client/v4/accounts/"
+            + os.environ["CLOUDFLARE_ACCOUNT_ID"]
+            + "/d1/database/3588d82a-d686-4430-872d-d4c0e62c3d5d/query")
+          def read(label,sql):
+              req=urllib.request.Request(endpoint,
+                   data=json.dumps({"sql":sql,"params":[]}).encode(),
+                   headers={"Authorization":"Bearer "+os.environ["CLOUDFLARE_API_TOKEN"],
+                            "Content-Type":"application/json"})
+              with urllib.request.urlopen(req,timeout=25) as response:
+                  obj=json.load(response)
+              if not obj.get("success") or len(obj.get("result") or [])!=1:
+                  raise RuntimeError(label+": invalid D1 query response")
+              return obj["result"][0].get("results") or []
+
+          indexes=read("indices","""SELECT name FROM sqlite_master
+              WHERE type='index' AND name IN (
+              'ix_aidy_gold_expert_outcome_gate_resolved',
+              'ix_aidy_gold_expert_outcome_type_resolved',
+              'ix_aidy_gold_expert_shadow_last_frozen') ORDER BY name""")
+          print("index_names="+",".join(x["name"] for x in indexes))
+          assert len(indexes)==3, "Not all three D1 performance indexes active"
+          shadow=read("shadow","""SELECT observed_at_utc,status,error_type
+              FROM aidy_gold_expert_shadow_health_history
+              INDEXED BY idx_gold_expert_shadow_health_history_observed
+              ORDER BY observed_at_utc DESC LIMIT 4""")
+          print("shadow_recent_heartbeats="+json.dumps(shadow,sort_keys=True))
+          print("no_sensitive_rows_or_trades_accessed=true")
+          PY
