@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import inspect
+import re
+import sqlite3
 from pathlib import Path
 
 from aidy.gold_cycle_environment import build_cycle_environment
 from aidy.gold_expert_gate_contract import verify_expert_gate_packet
 from aidy.gold_expert_shadow import (
+    D1GoldExpertShadowStore,
     EXPECTED_GATES,
     GOLD_EXPERT_SCORECARD_VERSION,
     GOLD_EXPERT_SHADOW_VERSION,
@@ -271,3 +275,47 @@ def test_no_live_money_or_formal_forward_authority_is_created() -> None:
     assert "MetaAPI" not in source
     assert "Vantage" not in source
     assert "execute_trade" not in source
+
+
+def test_shadow_does_not_get_stuck_on_archived_pruned_source_snapshot() -> None:
+    """Never fabricate a shadow result for a pruned snapshot; allow newer PIT rows."""
+    sql_source = inspect.getsource(D1GoldExpertShadowStore.create_new_cycles)
+    match = re.search(r'"""([\s\S]*?)"""', sql_source)
+    assert match is not None
+    sql = match.group(1)
+    assert "JOIN market_snapshots original_snapshot" in sql
+
+    db = sqlite3.connect(":memory:")
+    db.executescript("""
+      CREATE TABLE aidy_gold_cycle_views (
+          cycle_view_id TEXT PRIMARY KEY, source_snapshot_id TEXT,
+          decided_at_utc TEXT, window_start_utc TEXT, window_end_utc TEXT
+      );
+      CREATE TABLE market_snapshots (id TEXT PRIMARY KEY);
+      CREATE TABLE aidy_gold_expert_shadow_cycles (cycle_view_id TEXT PRIMARY KEY);
+    """)
+    frozen = [
+        ("before-activation", "pre-snapshot", "2026-09-20T20:55:00+00:00"),
+        ("old-pruned", "archived-removed-snapshot", "2026-09-25T20:55:00+00:00"),
+        ("new-present", "retained-snapshot", "2026-10-16T20:55:00+00:00"),
+        ("already-scored", "scored-snapshot", "2026-10-16T20:56:00+00:00"),
+    ]
+    for identity, source, decided in frozen:
+        db.execute(
+            """INSERT INTO aidy_gold_cycle_views
+               (cycle_view_id,source_snapshot_id,decided_at_utc,window_start_utc,window_end_utc)
+               VALUES (?,?,?,?,?)""",
+            (identity, source, decided, decided, decided),
+        )
+    for source in ("pre-snapshot", "retained-snapshot", "scored-snapshot"):
+        db.execute("INSERT INTO market_snapshots (id) VALUES (?)", (source,))
+    db.execute(
+        "INSERT INTO aidy_gold_expert_shadow_cycles (cycle_view_id) VALUES ('already-scored')"
+    )
+    observed = db.execute(sql, ("2026-09-21T00:00:00+00:00",
+                                "2026-10-17T00:00:00+00:00", 4)).fetchall()
+    assert [row[0] for row in observed] == ["new-present"]
+    # Do not label the old un-reconstructable source as processed.
+    assert db.execute(
+        "SELECT count(*) FROM aidy_gold_expert_shadow_cycles WHERE cycle_view_id='old-pruned'"
+    ).fetchone()[0] == 0
