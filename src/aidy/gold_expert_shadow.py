@@ -1005,6 +1005,10 @@ class D1GoldExpertShadowStore:
             SELECT v.cycle_view_id,v.source_snapshot_id,v.decided_at_utc,
                    v.window_start_utc,v.window_end_utc
             FROM aidy_gold_cycle_views v
+            -- An old frozen cycle may outlive its archived/pruned hot snapshot.
+            -- Only source-replayable cycles enter prospective expert evaluation.
+            JOIN market_snapshots original_snapshot
+              ON original_snapshot.id=v.source_snapshot_id
             LEFT JOIN aidy_gold_expert_shadow_cycles s
               ON s.cycle_view_id=v.cycle_view_id
             WHERE s.cycle_view_id IS NULL
