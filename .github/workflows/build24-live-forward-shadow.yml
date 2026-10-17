@@ -63,4 +63,4 @@ jobs:
           PYTHONPATH: "src:."
         run: |
           set -euo pipefail
-          uv run --with 'pandas>=2' --with 'matplotlib>=3' --with 'pypdf>=5' --with 'google-cloud-bigquery>=3' pytest -q
+          uv run --with 'pandas>=2' --with 'matplotlib>=3' --with 'pypdf>=5' --with 'reportlab>=4' --with 'google-cloud-bigquery>=3' pytest -q
