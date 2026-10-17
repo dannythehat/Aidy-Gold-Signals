@@ -1,4 +1,5 @@
 name: AIDY PR331 Live Recovery Read-only Receipt
+# Second independent observation after PR333 guarded Worker deployment
 
 on:
   pull_request:
