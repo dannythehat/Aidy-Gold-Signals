@@ -1,0 +1,33 @@
+name: AIDY Shadow Pruned Snapshot Recovery Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/gold_expert_shadow.py
+      - tests/test_gold_expert_shadow.py
+      - .github/workflows/aidy-shadow-pruned-snapshot-ci.yml
+
+permissions:
+  contents: read
+
+jobs:
+  shadow-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install locked dependencies
+        run: |
+          python -m pip install --quiet uv
+          uv sync
+      - name: Strict lint and syntax
+        run: |
+          uv run ruff check src/aidy/gold_expert_shadow.py tests/test_gold_expert_shadow.py
+          uv run python -m compileall -q src/aidy/gold_expert_shadow.py tests/test_gold_expert_shadow.py
+      - name: Verify no hindsight, missing PIT exclusion, and gold cycle interfaces
+        run: |
+          uv run pytest -q tests/test_gold_expert_shadow.py tests/test_gold_cycle_memory.py
