@@ -145,52 +145,73 @@ jobs:
           print('config_built_with_cron=true')
           PY
 
-      - name: Apply Gold movement memory migration
+      - name: Verify required live D1 schema before safe Worker rollout
         shell: bash
         run: |
           set -euo pipefail
-          npx --yes wrangler@4 d1 migrations apply AIDY_OPS --remote \
-            --config wrangler.research.live.jsonc
-
-      - name: Verify Build 3 trust schema
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
-            --config wrangler.research.live.jsonc \
-            --command "
-              SELECT COUNT(*) AS n
-              FROM sqlite_master
-              WHERE type='table'
-                AND name IN (
-                  'aidy_gold_expert_outcome_ledger',
-                  'aidy_gold_expert_context_scores'
-                );
-            " > /tmp/build3_schema.txt
-          grep -q '"n": 2' /tmp/build3_schema.txt
-          echo "build3_expert_trust_schema_present=true"
-
-      - name: Verify Build 24 shadow schema
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes wrangler@4 d1 execute AIDY_OPS --remote \
-            --config wrangler.research.live.jsonc \
-            --command "
-              SELECT COUNT(*) AS n
-              FROM sqlite_master
-              WHERE type='table'
-                AND name IN (
-                  'aidy_gold_expert_shadow_runtime_state',
-                  'aidy_gold_expert_shadow_cycles',
-                  'aidy_gold_expert_gate_snapshots',
-                  'aidy_gold_expert_subcalculator_snapshots',
-                  'aidy_gold_meta_view_results',
-                  'aidy_gold_expert_shadow_sync_health'
-                );
-            " > /tmp/build24_schema.txt
-          grep -q '"n": 6' /tmp/build24_schema.txt
-          echo "build24_shadow_schema_present=true"
+          # Do NOT blindly replay every historical migration on every Worker
+          # release. Cloudflare D1 is large and per-release migration replays
+          # can hit its CPU limit before otherwise tested source code deploys.
+          # A schema change needs its own separately tested migration release.
+          python - <<'PY'
+          import json, os, time, urllib.error, urllib.request
+          endpoint=("https://api.cloudflare.com/client/v4/accounts/"
+              + os.environ["CLOUDFLARE_ACCOUNT_ID"] + "/d1/database/"
+              + os.environ["AIDY_D1_DATABASE_ID"] + "/query")
+          tables={
+              'market_snapshots','market_candles',
+              'aidy_gold_cycle_views','aidy_gold_cycle_outcomes',
+              'aidy_gold_cycle_environments',
+              'aidy_gold_expert_shadow_runtime_state',
+              'aidy_gold_expert_shadow_cycles',
+              'aidy_gold_expert_gate_snapshots',
+              'aidy_gold_expert_subcalculator_snapshots',
+              'aidy_gold_meta_view_results',
+              'aidy_gold_expert_shadow_sync_health',
+              'aidy_gold_expert_shadow_health_history',
+              'aidy_gold_expert_outcome_ledger',
+              'aidy_gold_expert_context_scores',
+          }
+          indexes={
+              'ix_aidy_gold_expert_outcome_gate_resolved',
+              'ix_aidy_gold_expert_outcome_type_resolved',
+              'ix_aidy_gold_expert_shadow_last_frozen',
+          }
+          wanted=tables|indexes
+          sql=("SELECT name,type FROM sqlite_master WHERE name IN ("
+               + ",".join("'"+name+"'" for name in sorted(wanted))+")")
+          req=urllib.request.Request(
+              endpoint,
+              data=json.dumps({"sql":sql,"params":[]}).encode(),
+              headers={"Authorization":"Bearer "+os.environ["CLOUDFLARE_API_TOKEN"],
+                       "Content-Type":"application/json"},
+              method="POST")
+          result=None
+          for attempt in range(3):
+              try:
+                  with urllib.request.urlopen(req,timeout=25) as response:
+                      response_body=json.load(response)
+                  if not response_body.get('success') or len(response_body.get('result') or [])!=1:
+                      raise RuntimeError("D1 preflight returned unsuccessful query")
+                  result=response_body['result'][0].get('results') or []
+                  break
+              except (urllib.error.URLError,TimeoutError) as exc:
+                  print("transient_schema_preflight_error="+type(exc).__name__)
+                  if attempt==2:
+                      raise
+                  time.sleep(3)
+          assert result is not None
+          available={str(row['name']):str(row['type']) for row in result}
+          missing_tables=sorted(name for name in tables if available.get(name)!='table')
+          missing_indexes=sorted(name for name in indexes if available.get(name)!='index')
+          if missing_tables or missing_indexes:
+              raise RuntimeError(
+                  "D1 schema missing; deployment BLOCKED. "
+                  "Run a separately reviewed migration instead. "
+                  f"missing_tables={missing_tables} missing_indexes={missing_indexes}")
+          print(f"aidy_d1_schema_preflight_pass={len(tables)}_tables_{len(indexes)}_indexes")
+          print("historical_migrations_not_replayed_during_worker_deploy=true")
+          PY
 
       - name: Deploy
         shell: bash
