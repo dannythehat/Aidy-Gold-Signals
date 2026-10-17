@@ -1,5 +1,9 @@
 # AIDY Gold Signals
 
+## Strategy Lab engineering closeout — 17 October 2026
+
+The 40-day **Strategy Lab implementation inventory** has been audited as implemented across all 40 days; its **original acceptance remains 35/40**, with Days 03, 06, 38, 39 and 40 and B00–B11 owner approvals outstanding. This is **not** a public, payment or live-trading GO. See the [source-linked engineering closeout and external release holds](docs/strategy-lab-engineering-closeout-2026-10-17.md) and the [Notion authoritative roadmap](https://app.notion.com/p/3f9e30f1e540811ba4eafeb271ba4a47). Two genuinely processed mechanical 2025 gold families do not mean 83 original candidates were tested. GoldThinker is the separate public brand; AIDY remains internal.
+
 Standalone AIDY Signals Gold trading intelligence and Telegram signal-provider project.
 
 AIDY and Super Signals are separate systems. AIDY produces signals; Super Signals may later consume the AIDY Telegram group exactly like any other external provider.
