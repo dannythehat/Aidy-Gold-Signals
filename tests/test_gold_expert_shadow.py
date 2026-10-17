@@ -312,10 +312,48 @@ def test_shadow_does_not_get_stuck_on_archived_pruned_source_snapshot() -> None:
     db.execute(
         "INSERT INTO aidy_gold_expert_shadow_cycles (cycle_view_id) VALUES ('already-scored')"
     )
-    observed = db.execute(sql, ("2026-09-21T00:00:00+00:00",
-                                "2026-10-17T00:00:00+00:00", 4)).fetchall()
+    # Frozen decisions must remain within the prospective lead-in to the
+    # target window. Historical source availability alone is NOT authority to
+    # recreate predictions once the target gold movement is already known.
+    db.execute(
+        """UPDATE aidy_gold_cycle_views
+           SET window_start_utc='2026-10-16T21:00:00+00:00'
+           WHERE cycle_view_id IN ('new-present','already-scored')"""
+    )
+    now = "2026-10-16T20:56:30+00:00"
+    cutoff = "2026-10-16T20:41:30+00:00"
+    observed = db.execute(
+        sql, ("2026-09-21T00:00:00+00:00", cutoff, now, now, 4)
+    ).fetchall()
     assert [row[0] for row in observed] == ["new-present"]
+    # The same row MUST NOT be selected after the target window has started.
+    stale = db.execute(
+        sql, ("2026-09-21T00:00:00+00:00",
+              "2026-10-16T21:00:00+00:00",
+              "2026-10-16T21:16:00+00:00",
+              "2026-10-16T21:16:00+00:00", 4)
+    ).fetchall()
+    assert stale == []
     # Do not label the old un-reconstructable source as processed.
     assert db.execute(
         "SELECT count(*) FROM aidy_gold_expert_shadow_cycles WHERE cycle_view_id='old-pruned'"
     ).fetchone()[0] == 0
+
+
+def test_minute_cron_uses_bounded_pit_eligibility_and_lightweight_status() -> None:
+    """Full historical scorecards stay available to user-initiated reads, not cron."""
+    source = inspect.getsource(D1GoldExpertShadowStore.create_new_cycles)
+    assert "v.window_start_utc>?" in source
+    assert "timedelta(minutes=15)" in source
+    sync_source = (ROOT / "src" / "aidy" / "gold_expert_shadow.py").read_text(
+        encoding="utf-8"
+    )
+    minute_sync = sync_source[sync_source.index("async def sync_gold_expert_shadow"): ]
+    assert "store.heartbeat_shadow_summary(as_of_utc=now)" in minute_sync
+    assert "store.scorecard_snapshot(as_of_utc=now)" not in minute_sync
+    # The heavy report must still exist for a deliberate Provider Context read.
+    assert "async def scorecard_snapshot" in sync_source
+    provider = (ROOT / "src" / "aidy" / "provider_context_api.py").read_text(
+        encoding="utf-8"
+    )
+    assert ".scorecard_snapshot(" in provider
