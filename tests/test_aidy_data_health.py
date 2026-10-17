@@ -8,10 +8,10 @@ import pytest
 
 from aidy.data_health import (
     _HEARTBEAT_SQL,
-    read_data_health_facts,
     HEALTH_VERSION,
     collect_data_health,
     evaluate_data_health,
+    read_data_health_facts,
     recent_data_health_events,
     record_data_health,
 )
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Prepared:
-    def __init__(self, db: "LocalD1", sql: str, params=()) -> None:
+    def __init__(self, db: LocalD1, sql: str, params=()) -> None:
         self.db = db
         self.sql = sql
         self.params = params
