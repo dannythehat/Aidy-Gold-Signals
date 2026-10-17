@@ -57,6 +57,12 @@ jobs:
               return results[0].get("results") or []
 
           queries = {
+              "shadow_new_index_presence": """SELECT name FROM sqlite_master
+                  WHERE type='index' AND name IN (
+                    'ix_aidy_gold_expert_outcome_gate_resolved',
+                    'ix_aidy_gold_expert_outcome_type_resolved',
+                    'ix_aidy_gold_expert_shadow_last_frozen'
+                  ) ORDER BY name""",
               # No COUNT(*) over the historical shadow-health log; a bounded
               # newest-first record sample remains index-driven and cheap.
               "shadow_recent_sample": """SELECT observed_at_utc,status,error_type
@@ -110,7 +116,12 @@ jobs:
           for kind, sql in queries.items():
               try:
                   rows = query(sql)
-                  if kind.endswith("delivery_states"):
+                  if kind == "shadow_new_index_presence":
+                      report["sections"][kind] = {
+                          "names": sorted(str(row["name"]) for row in rows),
+                          "installed_count": len(rows)
+                      }
+                  elif kind.endswith("delivery_states"):
                       report["sections"][kind] = {
                           str(row.get('status','')) + ':' + str(row['delivery_state']): {
                               'count': int(row['count']),
@@ -213,3 +224,13 @@ jobs:
             --branch main --limit 6 \
             --json databaseId,createdAt,headSha,status,conclusion,url \
             --jq '.[] | {run_id:.databaseId,created_at:.createdAt,head_sha:.headSha,status:.status,conclusion:.conclusion,url:.url}'
+
+      - name: Check indexed query migration applied on protected main
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh run list --workflow aidy-d1-shadow-index-perf.yml --branch main --limit 3 \
+            --json databaseId,status,conclusion,headSha,url \
+            --jq '.[] | {run_id:.databaseId,status:.status,conclusion:.conclusion,head_sha:.headSha,url:.url}'
