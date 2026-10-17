@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import inspect
 import re
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 
 from aidy.gold_cycle_environment import build_cycle_environment
