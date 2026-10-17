@@ -36,7 +36,8 @@ jobs:
           endpoint=("https://api.cloudflare.com/client/v4/accounts/"
               + os.environ["CLOUDFLARE_ACCOUNT_ID"]
               + "/d1/database/3588d82a-d686-4430-872d-d4c0e62c3d5d/query")
-          sql="""SELECT observed_at_utc,status,error_type,latest_cycle_view_id
+          sql="""SELECT observed_at_utc,status,error_type,
+                        substr(error_message,1,140) AS error_sample,latest_cycle_view_id
                  FROM aidy_gold_expert_shadow_health_history
                  INDEXED BY idx_gold_expert_shadow_health_history_observed
                  ORDER BY observed_at_utc DESC LIMIT 1"""
