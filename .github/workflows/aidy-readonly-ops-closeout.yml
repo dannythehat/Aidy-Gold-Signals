@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   independent-cloudflare-read:
@@ -191,3 +192,14 @@ jobs:
             artifacts/aidy-d1-insights-families.json
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Inspect recent protected-main Cloudflare deploy workflow outcomes
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh run list --workflow aidy-provider-research-read-deploy.yml \
+            --branch main --limit 6 \
+            --json databaseId,createdAt,headSha,status,conclusion,url \
+            --jq '.[] | {run_id:.databaseId,created_at:.createdAt,head_sha:.headSha,status:.status,conclusion:.conclusion,url:.url}'
