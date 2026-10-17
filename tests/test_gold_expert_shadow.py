@@ -9,10 +9,10 @@ from pathlib import Path
 from aidy.gold_cycle_environment import build_cycle_environment
 from aidy.gold_expert_gate_contract import verify_expert_gate_packet
 from aidy.gold_expert_shadow import (
-    D1GoldExpertShadowStore,
     EXPECTED_GATES,
     GOLD_EXPERT_SCORECARD_VERSION,
     GOLD_EXPERT_SHADOW_VERSION,
+    D1GoldExpertShadowStore,
     _unknown_context_result,
 )
 
