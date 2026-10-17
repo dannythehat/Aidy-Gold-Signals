@@ -109,6 +109,40 @@ jobs:
           python scripts/aidy_d1_budget_monitor.py \
             --day "$DAY" --max-attempts 2 \
             --diagnostic artifacts/aidy-previous-full-day-rows-read.json
+      - name: Diagnose dominant D1 query families without fetching table data
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 d1 insights aidy-ops-test \
+            --sort-type=sum --sort-by=reads --sort-direction=DESC \
+            --limit=15 --time-period=1d --json > /tmp/aidy-d1-insights-raw.json
+          python - <<'PY'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+          obj = json.loads(Path('/tmp/aidy-d1-insights-raw.json').read_text())
+          if not isinstance(obj, list):
+              raise ValueError("Unexpected D1 insights JSON")
+          summary = []
+          for item in obj:
+              sql = str(item.get('query', ''))
+              tables = re.findall(r'\b(?:FROM|JOIN)\s+["' + "'" + r']?([A-Za-z_][A-Za-z_0-9]*)',
+                                  sql, flags=re.I)
+              summary.append({
+                  'sql_sha256': hashlib.sha256(sql.encode()).hexdigest(),
+                  'tables': sorted(set(tables)),
+                  'total_rows_read': int(item.get('totalRowsRead') or 0),
+                  'executions': int(item.get('numberOfTimesRun') or 0),
+                  'average_rows_read': float(item.get('avgRowsRead') or 0),
+              })
+          result = {'scope': 'last_1d_rolling_insights_not_full_utc_day',
+                    'sampled_top_query_families': summary,
+                    'no_query_text_exported': True}
+          Path('artifacts/aidy-d1-insights-families.json').write_text(
+              json.dumps(result, indent=2, sort_keys=True)+'\n')
+          print(json.dumps(result, indent=2, sort_keys=True))
+          PY
       - name: Retain sanitised read-only receipts
         if: always()
         uses: actions/upload-artifact@v4
@@ -117,5 +151,6 @@ jobs:
           path: |
             artifacts/aidy-readonly-closeout.json
             artifacts/aidy-previous-full-day-rows-read.json
+            artifacts/aidy-d1-insights-families.json
           if-no-files-found: warn
           retention-days: 14
