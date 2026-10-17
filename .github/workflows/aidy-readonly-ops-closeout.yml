@@ -56,7 +56,8 @@ jobs:
               return results[0].get("results") or []
 
           queries = {
-              "shadow_latest_observation": """SELECT observed_at_utc,status,latest_cycle_decided_at_utc
+              "shadow_latest_observation": """SELECT observed_at_utc,status,error_type,
+                         substr(error_message,1,250) AS error_message,latest_cycle_decided_at_utc
                   FROM aidy_gold_expert_shadow_health_history
                   ORDER BY observed_at_utc DESC LIMIT 1""",
               "shadow_latest_cycle": """SELECT observed_at_utc,latest_cycle_decided_at_utc
