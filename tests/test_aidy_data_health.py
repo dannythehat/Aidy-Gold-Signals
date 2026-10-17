@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 
 from aidy.data_health import (
+    _HEARTBEAT_SQL,
+    read_data_health_facts,
     HEALTH_VERSION,
     collect_data_health,
     evaluate_data_health,
@@ -328,3 +330,76 @@ def test_phase_a_migration_and_production_entry_are_point_in_time_safe() -> None
     assert 'await _record_health_best_effort(self.env, scheduler="direct-cron")' in entry
     assert 'await _record_health_best_effort(self.env, scheduler="queue-consumer")' in entry
     assert 'await _record_health_best_effort(env, scheduler="direct-cron")' not in entry
+
+
+@pytest.mark.asyncio
+async def test_data_health_archive_aggregates_only_active_delivery_states_using_indexes() -> None:
+    """Archived historical growth must not amplify each data-health query."""
+    db = LocalD1()
+    old = "2026-09-01T00:00:00+00:00"
+    pending = "2026-10-16T00:00:00+00:00"
+    backoff = "2026-10-16T01:00:00+00:00"
+    dead_letter = "2026-10-16T02:00:00+00:00"
+
+    def add_archive(*, cross_market: bool, identity: str, state: str, created_at: str) -> None:
+        table = "cross_market_archive_outbox" if cross_market else "archive_outbox"
+        columns = [
+            "id",
+            "evidence_id",
+            "archive_key",
+            "payload_digest",
+            "status",
+            "delivery_state",
+            "created_at",
+        ]
+        values = [
+            identity,
+            identity,
+            f"test/{identity}.json",
+            "a" * 64,
+            "archived" if state == "archived" else "pending",
+            state,
+            created_at,
+        ]
+        if not cross_market:
+            columns.insert(1, "record_type")
+            values.insert(1, "snapshot")
+        placeholders = ",".join(["?"] * len(columns))
+        db.connection.execute(
+            f"INSERT INTO {table} ({','.join(columns)}) VALUES ({placeholders})",
+            values,
+        )
+
+    for i in range(120):
+        add_archive(cross_market=False, identity=f"gold-archived-{i}", state="archived", created_at=old)
+        add_archive(cross_market=True, identity=f"cross-archived-{i}", state="archived", created_at=old)
+
+    add_archive(cross_market=False, identity="gold-pending", state="pending", created_at=pending)
+    add_archive(cross_market=False, identity="gold-backoff", state="backoff", created_at=backoff)
+    add_archive(cross_market=False, identity="gold-dead", state="dead_letter", created_at=dead_letter)
+    add_archive(cross_market=True, identity="cross-pending", state="pending", created_at=backoff)
+    add_archive(cross_market=True, identity="cross-dead", state="dead_letter", created_at=dead_letter)
+    db.connection.commit()
+
+    facts = await read_data_health_facts(db)
+    assert facts["archive_pending_count"] == 1
+    assert facts["archive_backoff_count"] == 1
+    assert facts["archive_dead_letter_count"] == 1
+    assert facts["oldest_archive_unarchived_utc"] == pending
+    assert facts["cross_market_archive_pending_count"] == 1
+    assert facts["cross_market_archive_backoff_count"] == 0
+    assert facts["cross_market_archive_dead_letter_count"] == 1
+    assert facts["oldest_cross_market_archive_unarchived_utc"] == backoff
+
+    plans = [
+        str(row[3]) for row in db.connection.execute("EXPLAIN QUERY PLAN " + _HEARTBEAT_SQL)
+    ]
+    assert any(
+        "SEARCH archive_outbox USING COVERING INDEX ix_archive_outbox_delivery_due" in line
+        for line in plans
+    )
+    assert any(
+        "SEARCH cross_market_archive_outbox USING COVERING INDEX "
+        "ix_cross_market_archive_outbox_delivery_due" in line
+        for line in plans
+    )
