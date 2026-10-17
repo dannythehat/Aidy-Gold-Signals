@@ -56,6 +56,18 @@ jobs:
               return results[0].get("results") or []
 
           queries = {
+              "shadow_latest_observation": """SELECT observed_at_utc,status,error_type,
+                         substr(error_message,1,250) AS error_message,latest_cycle_decided_at_utc
+                  FROM aidy_gold_expert_shadow_health_history
+                  ORDER BY observed_at_utc DESC LIMIT 1""",
+              "shadow_latest_cycle": """SELECT observed_at_utc,latest_cycle_decided_at_utc
+                  FROM aidy_gold_expert_shadow_health_history
+                  WHERE latest_cycle_decided_at_utc IS NOT NULL
+                  ORDER BY observed_at_utc DESC LIMIT 1""",
+              "cycle_latest_frozen": """SELECT window_start_utc FROM aidy_gold_cycle_views
+                  ORDER BY window_start_utc DESC LIMIT 1""",
+              "cycle_latest_scored": """SELECT resolved_at_utc FROM aidy_gold_cycle_outcomes
+                  ORDER BY resolved_at_utc DESC LIMIT 1""",
               "gold_archive_delivery_states": """SELECT status,delivery_state,
                          COUNT(*) AS count,
                          SUM(CASE WHEN archived_at IS NULL THEN 1 ELSE 0 END) AS missing_archive_timestamp,
@@ -105,6 +117,8 @@ jobs:
                           "bounded_pending_rows": len(rows),
                           "cap_hit": len(rows) >= 26, "oldest_pending_at": oldest,
                           "maximum_attempts_in_sample": max_attempts}
+                  elif kind.startswith("shadow_") or kind.startswith("cycle_"):
+                      report["sections"][kind] = rows[0] if rows else {"no_rows": True}
                   else:
                       report["sections"][kind] = {
                           "latest_completed_utc": (list(rows[0].values())[0] if rows else None)}
