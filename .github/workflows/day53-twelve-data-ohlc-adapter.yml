@@ -209,9 +209,12 @@ jobs:
             tests/test_gold_futures_microstructure_expert.py \
             tests/test_build17_genuine_microstructure_holdout.py
 
-      - name: Full repository regression
+      - name: Full repository regression with private-lab optional test dependencies
         shell: bash
-        run: uv run pytest -q
+        env:
+          PYTHONPATH: "src:."
+        run: |
+          uv run --with 'pandas>=2' --with 'matplotlib>=3' --with 'pypdf>=5' --with 'reportlab>=4' --with 'google-cloud-bigquery>=3' pytest -q
 
       - name: Build 17 genuine Databento microstructure holdout
         id: build17_genuine
