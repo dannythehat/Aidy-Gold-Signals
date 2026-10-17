@@ -57,16 +57,12 @@ jobs:
               return results[0].get("results") or []
 
           queries = {
-              "shadow_recent_counts": """SELECT COUNT(*) AS samples,
-                  SUM(CASE WHEN status='ok' THEN 1 ELSE 0 END) AS ok_count,
-                  SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) AS error_count
+              # No COUNT(*) over the historical shadow-health log; a bounded
+              # newest-first record sample remains index-driven and cheap.
+              "shadow_recent_sample": """SELECT observed_at_utc,status,error_type
                   FROM aidy_gold_expert_shadow_health_history
-                  WHERE observed_at_utc >= strftime('%Y-%m-%dT%H:%M:%S','now','-30 minutes')""",
-              "shadow_recent_counts_10m": """SELECT COUNT(*) AS samples,
-                  SUM(CASE WHEN status='ok' THEN 1 ELSE 0 END) AS ok_count,
-                  SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) AS error_count
-                  FROM aidy_gold_expert_shadow_health_history
-                  WHERE observed_at_utc >= strftime('%Y-%m-%dT%H:%M:%S','now','-10 minutes')""",
+                  INDEXED BY idx_gold_expert_shadow_health_history_observed
+                  ORDER BY observed_at_utc DESC LIMIT 5""",
               "shadow_latest_observation": """SELECT observed_at_utc,status,error_type,
                          substr(error_message,1,250) AS error_message,latest_cycle_decided_at_utc
                   FROM aidy_gold_expert_shadow_health_history
@@ -128,6 +124,15 @@ jobs:
                           "bounded_pending_rows": len(rows),
                           "cap_hit": len(rows) >= 26, "oldest_pending_at": oldest,
                           "maximum_attempts_in_sample": max_attempts}
+                  elif kind == "shadow_recent_sample":
+                      report["sections"][kind] = {
+                          "latest_five": [
+                              {"observed_at_utc": row.get("observed_at_utc"),
+                               "status": row.get("status"),
+                               "error_type": row.get("error_type")}
+                              for row in rows
+                          ]
+                      }
                   elif kind.startswith("shadow_") or kind.startswith("cycle_"):
                       report["sections"][kind] = rows[0] if rows else {"no_rows": True}
                   else:
