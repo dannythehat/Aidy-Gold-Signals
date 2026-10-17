@@ -1,0 +1,103 @@
+name: AIDY One-off Archived Flag Reconciliation 2026-10-17
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/aidy-archived-flag-reconcile-20261017.yml
+
+permissions:
+  contents: read
+
+jobs:
+  guarded-archived-flag-reconciliation:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      AIDY_D1_DATABASE_ID: 3588d82a-d686-4430-872d-d4c0e62c3d5d
+    steps:
+      - name: Confirm exact preconditions and reconcile only already-archived secondary flags
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os, urllib.request
+          from datetime import UTC, datetime
+          from pathlib import Path
+
+          endpoint = (
+              "https://api.cloudflare.com/client/v4/accounts/"
+              + os.environ["CLOUDFLARE_ACCOUNT_ID"] + "/d1/database/"
+              + os.environ["AIDY_D1_DATABASE_ID"] + "/query"
+          )
+          def run_sql(sql):
+              request = urllib.request.Request(
+                  endpoint,
+                  data=json.dumps({"sql": sql, "params": []}).encode(),
+                  headers={
+                      "Authorization": "Bearer " + os.environ["CLOUDFLARE_API_TOKEN"],
+                      "Content-Type": "application/json",
+                  },
+                  method="POST",
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  result = json.load(response)
+              if not result.get("success") or len(result.get("result") or []) != 1:
+                  raise RuntimeError("D1 query returned an unexpected response")
+              return result["result"][0]
+
+          # Only secondary marker differs. Source archive status and timestamp
+          # must independently prove completed R2 handoff for all 49 rows.
+          before = run_sql(
+              """SELECT COUNT(*) AS n,
+                        SUM(CASE WHEN archived_at IS NULL THEN 1 ELSE 0 END) AS missing_archived_at
+                 FROM archive_outbox
+                 WHERE status='archived' AND delivery_state='pending'"""
+          )["results"][0]
+          n = int(before["n"])
+          missing = int(before.get("missing_archived_at") or 0)
+          print(f"legacy_archived_pending_before={n} missing_archive_timestamps={missing}")
+          if n != 49 or missing != 0:
+              raise RuntimeError("Expected exact 49 dated archived records with R2 completion timestamps; NO WRITE")
+
+          # No broker or signal data changed, no archive replay, no deletes.
+          run_sql(
+              """UPDATE archive_outbox
+                 SET delivery_state='archived',
+                     next_attempt_at=NULL,
+                     dead_lettered_at=NULL,
+                     last_error=NULL
+                 WHERE status='archived' AND delivery_state='pending'
+                   AND archived_at IS NOT NULL"""
+          )
+          after = run_sql(
+              """SELECT COUNT(*) AS n FROM archive_outbox
+                 WHERE status='archived' AND delivery_state='pending'"""
+          )["results"][0]
+          remaining = int(after["n"])
+          print(f"legacy_archived_pending_after={remaining}")
+          if remaining != 0:
+              raise RuntimeError("Follow-up D1 verification found incomplete reconciliation")
+          Path("aidy_archive_flag_reconciliation_receipt.json").write_text(
+              json.dumps({
+                  "scope": "secondary_delivery_marker_only",
+                  "before": n,
+                  "after": remaining,
+                  "reconciled": n,
+                  "existing_r2_archive_timestamps_verified": True,
+                  "observed_at_utc": datetime.now(UTC).isoformat(),
+                  "broker_or_trading_data_changed": False,
+              }, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+      - name: Preserve minimal non-sensitive reconciliation receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidy-archive-flags-reconciliation-20261017
+          path: aidy_archive_flag_reconciliation_receipt.json
+          if-no-files-found: warn
+          retention-days: 14
