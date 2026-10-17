@@ -1,0 +1,55 @@
+name: AIDY PR331 Live Recovery Read-only Receipt
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/aidy-331-live-heartbeat-probe.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  independent-observation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: State of latest protected-main Worker deploys
+        shell: bash
+        run: |
+          gh run list --repo dannythehat/Aidy-Gold-Signals \
+            --workflow aidy-provider-research-read-deploy.yml \
+            --branch main --limit 3 \
+            --json databaseId,createdAt,headSha,status,conclusion,url \
+            --jq '.[] | {run:.databaseId,created_at:.createdAt,head:.headSha,status:.status,conclusion:.conclusion,url:.url}'
+      - name: One indexed D1 lookup of the latest shadow heartbeat
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request, time
+          endpoint=("https://api.cloudflare.com/client/v4/accounts/"
+              + os.environ["CLOUDFLARE_ACCOUNT_ID"]
+              + "/d1/database/3588d82a-d686-4430-872d-d4c0e62c3d5d/query")
+          sql="""SELECT observed_at_utc,status,error_type,latest_cycle_view_id
+                 FROM aidy_gold_expert_shadow_health_history
+                 INDEXED BY idx_gold_expert_shadow_health_history_observed
+                 ORDER BY observed_at_utc DESC LIMIT 1"""
+          request=urllib.request.Request(
+              endpoint,
+              data=json.dumps({"sql":sql,"params":[]}).encode(),
+              headers={"Authorization":"Bearer "+os.environ["CLOUDFLARE_API_TOKEN"],
+                       "Content-Type":"application/json"})
+          with urllib.request.urlopen(request,timeout=22) as response:
+              obj=json.load(response)
+          if not obj.get("success") or len(obj.get("result") or [])!=1:
+              raise RuntimeError("D1 heartbeat read not successful")
+          rows=obj["result"][0].get("results") or []
+          print("AIDY_SHADOW_LATEST_HEARTBEAT="+json.dumps(rows[0] if rows else {"none":True},sort_keys=True))
+          print("AIDY_READ_ONLY=true")
+          PY
