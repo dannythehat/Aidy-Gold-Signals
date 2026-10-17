@@ -1,0 +1,39 @@
+name: AIDY D1 Indexed Health Query Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/aidy/data_health.py
+      - tests/test_aidy_data_health.py
+      - .github/workflows/aidy-d1-indexed-health-regression.yml
+  push:
+    branches: [main]
+    paths:
+      - src/aidy/data_health.py
+      - tests/test_aidy_data_health.py
+      - .github/workflows/aidy-d1-indexed-health-regression.yml
+
+permissions:
+  contents: read
+
+jobs:
+  indexed-health-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install locked Python environment
+        run: |
+          python -m pip install --quiet uv
+          uv sync
+      - name: Focused lint and syntax checks
+        run: |
+          uv run ruff check src/aidy/data_health.py tests/test_aidy_data_health.py
+          uv run python -m compileall -q src/aidy/data_health.py tests/test_aidy_data_health.py
+      - name: Data-health query semantics and index plan
+        run: |
+          uv run pytest -q tests/test_aidy_data_health.py tests/test_day4_capture_freshness_watchdog.py
