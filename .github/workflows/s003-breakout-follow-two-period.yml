@@ -1,4 +1,4 @@
-name: S003 Breakout Follow Trend 101 | AIDY Two Period Screen
+name: S003 Breakout Follow Trend 101 Two Period Research
 on:
   pull_request:
     branches: [main]
