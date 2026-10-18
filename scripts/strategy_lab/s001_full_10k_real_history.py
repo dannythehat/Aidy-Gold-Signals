@@ -402,7 +402,7 @@ def summarize(trades,trace,end,scenario):
         mdd=min(mdd,(value-peak)/peak)
     monthly=[]
     for month in MONTHS:
-        sub=[t for t in trades if min(t["exit_time"][:7], "2025-12")==month]
+        sub=[t for t in trades if min(t["exit_time"][:7], MONTHS[-1])==month]
         net=sum(t["net_pnl"] for t in sub)
         monthly.append({"month":month,"closed_trades":len(sub),
             "wins":sum(t["net_pnl"]>0 for t in sub),
