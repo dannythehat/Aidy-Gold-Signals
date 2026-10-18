@@ -311,10 +311,9 @@ def simulate(df, *, scenario, spread=.30, slippage=.10, target_r=2.0,
             direction,src_bar=pending
             if np.isfinite(atr[src_bar]) and atr[src_bar]>0 and cash>0:
                 reference=wick[src_bar]
-                if not np.isfinite(reference):
-                    if naive:
-                        reference=(np.min(lo[max(0,src_bar-8):src_bar+1]) if direction==1
-                                   else np.max(hi[max(0,src_bar-8):src_bar+1]))
+                if not np.isfinite(reference) and naive:
+                    reference=(np.min(lo[max(0,src_bar-8):src_bar+1]) if direction==1
+                               else np.max(hi[max(0,src_bar-8):src_bar+1]))
                 if np.isfinite(reference):
                     entry_bid=op[i]
                     stop=(min(entry_bid,reference)-atr[src_bar] if direction==1
@@ -347,10 +346,7 @@ def simulate(df, *, scenario, spread=.30, slippage=.10, target_r=2.0,
             elif d==-1 and hi[i]>=stop:
                 exit_bid=max(stop,op[i])
                 reason="stop"
-            elif target is not None and d==1 and hi[i]>=target:
-                exit_bid=target
-                reason="target_2R"
-            elif target is not None and d==-1 and lo[i]<=target:
+            elif target is not None and ((d==1 and hi[i]>=target) or (d==-1 and lo[i]<=target)):
                 exit_bid=target
                 reason="target_2R"
             elif target is None and i>0 and (
@@ -406,7 +402,7 @@ def summarize(trades,trace,end,scenario):
         mdd=min(mdd,(value-peak)/peak)
     monthly=[]
     for month in MONTHS:
-        sub=[t for t in trades if (t["exit_time"][:7] if t["exit_time"][:7]<="2025-12" else "2025-12")==month]
+        sub=[t for t in trades if min(t["exit_time"][:7], "2025-12")==month]
         net=sum(t["net_pnl"] for t in sub)
         monthly.append({"month":month,"closed_trades":len(sub),
             "wins":sum(t["net_pnl"]>0 for t in sub),
