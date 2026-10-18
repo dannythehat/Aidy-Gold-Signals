@@ -203,42 +203,42 @@ def render():
         "than invented broker-native tick volume."))
     pagebreak("06  Rules and causality")
     for v in [
-        "Source: real HistData XAUUSD M1 BID candles. Exactly 15 consecutive, "
-        "original minute records required per M15. No synthetic candle repair.",
-        "Reference UK clock uses Europe/London with seasonal BST/GMT. "
+        ("Source: real HistData XAUUSD M1 BID candles. Exactly 15 consecutive, "
+        "original minute records required per M15. No synthetic candle repair."),
+        ("Reference UK clock uses Europe/London with seasonal BST/GMT. "
         "Previous day high/low, Asia 00:00 to 08:00 range and "
-        "London 08:00 to 09:00 opening range.",
-        "Price wicks beyond an active session level, then closes back through "
-        "at least half its own bar range to confirm a sweep/reclaim.",
-        "Direction must agree with both confirmed one-hour and four-hour "
+        "London 08:00 to 09:00 opening range."),
+        ("Price wicks beyond an active session level, then closes back through "
+        "at least half its own bar range to confirm a sweep/reclaim."),
+        ("Direction must agree with both confirmed one-hour and four-hour "
         "swing market structure. Higher-timeframe pivots only exist "
-        "AFTER the full confirming bar closes.",
-        "Signal after completed M15 bar, first entry at NEXT actual contiguous "
-        "M15 opening. Session rollover flats exposure; no weekend assumption.",
-        "1% of CURRENT model equity nominal entry stop risk, 0.01 lot "
-        "increment, 100 oz/lot, 10x notional cap, one position maximum.",
-        "Protective stop at wick extreme plus 1x Wilder ATR14; "
+        "AFTER the full confirming bar closes."),
+        ("Signal after completed M15 bar, first entry at NEXT actual contiguous "
+        "M15 opening. Session rollover flats exposure; no weekend assumption."),
+        ("1% of CURRENT model equity nominal entry stop risk, 0.01 lot "
+        "increment, 100 oz/lot, 10x notional cap, one position maximum."),
+        ("Protective stop at wick extreme plus 1x Wilder ATR14; "
         "AIDY primary uses a declared fixed 2R take-profit, stop "
-        "takes priority when both are touched intrabar.",
+        "takes priority when both are touched intrabar."),
     ]:
         story.append(para("• "+v))
     pagebreak("07  Cost realism and stress model")
     for v in [
-        "Bid-only source history. Long enters at hypothetical ASK, "
-        "short exits at hypothetical ASK. No genuine broker fills are claimed.",
-        "Spread $0.30 per ounce charged once per full round trip.",
-        "Slippage $0.10 per ounce separately on each side. "
-        "Roundtrip brokerage commission $7.00 per one standard lot.",
-        "Modelled net P&L is gross price movement times physical ounces "
-        "less spread, two-way slippage and commission.",
-        "Stress doubles source spread to $0.60 and each-side "
-        "slippage to $0.20 per ounce, maintaining the same rules.",
-        "Financing excluded as an explicit zero assumption in this "
+        ("Bid-only source history. Long enters at hypothetical ASK, "
+        "short exits at hypothetical ASK. No genuine broker fills are claimed."),
+        ("Spread $0.30 per ounce charged once per full round trip."),
+        ("Slippage $0.10 per ounce separately on each side. "
+        "Roundtrip brokerage commission $7.00 per one standard lot."),
+        ("Modelled net P&L is gross price movement times physical ounces "
+        "less spread, two-way slippage and commission."),
+        ("Stress doubles source spread to $0.60 and each-side "
+        "slippage to $0.20 per ounce, maintaining the same rules."),
+        ("Financing excluded as an explicit zero assumption in this "
         "intraday session exit model. Actual Vantage swap, "
         "margin call rules, fill priority and commission need "
-        "independent broker verification.",
-        "Monthly ledger total, trade count and source SHA "
-        "are asserted before the report is generated.",
+        "independent broker verification."),
+        ("Monthly ledger total, trade count and source SHA "
+        "are asserted before the report is generated."),
     ]:
         story.append(para("• "+v))
     pagebreak("08  Review risks and advancement gate")
