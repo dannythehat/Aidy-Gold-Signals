@@ -1,0 +1,87 @@
+name: S003 Breakout Follow Trend 101 Two Period Research
+on:
+  push:
+    branches: [main, research/s003-original-pine-mql5-2025-2026-screen]
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s003_breakout_follow_two_period.py
+      - tests/test_s003_breakout_follow_two_period.py
+      - .github/workflows/s003-breakout-follow-two-period.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-pine-and-mql5-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff pandas numpy
+      - name: Verify original defaults are NOT substituted by README preset
+        run: |
+          python -m compileall -q scripts/strategy_lab/s003_breakout_follow_two_period.py tests/test_s003_breakout_follow_two_period.py
+          ruff check --select F scripts/strategy_lab/s003_breakout_follow_two_period.py tests/test_s003_breakout_follow_two_period.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s003_breakout_follow_two_period.py
+  authenticated-two-year-economic-screen:
+    needs: original-pine-and-mql5-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Reuse SAME 22 authenticated source tick archive M15 receipts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s003_source/
+          merge-multiple: false
+      - name: Install research mathematics
+        run: python -m pip install --quiet pandas numpy
+      - name: Replay exact Pine code defaults and separate README candidate, both years
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s003_breakout_follow_two_period.py --source-root artifacts/strategy_lab/s003_source --out artifacts/strategy_lab/s003_2025_2026
+      - name: Proof: audited source dates, 2 independent $10k ledgers, research-only labels
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("artifacts/strategy_lab/s003_2025_2026")
+          d=json.loads((p/"S003_INITIAL_SCREEN.json").read_text())
+          assert d["raw_source_months"]==22
+          assert len(d["raw_source_market_sha256"])==64
+          assert d["source_histdata_bid_ask"]
+          assert d["source_histdata_tick_counts_used_for_volume"]
+          assert d["source_native_pepperstone_mt5_tick_volume_verified"] is False
+          assert d["publisher_pine_mql5_parity_independently_proven"] is False
+          assert d["broker_actual_execution_and_financing_verified"] is False
+          assert d["source_rules_tested"]["session_start_hour"]==12
+          assert d["source_rules_tested"]["session_end_hour"]==18
+          assert d["source_rules_tested"]["cooldown_bars"]==6
+          assert d["readme_preset_rules_tested_separately"]["session_start_hour"]==0
+          assert d["readme_preset_rules_tested_separately"]["cooldown_bars"]==3
+          for year,n in [("2025",12),("2026",9)]:
+              cases=d["independent_results"][year]
+              for name,r in cases.items():
+                  assert r["starting_usd"]==10000
+                  assert len(r["months"])==n
+                  assert len(r["closed_tickets"])==r["trades"]
+                  assert sum(m["closed_tickets"] for m in r["months"])==r["trades"]
+                  assert abs(r["net_usd"]-(r["ending_usd"]-10000))<.02
+                  assert (p/(year+"_"+name+"_closed_tickets.csv")).exists()
+          print("S003_REAL_2025_AND_JAN_SEP_2026_TWO_PERIOD_AIDY_SCREEN_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S003-AIDY-Two-Period-Source-Screen-Ledgers
+          path: artifacts/strategy_lab/s003_2025_2026/
+          if-no-files-found: warn
+          retention-days: 90
