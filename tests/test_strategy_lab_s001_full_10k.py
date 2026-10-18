@@ -3,7 +3,10 @@ import numpy as np
 import pandas as pd
 
 from scripts.strategy_lab.s001_full_10k_real_history import (
-    MONTHS, bias_projection, signal_table, simulate,
+    MONTHS,
+    bias_projection,
+    signal_table,
+    simulate,
 )
 
 
