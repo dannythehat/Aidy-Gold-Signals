@@ -5,6 +5,7 @@ on:
     paths:
       - scripts/strategy_lab/s005_publisher_engine_two_preset_parity.py
       - tests/test_s005_publisher_source_parity.py
+      - scripts/strategy_lab/s005_actual_aidy_capability_coverage.py
       - .github/workflows/s005-original-full-aidy-parity.yml
   push:
     branches: [main]
@@ -91,5 +92,59 @@ jobs:
         with:
           name: S005-Original-Author-Python-Real-Spot-Two-Presets-2025-2026
           path: artifacts/strategy_lab/s005_original_author_compared/
+          if-no-files-found: warn
+          retention-days: 90
+
+  canonical-aidy-original-source-intelligence-and-evidence-gate:
+    needs: real-two-calendar-periods-native-publisher-python
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy ruff
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s005_original_source/
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: S005-Original-Author-Python-Real-Spot-Two-Presets-2025-2026
+          path: artifacts/strategy_lab/s005_publisher_results/
+      - name: Verify 9-factor score cannot be forged and run original math at preselected timestamps
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005_actual_aidy_capability_coverage.py
+          ruff check --select F scripts/strategy_lab/s005_actual_aidy_capability_coverage.py
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_actual_aidy_capability_coverage.py --source-root artifacts/strategy_lab/s005_original_source --publisher-evidence artifacts/strategy_lab/s005_publisher_results/S005_PUBLISHER_PY_NATIVE_REPLAY.json --out artifacts/strategy_lab/s005_full_aidy_coverage
+      - name: Enforce honest full-capability research status and original-toolbox actual calls
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("artifacts/strategy_lab/s005_full_aidy_coverage/S005_CANONICAL_AIDY_CAPABILITY_COVERAGE.json").read_text())
+          assert a["AIDY_toolbox_manifest_valid"]
+          assert a["aidy_source_real_price_math_executed"]
+          assert a["real_AIDY_nine_factor_governance_invoked"]
+          assert a["qualified_numeric_score_prohibited"]
+          assert not a["source_native_MT5_trade_parity"]
+          assert a["nine_factor_AIDY_real_result"]["score_out_of_100"] is None
+          assert len(a["hard_gaps"])>=5
+          for family in ("DONCHIAN","SESSION"):
+              for year in ("2025","2026"):
+                  x=a["coverage_by_preset_period"][family][year]
+                  assert x["actual_AIDY_source_math_execution"]>=1
+                  assert x["not_all_trades_PIT_gold_experts_executed"]
+          print("S005_AIDY_ORIGINAL_COVERAGE_AND_SCORE_GATE_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-AIDY-Toolbox-PriceMath-Evidence-Gating-Actual-Source
+          path: artifacts/strategy_lab/s005_full_aidy_coverage/
           if-no-files-found: warn
           retention-days: 90
