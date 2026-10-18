@@ -3,16 +3,23 @@ import json
 from pathlib import Path
 
 import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from pypdf import PdfReader
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, PageBreak, Image, LongTable, TableStyle
+    Image,
+    LongTable,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    TableStyle,
 )
-from pypdf import PdfReader
+
+matplotlib.use("Agg")
 
 OUT=Path(__file__).resolve().parents[2]/"artifacts/strategy_lab/s001_full_2025"
 NAVY=colors.HexColor("#16243a")
