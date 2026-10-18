@@ -9,7 +9,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from datetime import UTC, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -108,7 +107,6 @@ def main():
     assert original["publisher_git_commit"]==PUB_COMMIT
     m15,receipts,market_sha,hsha,times,hours,weekdays=source_h1(o.source_root)
     assert len(receipts)==22 and market_sha==original["all_original_m15_sha256"]
-    full_m15=m15 # name inherited from source_h1, this is source-derived H1.
     # We need the original M15 source for M15 / H4, not H1 approximation.
     from scripts.strategy_lab.s001_two_period_original_rules import read_source
     real_m15,_,originalsha=read_source(o.source_root)
