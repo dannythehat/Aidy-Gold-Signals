@@ -20,7 +20,7 @@ import csv
 import hashlib
 import json
 import math
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
