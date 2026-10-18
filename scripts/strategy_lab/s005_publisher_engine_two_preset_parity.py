@@ -90,6 +90,12 @@ def auditor_signal_diff(h, original_ls,original_ss, original_lx,original_sx,mode
             "short_signals":int(sum(original_ss)),
             "native_mql_session_parity_proven":False}
 
+def _source_np_json(value):
+    if isinstance(value,np.integer):return int(value)
+    if isinstance(value,np.floating):return float(value)
+    if isinstance(value,np.bool_):return bool(value)
+    raise TypeError(f"Unsupported result type: {type(value)}")
+
 def dump_csv(path,rows):
     if not rows:
         path.write_text("NO ORIGINAL PUBLISHER TRADES\n")
@@ -212,9 +218,9 @@ def main():
       "cases":output,
     }
     packet["sha256"]=hashlib.sha256(json.dumps(packet,sort_keys=True,
-        separators=(",",":"),allow_nan=False).encode()).hexdigest()
+        separators=(",",":"),allow_nan=False,default=_source_np_json).encode()).hexdigest()
     (opts.out/"S005_PUBLISHER_PY_NATIVE_REPLAY.json").write_text(
-        json.dumps(packet,indent=2,sort_keys=True,allow_nan=False)+"\n")
+        json.dumps(packet,indent=2,sort_keys=True,allow_nan=False,default=_source_np_json)+"\n")
     print("S005_SOURCE_PUBLISHER_ENGINE_VERIFIED",json.dumps({
       "m15_archive_months":len(receipts),"checksum":packet["sha256"],
       "source_m15_sha256":source_sha,"H1_bars":len(bars)
