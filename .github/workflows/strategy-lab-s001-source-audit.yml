@@ -1,0 +1,41 @@
+name: AIDY S001 GoldEA First Real-Source Research Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s001_goldea_source_audit.py
+      - tests/test_strategy_lab_s001_source_audit.py
+      - docs/strategy-lab-s001-goldea-first-audit.md
+      - .github/workflows/strategy-lab-s001-source-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  s001-original-history-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install bounded original BigQuery and test dependencies
+        run: python -m pip install --quiet pytest ruff 'google-cloud-bigquery>=3.42,<4'
+      - name: Strict source and test checks
+        run: |
+          python -m compileall -q scripts/strategy_lab/s001_goldea_source_audit.py tests/test_strategy_lab_s001_source_audit.py
+          ruff check scripts/strategy_lab/s001_goldea_source_audit.py tests/test_strategy_lab_s001_source_audit.py
+          PYTHONPATH=. python -m pytest -q tests/test_strategy_lab_s001_source_audit.py
+      - name: Actual frozen original source M1 BID January 2025 read-only
+        run: PYTHONPATH=. python scripts/strategy_lab/s001_goldea_source_audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: AIDY-S001-GoldEA-First-Source-Audit
+          path: artifacts/strategy_lab/s001_goldea/
+          if-no-files-found: warn
+          retention-days: 90
