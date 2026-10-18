@@ -13,6 +13,9 @@ import pandas as pd
 from aidy.strategy_lab_crossfire_balanced_guard import VERSIONS, replay
 from aidy.strategy_lab_s010_backtest import BASE, ORIGINAL_LEVERAGE, simulate
 from aidy.strategy_lab_nursery_refinement import write_bundle
+from aidy.strategy_lab_goldthinker_balanced_policy import (
+    select_crossfire_platform_version, selection_markdown,
+)
 
 FROZEN={
   "2025":{"original":(15032.76,-33.671),"prior_entry_only_half_guard":(7641.47,-32.557),
@@ -60,6 +63,22 @@ def run(h1_2025:Path,h1_2026:Path,out:Path)->dict:
     # Produce actual internal report footer + standalone private System Builder handover.
     # A report cannot approve trading or publication.
     nursery = write_bundle(evidence, out)
+    # Owner's platform choice is a separate read-only overlay on immutable research.
+    # This does not authorize connection, account funding, demo orders or publication.
+    selection = select_crossfire_platform_version(nursery)
+    (out / 'goldthinker_platform_version_selection.json').write_text(
+        json.dumps(selection, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+    (out / 'goldthinker_platform_version_selection.md').write_text(
+        selection_markdown(selection, nursery), encoding='utf-8')
+    print("GOLDTHINKER_CROSSFIRE_BALANCED_VERSION_SELECTED", json.dumps({
+        "version": selection["owner_selection"],
+        "owner_decision": selection["owner_decision_date"],
+        "research_original_preserved": True,
+        "research_sha": selection["underlying_historical_packet_sha256"],
+        "selection_sha": selection["selection_record_sha256"],
+        "paper_execution_authorised": False,
+        "customer_copy_authorised": False,
+    }, sort_keys=True), flush=True)
     print("CROSSFIRE_PRIVATE_NURSERY_PACKAGE_WRITTEN", json.dumps({
         "status": "AWAITING_OWNER_VERSION_DECISION",
         "candidate": nursery["system_id"],
