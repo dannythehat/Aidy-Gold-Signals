@@ -36,7 +36,7 @@ SOURCE_BLOBS = {
     "session_levels.py":"4b0302001b849a5f3c2291f4fa9ca80f4a904558",
     "swing_structure.py":"19f14e8fa9b9fd6ad53ce8bc70e87b6f7e559686",
     "backtester.py":"eca177393950575015609002bc2fe06447e317ee",
-    "indicators.py":"d7a5057e45a45c4a871628451885196b0ce17fe",  # verified separately before source-parity rating
+    "indicators.py":"9f1c7583a76755945e22e494deb22f095ce3e736",
 }
 RULES = {
     "symbol":"XAUUSD","execution_frame":"M15","bias_frames":["H1","H4"],
@@ -129,8 +129,7 @@ def swing_events(htf:pd.DataFrame,left:int,right:int):
     ix=htf.index
     events=[]
     for i in range(left,len(htf)-right):
-        latest=ix[i+right]+(ix[i+right] - ix[i+right-1] if False else pd.Timedelta(
-            hours=1 if left==5 else 4))
+        latest=ix[i+right]+pd.Timedelta(hours=1 if left==5 else 4)
         if hi[i]>=np.max(hi[i-left:i+right+1]):
             events.append((latest,"high",float(hi[i])))
         if lo[i]<=np.min(lo[i-left:i+right+1]):
@@ -270,7 +269,6 @@ def model_period(df:pd.DataFrame,year:str,scenario:str,spread_multiplier=1.0,sli
     observed_spread=df["observed_open_spread"].to_numpy()
     dates=df["uk_date"].to_numpy()
     times=df.index
-    trace_cost=0.0
     for i in range(1,len(df)):
         contiguous=times[i]-times[i-1]==pd.Timedelta(minutes=15)
         if position is not None and (not contiguous or dates[i]!=dates[i-1]):
