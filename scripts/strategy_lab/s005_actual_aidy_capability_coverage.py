@@ -144,8 +144,7 @@ def main():
                     "original_publisher_trade_index":k,
                     "AIDY_price_math_packet_sha256":packet["packet_digest"],
                     "frames_completed":{
-                      tf:packet["timeframes"][tf].get("observed_candles",
-                            packet["timeframes"][tf].get("completed_candle_count"))
+                      tf:packet["timeframes"][tf]["bars_available"]
                       for tf in ("M15","H1","H4")},
                     "primitive_manifest_count":len(packet["primitive_manifest"]),
                     "research_not_pit":True,
