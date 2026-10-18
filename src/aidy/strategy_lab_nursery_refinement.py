@@ -34,7 +34,7 @@ def build_refinement(source):
         raise ValueError("wrong or unqualified CROSSFIRE research evidence")
     years = source.get("years")
     if not isinstance(years, dict) or set(years) != {"2025", "2026"}:
-        raise ValueError("original and cross-period evidence required")
+        raise ValueError("missing original and cross-period evidence")
     comparison = {}
     receipts = {}
     for year in ("2025", "2026"):
@@ -187,7 +187,7 @@ def write_bundle(source, folder):
                   "original entry signals unchanged, no automatic live selection.",
                   styles["BodyText"]), PageBreak(),
         Paragraph("System Builder handover — INTERNAL ONLY", styles["Heading1"]),
-        Paragraph("Nursery acceptance and owner version-selection are pending. "
+        Paragraph("Nursery acceptance and owner version-selection are PENDING. "
                   "No demo login, broker orders, paper start or public JOIN.",
                   styles["BodyText"]),
     ]
