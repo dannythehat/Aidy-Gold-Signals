@@ -1,0 +1,79 @@
+name: S002 PDH PDL Original Python Economic Screen 2025 and 2026
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s002_original_source_two_period_screen.py
+      - tests/test_s002_original_source_two_period_screen.py
+      - .github/workflows/s002-original-source-economic-screen.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-first-code-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff pandas numpy
+      - name: Test publisher label defect and account/quote causal properties
+        run: |
+          python -m compileall -q scripts/strategy_lab/s002_original_source_two_period_screen.py tests/test_s002_original_source_two_period_screen.py
+          ruff check --select F scripts/strategy_lab/s002_original_source_two_period_screen.py tests/test_s002_original_source_two_period_screen.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s002_original_source_two_period_screen.py
+  full-two-year-s002-economic-screen:
+    needs: source-first-code-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Reuse original 22 SHA receipt-verified AIDY real market months
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s002_source/
+          merge-multiple: false
+      - name: Install AIDY economic simulation
+        run: python -m pip install --quiet pandas numpy
+      - name: Run S002 exact author open-price state machine and real-cost AUDIT
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s002_original_source_two_period_screen.py --source-root artifacts/strategy_lab/s002_source --out artifacts/strategy_lab/s002_2025_2026
+      - name: Verify all original history and two-year $10k ledger evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('artifacts/strategy_lab/s002_2025_2026')
+          v=json.loads((p/'S002_TWO_PERIOD_AIDY_SCREEN.json').read_text())
+          assert len(v['source_receipts'])==22
+          assert len(v['source_m15_sha256'])==64
+          assert v['original_readme_strategy_differs_from_actual_author_source']
+          assert v['author_risk_stop_missing'] and not v['brokers_and_live_positions_touched']
+          assert v['source_exact_signal_mechanics_reimplemented']
+          assert v['frozen_rules']['protective_stop_price_in_author_code'] is None
+          assert v['research_decision'] in ('INITIAL_SCREEN_FAIL','SOURCE_QUALITY_FAIL_RESEARCH_ONLY')
+          for year,expected_months in (('2025',12),('2026',9)):
+              for label,case in v['periods'][year].items():
+                  assert case['starting_usd']==10000
+                  assert len(case['monthly'])==expected_months
+                  assert case['trades']==len(case['trade_ledger'])
+                  assert sum(m['trades'] for m in case['monthly'])==case['trades']
+                  assert abs(case['net_usd']-(case['ending_usd']-10000))<.03
+                  assert (p/(year+'_'+label+'_closed_trades.csv')).exists()
+          print('S002_2025_AND_2026_REAL_SOURCE_ECONOMIC_AUDIT_VERIFIED')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S002-2025-2026-AIDY-Initial-Screen-Tables-And-Trade-Ledger
+          path: artifacts/strategy_lab/s002_2025_2026/
+          if-no-files-found: warn
+          retention-days: 90
