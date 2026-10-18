@@ -1,0 +1,150 @@
+name: S005 Original Dual Gold Presets Source Replay and Publisher Python Parity
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_publisher_engine_two_preset_parity.py
+      - tests/test_s005_publisher_source_parity.py
+      - scripts/strategy_lab/s005_actual_aidy_capability_coverage.py
+      - .github/workflows/s005-original-full-aidy-parity.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_publisher_engine_two_preset_parity.py
+      - tests/test_s005_publisher_source_parity.py
+      - .github/workflows/s005-original-full-aidy-parity.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original-source-and-semantic-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy pytest ruff
+      - name: Original SHA rule and negative-parity fixture regression
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005_publisher_engine_two_preset_parity.py tests/test_s005_publisher_source_parity.py
+          ruff check --select F scripts/strategy_lab/s005_publisher_engine_two_preset_parity.py tests/test_s005_publisher_source_parity.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s005_publisher_source_parity.py
+  real-two-calendar-periods-native-publisher-python:
+    needs: original-source-and-semantic-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Reuse all 22 source-tick SHA-verified original HistData M15 month receipts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s005_original_source/
+          merge-multiple: false
+      - run: python -m pip install --quiet pandas numpy
+      - name: Fetch publisher original READ-ONLY Python and MQL5 source PINNED to commit
+        run: |
+          mkdir -p /tmp/s005_publisher
+          BASE="https://raw.githubusercontent.com/sbrakni/MQL5-trading-bot-claude-experiment/3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/engine.py" -o /tmp/s005_publisher/engine.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/strategies.py" -o /tmp/s005_publisher/strategies.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Experts/ApexBreakout.mq5" -o /tmp/s005_publisher/ApexBreakout.mq5
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Donchian.set" -o /tmp/s005_publisher/ApexBreakout_XAUUSD_H1_Donchian.set
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Session.set" -o /tmp/s005_publisher/ApexBreakout_XAUUSD_H1_Session.set
+          test -s /tmp/s005_publisher/engine.py
+      - name: Execute actual unmodified publisher Python research engine on REAL spot gold not GC futures proxy
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_publisher_engine_two_preset_parity.py --source-root artifacts/strategy_lab/s005_original_source/ --publisher-root /tmp/s005_publisher/ --out artifacts/strategy_lab/s005_original_author_compared/
+      - name: Verify source data, independent account, each EA gold preset, source signal parity, full ledgers
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("artifacts/strategy_lab/s005_original_author_compared")
+          d=json.loads((p/"S005_PUBLISHER_PY_NATIVE_REPLAY.json").read_text())
+          assert d["publisher_python_original_executed_on_REAL_SPOT_HISTORY"] is True
+          assert d["native_MQL5_EA_run"] is False
+          assert d["publisher_python_barclose_vs_MQL5_EA_nextbar_exits_differ"]
+          assert d["fully_authenticated_22_source_months"]==22
+          assert len(d["all_original_m15_sha256"])==64
+          assert d["cases"]["DONCHIAN"]["source_signal_diagnostic"]["signal_event_parity_mechanical"]
+          assert d["publisher_git_commit"]=="3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          for family in ("DONCHIAN","SESSION"):
+            for yr,n in (("2025",12),("2026",9)):
+              case=d["cases"][family]["periods"][yr]
+              assert case["initial_usd"]==10000
+              assert len(case["monthly"])==n
+              assert case["trades"]==len(case["trade_ledger"])
+              assert sum(t["closed"] for t in case["monthly"])==case["trades"]
+              assert (p/f"{family}_{yr}_publisher_PY_closed_trades.csv").exists()
+              assert abs(case["net_usd"]+10000-case["ending_usd"])<.03
+          print("S005_AUTHOR_UNMODIFIED_PY_REAL_SPOT_TWO_PRESET_TWO_YEARS_VERIFIED")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-Original-Author-Python-Real-Spot-Two-Presets-2025-2026
+          path: artifacts/strategy_lab/s005_original_author_compared/
+          if-no-files-found: warn
+          retention-days: 90
+
+  canonical-aidy-original-source-intelligence-and-evidence-gate:
+    needs: real-two-calendar-periods-native-publisher-python
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy httpx ruff
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s005_original_source/
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: S005-Original-Author-Python-Real-Spot-Two-Presets-2025-2026
+          path: artifacts/strategy_lab/s005_publisher_results/
+      - name: Verify 9-factor score cannot be forged and run original math at preselected timestamps
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005_actual_aidy_capability_coverage.py
+          ruff check --select F scripts/strategy_lab/s005_actual_aidy_capability_coverage.py
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_actual_aidy_capability_coverage.py --source-root artifacts/strategy_lab/s005_original_source --publisher-evidence artifacts/strategy_lab/s005_publisher_results/S005_PUBLISHER_PY_NATIVE_REPLAY.json --out artifacts/strategy_lab/s005_full_aidy_coverage
+      - name: Enforce honest full-capability research status and original-toolbox actual calls
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("artifacts/strategy_lab/s005_full_aidy_coverage/S005_CANONICAL_AIDY_CAPABILITY_COVERAGE.json").read_text())
+          assert a["AIDY_toolbox_manifest_valid"]
+          assert a["aidy_source_real_price_math_executed"]
+          assert a["real_AIDY_nine_factor_governance_invoked"]
+          assert a["qualified_numeric_score_prohibited"]
+          assert not a["source_native_MT5_trade_parity"]
+          assert a["nine_factor_AIDY_real_result"]["score_out_of_100"] is None
+          assert len(a["hard_gaps"])>=5
+          for family in ("DONCHIAN","SESSION"):
+              for year in ("2025","2026"):
+                  x=a["coverage_by_preset_period"][family][year]
+                  assert x["actual_AIDY_source_math_execution"]>=1
+                  assert x["not_all_trades_PIT_gold_experts_executed"]
+          print("S005_AIDY_ORIGINAL_COVERAGE_AND_SCORE_GATE_PASS")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-AIDY-Toolbox-PriceMath-Evidence-Gating-Actual-Source
+          path: artifacts/strategy_lab/s005_full_aidy_coverage/
+          if-no-files-found: warn
+          retention-days: 90
