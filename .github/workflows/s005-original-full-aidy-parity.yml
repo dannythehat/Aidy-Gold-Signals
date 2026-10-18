@@ -134,10 +134,13 @@ jobs:
           assert not a["source_native_MT5_trade_parity"]
           assert a["nine_factor_AIDY_real_result"]["score_out_of_100"] is None
           assert len(a["hard_gaps"])>=5
+          assert a["all_original_trade_entries_have_causal_AIDY_price_math"]
+          assert a["representative_not_all_trades"] is False
           for family in ("DONCHIAN","SESSION"):
               for year in ("2025","2026"):
                   x=a["coverage_by_preset_period"][family][year]
-                  assert x["actual_AIDY_source_math_execution"]>=1
+                  assert x["actual_AIDY_source_math_execution"]==x["original_publisher_trades"]
+                  assert x["all_original_entries_annotated"]
                   assert x["not_all_trades_PIT_gold_experts_executed"]
           print("S005_AIDY_ORIGINAL_COVERAGE_AND_SCORE_GATE_PASS")
           PY
