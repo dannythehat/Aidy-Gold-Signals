@@ -124,10 +124,23 @@ def run_account(year,source,market,scale=1):
     if not math.isfinite(spread) or spread<=0 or spread>10:
         raise ValueError("Unqualified original source observed spread")
     slippage=(spread/2+0.10)*scale
-    pf=sub[["open","high","low","close","volume"]].copy()
-    pf["openinterest"]=0
+    # The author's original source assumes self.data._dataname is a filename
+    # string and explicitly invokes .upper(). A PandasData feed will CRASH
+    # in unmodified _apply_forex_config. Use the identical GenericCSVData
+    # adapter configured in the PUBLISHER's own __main__ block. No source
+    # trading calculations are patched or disabled.
+    csv_path=OUT/("S004_AUTHENTIC_REAL_M5_"+year+".csv")
+    with csv_path.open("w",newline="",encoding="utf-8") as h:
+        w=csv.writer(h)
+        w.writerow(["Date","Time","Open","High","Low","Close","Volume"])
+        for ts,x in sub.iterrows():
+            w.writerow([ts.strftime("%Y%m%d"),ts.strftime("%H:%M:%S"),
+                 x["open"],x["high"],x["low"],x["close"],int(x["volume"])])
     c=bt.Cerebro(stdstats=False,preload=True,runonce=True)
-    c.adddata(bt.feeds.PandasData(dataname=pf,timeframe=bt.TimeFrame.Minutes,compression=5))
+    c.adddata(bt.feeds.GenericCSVData(dataname=str(csv_path),
+        dtformat="%Y%m%d",tmformat="%H:%M:%S",
+        datetime=0,time=1,open=2,high=3,low=4,close=5,volume=6,
+        openinterest=-1,timeframe=bt.TimeFrame.Minutes,compression=5))
     broker=c.broker
     broker.setcash(10000.)
     # One GOLD oz per one Backtrader stocklike unit, 100 oz per standard lot.
