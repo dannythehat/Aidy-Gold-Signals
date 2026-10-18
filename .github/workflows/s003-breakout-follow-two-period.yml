@@ -1,7 +1,7 @@
 name: S003 Breakout Follow Trend 101 Two Period Research
 on:
   push:
-    branches: [research/s003-original-pine-mql5-2025-2026-screen]
+    branches: [main, research/s003-original-pine-mql5-2025-2026-screen]
   pull_request:
     branches: [main]
     paths:
