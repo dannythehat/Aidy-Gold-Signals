@@ -36,7 +36,6 @@ import json
 from datetime import timedelta, timezone
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from scripts.strategy_lab.s001_two_period_original_rules import read_source
