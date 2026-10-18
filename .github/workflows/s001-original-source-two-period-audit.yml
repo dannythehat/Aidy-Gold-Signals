@@ -1,0 +1,110 @@
+name: S001 GoldEA Faithful Two Period AIDY Audit
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s001_real_tick_to_m15.py
+      - scripts/strategy_lab/s001_two_period_original_rules.py
+      - scripts/strategy_lab/s001_two_period_report_pdf.py
+      - tests/test_s001_two_period_original_rules.py
+      - .github/workflows/s001-original-source-two-period-audit.yml
+permissions:
+  contents: read
+jobs:
+  source-rule-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest ruff pandas numpy
+      - name: Compile and check immutable source rule tests
+        run: |
+          python -m compileall -q scripts/strategy_lab/s001_real_tick_to_m15.py scripts/strategy_lab/s001_two_period_original_rules.py scripts/strategy_lab/s001_two_period_report_pdf.py tests/test_s001_two_period_original_rules.py
+          ruff check --select F scripts/strategy_lab/s001_real_tick_to_m15.py scripts/strategy_lab/s001_two_period_original_rules.py scripts/strategy_lab/s001_two_period_report_pdf.py tests/test_s001_two_period_original_rules.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s001_two_period_original_rules.py
+  source-month:
+    needs: source-rule-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        period: ['202412','202501','202502','202503','202504','202505','202506','202507','202508','202509','202510','202511','202512','202601','202602','202603','202604','202605','202606','202607','202608','202609']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SOURCE_MONTH: ${{ matrix.period }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download immutable original gold tick ZIP from existing private R2
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/S001_${SOURCE_MONTH}.zip"
+      - name: Build native M15 BID ASK candles with source tick counts and SHA receipt
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s001_real_tick_to_m15.py --period "${SOURCE_MONTH}" --archive "/tmp/S001_${SOURCE_MONTH}.zip" --output "artifacts/strategy_lab/s001_source/s001-source-${SOURCE_MONTH}"
+          rm -f "/tmp/S001_${SOURCE_MONTH}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s001-source-${{ matrix.period }}
+          path: artifacts/strategy_lab/s001_source/s001-source-${{ matrix.period }}/
+          if-no-files-found: error
+          retention-days: 90
+  two-period-report:
+    needs: source-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s001_source/
+          merge-multiple: false
+      - run: python -m pip install --quiet pandas numpy matplotlib reportlab pypdf pillow
+      - name: Independently model source-rule GoldEA for 2025 and Jan-Sep 2026
+        run: PYTHONPATH=src:. python scripts/strategy_lab/s001_two_period_original_rules.py --source-root artifacts/strategy_lab/s001_source --out artifacts/strategy_lab/s001_full_2025_2026
+      - name: Produce complete 2025 and 2026 $10000 results PDF
+        run: PYTHONPATH=src:. python scripts/strategy_lab/s001_two_period_report_pdf.py
+      - name: Validate two periods, source receipts, all trades and PDF
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from pypdf import PdfReader
+          p=Path('artifacts/strategy_lab/s001_full_2025_2026')
+          d=json.loads((p/'S001_two_period_full_aidy_evidence.json').read_text())
+          assert d['status']=='TWO_PERIOD_AUTHENTIC_TICK_SOURCE_MODEL_COMPLETE__MT5_PARITY_NOT_VERIFIED'
+          assert len(d['market_source_receipts'])==22
+          assert not d['source_original_retail_MT5_EA_parity']
+          assert d['frozen_source_rules']['target_r'] is None
+          assert d['broker_orders']==0
+          for year,n in (('2025',12),('2026',9)):
+              a=d['independent_period_results'][year]['scenarios']['published_default_vwap_exit']
+              assert a['start_usd']==10000 and len(a['monthly'])==n
+              assert a['closed_trades']==len(a['trades'])
+              assert sum(m['closed_trades'] for m in a['monthly'])==a['closed_trades']
+              assert abs(a['net_usd']-(a['end_usd']-10000))<.02
+          pdf=p/'GOLDTHINKER_S001_Full_2025_2026_Original_Rules_AIDY_Report.pdf'
+          assert len(PdfReader(str(pdf)).pages)>=14
+          print('S001_AIDY_TWO_PERIOD_REAL_MARKET_FULL_REPORT_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S001-GoldEA-2025-2026-Source-Faithful-AIDY-Report
+          path: artifacts/strategy_lab/s001_full_2025_2026/
+          retention-days: 90
+          if-no-files-found: warn
