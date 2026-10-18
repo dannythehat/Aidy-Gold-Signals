@@ -172,9 +172,9 @@ def bias_projection(execution_times, htf, lookback, confirm):
 def bars_at(df, minutes, expected):
     # Uses genuine source-contiguous fixed-time windows; no missing synthetic bars.
     x = df.resample(f"{minutes}min").agg(
-        {"open":"first","high":"max","low":"min","close":"last","open_time_utc":"count"})
-    x=x[x["open_time_utc"]==expected].copy()
-    x.drop(columns=["open_time_utc"],inplace=True)
+        {"open":"first","high":"max","low":"min","close":"last","volume_proxy":"count"})
+    x=x[x["volume_proxy"]==expected].copy()
+    x.drop(columns=["volume_proxy"],inplace=True)
     return x
 
 
@@ -406,7 +406,7 @@ def summarize(trades,trace,end,scenario):
         mdd=min(mdd,(value-peak)/peak)
     monthly=[]
     for month in MONTHS:
-        sub=[t for t in trades if t["exit_time"].startswith(month)]
+        sub=[t for t in trades if (t["exit_time"][:7] if t["exit_time"][:7]<="2025-12" else "2025-12")==month]
         net=sum(t["net_pnl"] for t in sub)
         monthly.append({"month":month,"closed_trades":len(sub),
             "wins":sum(t["net_pnl"]>0 for t in sub),
