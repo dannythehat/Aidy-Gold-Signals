@@ -12,6 +12,7 @@ from pathlib import Path
 import pandas as pd
 from aidy.strategy_lab_crossfire_balanced_guard import VERSIONS, replay
 from aidy.strategy_lab_s010_backtest import BASE, ORIGINAL_LEVERAGE, simulate
+from aidy.strategy_lab_nursery_refinement import write_bundle
 
 FROZEN={
   "2025":{"original":(15032.76,-33.671),"prior_entry_only_half_guard":(7641.47,-32.557),
@@ -56,6 +57,17 @@ def run(h1_2025:Path,h1_2026:Path,out:Path)->dict:
         evidence["years"][str(year)]={"h1_rows":len(h),"source_csv_sha256":hashlib.sha256(source.read_bytes()).hexdigest(),"scenarios":scenarios}
     out.mkdir(parents=True,exist_ok=True)
     (out/'crossfire_risk_balance_reproduced.json').write_text(json.dumps(evidence,indent=2,sort_keys=True)+'\n',encoding='utf-8')
+    # Produce actual internal report footer + standalone private System Builder handover.
+    # A report cannot approve trading or publication.
+    nursery = write_bundle(evidence, out)
+    print("CROSSFIRE_PRIVATE_NURSERY_PACKAGE_WRITTEN", json.dumps({
+        "status": "AWAITING_OWNER_VERSION_DECISION",
+        "candidate": nursery["system_id"],
+        "proposed_compromise": nursery["proposed_compromise"],
+        "source_digest": nursery["source_packet_sha256"],
+        "package_digest": nursery["draft_sha256"],
+        "paper_trading_authorised": False,
+    }, sort_keys=True), flush=True)
     print("CROSSFIRE_BALANCED_RISK_SOURCE_REPRODUCED",json.dumps({
         yr:{"2025_or_2026":yr, "original_profit":case["scenarios"]["assumed_bid_ask"]["original"]["profit_usd"],
             "hourly_guard_profit":case["scenarios"]["assumed_bid_ask"]["hourly_state_half_new"]["profit_usd"],

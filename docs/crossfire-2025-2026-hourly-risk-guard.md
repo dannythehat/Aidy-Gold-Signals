@@ -50,3 +50,11 @@ Extra H1-low drawdown diagnostic (held longs marked to worst H1 BID low): 2025 b
 - [Drive tracker](https://docs.google.com/spreadsheets/d/1ri94tJaaEiPGbhRaFyA12kUUl4l3enP3jzOepX1RCsU/edit) tab `15_DRAWDOWN_RESEARCH`: append new experiments without overwriting older or original rows.
 
 **Outcome: historically promising risk-balanced hypothesis, not production or paper qualification.**
+
+## 18 October 2026 — PRIVATE Nursery refinement → System Builder packaging (implementation)
+
+The real original-vs-five-variant, two-year frozen-source reproduction has an additional **private** downstream handover in the same GitHub Actions run: `nursery_refinement_package.json` (source and draft SHA, all variants, no invented approval), `nursery_refinement_package.md` (side-by-side review, operator checklist, brand/SEO/account tasks) and `nursery_refinement_internal_appendix.pdf` (two-page printable final research appendix). They are produced by `src/aidy/strategy_lab_nursery_refinement.py` **only after** the runner has independently reproduced the fixed figures against the two previously verified source-artifact datasets. The test fixture is never an accepted profitable strategy. This workflow remains PR research, not a broker or website deployment.
+
+**Decision is not automatic:** `hourly_state_half_new` is the proposed risk-balanced compromise, but `selected_version=null`, `school_admission_approved=false`, `paper_trading_authorised=false`, `publication_authorised=false` and `customer_copy_authorised=false`. The proposed variant is historically promising, not source-validated for a real Vantage broker and not an owner-frozen approved paper version. All mechanical parameters stay in private research; public GoldThinker copy stays non-replicable.
+
+**Private Notion staging** uses the existing [GoldThinker System Builder](https://app.notion.com/p/3fde30f1e5408141a04df260c00ecfef) and [CROSSFIRE paper-account preflight](https://app.notion.com/p/3fde30f1e540810daee1c17321cea8b8). The operator can save the generated Markdown/JSON/PDF to the dedicated Notion dossier after verifying the source digest. This branch does NOT install an unauthorised Notion service integration or claim automatic private page creation. A future owner-approved Notion service connection can read this exact immutable package without running new strategy calculations.

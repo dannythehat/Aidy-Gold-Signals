@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - src/aidy/strategy_lab_crossfire_balanced_guard.py
+      - src/aidy/strategy_lab_nursery_refinement.py
+      - tests/test_strategy_lab_nursery_refinement.py
       - scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
       - .github/workflows/crossfire-balanced-risk-research.yml
       - docs/crossfire-2025-2026-hourly-risk-guard.md
@@ -20,11 +22,14 @@ jobs:
         with:
           python-version: '3.13'
       - name: Install deterministic research dependencies
-        run: python -m pip install --quiet numpy pandas ruff
+        run: python -m pip install --quiet numpy pandas ruff pytest pypdf reportlab
       - name: Verify Python syntax and undefined identifiers
         run: |
-          python -m compileall -q src/aidy/strategy_lab_crossfire_balanced_guard.py scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
-          ruff check --select F src/aidy/strategy_lab_crossfire_balanced_guard.py scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
+          python -m compileall -q src/aidy/strategy_lab_crossfire_balanced_guard.py src/aidy/strategy_lab_nursery_refinement.py scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
+          ruff check --select F src/aidy/strategy_lab_crossfire_balanced_guard.py src/aidy/strategy_lab_nursery_refinement.py scripts/strategy_lab/crossfire_balance_2025_2026_reproduce.py
+      - name: Test source-locked Nursery package and guard against premature trading
+        run: |
+          PYTHONPATH=src:. python -m pytest -q tests/test_strategy_lab_nursery_refinement.py
       - name: Retrieve VERIFIED original 2025 S010 archive (no synthetic candles)
         uses: actions/download-artifact@v4
         with:
