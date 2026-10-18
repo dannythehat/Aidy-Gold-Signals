@@ -11,7 +11,6 @@ import csv
 import hashlib
 import io
 import json
-import math
 import zipfile
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -55,9 +54,10 @@ def derive(archive: Path, period: str) -> tuple[list[dict], dict]:
                     minutes[minute]={
                         "first":order,"last":order,"open_bid":bid,
                         "close_bid":bid,"high_bid":bid,"low_bid":bid,
-                        "open_ask":ask,"max_spread":ask-bid,
+                        "open_ask":ask,"max_spread":ask-bid,"source_ticks":1,
                     }
                 else:
+                    item["source_ticks"]+=1
                     item["high_bid"]=max(item["high_bid"],bid)
                     item["low_bid"]=min(item["low_bid"],bid)
                     item["max_spread"]=max(item["max_spread"],ask-bid)
@@ -89,6 +89,7 @@ def derive(archive: Path, period: str) -> tuple[list[dict], dict]:
             "low":min(v["low_bid"] for _,v in parts),
             "close":last["close_bid"],
             "m1_count":15,
+            "volume":sum(v["source_ticks"] for _,v in parts),
             "observed_open_ask":first["open_ask"],
             "observed_open_spread":first["open_ask"]-first["open_bid"],
             "observed_max_spread":max(v["max_spread"] for _,v in parts),
