@@ -249,12 +249,12 @@ def rows_csv(path,rows):
         w.writerows(rows)
 
 def main():
+    global OUT
     cli=argparse.ArgumentParser()
     cli.add_argument("--original-source",required=True,type=Path)
     cli.add_argument("--source-root",required=True,type=Path)
     cli.add_argument("--output",type=Path,default=OUT)
     a=cli.parse_args()
-    global OUT
     OUT=a.output
     OUT.mkdir(parents=True,exist_ok=True)
     source,params,sha=load_original(a.original_source)
