@@ -121,7 +121,7 @@ def get_original_gold_history():
         receipts.append(receipt)
         print("S001_REAL_HISTORY", json.dumps({
             k:receipt[k] for k in ("month","native_m1_rows","complete_m15","partial_excluded","query_job_id")
-        },sort_keys=True),flush=True)
+        },sort_keys=True,default=_json_native),flush=True)
     raw_canon = json.dumps(all_rows,sort_keys=True,separators=(",",":"))
     source_sha = hashlib.sha256(raw_canon.encode()).hexdigest()
     return pd.DataFrame(all_rows), receipts, source_sha
@@ -440,6 +440,17 @@ def write_trade_csv(path,trades):
         w.writerows(trades)
 
 
+def _json_native(value):
+    """Convert audited NumPy scalar results without rounding away evidence."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, (np.ndarray,)):
+        return value.tolist()
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    raise TypeError("Unsupported market/result type: " + type(value).__name__)
+
+
 def main():
     OUT.mkdir(parents=True,exist_ok=True)
     raw,receipts,market_sha=get_original_gold_history()
@@ -487,9 +498,9 @@ def main():
         "scenarios":scenarios,
         "paper_or_live_orders":0,
     }
-    report["report_sha256"]=hashlib.sha256(json.dumps(report,sort_keys=True,separators=(",",":"),allow_nan=False).encode()).hexdigest()
+    report["report_sha256"]=hashlib.sha256(json.dumps(report,sort_keys=True,separators=(",",":"),allow_nan=False,default=_json_native).encode()).hexdigest()
     (OUT/"s001_2025_full_report.json").write_text(json.dumps(
-        report,indent=2,sort_keys=True,allow_nan=False)+"\n",encoding="utf-8")
+        report,indent=2,sort_keys=True,allow_nan=False,default=_json_native)+"\n",encoding="utf-8")
     for name,scenario in scenarios.items():
         write_trade_csv(OUT/(name.lower()+".csv"),scenario["trades"])
     with (OUT/"source_verified_2025_m15_bid.csv").open("w",newline="",encoding="utf-8") as f:
