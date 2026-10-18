@@ -1,0 +1,173 @@
+name: S004 Native Backtrader Original 5m Research 2025 2026
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s004_original_tick_to_m5.py
+      - scripts/strategy_lab/s004_original_backtrader_two_period.py
+      - tests/test_s004_native_source_screen.py
+      - .github/workflows/s004-native-original-m5-two-years.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s004_original_tick_to_m5.py
+      - scripts/strategy_lab/s004_original_backtrader_two_period.py
+      - tests/test_s004_native_source_screen.py
+      - .github/workflows/s004-native-original-m5-two-years.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  pinned-source-unit-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet backtrader pandas numpy pytest ruff
+      - name: Ensure PINNED source default and M5 calendar contract
+        run: |
+          python -m compileall -q scripts/strategy_lab/s004_original_tick_to_m5.py scripts/strategy_lab/s004_original_backtrader_two_period.py tests/test_s004_native_source_screen.py
+          ruff check --select F scripts/strategy_lab/s004_original_tick_to_m5.py scripts/strategy_lab/s004_original_backtrader_two_period.py tests/test_s004_native_source_screen.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s004_native_source_screen.py
+
+  replay-using-22-previously-authenticated-m5-months:
+    needs: pinned-source-unit-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39154372333
+          github-token: ${{ github.token }}
+          pattern: s004-source-*
+          path: artifacts/strategy_lab/s004_source/
+          merge-multiple: false
+      - name: Retrieve fixed-author original Python source
+        run: |
+          mkdir -p /tmp/s004_publisher
+          curl --retry 3 --fail --location --silent --show-error "https://raw.githubusercontent.com/ilahuerta-IA/backtrader-pullback-window-xauusd/4ab0213c5e6dd3ffb486a67f9b07bef788cdbd02/src/strategy/sunrise_ogle_xauusd.py" -o /tmp/s004_publisher/sunrise_ogle_xauusd.py
+      - run: python -m pip install --quiet backtrader pandas numpy
+      - name: Historical model native unmodified author source, no data reconversion
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s004_original_backtrader_two_period.py --source-root artifacts/strategy_lab/s004_source --original-source /tmp/s004_publisher/sunrise_ogle_xauusd.py --output artifacts/strategy_lab/s004_two_period_source
+      - name: Verify two independently reset 10000 USD periods
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('artifacts/strategy_lab/s004_two_period_source/S004_2025_2026_NATIVE_SOURCE_RESEARCH.json').read_text())
+          assert len(d['original_22_month_source_receipts'])==22
+          assert d['starting_capital_each']==10000
+          assert d['actual_frozen_code_defaults']['long_atr_sl_multiplier']==4.5
+          assert d['actual_frozen_code_defaults']['enable_short_trades'] is False
+          for y,n in (('2025',12),('2026',9)):
+              for r in d['accounts'][y].values():
+                  assert len(r['monthly'])==n
+                  assert r['starting_usd']==10000
+                  assert sum(q['closed_trades'] for q in r['monthly'])==r['closed_trades']
+          print('S004_NATIVE_SOURCE_REAL_M5_TWO_YEAR_AIDY_PROOF_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S004-AIDY-Two-Period-Native-Author-Research-Replay
+          path: artifacts/strategy_lab/s004_two_period_source/
+          if-no-files-found: warn
+          retention-days: 90
+
+  authentic-original-tick-m5:
+    needs: pinned-source-unit-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      max-parallel: 5
+      fail-fast: false
+      matrix:
+        month: ['202412','202501','202502','202503','202504','202505','202506','202507','202508','202509','202510','202511','202512','202601','202602','202603','202604','202605','202606','202607','202608','202609']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SOURCE_MONTH: ${{ matrix.month }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download SAME original XAUUSD BID ASK tick ZIP source from R2
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/s004_${SOURCE_MONTH}.zip"
+      - name: Preserve genuine author M5 timeframe and native HistData quote receipts
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s004_original_tick_to_m5.py --archive "/tmp/s004_${SOURCE_MONTH}.zip" --period "${SOURCE_MONTH}" --out "artifacts/strategy_lab/s004_source/s004-source-${SOURCE_MONTH}"
+          rm -f "/tmp/s004_${SOURCE_MONTH}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s004-source-${{ matrix.month }}
+          path: artifacts/strategy_lab/s004_source/s004-source-${{ matrix.month }}/
+          retention-days: 90
+          if-no-files-found: error
+
+  full-2025-and-current-2026-original-backtrader-source:
+    needs: authentic-original-tick-m5
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: s004-source-*
+          path: artifacts/strategy_lab/s004_source/
+          merge-multiple: false
+      - name: Download only pinned original THIRD PARTY strategy version
+        run: |
+          mkdir -p /tmp/s004_publisher
+          curl --retry 3 --fail --location --silent --show-error "https://raw.githubusercontent.com/ilahuerta-IA/backtrader-pullback-window-xauusd/4ab0213c5e6dd3ffb486a67f9b07bef788cdbd02/src/strategy/sunrise_ogle_xauusd.py" -o /tmp/s004_publisher/sunrise_ogle_xauusd.py
+          test -s /tmp/s004_publisher/sunrise_ogle_xauusd.py
+      - run: python -m pip install --quiet backtrader pandas numpy
+      - name: Run actual unmodified Backtrader source signal/stop/entry rules on 5m real gold
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s004_original_backtrader_two_period.py --source-root artifacts/strategy_lab/s004_source --original-source /tmp/s004_publisher/sunrise_ogle_xauusd.py --output artifacts/strategy_lab/s004_two_period_source
+      - name: Verify both independent 10k accounts and disclosed publisher broker constraints
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("artifacts/strategy_lab/s004_two_period_source")
+          d=json.loads((p/"S004_2025_2026_NATIVE_SOURCE_RESEARCH.json").read_text())
+          assert d["original_git_commit"]=="4ab0213c5e6dd3ffb486a67f9b07bef788cdbd02"
+          assert len(d["original_22_month_source_receipts"])==22
+          assert d["starting_capital_each"]==10000
+          assert d["actual_frozen_code_defaults"]["enable_short_trades"] is False
+          assert d["actual_frozen_code_defaults"]["long_atr_sl_multiplier"]==4.5
+          assert d["actual_frozen_code_defaults"]["long_atr_tp_multiplier"]==6.5
+          assert d["actual_frozen_code_defaults"]["long_atr_max_threshold"]==2
+          assert not d["MT5_broker_fill_parity"]
+          for yr,n in (("2025",12),("2026",9)):
+              for name,q in d["accounts"][yr].items():
+                  assert q["starting_usd"]==10000
+                  assert len(q["monthly"])==n
+                  assert q["closed_trades"]==len(q["closed_trades_ledger"])
+                  assert sum(x["closed_trades"] for x in q["monthly"])==q["closed_trades"]
+                  assert (p/(yr+"_"+name+"_trade_ledger.csv")).exists()
+          print("S004_PINNED_REAL_SOURCE_M5_2025_AND_2026_AUDIT_VERIFIED",d["economic_first_screen"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S004-2025-2026-Original-Backtrader-AIDY-Compact-Evidence
+          path: artifacts/strategy_lab/s004_two_period_source/
+          if-no-files-found: warn
+          retention-days: 90
