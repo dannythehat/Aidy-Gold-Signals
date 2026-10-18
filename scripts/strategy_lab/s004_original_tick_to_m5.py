@@ -20,7 +20,7 @@ from aidy.strategy_lab_crossfire_tick_2021 import parse_tick
 
 
 def original_tick_m5(archive: Path, period: str):
-    if len(period)!=6 or not period.isdigit() or int(period[:4]) not in (2024,2025,2026):
+    if period not in (["202412"]+[f"2025{x:02d}" for x in range(1,13)]+[f"2026{x:02d}" for x in range(1,10)]):
         raise ValueError("S004 original archive period invalid")
     sha=hashlib.sha256(archive.read_bytes()).hexdigest()
     minutes={}
