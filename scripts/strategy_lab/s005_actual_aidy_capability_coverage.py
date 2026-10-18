@@ -32,20 +32,23 @@ from scripts.strategy_lab.s005_publisher_engine_two_preset_parity import (
     source_h1,
 )
 
-def candle_rows(h:pd.DataFrame,as_of:pd.Timestamp,market_sha:str):
-    # Each emitted candle has CLOSED before as_of. No future candles or
-    # outcome-based inclusion, and NO retrospective -> PIT promotion.
-    datasets={
-       "M15":(h,15),
-       "H1":(h.resample("60min").agg(
-         open=("open","first"),high=("high","max"),low=("low","min"),
-         close=("close","last"),bars=("open","count")).loc[lambda v:v.bars==4],60),
+def precompute_datasets(h:pd.DataFrame):
+    """Prepare genuine complete M15/H1/H4 once; no repeated source resampling."""
+    h1=h.resample("60min").agg(
+      open=("open","first"),high=("high","max"),low=("low","min"),
+      close=("close","last"),bars=("open","count"))
+    h4=h.resample("240min").agg(
+      open=("open","first"),high=("high","max"),low=("low","min"),
+      close=("close","last"),bars=("open","count"))
+    return {
+      "M15":(h,15),
+      "H1":(h1.loc[h1.bars==4],60),
+      "H4":(h4.loc[h4.bars==16],240)
     }
-    m15=h
-    h4=m15.resample("240min").agg(
-       open=("open","first"),high=("high","max"),low=("low","min"),
-       close=("close","last"),bars=("open","count"))
-    datasets["H4"]=(h4.loc[h4.bars==16],240)
+
+def candle_rows(datasets,as_of:pd.Timestamp,market_sha:str):
+    # Source-only bars CLOSE before this exact entry instant.
+    # No hindsight, no retrospective -> live PIT promotion.
     all_rows=[]
     for tf,(frame,minutes) in datasets.items():
         cutoff=as_of-pd.Timedelta(minutes=minutes)
@@ -111,6 +114,7 @@ def main():
     from scripts.strategy_lab.s001_two_period_original_rules import read_source
     real_m15,_,originalsha=read_source(o.source_root)
     assert originalsha==market_sha
+    datasets=precompute_datasets(real_m15)
     manifest=build_gold_toolbox_manifest(
       gold_state={},semantic_context={},live_source_availability={})
     if not verify_gold_toolbox_manifest(manifest):
@@ -121,17 +125,16 @@ def main():
         for yr in ("2025","2026"):
             evidence=original["cases"][family]["periods"][yr]
             trades=evidence["trade_ledger"]
-            # Representative PREDECLARED set: chronological first, 25%, 50%,
-            # 75%, last. No post-outcome optimisation or chart-picking.
-            indices=sorted(set(round((len(trades)-1)*fraction)
-                               for fraction in (0,.25,.5,.75,1))) if trades else []
+            # ALL original author trade entries, in source chronology.
+            # No ex-post sample selection; contexts NEVER modify entry/exit.
+            indices=range(len(trades))
             snapshots=[]
             for k in indices:
                 trade=trades[k]
                 asof=pd.Timestamp(trade["entry_time_utc"].replace("Z","+00:00"))
                 if asof.tzinfo is not None:
                     asof=asof.tz_convert("UTC").tz_localize(None)
-                candle_inputs=candle_rows(real_m15,asof,market_sha)
+                candle_inputs=candle_rows(datasets,asof,market_sha)
                 packet=build_price_expert_math_packet(
                     as_of=asof.tz_localize("UTC").to_pydatetime(),
                     symbol="XAUUSD",candle_rows=candle_inputs,mode="retrospective")
@@ -152,7 +155,8 @@ def main():
             reports[family][yr]={
                 "actual_AIDY_source_math_execution":len(snapshots),
                 "original_publisher_trades":len(trades),
-                "sample_method":"chronological fixed-index 0/25/50/75/100pct, not chosen by P&L",
+                "sample_method":"every original publisher source trade at its own entry timestamp, not chosen by P&L",
+                "all_original_entries_annotated":len(snapshots)==len(trades),
                 "price_math_samples":snapshots,
                 "not_all_trades_PIT_gold_experts_executed":True,
                 "macro_asof_and_news_intelligence_not_qualified":True,
@@ -174,7 +178,8 @@ def main():
       "canonical_toolbox_manifest":manifest,
       "aidy_source_real_price_math_executed":True,
       "AIDY_price_math_mode":"retrospective",
-      "representative_not_all_trades":True,
+      "representative_not_all_trades":False,
+      "all_original_trade_entries_have_causal_AIDY_price_math":True,
       "real_AIDY_nine_factor_governance_invoked":True,
       "qualified_numeric_score_prohibited":True,
       "nine_factor_AIDY_real_result":gate,
