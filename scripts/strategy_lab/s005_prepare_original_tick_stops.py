@@ -44,7 +44,7 @@ def prepare(m15_root,publisher_root,original_evidence):
     if historysha!=original_evidence["all_original_m15_sha256"]:
         raise ValueError("Original full tick-derived HISTDATA historical source SHA mismatch")
     for receipt in receipts:
-        if receipt.get("source_period") is None or not receipt.get("sha256_original_zip"):
+        if receipt.get("fixed_est_month") is None or not receipt.get("original_zip_sha256"):
             raise ValueError("Monthly original source archive ZIP SHA missing")
     atr=publisher_engine.atr(
         h1.high.to_numpy(float),h1.low.to_numpy(float),
@@ -105,8 +105,8 @@ def prepare(m15_root,publisher_root,original_evidence):
       "qualified_m15_histdata_source_sha256":historysha,
       "completed_history_h1_sha256":h1sha,
       "real_source_original_monthly_zip_receipts":[{
-         "source_period":r["source_period"],
-         "sha256_original_zip":r["sha256_original_zip"]
+         "source_period":r["fixed_est_month"],
+         "sha256_original_zip":r["original_zip_sha256"]
        } for r in receipts],
       "publisher_model_vs_compiled_MT5_must_NOT_be_equated":True,
       "initial_stops_from_unmodified_author_engine":True,
