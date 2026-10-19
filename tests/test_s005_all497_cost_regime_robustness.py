@@ -1,7 +1,6 @@
 """S005 independent source quote, cost and evidence safeguards."""
 import math
 
-import numpy as np
 import pandas as pd
 
 from scripts.strategy_lab.s005_all497_source_cost_regime_robustness import (
