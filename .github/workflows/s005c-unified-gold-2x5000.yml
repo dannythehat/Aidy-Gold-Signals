@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - scripts/strategy_lab/s005c_unified_two_sleeve_portfolio.py
+      - scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py
       - tests/test_s005c_unified_two_sleeve_portfolio.py
       - .github/workflows/s005c-unified-gold-2x5000.yml
   push:
@@ -107,5 +108,68 @@ jobs:
         with:
           name: S005C-Combined-One10000-Two5000-Donchian-Session-Hybrid-OriginalSource-Evidence
           path: artifacts/s005c_unified_2x5000/
+          retention-days: 90
+          if-no-files-found: warn
+
+  original_C_two_5000_sleeves_497_real_BIDASK_quotes_and_fee_stress:
+    needs: source_frozen_original_Python_two_5000_single_10000_full_history
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet ruff
+      - name: Ensure executable original source exact raw quote ledger and 2x5000 overlay pass strict syntax checks
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py
+          ruff check --select F scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: S005C-Combined-One10000-Two5000-Donchian-Session-Hybrid-OriginalSource-Evidence
+          path: artifacts/s005c_original_model/
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39198857672
+          github-token: ${{ github.token }}
+          name: S005-497-Real-Raw-BIDASK-Original-Quote-Economic-Evidence
+          path: artifacts/original_S005_raw_tick_quote/
+      - name: Independently join every source original 5k trade to frozen raw BID ASK quote and stress 3 levels
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py --combined-portfolio artifacts/s005c_original_model/S005_UNIFIED_2X5000_MASTER_PORTFOLIO.json --original-10k-raw-quotes artifacts/original_S005_raw_tick_quote/S005_497_FIXED_COHORT_REAL_SOURCE_BIDASK_ECONOMICS.json --out artifacts/s005c_original_5k_real_bidask_overlay/
+      - name: Reject any false original native-MT5 or full $20k account attribution
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("artifacts/s005c_original_5k_real_bidask_overlay")
+          d=json.loads((p/"S005C_2x5000_REAL_BIDASK_ORIGINAL_C_STRESS.json").read_text())
+          assert d["original_source_497_event_coverage"]==497
+          assert d["a_single_virtual_wallet_usd"]==10000
+          assert d["donchian_initial_capital_usd"]==5000
+          assert d["session_initial_capital_usd"]==5000
+          assert d["all_original_source_python_position_sizes_halved_and_matched_to_raw_history"]
+          assert d["hybrid_D_quote_side_ledger_qualified"] is False
+          assert d["actual_native_MT5_strategy_tester_original_EA_executed"] is False
+          assert d["source_true_BIDASK_cost_stress_is_not_new_compounded_portfolio"]
+          assert len(d["cost_factor_scenarios"])==3
+          for factor,scenario in d["cost_factor_scenarios"].items():
+              assert set(scenario["periods"])=={"2025","2026"}
+              assert len(scenario["all_matching_original_5k_trade_quotes"])==497
+              assert sum(scenario["periods"][y]["total_frozen_original_PY_trades"] for y in ("2025","2026"))==497
+              for year in ("2025","2026"):
+                  v=scenario["periods"][year]
+                  assert v["starting_master_usd"]==10000
+                  assert v["sleeve_allocation_each_usd"]==5000
+                  assert not v["native_1_account_model_run_with_updated_fills"]
+          assert (p/"S005C_2x5000_REAL_BIDASK_C_PUBLISHED_497_TRADES.csv").exists()
+          print("S005_C_TRUE_ORIGINAL_5K_5K_SOURCE_TAPE_COST_SENSITIVITY_VERIFIED",d["sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005C-Original-Two5000-RealSource-BIDASK-497-QuoteOverlay-Stress
+          path: artifacts/s005c_original_5k_real_bidask_overlay/
           retention-days: 90
           if-no-files-found: warn
