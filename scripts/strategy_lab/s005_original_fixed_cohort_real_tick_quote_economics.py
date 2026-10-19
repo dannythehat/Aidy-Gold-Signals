@@ -139,7 +139,6 @@ def analyse(full,source):
         for fam in FAMILIES for yr in YEARS
         for index,trade in enumerate(source["cases"][fam]["periods"][yr]["trade_ledger"])}
     outcome={}
-    cases={}
     allbase=[]
     for factor in STRESS_FACTORS:
         groups=defaultdict(list)
@@ -190,7 +189,6 @@ def analyse(full,source):
                 allbase.extend(items)
         outcome[str(factor)]=block
     assert len(allbase)==497
-    primary=outcome["1.0"]
     # The issue raised by actual XAUUSD quote tape must remain explicitly.
     target=next(x for x in allbase if x["id"]=="S005-DONCHIAN-2025-0112")
     if target["exit_path"]!="FIRST_TRUE_SOURCE_STOP_QUOTE":
@@ -263,7 +261,7 @@ def main():
       "Original MQL5 compiled EA uses bar-next-tick execution, broker point/lot/stop policies and a different session close than original author's Python research, so this is NOT official original EA parity.",
       "Financing/swaps/real Vantage commissions/real slippage/market impact and an independent sealed holdout are not verified. Owner must not promote to paper or live on this ledger.",
       "",
-      "Source current real raw bidask quote-audit SHA: "+full["sha256"],
+      "Source current real raw bidask quote-audit SHA: "+data["raw_original_source_quote_first_stop_artifact_SHA256"],
       "This model evidence SHA: "+data["sha256"],
     ])
     (q.out/"S005_REAL_QUOTE_FULL_REVALUATION_AUDIT.md").write_text(
