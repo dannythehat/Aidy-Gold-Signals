@@ -41,11 +41,17 @@ def _digest(d):
 
 
 def verify_original(raw,original):
-    if raw.get("sha256")!=ROOT_HASH or raw.get("sha256")!=_digest({
+    if raw.get("sha256")!=_digest({
          k:v for k,v in raw.items() if k!="sha256"}):
         raise ValueError("Full original BID ASK 497-trade stop/raw source receipt tampered")
     if len(raw["month_receipts"])!=22 or raw["original_publisher_model_trades"]!=497:
         raise ValueError("Not the full 22 original source archive 497 trade population")
+    if raw["source_stop_request_sha256"]!="10bed13771dc77fa9ece75ec26a6429848c83100d3690dd73f2d9a0f63b0cfea":
+        raise ValueError("The frozen original 497 publisher stop request policy was replaced")
+    if (raw["original_reported_model_stop_exits"]!=129 or
+        raw["source_quote_side_stop_crossings_within_original_trade_windows"]!=130 or
+        raw["model_nonstop_exits_with_a_true_quote_side_crossing_before_model_exit"]!=1):
+        raise ValueError("Prior original true-source raw tick regression mismatch")
     if raw["source_raw_tick_coverage_original_entries"]!=497:
         raise ValueError("Raw original BID and ASK first quote missing")
     if original.get("publisher_git_commit")!=PINNED_PUBLISHER:
@@ -193,7 +199,8 @@ def analyse(full,source):
       "schema":"aidy.s005.497_original_source_positions_real_bidask_quote_ledger.v1",
       "actual_original_historical_BID_ASK_ticks":True,
       "original_unmodified_position_signal_strategy_source":PINNED_PUBLISHER,
-      "raw_original_source_quote_first_stop_artifact_SHA256":ROOT_HASH,
+      "raw_original_source_quote_first_stop_artifact_SHA256":full["sha256"],
+      "prior_readonly_497_stop_probe_SHA256":ROOT_HASH,
       "original_publisher_PY_model_evidence_sha256":source["sha256"],
       "source_original_author_unchanged_frozen_positions":True,
       "original_author_shares_account_compounding_replayed":False,
@@ -256,7 +263,7 @@ def main():
       "Original MQL5 compiled EA uses bar-next-tick execution, broker point/lot/stop policies and a different session close than original author's Python research, so this is NOT official original EA parity.",
       "Financing/swaps/real Vantage commissions/real slippage/market impact and an independent sealed holdout are not verified. Owner must not promote to paper or live on this ledger.",
       "",
-      "Source raw bidask quote-audit SHA: "+ROOT_HASH,
+      "Source current real raw bidask quote-audit SHA: "+full["sha256"],
       "This model evidence SHA: "+data["sha256"],
     ])
     (q.out/"S005_REAL_QUOTE_FULL_REVALUATION_AUDIT.md").write_text(
