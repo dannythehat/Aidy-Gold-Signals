@@ -127,7 +127,7 @@ def _annotate_one(row,source,prior_h1_trend,year,mode,i):
       "real_histdata_entry_bid":float(market["open"]),
       "real_histdata_entry_ask":float(market["observed_open_ask"]),
       "real_histdata_entry_spread_per_oz":round(entry_spread,6),
-      "real_entry_spread_exceeds_publishers_ENTIRE_0p45_cost":entry_spread>ORIGINAL_COST_PER_OZ,
+      "real_entry_spread_exceeds_publishers_ENTIRE_0p45_cost":entry_spread>ORIGINAL_COST_PER_OZ+0.0000005,
       "observed_entry_spread_gt_60_points_if_point_0p01":entry_spread>.60,
       "observed_entry_spread_gt_60_points_if_point_0p001":entry_spread>.06,
       "market_regime_at_entry":regime,
@@ -180,7 +180,7 @@ def analyse(source,evidence):
             scenarios={
                 "fixed_original_trade_cohort_cost_scenarios_usd":extra,
                 "publisher_all_in_roundtrip_cost_per_oz":ORIGINAL_COST_PER_OZ,
-                "source_entry_spread_only_exceeds_all_in_cost_count":sum(s>ORIGINAL_COST_PER_OZ for s in entry_spreads),
+                "source_entry_spread_only_exceeds_all_in_cost_count":sum(s>ORIGINAL_COST_PER_OZ+0.0000005 for s in entry_spreads),
                 "source_entry_quote_spread_usd_per_oz_median":round(float(np.median(entry_spreads)),4),
                 "source_entry_quote_spread_usd_per_oz_p90":round(float(np.quantile(entry_spreads,.9)),4),
                 "source_entry_quote_spread_usd_per_oz_max":round(float(max(entry_spreads)),4),
@@ -220,8 +220,8 @@ def analyse(source,evidence):
                  "full_cost_break_even_usd_per_oz":report["stop_break_even_full_cost_usd_per_oz"],
                  "calendar_month_bootstrap_q025_usd":report["bootstrap"]["q025_usd"],
              },sort_keys=True),flush=True)
-    if len(annotated)!=497 or sum(r["source_entry_spread_only_exceeds_publishers_ENTIRE_0p45_cost"]
-                                  for r in annotated)!=456:
+    if len(annotated)!=497 or sum(r["real_entry_spread_exceeds_publishers_ENTIRE_0p45_cost"]
+                                  for r in annotated)!=454:
         raise ValueError("Historic 497 author original trades or original quote-cost evidence mismatch")
     return {
       "schema":"aidy.s005.author_original_497_spot_quote_cost_regime_bootstrap.v1",
@@ -233,7 +233,7 @@ def analyse(source,evidence):
       "n_original_trades_all_verified":len(annotated),
       "original_quote_source_is_authentic_histdata_spot":True,
       "all_original_entry_spreads_observed":True,
-      "source_spread_exceeds_publisher_whole_cost_on_trades":456,
+      "source_spread_exceeds_publisher_whole_cost_on_trades":454,
       "source_PY_roundtrip_0p45_not_a_verified_broker_cost":True,
       "true_native_spot_broker_exit_ASK_tick_parity":False,
       "retrospective_cost_scenarios_reselect_original_signals":False,
@@ -279,7 +279,7 @@ def main():
                 " | "+str(v["profitable_calendar_months"])+
                 " | "+str(v["bootstrap"]["q025_usd"])+" |")
     summary.extend(["","## Explicit methodology","- Audit original author Python model trade P&L to ±$0.00012 using source documented $0.45/oz roundtrip (not original native MQL5 fills).",
-       "- The 456 cost-underestimate warning compares authentic ENTRY bid/ask quotes only. Shorts pay actual spread on EXIT, which requires native bid/ask tick evidence and is NOT proved by entry quotes.",
+       "- The 454 strictly-greater-than-$0.45 entry-spread warning compares authentic ENTRY bid/ask quotes only. Shorts pay actual spread on EXIT, which requires native bid/ask tick evidence and is NOT proved by entry quotes.",
        "- Bootstrap independently resamples **observed monthly profit blocks** only. Month blocks may be dependent, historical data are known, this is NOT a sealed OOS CI or population alpha test.",
        "- Extra fixed-cost scenarios keep the ORIGINAL trade cohort, size and stop outcomes FIXED and vary only charged roundtrip fee; NOT a newly executable trade simulation.",
        "- 24-completed-H1 trend uses source-close SHIFTED to before the original trade's entry instant. These regime tags are explanatory and do not filter trades.",
@@ -289,7 +289,7 @@ def main():
         "\n".join(summary)+"\n",encoding="utf-8")
     print("S005_ECONOMIC_497_COST_REGIME_AUDIT_PASSED",json.dumps({
         "audit_sha256":data["sha256"],"original_trades":len(trade_rows),
-        "source_entry_spread_exceeds_original_all_in_cost":456,
+        "source_entry_spread_exceeds_original_all_in_cost":454,
         "native_MQL5_test_complete":False,
         "genuine_OOS_complete":False,
     },sort_keys=True),flush=True)
