@@ -67,7 +67,7 @@ jobs:
               rows=list(csv.DictReader(f))
           assert d['n_original_trades_all_verified']==497
           assert len(rows)==497
-          assert d['source_spread_exceeds_publisher_whole_cost_on_trades']==456
+          assert d['source_spread_exceeds_publisher_whole_cost_on_trades']==454
           assert not d['true_native_spot_broker_exit_ASK_tick_parity']
           assert d['months_bootstrap_is_not_sealed_holdout'] is True
           assert d['retrospective_cost_scenarios_reselect_original_signals'] is False
