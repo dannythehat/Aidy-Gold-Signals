@@ -73,7 +73,8 @@ def _resample_months(month_values,year,mode):
 def _signed_summary(trades,group_field):
     buckets=defaultdict(list)
     for t in trades:
-        buckets[t[group_field]].append(float(t["publisher_costed_usd"]))
+        net=t["publisher_net_usd"] if "publisher_net_usd" in t else t["publisher_costed_usd"]
+        buckets[t[group_field]].append(float(net))
     return {str(k):{
         "trades":len(v),"net_usd":round(sum(v),2),
         "model_wins":sum(x>0 for x in v),
