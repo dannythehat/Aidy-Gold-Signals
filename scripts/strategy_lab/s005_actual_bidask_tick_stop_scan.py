@@ -219,7 +219,7 @@ def main():
     a.out.mkdir(parents=True,exist_ok=True)
     if a.archive is not None and a.period is not None and a.monthly_root is None:
         m=source_month_scan(a.archive,a.period,manifest)
-        (a.out/"S005_RAW_BIDASK_STOP_EVENTS_"+a.period+".json").write_text(
+        (a.out/("S005_RAW_BIDASK_STOP_EVENTS_"+a.period+".json")).write_text(
             json.dumps(m,indent=2,sort_keys=True)+"\n")
         print("S005_RAW_MONTH_REAL_TICK_STOP_EVENTS",json.dumps({
             "period":a.period,"rows":m["original_tick_rows_processed"],
