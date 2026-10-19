@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
