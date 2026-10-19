@@ -27,7 +27,6 @@ import csv
 import hashlib
 import json
 from collections import defaultdict
-from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -95,7 +94,7 @@ def merge_portfolio(result_d,result_s,lo,hi,h1_closes,case_name,year):
         for k,t in enumerate(res.trades):
             if not (lo<=t.entry_i<hi and lo<=t.exit_i<hi):
                 raise ValueError("Source original trade escaped $5k sleeve period")
-            ts=pd.Timestamp(h1_closes[t.exit_i])
+            ts=pd.Timestamp(h1_closes.index[t.exit_i])
             month=ts.strftime("%Y-%m")
             if not month.startswith(year):
                 raise ValueError("Out-of-calendar trade end")
@@ -103,7 +102,7 @@ def merge_portfolio(result_d,result_s,lo,hi,h1_closes,case_name,year):
             merged_trades.append({
                 "source_strategy":tag,
                 "source_trade_no":k,
-                "entry_utc":str(pd.Timestamp(h1_closes[t.entry_i]))+"Z",
+                "entry_utc":str(pd.Timestamp(h1_closes.index[t.entry_i]))+"Z",
                 "exit_utc":str(ts)+"Z",
                 "direction":"BUY" if t.dir>0 else "SELL",
                 "entry_bid_proxy":float(t.entry_px),
