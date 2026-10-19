@@ -14,6 +14,9 @@ import argparse
 import csv
 import hashlib
 import io
+import os
+import subprocess
+import tempfile
 import json
 import zipfile
 from pathlib import Path
@@ -101,18 +104,50 @@ def source_month_scan(path:Path,period:str,manifest:dict):
             accept(epoch,micro,bid,ask,lineno)
         buffer=[]
 
-    with zipfile.ZipFile(path) as z:
-        names=[n for n in z.namelist() if n.lower().endswith(".csv")]
-        if len(names)!=1:raise ValueError("Original HISTDATA tick monthly ZIP not one CSV")
-        with z.open(names[0]) as binary:
-            for lineno,line in enumerate(io.TextIOWrapper(binary,encoding="utf-8-sig",newline=""),1):
+    # Original HistData ZIPs contain timestamp inversions (not only
+    # microsecond ties, sometimes entire prior minutes). An unsorted
+    # original tape cannot prove which stop touched FIRST. Never drop
+    # these ticks or guess by BID candle extrema. Preserve original ZIP
+    # SHA, write a separate temporary source-text copy, sort by the exact
+    # timestamp key with GNU sort --stable and LC_ALL=C. This uses
+    # bounded disk-backed memory regardless of month size.
+    source_out_of_order_lines=0
+    sorted_sha256=""
+    with tempfile.TemporaryDirectory(prefix="s005_original_tick_sort_") as temporary:
+        original_text=Path(temporary)/"original_utf8.csv"
+        sorted_text=Path(temporary)/"timestamp_sorted.csv"
+        previous_timestamp=None
+        with zipfile.ZipFile(path) as z:
+            names=[n for n in z.namelist() if n.lower().endswith(".csv")]
+            if len(names)!=1:raise ValueError("Original HISTDATA tick monthly ZIP not one CSV")
+            with z.open(names[0]) as binary:
+                with original_text.open("w",encoding="utf-8",newline="") as writer:
+                    for raw in io.TextIOWrapper(binary,encoding="utf-8-sig",newline=""):
+                        if not raw.strip():continue
+                        stamp=raw.split(",",1)[0]
+                        if previous_timestamp is not None and stamp<previous_timestamp:
+                            source_out_of_order_lines+=1
+                        previous_timestamp=stamp
+                        writer.write(raw)
+        subprocess.run([
+          "sort","--stable","--field-separator=,","--key=1,1",
+          "--buffer-size=256M","--temporary-directory="+temporary,
+          str(original_text),"--output="+str(sorted_text)
+        ],check=True,env={**os.environ,"LC_ALL":"C"})
+        digest=hashlib.sha256()
+        with sorted_text.open("rb") as source:
+            for chunk in iter(lambda:source.read(1024*1024),b""):
+                digest.update(chunk)
+        sorted_sha256=digest.hexdigest()
+        with sorted_text.open("r",encoding="utf-8",newline="") as binary:
+            for lineno,line in enumerate(binary,1):
                 if not line.strip():continue
                 epoch,micro,bid,ask=parse_tick(
                     next(csv.reader([line])),month=period,day_cache=day_cache)
                 observed_rows+=1
                 minute=(epoch//60)*60
                 if prior_minute is not None and minute<prior_minute:
-                    raise ValueError("Source HISTDATA minute chronology inverted; cannot assert event first without full sort")
+                    raise ValueError("Stable raw tape sort chronology wrong")
                 prior_minute=minute
                 if pending_minute is not None and minute!=pending_minute:
                     flush()
@@ -126,6 +161,9 @@ def source_month_scan(path:Path,period:str,manifest:dict):
       "original_stop_requests_sha256":supplied,
       "original_tick_rows_processed":observed_rows,
       "source_minutes_with_out_of_order_micros":inversions_within_minute,
+      "source_unsorted_lines_before_stable_sort":source_out_of_order_lines,
+      "source_stably_sorted_timestamp_csv_sha256":sorted_sha256,
+      "stable_sort_kept_original_raw_zip_byte_unchanged":True,
       "trade_ids_covered_with_quotes":len(states),
       "market_side":"original BID/ASK from authentic HistData source",
       "not_native_MT5_deal_or_equity":True,
