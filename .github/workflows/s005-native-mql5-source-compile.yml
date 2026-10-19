@@ -1,0 +1,97 @@
+name: S005 Original Native MetaEditor MQL5 Source Compilation Evidence Only
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/s005-native-mql5-source-compile.yml
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/s005-native-mql5-source-compile.yml
+permissions:
+  contents: read
+jobs:
+  compile_original_source_on_real_MQL5_MetaEditor:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download immutable publisher MQL5 original EA and two original presets
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://raw.githubusercontent.com/sbrakni/MQL5-trading-bot-claude-experiment/3dab20e20a846edae9ac6fcf56d6b090dbba9f98'
+          New-Item -Path "$env:RUNNER_TEMP\s005_publisher" -ItemType Directory -Force | Out-Null
+          $files = @{
+            'ApexBreakout.mq5' = '/MQL5/Experts/ApexBreakout.mq5'
+            'ApexBreakout_XAUUSD_H1_Donchian.set' = '/MQL5/Presets/ApexBreakout_XAUUSD_H1_Donchian.set'
+            'ApexBreakout_XAUUSD_H1_Session.set' = '/MQL5/Presets/ApexBreakout_XAUUSD_H1_Session.set'
+          }
+          foreach($name in $files.Keys) {
+            Invoke-WebRequest -UseBasicParsing -Uri ($base + $files[$name]) -OutFile "$env:RUNNER_TEMP\s005_publisher\$name"
+          }
+          $expected = @{
+            'ApexBreakout.mq5' = 'db9ee1d2589cd1625c2d9f5b224ea4f1fad14442'
+            'ApexBreakout_XAUUSD_H1_Donchian.set' = '0a053c3c49cdd23e70a65d079739dad46900b6a1'
+            'ApexBreakout_XAUUSD_H1_Session.set' = 'f16c28996e112e6179ee6eb91ae0b490eb74270b'
+          }
+          foreach($name in $expected.Keys) {
+            $bytes = [IO.File]::ReadAllBytes("$env:RUNNER_TEMP\s005_publisher\$name")
+            $header = [Text.Encoding]::UTF8.GetBytes("blob $($bytes.Length)" + [char]0)
+            $full = New-Object byte[] ($header.Length + $bytes.Length)
+            [Array]::Copy($header,0,$full,0,$header.Length)
+            [Array]::Copy($bytes,0,$full,$header.Length,$bytes.Length)
+            $hash = [Convert]::ToHexString([Security.Cryptography.SHA1]::HashData($full)).ToLowerInvariant()
+            if($hash -ne $expected[$name]) { throw "PINNED source blob mismatch $name $hash" }
+            Write-Host "S005_SOURCE_MQL5_AUTHOR_BLOB_VERIFIED $name $hash"
+          }
+      - name: Install OFFICIAL signed MetaQuotes native MetaTrader5 MetaEditor to an isolated Windows path
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $setup="$env:RUNNER_TEMP\mt5setup.exe"
+          Invoke-WebRequest -UseBasicParsing -Uri 'https://download.mql5.com/cdn/web/metaquotes.ltd/mt5/mt5setup.exe' -OutFile $setup
+          $sig=Get-AuthenticodeSignature -FilePath $setup
+          if($sig.Status -ne 'Valid' -or ($sig.SignerCertificate.Subject -notmatch 'MetaQuotes')) {
+            throw "MT5 installer signature untrusted: $($sig.Status) $($sig.SignerCertificate.Subject)"
+          }
+          $install=Join-Path $env:RUNNER_TEMP "s005_mt5_terminal"
+          $exe=Start-Process -FilePath $setup -ArgumentList @('/auto',"/path:`"$install`"") -PassThru
+          $exe.WaitForExit(600000) | Out-Null
+          $editor=Join-Path $install 'metaeditor64.exe'
+          for($i=0;$i -lt 40 -and !(Test-Path $editor);$i++) {Start-Sleep -Seconds 10}
+          if(!(Test-Path $editor)) {throw "Official installer did not produce isolated native MetaEditor"}
+          "S005_NATIVE_METAEDITOR_PATH=$editor" >> $env:GITHUB_ENV
+          "S005_NATIVE_TERMINAL_ROOT=$install" >> $env:GITHUB_ENV
+          Write-Host "S005_OFFICIAL_METAEDITOR_INSTALLED"
+      - name: Compile EXACT original third-party MQL5 EA with native compiler; no trader execution
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root=$env:S005_NATIVE_TERMINAL_ROOT
+          New-Item -Path "$root\MQL5\Experts" -ItemType Directory -Force | Out-Null
+          Copy-Item "$env:RUNNER_TEMP\s005_publisher\ApexBreakout.mq5" "$root\MQL5\Experts\ApexBreakout.mq5"
+          $source="$root\MQL5\Experts\ApexBreakout.mq5"
+          $log="$env:RUNNER_TEMP\s005_native_source_build.log"
+          $p=Start-Process -FilePath $env:S005_NATIVE_METAEDITOR_PATH -ArgumentList @("/portable","/compile:`"$source`"","/log:`"$log`"") -Wait -PassThru
+          if(!(Test-Path $log)) {throw "Native MetaEditor did not produce compile log, exit=$($p.ExitCode)"}
+          $raw=[IO.File]::ReadAllBytes($log)
+          $text=[Text.Encoding]::Unicode.GetString($raw)
+          $text | Out-File -Encoding utf8 "$env:RUNNER_TEMP\s005_native_source_compile_decoded.txt"
+          Write-Host $text
+          $built=Join-Path $root "MQL5\Experts\ApexBreakout.ex5"
+          if(!(Test-Path $built) -or (Get-Item $built).Length -lt 1024) {
+            throw "Native source MQL5 EA compilation FAILED or no executable was created"
+          }
+          if($text -notmatch '0 error') {throw "Native compiler has errors in original source"}
+          Write-Host "S005_ORIGINAL_NATIVE_MQL5_COMPILATION_PASS"
+          Write-Host "S005_NOTE_COMPILATION_ONLY_NOT_NATIVE_STRATEGY_TESTER"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-Original-Publisher-MQL5-Real-MetaEditor-Compile-Log
+          path: |
+            ${{ runner.temp }}/s005_native_source_compile_decoded.txt
+            ${{ runner.temp }}/s005_native_source_build.log
+          if-no-files-found: warn
+          retention-days: 90
