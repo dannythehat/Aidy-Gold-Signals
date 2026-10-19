@@ -69,6 +69,32 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $root=$env:S005_NATIVE_TERMINAL_ROOT
+          $include=Join-Path $root "MQL5\Include\Trade\Trade.mqh"
+          if(!(Test-Path $include)) {
+            # MetaQuotes web installer deploys executable before first portable
+            # launch generates its standard MQL5 user-data directories.
+            $terminal=Join-Path $root "terminal64.exe"
+            if(!(Test-Path $terminal)) {throw "Official terminal not installed"}
+            $first=Start-Process -FilePath $terminal -ArgumentList @('/portable','/skipupdate') -PassThru
+            Start-Sleep -Seconds 20
+            if(!$first.HasExited) {Stop-Process -Id $first.Id -Force}
+          }
+          if(!(Test-Path $include)) {
+            # The platform's default non-portable standard library may
+            # already be deposited in AppData. Copy the full Include tree
+            # into this isolated ephemeral compile folder only.
+            $found=Get-ChildItem "$env:APPDATA\MetaQuotes" -Filter Trade.mqh -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if($null -ne $found) {
+              $standards=$found.Directory.Parent.FullName
+              New-Item -Path "$root\MQL5\Include" -ItemType Directory -Force | Out-Null
+              Copy-Item (Join-Path $standards '*') "$root\MQL5\Include" -Force -Recurse
+            }
+          }
+          if(!(Test-Path $include)) {
+            Get-ChildItem "$root\MQL5" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 60 -ExpandProperty FullName | Out-Host
+            throw "Official MQL5 standard Include library still missing after first portable launch"
+          }
+          Write-Host "S005_REAL_STANDARD_MQL5_INCLUDE_CONFIRMED $include"
           New-Item -Path "$root\MQL5\Experts" -ItemType Directory -Force | Out-Null
           Copy-Item "$env:RUNNER_TEMP\s005_publisher\ApexBreakout.mq5" "$root\MQL5\Experts\ApexBreakout.mq5"
           $source="$root\MQL5\Experts\ApexBreakout.mq5"
