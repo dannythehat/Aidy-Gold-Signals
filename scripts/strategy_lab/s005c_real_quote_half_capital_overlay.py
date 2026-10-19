@@ -16,7 +16,6 @@ import argparse
 import csv
 import hashlib
 import json
-from collections import defaultdict
 from pathlib import Path
 
 STRESS_FACTORS=("1.0","2.0","3.0")
