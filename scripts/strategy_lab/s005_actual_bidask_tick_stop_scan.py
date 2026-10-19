@@ -16,7 +16,6 @@ import hashlib
 import io
 import json
 import zipfile
-from datetime import UTC,datetime
 from pathlib import Path
 
 from aidy.strategy_lab_crossfire_tick_2021 import parse_tick
