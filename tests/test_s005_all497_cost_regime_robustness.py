@@ -39,6 +39,21 @@ def test_long_original_pnl_dollars_proved_and_quote_spread_separate():
     assert r["quote_proxy_is_NOT_verified_MQL5_trade_fill"]
 
 
+def test_exact_forty_five_cent_quote_not_falsely_counted_above_threshold():
+    data=_bar().copy()
+    data.loc[data.index[0],"observed_open_spread"]=.4500000000002728
+    record={
+       "entry_time_utc":"2025-01-01 00:00:00Z",
+       "exit_time_utc":"2025-01-01 00:15:00Z",
+       "entry_price_publisher_bid_proxy":2600.,
+       "exit_price_publisher_bid_proxy":2601.,
+       "units_float_not_broker_lots":5.,
+       "publisher_costed_usd":2.75,
+       "direction":"LONG","reason":"signal"
+    }
+    r=_annotate_one(record,data,pd.Series(dtype=float),"2025","DONCHIAN",0)
+    assert not r["real_entry_spread_exceeds_publishers_ENTIRE_0p45_cost"]
+
 def test_short_explicitly_disclaims_exit_ask_not_entry_proxy():
     record={
        "entry_time_utc":"2025-01-01 00:00:00Z",
