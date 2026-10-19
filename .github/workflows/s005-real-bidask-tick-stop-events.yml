@@ -6,6 +6,8 @@ on:
       - scripts/strategy_lab/s005_prepare_original_tick_stops.py
       - scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py
       - tests/test_s005_raw_source_bidask_stops.py
+      - tests/test_s005_original_497_actual_bidask_exit_economics.py
+      - scripts/strategy_lab/s005_original_fixed_cohort_real_tick_quote_economics.py
       - .github/workflows/s005-real-bidask-tick-stop-events.yml
   push:
     branches: [main]
@@ -29,9 +31,9 @@ jobs:
       - run: python -m pip install --quiet pytest pandas numpy ruff
       - name: Immutable original source clock, 2-sided quote stop & tamper tests
         run: |
-          python -m compileall -q scripts/strategy_lab/s005_prepare_original_tick_stops.py scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py tests/test_s005_raw_source_bidask_stops.py
-          ruff check --select F scripts/strategy_lab/s005_prepare_original_tick_stops.py scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py tests/test_s005_raw_source_bidask_stops.py
-          PYTHONPATH=src:. python -m pytest -q tests/test_s005_raw_source_bidask_stops.py
+          python -m compileall -q scripts/strategy_lab/s005_prepare_original_tick_stops.py scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py tests/test_s005_raw_source_bidask_stops.py tests/test_s005_original_497_actual_bidask_exit_economics.py scripts/strategy_lab/s005_original_fixed_cohort_real_tick_quote_economics.py
+          ruff check --select F scripts/strategy_lab/s005_prepare_original_tick_stops.py scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py tests/test_s005_raw_source_bidask_stops.py tests/test_s005_original_497_actual_bidask_exit_economics.py scripts/strategy_lab/s005_original_fixed_cohort_real_tick_quote_economics.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s005_raw_source_bidask_stops.py tests/test_s005_original_497_actual_bidask_exit_economics.py
 
   prepare_all_497_author_original_initial_stops:
     needs: s005_real_tick_source_unit_tests
@@ -157,5 +159,62 @@ jobs:
         with:
           name: S005-497-Real-HistData-BIDASK-Tick-Stop-First-Proof
           path: artifacts/s005_all_raw_bidask_stop_audit/
+          retention-days: 90
+          if-no-files-found: warn
+
+  source_original_publisher_full_REAL_BIDASK_trade_revaluation:
+    needs: full_22month_497trade_real_bidask_stop_reconciliation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy
+      - uses: actions/download-artifact@v4
+        with:
+          name: S005-497-Real-HistData-BIDASK-Tick-Stop-First-Proof
+          path: artifacts/s005_tick_final/
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39159785515
+          github-token: ${{ github.token }}
+          name: S005-Original-Author-Python-Real-Spot-Two-Presets-2025-2026
+          path: artifacts/s005_original_publisher/
+      - name: Revalue each original-publisher trade at true source BID ASK entry and exit tick
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_original_fixed_cohort_real_tick_quote_economics.py --actual-raw-tick-audit artifacts/s005_tick_final/S005_ALL497_REAL_TICK_BIDASK_STOP_EVENTS.json --original-publisher artifacts/s005_original_publisher/S005_PUBLISHER_PY_NATIVE_REPLAY.json --out artifacts/s005_final_original_tick_quote_ledger/
+      - name: Verify 497 original source positions, four original $10k accounts, three friction bands, no MT5 native claim
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          p=Path("artifacts/s005_final_original_tick_quote_ledger/")
+          d=json.loads((p/"S005_497_FIXED_COHORT_REAL_SOURCE_BIDASK_ECONOMICS.json").read_text())
+          assert d["original_trades_fully_revalued"]==497
+          assert d["source_first_real_quote_side_stop_touch_used_over_original_signal_exit"]
+          assert d["actual_quote_side_bidask_used_at_original_trade_entry_and_exit"]
+          assert d["native_MQL5_EA_executed"] is False
+          assert d["broker_profit_certified"] is False
+          assert d["original_author_shares_account_compounding_replayed"] is False
+          assert d["original_sunday_first_stop_trade_case"]["id"]=="S005-DONCHIAN-2025-0112"
+          for factor in ("1.0","2.0","3.0"):
+              b=d["source_original_cohort_accounts_by_scenario"][factor]
+              assert sum(v["original_author_trades"] for v in b.values())==497
+              for mode in ("DONCHIAN","SESSION"):
+                  for yr in ("2025","2026"):
+                      v=b[f"{mode}_{yr}"]
+                      assert v["starting_usd"]==10000
+                      assert not v["full_original_MT5_EA_run"]
+          assert (p/"S005_REAL_QUOTE_FULL_REVALUATION_AUDIT.md").exists()
+          assert (p/"S005_497_REAL_BIDASK_BROKER_SENSITIVITY_ONLY.csv").exists()
+          print("S005_ALL_497_SOURCE_ORIGINAL_REAL_BIDASK_EXIT_QUOTE_LEDGER_PASS",d["sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-497-Real-Raw-BIDASK-Original-Quote-Economic-Evidence
+          path: artifacts/s005_final_original_tick_quote_ledger/
           retention-days: 90
           if-no-files-found: warn

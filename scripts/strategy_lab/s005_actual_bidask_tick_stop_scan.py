@@ -73,10 +73,15 @@ def source_month_scan(path:Path,period:str,manifest:dict):
         for rid,q in active.items():
             state=states.setdefault(rid,{
                 "id":rid,"entry_quote":None,
+                "last_original_window_quote":None,
                 "first_source_stop_crossing":None,
                 "source_quotes_in_original_trade_window":0,
             })
             state["source_quotes_in_original_trade_window"]+=1
+            state["last_original_window_quote"]={
+              "instant_epoch_us":when,"bid":bid,"ask":ask,
+              "source_zip_period_fixed_EST":period,"source_line":lineno,
+            }
             if state["entry_quote"] is None:
                 state["entry_quote"]={
                   "instant_epoch_us":when,"bid":bid,"ask":ask,
@@ -201,6 +206,9 @@ def aggregate(manifest:dict,monthly:list[dict]):
         crossing=min((frag["first_source_stop_crossing"] for frag in fragments
                       if frag["first_source_stop_crossing"] is not None),
                      key=lambda x:x["instant_epoch_us"],default=None)
+        exit_quote=max((frag["last_original_window_quote"] for frag in fragments
+                       if frag.get("last_original_window_quote") is not None),
+                       key=lambda x:x["instant_epoch_us"],default=None)
         volume=sum(x["source_quotes_in_original_trade_window"] for x in fragments)
         if entry is None:missed_quote+=1
         if entry is not None and abs(entry["bid"]-q["author_original_entry_bid"])>0.0001:
@@ -213,6 +221,7 @@ def aggregate(manifest:dict,monthly:list[dict]):
         if not original_stop and crossing is not None:early_stops+=1
         final.append({
            **q,"first_original_entry_raw_tick":entry,
+           "last_original_window_raw_tick":exit_quote,
            "first_true_quote_side_stop_crossing":crossing,
            "observed_tick_quotes_during_original_author_trade":volume,
            "author_exit_reported_stop":original_stop,
