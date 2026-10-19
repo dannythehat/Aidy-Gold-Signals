@@ -69,7 +69,7 @@ jobs:
           assert len(rows)==497
           assert d['source_spread_exceeds_publisher_whole_cost_on_trades']==456
           assert not d['true_native_spot_broker_exit_ASK_tick_parity']
-          assert not d['months_bootstrap_is_not_sealed_holdout'] is False
+          assert d['months_bootstrap_is_not_sealed_holdout'] is True
           assert d['retrospective_cost_scenarios_reselect_original_signals'] is False
           assert d['fixed_cohort_does_NOT_prove_prospective_edge']
           for fam in ('DONCHIAN','SESSION'):
