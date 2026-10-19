@@ -1,0 +1,161 @@
+name: S005 Original 497 Real BID ASK Raw Tick First Stop Event Audit
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_prepare_original_tick_stops.py
+      - scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py
+      - tests/test_s005_raw_source_bidask_stops.py
+      - .github/workflows/s005-real-bidask-tick-stop-events.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_prepare_original_tick_stops.py
+      - scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py
+      - tests/test_s005_raw_source_bidask_stops.py
+      - .github/workflows/s005-real-bidask-tick-stop-events.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  s005_real_tick_source_unit_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest pandas numpy ruff
+      - name: Immutable original source clock, 2-sided quote stop & tamper tests
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005_prepare_original_tick_stops.py scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py tests/test_s005_raw_source_bidask_stops.py
+          ruff check --select F scripts/strategy_lab/s005_prepare_original_tick_stops.py scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py tests/test_s005_raw_source_bidask_stops.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s005_raw_source_bidask_stops.py
+
+  prepare_all_497_author_original_initial_stops:
+    needs: s005_real_tick_source_unit_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/s005_original_source/
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39159785515
+          github-token: ${{ github.token }}
+          name: S005-Original-Author-Python-Real-Spot-Two-Presets-2025-2026
+          path: artifacts/s005_original_publisher/
+      - run: python -m pip install --quiet numpy pandas
+      - name: Pin exact author original source and both actual gold presets
+        run: |
+          mkdir -p /tmp/s005_original
+          BASE="https://raw.githubusercontent.com/sbrakni/MQL5-trading-bot-claude-experiment/3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/engine.py" -o /tmp/s005_original/engine.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/strategies.py" -o /tmp/s005_original/strategies.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Experts/ApexBreakout.mq5" -o /tmp/s005_original/ApexBreakout.mq5
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Donchian.set" -o /tmp/s005_original/ApexBreakout_XAUUSD_H1_Donchian.set
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Session.set" -o /tmp/s005_original/ApexBreakout_XAUUSD_H1_Session.set
+      - name: Compute original Python 497 stop thresholds from original author ATR14
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_prepare_original_tick_stops.py --source-root artifacts/s005_original_source/ --publisher-root /tmp/s005_original/ --original-evidence artifacts/s005_original_publisher/S005_PUBLISHER_PY_NATIVE_REPLAY.json --out artifacts/s005_real_stop_manifest/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: S005-497-Source-Pinned-Original-Stop-Manifest
+          path: artifacts/s005_real_stop_manifest/
+          if-no-files-found: error
+          retention-days: 90
+
+  authentic_bidask_zip_monthly_stop_events:
+    needs: prepare_all_497_author_original_initial_stops
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        month: ['202412','202501','202502','202503','202504','202505','202506','202507','202508','202509','202510','202511','202512','202601','202602','202603','202604','202605','202606','202607','202608','202609']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SOURCE_MONTH: ${{ matrix.month }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: S005-497-Source-Pinned-Original-Stop-Manifest
+          path: artifacts/s005_real_stop_manifest/
+      - name: Read original immutable XAUUSD BID/ASK raw source ZIP from R2
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/s005_original_${SOURCE_MONTH}.zip"
+      - name: Chronological original BID and ASK stop-first event replay against 497 stops
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py --manifest artifacts/s005_real_stop_manifest/S005_497_SOURCE_FROZEN_ORIGINAL_TICK_STOP_REQUESTS.json --archive "/tmp/s005_original_${SOURCE_MONTH}.zip" --period "${SOURCE_MONTH}" --out "artifacts/s005_real_stop_by_month/s005-tick-${SOURCE_MONTH}"
+          rm -f "/tmp/s005_original_${SOURCE_MONTH}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s005-actual-bidask-tick-${{ matrix.month }}
+          path: artifacts/s005_real_stop_by_month/s005-tick-${{ matrix.month }}/
+          retention-days: 90
+          if-no-files-found: error
+
+  full_22month_497trade_real_bidask_stop_reconciliation:
+    needs: authentic_bidask_zip_monthly_stop_events
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          name: S005-497-Source-Pinned-Original-Stop-Manifest
+          path: artifacts/s005_real_stop_manifest/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: s005-actual-bidask-tick-*
+          path: artifacts/s005_monthly_results/
+          merge-multiple: false
+      - name: Reconcile original 497 stops to first true tick quote-side stop in 22 historical months
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_actual_bidask_tick_stop_scan.py --manifest artifacts/s005_real_stop_manifest/S005_497_SOURCE_FROZEN_ORIGINAL_TICK_STOP_REQUESTS.json --monthly-root artifacts/s005_monthly_results/ --out artifacts/s005_all_raw_bidask_stop_audit/
+      - name: Assert complete original source tick coverage, zero fabricated broker parity
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("artifacts/s005_all_raw_bidask_stop_audit/S005_ALL497_REAL_TICK_BIDASK_STOP_EVENTS.json").read_text())
+          assert d["original_publisher_model_trades"]==497
+          assert d["source_raw_tick_coverage_original_entries"]==497
+          assert len(d["month_receipts"])==22
+          assert d["long_stop_test_side"]=="BID"
+          assert d["short_stop_test_side"]=="ASK"
+          assert d["no_original_compiled_MT5_signal_order_parity"]
+          assert d["positions_and_stops_are_frozen_author_python_not_native_MT5_ask_anchor"]
+          assert d["not_a_cash_pnl_or_broker_fill_simulation"]
+          assert (Path("artifacts/s005_all_raw_bidask_stop_audit")/"S005_ALL497_BIDASK_TICK_STOP_COMPARE.csv").exists()
+          print("S005_AUTHENTIC_22MONTH_497_RAW_BIDASK_QUOTE_STOP_CHRONOLOGY_COMPLETED",d["sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-497-Real-HistData-BIDASK-Tick-Stop-First-Proof
+          path: artifacts/s005_all_raw_bidask_stop_audit/
+          retention-days: 90
+          if-no-files-found: warn
