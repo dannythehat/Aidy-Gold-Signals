@@ -1,0 +1,175 @@
+name: S005-C Unified Gold 2x5000 Single Portfolio Original-Rule Research
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005c_unified_two_sleeve_portfolio.py
+      - scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py
+      - tests/test_s005c_unified_two_sleeve_portfolio.py
+      - .github/workflows/s005c-unified-gold-2x5000.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005c_unified_two_sleeve_portfolio.py
+      - tests/test_s005c_unified_two_sleeve_portfolio.py
+      - .github/workflows/s005c-unified-gold-2x5000.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  original_dual_5000_source_accounting_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy pytest ruff
+      - name: Assert exactly 10000 capital, no duplicate 10000 accounts and causal hybrid
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005c_unified_two_sleeve_portfolio.py tests/test_s005c_unified_two_sleeve_portfolio.py
+          ruff check --select F scripts/strategy_lab/s005c_unified_two_sleeve_portfolio.py tests/test_s005c_unified_two_sleeve_portfolio.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s005c_unified_two_sleeve_portfolio.py
+  source_frozen_original_Python_two_5000_single_10000_full_history:
+    needs: original_dual_5000_source_accounting_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy
+      - name: Original authentic 22 month HistData tick SHA verified source archives
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/s005c_original_month_source/
+          merge-multiple: false
+      - name: Pull and verify frozen upstream original EA Python and two exact gold presets
+        run: |
+          mkdir -p /tmp/s005_publisher
+          BASE="https://raw.githubusercontent.com/sbrakni/MQL5-trading-bot-claude-experiment/3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/engine.py" -o /tmp/s005_publisher/engine.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/strategies.py" -o /tmp/s005_publisher/strategies.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Experts/ApexBreakout.mq5" -o /tmp/s005_publisher/ApexBreakout.mq5
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Donchian.set" -o /tmp/s005_publisher/ApexBreakout_XAUUSD_H1_Donchian.set
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Session.set" -o /tmp/s005_publisher/ApexBreakout_XAUUSD_H1_Session.set
+      - name: Execute two original gold engines at exactly 5000 each on same real H1 spot tape
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005c_unified_two_sleeve_portfolio.py --source-root artifacts/s005c_original_month_source/ --publisher-root /tmp/s005_publisher/ --out artifacts/s005c_unified_2x5000/
+      - name: Enforce one account, original rules, 4 variants each year and truthful source limitations
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          out=Path("artifacts/s005c_unified_2x5000")
+          x=json.loads((out/"S005_UNIFIED_2X5000_MASTER_PORTFOLIO.json").read_text())
+          assert x["authentic_HistData_22_original_months"]==22
+          assert x["publisher_source_commit"]=="3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          assert x["original_publisher_python_engine_actually_called"]
+          assert x["account_total_usd"]==10000
+          assert x["donchian_capital_usd"]==5000
+          assert x["session_capital_usd"]==5000
+          assert x["sum_allocations_equal_one_account"]
+          assert x["true_original_source_signal_rules_unchanged_in_C"]
+          assert x["MT5_netted_one_account_gross_order_parity"] is False
+          assert x["exact_original_bidask_quote_level_fill_parity"] is False
+          assert x["2025_and_2026_both_known_dev_not_blind_holdout"] is True
+          for year in ("2025","2026"):
+              cases=x["two_period_results"][year]
+              assert set(cases)=={"DON_ONLY","SESSION_ONLY","S005_C_PARALLEL","S005_D_EMA_CONFIRM"}
+              c=cases["S005_C_PARALLEL"]
+              a=cases["DON_ONLY"]
+              b=cases["SESSION_ONLY"]
+              assert c["master_initial_cash_usd"]==10000
+              assert c["donchian_allocated_initial_usd"]==5000
+              assert c["session_allocated_initial_usd"]==5000
+              assert abs(c["master_realized_PY_model_net_usd"]-
+                         (a["master_realized_PY_model_net_usd"]+b["master_realized_PY_model_net_usd"]))<.02
+              assert c["total_trades"]==a["total_trades"]+b["total_trades"]
+              assert not c["native_account_margin_stopouts_applied"]
+              assert c["frozen_combo_spec"]["one_master_usd"]==10000
+              assert len(c["monthly_realized_usd"])==(12 if year=="2025" else 9)
+              for mode in cases:
+                  v=cases[mode]
+                  assert len(v["merged_source_trade_ledger"])==v["total_trades"]
+                  assert abs(v["master_ending_marked_equity_PY_model_usd"]-
+                             (10000+v["master_realized_PY_model_net_usd"]))<.03
+                  assert (out/f"{mode}_{year}_SOURCE_PY_ORIGINAL_2X5000_TRADES.csv").exists()
+          assert len(x["sha256"])==64
+          print("S005C_REAL_SOURCE_H1_TWO_5000_ACCOUNT_PORTFOLIO_VERIFIED")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005C-Combined-One10000-Two5000-Donchian-Session-Hybrid-OriginalSource-Evidence
+          path: artifacts/s005c_unified_2x5000/
+          retention-days: 90
+          if-no-files-found: warn
+
+  original_C_two_5000_sleeves_497_real_BIDASK_quotes_and_fee_stress:
+    needs: source_frozen_original_Python_two_5000_single_10000_full_history
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet ruff
+      - name: Ensure executable original source exact raw quote ledger and 2x5000 overlay pass strict syntax checks
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py
+          ruff check --select F scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: S005C-Combined-One10000-Two5000-Donchian-Session-Hybrid-OriginalSource-Evidence
+          path: artifacts/s005c_original_model/
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39198857672
+          github-token: ${{ github.token }}
+          name: S005-497-Real-Raw-BIDASK-Original-Quote-Economic-Evidence
+          path: artifacts/original_S005_raw_tick_quote/
+      - name: Independently join every source original 5k trade to frozen raw BID ASK quote and stress 3 levels
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005c_real_quote_half_capital_overlay.py --combined-portfolio artifacts/s005c_original_model/S005_UNIFIED_2X5000_MASTER_PORTFOLIO.json --original-10k-raw-quotes artifacts/original_S005_raw_tick_quote/S005_497_FIXED_COHORT_REAL_SOURCE_BIDASK_ECONOMICS.json --out artifacts/s005c_original_5k_real_bidask_overlay/
+      - name: Reject any false original native-MT5 or full $20k account attribution
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("artifacts/s005c_original_5k_real_bidask_overlay")
+          d=json.loads((p/"S005C_2x5000_REAL_BIDASK_ORIGINAL_C_STRESS.json").read_text())
+          assert d["original_source_497_event_coverage"]==497
+          assert d["a_single_virtual_wallet_usd"]==10000
+          assert d["donchian_initial_capital_usd"]==5000
+          assert d["session_initial_capital_usd"]==5000
+          assert d["all_original_source_python_position_sizes_halved_and_matched_to_raw_history"]
+          assert d["hybrid_D_quote_side_ledger_qualified"] is False
+          assert d["actual_native_MT5_strategy_tester_original_EA_executed"] is False
+          assert d["source_true_BIDASK_cost_stress_is_not_new_compounded_portfolio"]
+          assert len(d["cost_factor_scenarios"])==3
+          for factor,scenario in d["cost_factor_scenarios"].items():
+              assert set(scenario["periods"])=={"2025","2026"}
+              assert len(scenario["all_matching_original_5k_trade_quotes"])==497
+              assert sum(scenario["periods"][y]["total_frozen_original_PY_trades"] for y in ("2025","2026"))==497
+              for year in ("2025","2026"):
+                  v=scenario["periods"][year]
+                  assert v["starting_master_usd"]==10000
+                  assert v["sleeve_allocation_each_usd"]==5000
+                  assert not v["native_1_account_model_run_with_updated_fills"]
+          assert (p/"S005C_2x5000_REAL_BIDASK_C_PUBLISHED_497_TRADES.csv").exists()
+          print("S005_C_TRUE_ORIGINAL_5K_5K_SOURCE_TAPE_COST_SENSITIVITY_VERIFIED",d["sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005C-Original-Two5000-RealSource-BIDASK-497-QuoteOverlay-Stress
+          path: artifacts/s005c_original_5k_real_bidask_overlay/
+          retention-days: 90
+          if-no-files-found: warn
