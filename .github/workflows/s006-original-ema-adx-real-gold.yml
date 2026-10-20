@@ -5,6 +5,7 @@ on:
     paths:
       - scripts/strategy_lab/s006_publisher_ema_adx_original_h1_real_spot.py
       - tests/test_s006_original_ema_adx_source.py
+      - scripts/strategy_lab/s006_actual_aidy_complete_source_trade_coverage.py
       - .github/workflows/s006-original-ema-adx-real-gold.yml
   push:
     branches: [main]
@@ -95,5 +96,56 @@ jobs:
         with:
           name: S006-Original-Author-EMA-ADX-All-3-Gold-Variants-2025-2026-Spot-Evidence
           path: artifacts/strategy_lab/s006_2025_2026_original_source/
+          if-no-files-found: warn
+          retention-days: 90
+
+  actual-AIDY-all-source-EMA-ADX-trades-and-gated-evidence:
+    needs: source-exact-author-ema-adx-spot-gold-2025-2026
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s006_original_source/
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: S006-Original-Author-EMA-ADX-All-3-Gold-Variants-2025-2026-Spot-Evidence
+          path: artifacts/strategy_lab/s006_original_python/
+      - run: python -m pip install --quiet pandas numpy httpx ruff
+      - name: Strict AIDY existing code lint and 341 actual real-source price expert packet coverage
+        run: |
+          python -m compileall -q scripts/strategy_lab/s006_actual_aidy_complete_source_trade_coverage.py
+          ruff check --select F scripts/strategy_lab/s006_actual_aidy_complete_source_trade_coverage.py
+          PYTHONPATH=src:. python scripts/strategy_lab/s006_actual_aidy_complete_source_trade_coverage.py --source-root artifacts/strategy_lab/s006_original_source/ --s006-original-evidence artifacts/strategy_lab/s006_original_python/S006_ALL_VARIANTS_SOURCE_PY_REAL_SPOT_AUDIT.json --out artifacts/strategy_lab/s006_canonical_aidy_full_price_math/
+      - name: Verify exact author source full population and no fake scientific green
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          d=json.loads(Path("artifacts/strategy_lab/s006_canonical_aidy_full_price_math/S006_REAL_AIDY_FULL_ORIGINAL_TRADE_COVERAGE_AND_GOVERNANCE.json").read_text())
+          assert d["original_author_trades_all_in_model_cases"]==341
+          assert d["all_AIDY_PriceMath_source_packets_run"]==341
+          assert d["all_trades_historically_analyzed_using_actual_AIDY_price_math"]
+          assert d["canonical_real_AIDY_toolbox_verified"]
+          assert d["AIDY_actual_nine_factor_result"]["score_out_of_100"] is None
+          assert d["AIDY_numeric_evidence_score_not_issued"]
+          assert not d["verified_native_MQL5_EMA_ADX_strategy_preset"]
+          assert not d["genuine_untouched_holdout_verified"]
+          assert d["retrospective_not_live_PIT"]
+          print("S006_341_ACTUAL_AIDY_REAL_EMA_ADX_MARKET_MATH_AND_NINE_FACTOR_GATE",d["sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S006-AIDY-Real-Full-341-Original-EMA-ADX-PriceMath-And-Qualification
+          path: artifacts/strategy_lab/s006_canonical_aidy_full_price_math/
           if-no-files-found: warn
           retention-days: 90
