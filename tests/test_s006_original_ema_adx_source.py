@@ -1,7 +1,5 @@
 """S006 original author EMA 9/120: independent source proof and safety."""
-from pathlib import Path
 import numpy as np
-import pytest
 
 from scripts.strategy_lab.s006_publisher_ema_adx_original_h1_real_spot import (
     AUTHOR,BLOBS,VARIANTS,ENGINE,gitblob,signal_independent,
@@ -24,7 +22,7 @@ def test_public_source_and_scope_pin_preclude_s005_mql_preset_relabelling():
 
 
 def test_github_source_blob_sha_is_full_git_blob_not_payload_hash():
-    assert gitblob(b"test content")=="2b2f28645505c808bcfa9c9cdaff44f50d7f274"
+    assert gitblob(b"test content")=="08cf6101416f0ce0dda3c80e627f333854c4085c"
     assert BLOBS["strategies.py"]=="9abe69680df34064923e01236cbf9b77d486c682"
 
 
