@@ -47,7 +47,7 @@ def quote_candles(datasets,asof,sha):
 
 def gate(sourced):
     basis=EvidenceBasis(
-      origin="independent_source_only_gold_original_Python",
+      origin="independent_costed_xauusd",
       strategy_rule_sha256=hashlib.sha256(
          ("S006 fixed EMA-ADX source "+SOURCE_AUTHOR).encode()).hexdigest(),
       historical_input_sha256=sourced["original_22_month_m15_sha256"],
