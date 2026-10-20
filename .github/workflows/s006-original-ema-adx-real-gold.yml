@@ -1,0 +1,99 @@
+name: S006 Original EMA ADX Source Real Spot Full Research Audit
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s006_publisher_ema_adx_original_h1_real_spot.py
+      - tests/test_s006_original_ema_adx_source.py
+      - .github/workflows/s006-original-ema-adx-real-gold.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s006_publisher_ema_adx_original_h1_real_spot.py
+      - tests/test_s006_original_ema_adx_source.py
+      - .github/workflows/s006-original-ema-adx-real-gold.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  test-original-source-research-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet numpy pandas pytest ruff
+      - name: Source actual rules and immutable author 0/20/25 Wilder ADX causal tests
+        run: |
+          python -m compileall -q scripts/strategy_lab/s006_publisher_ema_adx_original_h1_real_spot.py tests/test_s006_original_ema_adx_source.py
+          ruff check --select F scripts/strategy_lab/s006_publisher_ema_adx_original_h1_real_spot.py tests/test_s006_original_ema_adx_source.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s006_original_ema_adx_source.py
+  source-exact-author-ema-adx-spot-gold-2025-2026:
+    needs: test-original-source-research-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/strategy_lab/s006_original_source/
+          merge-multiple: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy
+      - name: Download frozen original publisher source modules, MQL5 proof, and entire 910kb grid source
+        run: |
+          mkdir -p /tmp/s006_publisher
+          BASE="https://raw.githubusercontent.com/sbrakni/MQL5-trading-bot-claude-experiment/3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/engine.py" -o /tmp/s006_publisher/engine.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/strategies.py" -o /tmp/s006_publisher/strategies.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/optimize.py" -o /tmp/s006_publisher/optimize.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/results/grid_all.csv" -o /tmp/s006_publisher/grid_all.csv
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Experts/ApexBreakout.mq5" -o /tmp/s006_publisher/ApexBreakout.mq5
+      - name: Genuine 22 SHA-sourced original HistData 2025/2026 spots, original author EMA ADX model all three variants
+        run: |
+          mkdir -p artifacts/strategy_lab/s006_2025_2026_original_source/
+          PYTHONPATH=src:. python scripts/strategy_lab/s006_publisher_ema_adx_original_h1_real_spot.py --source-root artifacts/strategy_lab/s006_original_source/ --publisher-root /tmp/s006_publisher/ --out artifacts/strategy_lab/s006_2025_2026_original_source/
+      - name: 6-case dollar and 22 source quote proof acceptance, researcher integrity, no fake native EA
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          root=Path("artifacts/strategy_lab/s006_2025_2026_original_source")
+          d=json.loads((root/"S006_ALL_VARIANTS_SOURCE_PY_REAL_SPOT_AUDIT.json").read_text())
+          assert d["market_h1_count"]==10725
+          assert d["original_22_HistData_months"]==22
+          assert d["original_publisher_MQL5_EA_has_only_DONCHIAN_and_SESSION_modes"]
+          assert d["native_MQL5_EA_execution_of_EMA_ADX_not_possible_from_current_original_EA"]
+          assert d["author_published_EMA_9_120_best_grid_ADX_filter_disabled"]
+          assert d["research_only_retrospective_2025_2026_no_untouched_OOS"]
+          assert len(d["all_source_stats"])==3
+          for model in d["all_source_stats"].values():
+            assert model["real_original_complete_H1_signal_parity"]["all_original_H1_long_signals_identical"]
+            assert model["real_original_complete_H1_signal_parity"]["all_original_H1_short_signals_identical"]
+            assert model["real_original_complete_H1_signal_parity"]["no_explicit_strategy_exit_flags"]
+            for year in ("2025","2026"):
+              p=model["periods"][year]
+              assert p["initial_usd"]==10000
+              assert abs(p["net_usd"]-sum(x["publisher_costed_usd"] for x in p["trade_ledger"]))<0.02
+              assert not p["native_published_MQL5_EA_mode_available"]
+              assert not p["independent_untouched_holdout_proven"]
+              assert sum(x["trades"] for x in p["months"])==p["original_python_publisher_trades"]
+          print("S006_SIX_AUTHOR_ORIGINAL_PY_22_REAL_SPOT_SOURCE_QUALIFIED_MODEL_CASES",d["sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S006-Original-Author-EMA-ADX-All-3-Gold-Variants-2025-2026-Spot-Evidence
+          path: artifacts/strategy_lab/s006_2025_2026_original_source/
+          if-no-files-found: warn
+          retention-days: 90
