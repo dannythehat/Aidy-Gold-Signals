@@ -57,7 +57,7 @@ def load_market(root: Path):
             raise ValueError("Missing/mismatched authenticated M15 month: "+month)
         frame = pd.DataFrame(clean)
         ts = pd.to_datetime(frame.pop("open_time_utc"), utc=True)
-        if (ts.dt.strftime("%Y%m") != month).any() or ts.duplicated().any() or not ts.is_monotonic_increasing:
+        if ((ts - pd.Timedelta(hours=5)).dt.strftime("%Y%m") != month).any() or ts.duplicated().any() or not ts.is_monotonic_increasing:
             raise ValueError("Invalid month dates or source order: "+month)
         if ((frame.m1_count!=15).any() or (frame.volume<15).any()
            or (frame.observed_open_ask < frame.open).any()
