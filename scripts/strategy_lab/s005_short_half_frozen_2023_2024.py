@@ -139,7 +139,13 @@ def run(source_root: Path,publisher_root: Path,out: Path):
     h1,receipts,price_sha=load_market(source_root)
     o,h,l,c=(h1[x].to_numpy(float) for x in ("open","high","low","close"))
     dates=h1.index.tz_localize("UTC")
-    times=(dates.astype("int64")//1_000_000_000).to_numpy()
+    # Pandas may store timestamps as microseconds (not nanoseconds) in v3.
+    # Convert explicitly to ns before dividing, otherwise exports label trades
+    # in 1970 and time-based execution diagnostics become invalid.
+    times=dates.as_unit("ns").asi8//1_000_000_000
+    if not (pd.Timestamp("2023-01-01",tz="UTC").timestamp() <= times[1500]
+            < pd.Timestamp("2025-01-01",tz="UTC").timestamp()):
+        raise ValueError("SOURCE_TIME_UNITS_MISMATCH: UTC epoch seconds required")
     hours=dates.hour.to_numpy()
     signals=strategies.donchian(o,h,l,c,hours,entry_n=24,exit_n=12,ema_filter=200)
     atr=original.atr(h,l,c,14)
@@ -150,12 +156,18 @@ def run(source_root: Path,publisher_root: Path,out: Path):
         for year,(start,end) in YEAR_WINDOWS.items():
             lo=int(h1.index.searchsorted(pd.Timestamp(start)))
             hi=int(h1.index.searchsorted(pd.Timestamp(end)))
+            if not (pd.Timestamp(start,tz="UTC").timestamp() <= times[lo] <
+                    pd.Timestamp(end,tz="UTC").timestamp()):
+                raise ValueError("BROKEN_CALENDAR_YEAR_EPOCH")
             if hi-lo<4000:
                 raise ValueError("Incomplete historical year "+year)
             results[year]={}
             for cost in COSTS:
                 orig=case(original,o,h,l,c,times,atr,signals,lo,hi,cost)
                 half=case(adjusted,o,h,l,c,times,atr,signals,lo,hi,cost)
+                if any(not (start[:4] <= trade["entry_utc"][:4] <= end[:4])
+                       for trade in orig["trade_ledger"]):
+                    raise ValueError("Historical trade timestamps outside study dates")
                 if (orig["closed_trades"]!=half["closed_trades"]
                     or orig["long_trades"]!=half["long_trades"]
                     or orig["short_trades"]!=half["short_trades"]):
