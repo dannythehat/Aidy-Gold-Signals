@@ -27,7 +27,7 @@ jobs:
           python-version: '3.13'
       - run: |
           python -m compileall -q scripts/strategy_lab/s005_short_half_frozen_2023_2024.py
-          python -m pip install --quiet ruff
+          python -m pip install --quiet ruff pandas numpy
           ruff check --select F scripts/strategy_lab/s005_short_half_frozen_2023_2024.py
           python - <<'PY'
           from scripts.strategy_lab.s005_short_half_frozen_2023_2024 import (
