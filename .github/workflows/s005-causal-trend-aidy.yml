@@ -1,0 +1,107 @@
+name: S005 AIDY Causal H1 Persistence and H4 Confirmation 2023 to Sep2026
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_causal_trend_aidy_research.py
+      - tests/test_s005_causal_trend_aidy_research.py
+      - .github/workflows/s005-causal-trend-aidy.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_causal_trend_aidy_research.py
+      - tests/test_s005_causal_trend_aidy_research.py
+      - .github/workflows/s005-causal-trend-aidy.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  causal_rule_tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet numpy pandas pytest ruff
+      - name: Verify no future-bar H4/H1 regime leakage and no retrospective rewriting
+        run: |
+          python -m compileall -q scripts/strategy_lab/s005_causal_trend_aidy_research.py tests/test_s005_causal_trend_aidy_research.py
+          ruff check --select F scripts/strategy_lab/s005_causal_trend_aidy_research.py tests/test_s005_causal_trend_aidy_research.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_s005_causal_trend_aidy_research.py
+
+  authentic_original_full_causal_replay:
+    needs: causal_rule_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy
+      - name: Recover already verified 2023-2024 original data, 25 monthly SHA receipts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39594610701
+          github-token: ${{ github.token }}
+          pattern: s005-2023-24-source-*
+          path: artifacts/s005_four_year_original_source/2023_2024/
+          merge-multiple: false
+      - name: Recover already verified 2025-2026 original data, 22 monthly SHA receipts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39150315229
+          github-token: ${{ github.token }}
+          pattern: s001-source-*
+          path: artifacts/s005_four_year_original_source/2025_2026/
+          merge-multiple: false
+      - name: Fetch exact original upstream author files, pinned source verification in Python
+        run: |
+          mkdir -p /tmp/s005_causal_original_publisher
+          BASE="https://raw.githubusercontent.com/sbrakni/MQL5-trading-bot-claude-experiment/3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/engine.py" -o /tmp/s005_causal_original_publisher/engine.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/strategies.py" -o /tmp/s005_causal_original_publisher/strategies.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Experts/ApexBreakout.mq5" -o /tmp/s005_causal_original_publisher/ApexBreakout.mq5
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Donchian.set" -o /tmp/s005_causal_original_publisher/ApexBreakout_XAUUSD_H1_Donchian.set
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Session.set" -o /tmp/s005_causal_original_publisher/ApexBreakout_XAUUSD_H1_Session.set
+      - name: Rerun original author plus two preselected causal filters, independently per calendar study
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_causal_trend_aidy_research.py --source-root artifacts/s005_four_year_original_source/ --publisher-root /tmp/s005_causal_original_publisher --out artifacts/s005_four_year_causal_results/
+      - name: Validate original publisher 4-period baseline and exact two versions
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('artifacts/s005_four_year_causal_results/S005_AIDY_CAUSAL_REGIME_2023_2026.json')
+          r=json.loads(p.read_text())
+          assert r['all_months_pinned_original_price_bidask_receipts']
+          assert not r['native_MT5_account_trade_ledger_verified']
+          assert not r['actual_bidask_at_trade_fill_used']
+          assert not r['real_paper_or_live_orders_placed']
+          assert not r['original_strategy_modified_in_repo_or_broker']
+          assert r['cash_recompound_on_accepted_trades']
+          assert r['all_years_already_research_reviewed_therefore_not_blind_oos']
+          assert len(r['source_groups']['2023_2024']['all_source_receipts'])==25
+          assert len(r['source_groups']['2025_2026']['all_source_receipts'])==22
+          assert set(r['years'])=={'2023','2024','2025','2026_JAN_SEP'}
+          assert len(r['prespecified_rules'])==3
+          for year,cases in r['years'].items():
+            assert set(cases)=={'0.45','0.90'}
+            for friction,entry in cases.items():
+              assert set(entry['models'])=={'ORIGINAL','A_H1_PATH_EFFICIENCY_0P30','B_H4_SIX_BAR_MOMENTUM_AGREES'}
+              for v in entry['models'].values():
+                assert len(v['trade_ledger'])==v['completed_trades']
+                assert all(t['entry_utc'].startswith(year[:4]) for t in v['trade_ledger'])
+                assert all(t['entry_causal_path_efficiency_24h1'] is None or 0<=t['entry_causal_path_efficiency_24h1']<=1 for t in v['trade_ledger'])
+                assert abs(v['ending_usd']-10000-v['net_profit_usd'])<.01
+          print('S005_SOURCE_ORIGINAL_4_PERIOD_2_FROZEN_VARIANTS_VERIFIED',r['sha256'])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-AIDY-Four-Period-Causal-Original-vs-Two-Refinements
+          path: artifacts/s005_four_year_causal_results/
+          retention-days: 90
+          if-no-files-found: error
