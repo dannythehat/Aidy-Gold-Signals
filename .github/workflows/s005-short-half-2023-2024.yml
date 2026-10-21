@@ -1,0 +1,137 @@
+name: S005 frozen half-short 2023 and 2024 AIDY retrospective gold test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_short_half_frozen_2023_2024.py
+      - .github/workflows/s005-short-half-2023-2024.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s005_short_half_frozen_2023_2024.py
+      - .github/workflows/s005-short-half-2023-2024.yml
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  static_source_safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: |
+          python -m compileall -q scripts/strategy_lab/s005_short_half_frozen_2023_2024.py
+          python -m pip install --quiet ruff pandas numpy
+          ruff check --select F scripts/strategy_lab/s005_short_half_frozen_2023_2024.py
+          python - <<'PY'
+          from scripts.strategy_lab.s005_short_half_frozen_2023_2024 import (
+              SOURCE_MONTHS, YEAR_WINDOWS, RISK_PATCH_FROM, RISK_PATCH_TO, COSTS
+          )
+          assert len(SOURCE_MONTHS)==25 and len(set(SOURCE_MONTHS))==25
+          assert YEAR_WINDOWS["2023"]==("2023-01-01","2024-01-01")
+          assert YEAR_WINDOWS["2024"]==("2024-01-01","2025-01-01")
+          assert COSTS==(0.45,0.90)
+          assert "0.5 if direction == -1 else 1.0" in RISK_PATCH_TO
+          assert "risk_cash = cash * riskpct / 100.0" == RISK_PATCH_FROM
+          print("READ_ONLY_FROZEN_CONTRACT_PASSED")
+          PY
+
+  real_month_source:
+    needs: static_source_safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        month: ['202212',
+                '202301','202302','202303','202304','202305','202306','202307','202308','202309','202310','202311','202312',
+                '202401','202402','202403','202404','202405','202406','202407','202408','202409','202410','202411','202412']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SOURCE_MONTH: ${{ matrix.month }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Retrieve unmodified R2 original BID/ASK ZIP
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/s005_${SOURCE_MONTH}.zip"
+          test -s "/tmp/s005_${SOURCE_MONTH}.zip"
+      - name: Derive reproducible complete M15, source original intact
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s001_real_tick_to_m15.py --period "${SOURCE_MONTH}" --archive "/tmp/s005_${SOURCE_MONTH}.zip" --output "artifacts/s005_2023_24_source/s005-2023-24-source-${SOURCE_MONTH}"
+          rm -f "/tmp/s005_${SOURCE_MONTH}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: s005-2023-24-source-${{ matrix.month }}
+          path: artifacts/s005_2023_24_source/s005-2023-24-source-${{ matrix.month }}/
+          retention-days: 90
+          if-no-files-found: error
+
+  compare_original_vs_half_shorts:
+    needs: real_month_source
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet numpy pandas
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: s005-2023-24-source-*
+          path: artifacts/s005_2023_24_source/
+          merge-multiple: false
+      - name: Download exact original publisher Python modules, presets, EA, all pinned by git blob SHA
+        run: |
+          mkdir -p /tmp/s005_exact_publisher
+          BASE="https://raw.githubusercontent.com/sbrakni/MQL5-trading-bot-claude-experiment/3dab20e20a846edae9ac6fcf56d6b090dbba9f98"
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/engine.py" -o /tmp/s005_exact_publisher/engine.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/research/strategies.py" -o /tmp/s005_exact_publisher/strategies.py
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Experts/ApexBreakout.mq5" -o /tmp/s005_exact_publisher/ApexBreakout.mq5
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Donchian.set" -o /tmp/s005_exact_publisher/ApexBreakout_XAUUSD_H1_Donchian.set
+          curl --retry 3 --fail --location --silent --show-error "$BASE/MQL5/Presets/ApexBreakout_XAUUSD_H1_Session.set" -o /tmp/s005_exact_publisher/ApexBreakout_XAUUSD_H1_Session.set
+      - name: Run both frozen model variants on authentic 2023 and 2024 source
+        run: |
+          PYTHONPATH=src:. python scripts/strategy_lab/s005_short_half_frozen_2023_2024.py --source-root artifacts/s005_2023_24_source/ --publisher-root /tmp/s005_exact_publisher --out artifacts/s005_2023_24_short_half_results/
+      - name: Verify both years, no invented broker profit, no hidden entry filters
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("artifacts/s005_2023_24_short_half_results/S005_2023_2024_ORIGINAL_VS_SHORT_HALF.json").read_text())
+          assert data["tested_years"]==["2023","2024"]
+          assert len(data["source_month_receipts"])==25
+          assert data["original_signal_rules_unchanged"]
+          assert data["entry_exit_event_parity_required"]
+          assert not data["real_bidask_broker_fill_replay"]
+          assert not data["native_MT5_test"]
+          assert data["research_only_no_orders"]
+          assert data["retrospective_not_sealed_oos"]
+          for year in ("2023","2024"):
+            for cost in ("0.45","0.90"):
+              x=data["results"][year][cost]
+              assert x["original"]["closed_trades"]==x["short_half"]["closed_trades"]
+              assert len(x["original"]["trade_ledger"])==x["original"]["closed_trades"]
+          print("S005_2023_2024_RESEARCH_RESULT_RECONCILED",data["sha256"])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: S005-Frozen-Original-vs-Short-Half-2023-2024-Research
+          path: artifacts/s005_2023_24_short_half_results/
+          if-no-files-found: error
+          retention-days: 90
