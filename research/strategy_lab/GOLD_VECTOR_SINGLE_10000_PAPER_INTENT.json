@@ -1,0 +1,51 @@
+{
+  "schema": "goldthinker.paper_intent_v1",
+  "system_id": "GOLD_VECTOR_V1",
+  "display_name": "GOLD VECTOR",
+  "origin_candidate": "S005 original Donchian 24/12 EMA200 gold",
+  "algorithm_version": "COMBINED_H1_PATH_0P30_AND_H4_SIX_COMPLETE",
+  "customer_publication_approved": false,
+  "current_stage": "PAPER_REQUESTED_BUT_NOT_STARTED",
+  "owner_requested_paper": true,
+  "trading_account": {
+    "type": "ONE_FRESH_DEDICATED_MT5_DEMO",
+    "currency": "USD",
+    "seed_usd": 10000,
+    "mt5_login": null,
+    "server": null,
+    "portable_terminal_path": null,
+    "broker_account_ownership_verified": false,
+    "account_isolation_verified": false,
+    "balance_verified_at_broker": false,
+    "paper_inception_utc": null,
+    "actual_broker_deals": 0,
+    "any_orders_placed_by_this_package": false
+  },
+  "execution_contract": {
+    "symbol": "XAUUSD",
+    "source_candles": "completed broker H1 and completed H4, point in time only",
+    "base_entry": "original S005 Donchian breakout above/below past 24 complete H1 with EMA200 direction",
+    "filter_1": "H1 24-completed-close path efficiency >= 0.30 on confirmed signal",
+    "filter_2": "BUY if most recent completed H4 close above six completed H4 bars prior, SELL if below",
+    "filter_operator": "AND; both must be true on same closed H1 signal",
+    "protective_stop": "ATR14 * 2.5 from original publisher strategy, with broker-native validation required",
+    "primary_exit": "original opposite 12-hour Donchian channel / ATR stop",
+    "theoretical_risk_per_position_pct": 1,
+    "real_broker_lot_risk_verified": false,
+    "broker_bidask_slippage_swap_margin_verified": false,
+    "native_mt5_signal_fill_stop_parity_verified": false
+  },
+  "startup_gates": [
+    "dedicated unused freshly seeded MT5 DEMO account verified $10,000 USD",
+    "portable MT5 profile and account login/server unique and isolated from CROSSFIRE and Super Signals",
+    "broker XAUUSD contract size, min/step lots, spread, stop level, swap, tick size and real risk checked",
+    "H1/H4 UTC broker time corrected and verified against live fresh completed candles",
+    "source EA/Python next-tick entry and exit parity run on live native MT5 demo",
+    "idempotent signed order-intent journal, reconcile broker positions before restart, no old replay",
+    "drawdown/failsafe/slippage/stale-quote and reconnection/kill-switch rules accepted",
+    "owner verifies exact account and explicitly authorises activation after preflight"
+  ],
+  "no_demo_or_live_order_capability_in_this_manifest": true,
+  "research_status": "owner-selected combined variant, historical qualification pending, not GREEN scientifically",
+  "note": "The historical testing pipeline cannot create a genuine new broker MT5 DEMO account or place a paper order. Never count this proposed seed as actual broker balance, realised profit, or forward trial start."
+}
