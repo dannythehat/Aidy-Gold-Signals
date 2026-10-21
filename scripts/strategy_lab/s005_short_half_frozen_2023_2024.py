@@ -165,7 +165,7 @@ def run(source_root: Path,publisher_root: Path,out: Path):
             for cost in COSTS:
                 orig=case(original,o,h,l,c,times,atr,signals,lo,hi,cost)
                 half=case(adjusted,o,h,l,c,times,atr,signals,lo,hi,cost)
-                if any(not (start[:4] <= trade["entry_utc"][:4] <= end[:4])
+                if any(trade["entry_utc"][:4] != year
                        for trade in orig["trade_ledger"]):
                     raise ValueError("Historical trade timestamps outside study dates")
                 if (orig["closed_trades"]!=half["closed_trades"]
