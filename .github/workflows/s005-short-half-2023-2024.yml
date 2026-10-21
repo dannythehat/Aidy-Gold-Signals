@@ -39,6 +39,9 @@ jobs:
           assert COSTS==(0.45,0.90)
           assert "0.5 if direction == -1 else 1.0" in RISK_PATCH_TO
           assert "risk_cash = cash * riskpct / 100.0" == RISK_PATCH_FROM
+          import pandas as pd
+          us=pd.date_range("2023-01-01",periods=2,tz="UTC").as_unit("us")
+          assert int((us.as_unit("ns").asi8//1000000000)[0])==1672531200
           print("READ_ONLY_FROZEN_CONTRACT_PASSED")
           PY
 
@@ -126,6 +129,8 @@ jobs:
               x=data["results"][year][cost]
               assert x["original"]["closed_trades"]==x["short_half"]["closed_trades"]
               assert len(x["original"]["trade_ledger"])==x["original"]["closed_trades"]
+              assert all(t["entry_utc"].startswith(year) for t in x["original"]["trade_ledger"])
+              assert all(t["entry_utc"].startswith(year) for t in x["short_half"]["trade_ledger"])
           print("S005_2023_2024_RESEARCH_RESULT_RECONCILED",data["sha256"])
           PY
       - uses: actions/upload-artifact@v4
