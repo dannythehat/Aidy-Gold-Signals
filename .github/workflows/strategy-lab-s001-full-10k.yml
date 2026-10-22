@@ -1,0 +1,68 @@
+name: AIDY S001 Full 2025 Real Gold $10k Backtest and PDF
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/s001_full_10k_real_history.py
+      - scripts/strategy_lab/s001_render_full_research_pdf.py
+      - tests/test_strategy_lab_s001_full_10k.py
+      - .github/workflows/strategy-lab-s001-full-10k.yml
+
+permissions:
+  contents: read
+
+jobs:
+  full-s001-real-gold-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install real-data, accounting, chart and report dependencies
+        run: python -m pip install --quiet pytest ruff pandas numpy 'google-cloud-bigquery>=3.42,<4' reportlab matplotlib pypdf pillow
+      - name: Syntax, strict lint, and source/account causality tests
+        run: |
+          python -m compileall -q scripts/strategy_lab/s001_full_10k_real_history.py scripts/strategy_lab/s001_render_full_research_pdf.py tests/test_strategy_lab_s001_full_10k.py
+          ruff check scripts/strategy_lab/s001_full_10k_real_history.py scripts/strategy_lab/s001_render_full_research_pdf.py tests/test_strategy_lab_s001_full_10k.py
+          PYTHONPATH=. pytest -q tests/test_strategy_lab_s001_full_10k.py
+      - name: Process genuine 12 month native XAUUSD BID BigQuery history
+        run: PYTHONPATH=. python scripts/strategy_lab/s001_full_10k_real_history.py
+      - name: Generate complete original-$10k research comparison and PDF
+        run: PYTHONPATH=. python scripts/strategy_lab/s001_render_full_research_pdf.py
+      - name: Verify full customer research packet is real and complete
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from pypdf import PdfReader
+          p=Path('artifacts/strategy_lab/s001_full_2025')
+          v=json.loads((p/'s001_2025_full_report.json').read_text())
+          assert v['run_status']=='FULL_REAL_2025_HISTORICAL_COSTED_MODEL__ORIGINAL_PARITY_NOT_VERIFIED'
+          assert len(v['source_receipts'])==12
+          assert [r['month'] for r in v['source_receipts']]==[f'2025-{m:02d}' for m in range(1,13)]
+          assert len({r['query_job_id'] for r in v['source_receipts']})==12
+          assert v['source_original_exact_parity'] is False
+          assert v['paper_or_live_orders']==0 and v['independently_qualified_profitable'] is False
+          assert not v['oos_untouched_holdout_proved']
+          for key,stats in v['scenarios'].items():
+              assert stats['closed_trades']==len(stats['trades'])
+              assert len(stats['monthly'])==12
+              assert abs(stats['net_usd']-(stats['ending_usd']-10000))<.02
+              assert (p/(key.lower()+'.csv')).exists()
+          pdf=p/'GOLDTHINKER_S001_2025_Full_Independent_10K_Research_Report.pdf'
+          assert len(PdfReader(str(pdf)).pages)>=10
+          print('AIDY_S001_FULL_10K_COSTED_REAL_GOLD_PROOF_PASS')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: AIDY-S001-Full-2025-10K-Research-And-PDF
+          path: artifacts/strategy_lab/s001_full_2025/
+          if-no-files-found: warn
+          retention-days: 90
