@@ -38,7 +38,6 @@ class Parameters:
     commission_usd_oz_roundtrip: float = .07
     near_level_atr: float = .42
     stop_buffer_atr: float = .08
-    max_holding_bars: int = 96
     capital_usd: float = 10000.0
 
     def validate(self) -> None:
@@ -47,8 +46,7 @@ class Parameters:
                 0 <= self.slip_usd_oz_each_side < 20 and
                 0 <= self.commission_usd_oz_roundtrip < 20 and
                 .1 <= self.near_level_atr <= 1 and
-                0 <= self.stop_buffer_atr <= .5 and
-                2 <= self.max_holding_bars <= 240 and self.capital_usd > 0):
+                0 <= self.stop_buffer_atr <= .5 and self.capital_usd > 0):
             raise ValueError("Invalid or non-Bible risk configuration")
 
 
@@ -322,7 +320,9 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             side = p["side"]
             fill = bid_open + side * (half + cfg.slip_usd_oz_each_side)
             risk = side * (fill - p["stop"])
-            if (risk > 0 and side * (p["target"] - fill) / risk >= cfg.min_rr
+            if (risk > 0 and (side * (p["target"] - fill) -
+                              (half + cfg.slip_usd_oz_each_side +
+                               cfg.commission_usd_oz_roundtrip)) / risk >= cfg.min_rr
                     and equity > 0):
                 ounces = equity * cfg.risk_fraction / risk
                 position = dict(p, entry_utc=bar["open_time_utc"].isoformat(),
@@ -340,7 +340,6 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             at_open_exit = bid_open if side == 1 else bid_open + cfg.spread_usd_oz
             stop_hit = lo_exit <= stop if side == 1 else hi_exit >= stop
             target_hit = hi_exit >= target if side == 1 else lo_exit <= target
-            timed_out = i - position["entry_index"] >= cfg.max_holding_bars
             reason, exit_price = None, None
             if stop_hit:
                 reason = "STOP"  # adverse tie-break if same H1 hits both
@@ -348,9 +347,6 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             elif target_hit:
                 reason = "TARGET"
                 exit_price = target
-            elif timed_out or i == len(df) - 1:
-                reason = "EXPIRY" if timed_out else "SOURCE_END"
-                exit_price = bid_close if side == 1 else bid_close + cfg.spread_usd_oz
             if reason:
                 exit_price -= side * cfg.slip_usd_oz_each_side
                 pnl = (exit_price - position["entry"]) * side * position["ounces"]
@@ -389,6 +385,14 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
     eq = np.asarray([m["equity_usd"] for m in marks])
     high = np.maximum.accumulate(np.concatenate([[cfg.capital_usd], eq]))[1:]
     dd = (eq / high - 1) * 100
+    unrealized_position = None
+    if position is not None:
+        unrealized_position = {k: position[k] for k in (
+            "family", "signal_time_utc", "entry_utc", "side", "entry",
+            "stop", "target", "ounces", "risk_usd")}
+        unrealized_position["status"] = "CENSORED_AT_HISTORY_END_NOT_CLOSED"
+        unrealized_position["unrealized_model_pnl_usd"] = round(
+            float(eq[-1]) - equity, 4)
     result = {
         "schema": "gold_hunter.bible_multisystem_research.v0",
         "status": "HISTORICAL_RESEARCH_ONLY",
@@ -399,8 +403,10 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
         "costs_and_policy": asdict(cfg), "counts_selected": counts,
         "rejections": rejections, "closed_trades": len(trades),
         "win_rate_percent": round(100 * sum(t["net_pnl_usd"] > 0 for t in trades)/len(trades), 2) if trades else None,
-        "net_modelled_usd": round(equity - cfg.capital_usd, 2),
-        "ending_equity_usd": round(equity, 2),
+        "net_modelled_usd": round(float(eq[-1]) - cfg.capital_usd, 2),
+        "ending_equity_usd": round(float(eq[-1]), 2),
+        "realized_balance_usd": round(equity, 2),
+        "unrealized_open_position": unrealized_position,
         "max_marked_drawdown_percent": round(float(dd.min()), 3),
         "trades": trades, "equity_marks": marks,
         "limitations": ["Retrospective BID source; synthetic ASK/spread and slippage",
