@@ -252,8 +252,11 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
             if not near:
                 continue
             level = min(near, key=lambda n: abs(n - touch))
-            entry_est = c + side * (cfg.spread_usd_oz / 2 + cfg.slip_usd_oz_each_side)
-            stop = stop_edge - side * cfg.stop_buffer_atr * atr
+            # Historical original prices are BID. Buy at ASK; sell at BID.
+            entry_est = (c + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
+                         if side == 1 else c - cfg.slip_usd_oz_each_side)
+            stop = (stop_edge - side * cfg.stop_buffer_atr * atr +
+                    (cfg.spread_usd_oz if side == -1 else 0.0))
             risk = side * (entry_est - stop)
             if risk <= 0 or risk > 3 * atr:
                 continue
@@ -262,9 +265,9 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
             if not viable:
                 continue
             target = min(viable) if side == 1 else max(viable)
-            reward = side * (target - entry_est) - (cfg.spread_usd_oz / 2 +
-                                                   cfg.slip_usd_oz_each_side +
-                                                   cfg.commission_usd_oz_roundtrip)
+            reward = (side * (target - entry_est) -
+                      (cfg.spread_usd_oz if side == -1 else 0.0) -
+                      cfg.slip_usd_oz_each_side - cfg.commission_usd_oz_roundtrip)
             rr = reward / risk
             if rr < cfg.min_rr:
                 continue
@@ -344,7 +347,7 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
     pending = None
     trades, marks, counts = [], [], {family: 0 for family in families}
     rejections = {"conflicting_signals": 0, "portfolio_busy": 0, "not_bible_admitted": 0}
-    half = cfg.spread_usd_oz / 2
+    # CSV source is true BID, not MID: spread belongs on ASK only.
     for i in range(len(df)):
         bar = df.iloc[i]
         bid_open, bid_hi, bid_lo, bid_close = [float(bar[k]) for k in
@@ -353,15 +356,20 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             p = pending
             pending = None
             side = p["side"]
-            fill = bid_open + side * (half + cfg.slip_usd_oz_each_side)
+            fill = (bid_open + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
+                    if side == 1 else bid_open - cfg.slip_usd_oz_each_side)
             risk = side * (fill - p["stop"])
             if (risk > 0 and (side * (p["target"] - fill) -
-                              (half + cfg.slip_usd_oz_each_side +
-                               cfg.commission_usd_oz_roundtrip)) / risk >= cfg.min_rr
+                              (cfg.spread_usd_oz if side == -1 else 0.0) -
+                              cfg.slip_usd_oz_each_side -
+                              cfg.commission_usd_oz_roundtrip) / risk >= cfg.min_rr
                     and equity > 0):
-                ounces = equity * cfg.risk_fraction / risk
+                # Budget includes the additional adverse stop slippage and fee.
+                risk_per_oz = risk + cfg.slip_usd_oz_each_side + cfg.commission_usd_oz_roundtrip
+                ounces = equity * cfg.risk_fraction / risk_per_oz
                 position = dict(p, entry_utc=bar["open_time_utc"].isoformat(),
-                                entry=fill, ounces=ounces, risk_usd=ounces * risk,
+                                entry=fill, ounces=ounces,
+                                risk_usd=ounces * risk_per_oz,
                                 entry_index=i, equity_at_entry=equity)
             else:
                 rejections["not_bible_admitted"] += 1
@@ -430,9 +438,10 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
         unrealized_position["unrealized_model_pnl_usd"] = round(
             float(eq[-1]) - equity, 4)
     result = {
-        "schema": "gold_hunter.bible_multisystem_research.v0",
+        "schema": "gold_hunter.bible_multisystem_research.v1_bidask_corrected",
         "status": "HISTORICAL_RESEARCH_ONLY",
         "data_basis": "H1_NATIVE_M1_HISTDATA_BID_WITH_ILLUSTRATIVE_ASK",
+        "execution_quote_basis": "LONG_ENTRY_ASK_SHORT_ENTRY_BID_LONG_EXIT_BID_SHORT_EXIT_ASK",
         "price_rows": len(df), "start_utc": df.iloc[0]["open_time_utc"].isoformat(),
         "end_utc": df.iloc[-1]["open_time_utc"].isoformat(),
         "families": list(families), "bible_gate": "HTF_TREND_OR_RANGE+SIGNIFICANT_LEVEL+COMPLETED_PATTERN+RR>=2",
