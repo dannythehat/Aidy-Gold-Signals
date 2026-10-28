@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - src/gold_hunter/bible_engine.py
+      - src/gold_hunter/open_strategy_lab.py
+      - scripts/gold_hunter_open_strategy_research.py
       - tests/test_bible_engine.py
       - scripts/gold_hunter_2026_research.py
       - .github/workflows/gold-hunter-bible-2026-real-history.yml
@@ -24,8 +26,8 @@ jobs:
       - run: python -m pip install --quiet pandas numpy pytest
       - name: Verify deterministic Bible engine before protected archive access
         run: |
-          python -m compileall -q src/gold_hunter/bible_engine.py scripts/gold_hunter_2026_research.py tests/test_bible_engine.py
-          PYTHONPATH=src:. python -m pytest -q tests/test_bible_engine.py
+          python -m compileall -q src/gold_hunter/bible_engine.py src/gold_hunter/open_strategy_lab.py scripts/gold_hunter_2026_research.py scripts/gold_hunter_open_strategy_research.py tests/test_bible_engine.py tests/test_gold_hunter_open_lab.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_bible_engine.py tests/test_gold_hunter_open_lab.py
 
   real-archive-month:
     needs: source-and-engine-gate
@@ -79,14 +81,19 @@ jobs:
       - run: python -m pip install --quiet pandas numpy
       - name: Verify all ten original monthly R2 source receipts and chronology
         run: PYTHONPATH=src:. python scripts/strategy_lab/crossfire_2026_holdout.py
-      - name: Replay seven Bible families, trend, range and combined on Jan-Sep 2026
+      - name: Replay seven Bible baseline families, trend, range and combined
         run: PYTHONPATH=src:. python scripts/gold_hunter_2026_research.py
+      - name: Replay five OPEN gold strategies and combined portfolios on original BID ASK
+        env:
+          GOLD_HUNTER_RESEARCH_YEAR: '2026'
+        run: PYTHONPATH=src:. python scripts/gold_hunter_open_strategy_research.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: GOLD-HUNTER-2026-ORIGINAL-TICK-SOURCE-REPLAY
           path: |
             artifacts/gold_hunter/bible_2026/
+            artifacts/gold_hunter/open_lab_2026/
             artifacts/strategy_lab/crossfire_2026_holdout_result/crossfire_2026_verdict.json
           retention-days: 90
           if-no-files-found: error
