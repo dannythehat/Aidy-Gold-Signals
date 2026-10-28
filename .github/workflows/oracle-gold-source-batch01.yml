@@ -4,7 +4,9 @@ on:
   push:
     branches: ['codex/83-source-audit-batch01-20261028']
     paths:
-      - 'scripts/oracle_gold/**'
+      - 'scripts/oracle_gold/history.py'
+      - 'scripts/oracle_gold/batch01.py'
+      - 'scripts/oracle_gold/causal_sizing.py'
       - 'tests/test_oracle_gold_batch01.py'
       - '.github/workflows/oracle-gold-source-batch01.yml'
       - 'scripts/strategy_lab/s010_run_12month_history.py'
@@ -41,7 +43,7 @@ jobs:
       - name: Prove source parity, causality and known publisher lookahead defect
         run: |
           mkdir -p artifacts/oracle_gold/tests
-          python -m pytest -q tests/test_oracle_gold_batch01.py tests/test_gold_hunter_oracle_dedup.py tests/test_strategy_lab_s010_backtest.py tests/test_strategy_lab_system_processor.py --junitxml=artifacts/oracle_gold/tests/junit.xml
+          python -m pytest -q tests/test_oracle_gold_batch01.py tests/test_oracle_gold_register.py tests/test_gold_hunter_oracle_dedup.py tests/test_strategy_lab_s010_backtest.py tests/test_strategy_lab_system_processor.py --junitxml=artifacts/oracle_gold/tests/junit.xml
           python scripts/gold_hunter_oracle_dedup_audit.py --output artifacts/oracle_gold/tests/dedup.json
       - uses: actions/upload-artifact@v4
         if: always()
@@ -52,6 +54,7 @@ jobs:
 
   bigquery-history:
     needs: source-and-causality
+    if: ${{ github.event.before == '13428282bd972ce6e45679d92820e16433bedd08' || github.event.before == '9712c2ff3d6e2a6138de9c82161d416b09c95db7' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     strategy:
@@ -143,7 +146,7 @@ jobs:
 
   reuse-r2-year:
     needs: source-and-causality
-    if: ${{ github.event.before != '13428282bd972ce6e45679d92820e16433bedd08' }}
+    if: ${{ github.event.before == '9712c2ff3d6e2a6138de9c82161d416b09c95db7' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -170,9 +173,31 @@ jobs:
           path: artifacts/oracle_gold/history/2023/
           retention-days: 90
 
+  reuse-verified-history:
+    needs: source-and-causality
+    if: ${{ github.event.before != '13428282bd972ce6e45679d92820e16433bedd08' && github.event.before != '9712c2ff3d6e2a6138de9c82161d416b09c95db7' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        year: [2023, 2024, 2025]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-gold-history-${{ matrix.year }}
+          run-id: 40684602595
+          github-token: ${{ github.token }}
+          path: artifacts/oracle_gold/history/${{ matrix.year }}/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gold-history-${{ matrix.year }}
+          path: artifacts/oracle_gold/history/${{ matrix.year }}/
+          retention-days: 90
+
   replay:
-    needs: [bigquery-history, r2-year, reuse-r2-year]
-    if: ${{ always() && needs.bigquery-history.result == 'success' }}
+    needs: [bigquery-history, r2-year, reuse-r2-year, reuse-verified-history]
+    if: ${{ always() && (needs.bigquery-history.result == 'success' || needs.reuse-verified-history.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -198,16 +223,16 @@ jobs:
           for year in 2023 2024 2025; do
             folder="artifacts/oracle_gold/downloads/oracle-gold-history-${year}"
             if [ -f "${folder}/manifest.json" ]; then
-              python -m scripts.oracle_gold.batch01 --snapshot "${folder}" --apex /tmp/oracle-apex --s010 /tmp/oracle-s010 --out artifacts/oracle_gold/batch01
+              python -m scripts.oracle_gold.batch01 --snapshot "${folder}" --apex /tmp/oracle-apex --s010 /tmp/oracle-s010 --common-costs --causal-sizing-probe --out artifacts/oracle_gold/batch01_common
             else
-              mkdir -p artifacts/oracle_gold/batch01
-              echo '{"status":"BLOCKED_SOURCE","year":'"${year}"'}' > "artifacts/oracle_gold/batch01/BLOCKED-${year}.json"
+              mkdir -p artifacts/oracle_gold/batch01_common
+              echo '{"status":"BLOCKED_SOURCE","year":'"${year}"'}' > "artifacts/oracle_gold/batch01_common/BLOCKED-${year}.json"
             fi
           done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: oracle-gold-batch01-real-history-ledgers
-          path: artifacts/oracle_gold/batch01/
+          name: oracle-gold-batch01-common-cost-history-ledgers
+          path: artifacts/oracle_gold/batch01_common/
           retention-days: 90
           if-no-files-found: error

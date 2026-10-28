@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from datetime import UTC, datetime
+from itertools import pairwise
 from pathlib import Path
 
 from scripts.strategy_lab.s010_run_12month_history import retrieve_month
@@ -34,7 +35,7 @@ def write_snapshot(out, rows, receipts, identity):
                 "calendar_market_completeness_verified": False,
                 "exclusion": "Only occupied hours with all 60 M1 present admitted; gaps are not repaired",
                 "h1_gap_count": sum((datetime.fromisoformat(b) - datetime.fromisoformat(a)).total_seconds()
-                                    != 3600 for a, b in zip(times, times[1:])),
+                                    != 3600 for a, b in pairwise(times)),
                 "broker_parity": False, "sealed_oos": False}
     manifest["sha256"] = digest(manifest)
     (out / "rows.json").write_text(json.dumps(rows, sort_keys=True) + "\n")
@@ -108,7 +109,7 @@ def main():
         m = (r2_year(args.year, args.r2_root, args.out) if args.r2_root
              else bigquery_year(args.year, args.out))
         print("SNAPSHOT_VERIFIED", json.dumps(m, sort_keys=True), flush=True)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - archive access/integrity failure without secret text
         args.out.mkdir(parents=True, exist_ok=True)
         # No exception text: auth/service messages can contain sensitive context.
         (args.out / "BLOCKED.json").write_text(json.dumps({"year": args.year,

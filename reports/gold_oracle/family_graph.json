@@ -1,0 +1,1445 @@
+{
+  "edges": [
+    {
+      "a": "S041",
+      "b": "S042",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SIMILAR_DESCRIPTION_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S036",
+      "b": "S037",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SIMILAR_DESCRIPTION_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S041",
+      "b": "S043",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SIMILAR_DESCRIPTION_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S025",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S042",
+      "b": "S043",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S029",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S064",
+      "b": "S065",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S036",
+      "b": "S038",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S037",
+      "b": "S038",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S038",
+      "b": "S039",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S036",
+      "b": "S039",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S037",
+      "b": "S039",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S026",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S007",
+      "b": "S008",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S027",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S006",
+      "b": "S008",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S023",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S005",
+      "b": "S008",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S005",
+      "b": "S009",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S022",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S025",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S029",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S005",
+      "b": "S006",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S005",
+      "b": "S007",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S006",
+      "b": "S007",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S006",
+      "b": "S009",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S007",
+      "b": "S009",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S008",
+      "b": "S009",
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S014",
+      "b": "S015",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S021",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S022",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S024",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S025",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S026",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S027",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S023",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S024",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S026",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S027",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S021",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S023",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S024",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S026",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S027",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S024",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S025",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S026",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S027",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S023",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S024",
+      "b": "S025",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S024",
+      "b": "S026",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S024",
+      "b": "S027",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S024",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S024",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S024",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S024",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S027",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S026",
+      "b": "S027",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S026",
+      "b": "S028",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S026",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S026",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S026",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S027",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S027",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S027",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S028",
+      "b": "S029",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S028",
+      "b": "S030",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S028",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S030",
+      "b": "S031",
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S076",
+      "b": "S077",
+      "flags": [
+        "SIMILAR_DESCRIPTION_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S071",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S008",
+      "b": "S080",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S003",
+      "b": "S005",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S009",
+      "b": "S022",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S009",
+      "b": "S025",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S022",
+      "b": "S077",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S077",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S006",
+      "b": "S080",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S008",
+      "b": "S060",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S009",
+      "b": "S032",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S009",
+      "b": "S077",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S011",
+      "b": "S060",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S012",
+      "b": "S028",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S025",
+      "b": "S071",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S008",
+      "b": "S078",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S009",
+      "b": "S071",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S010",
+      "b": "S060",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S012",
+      "b": "S020",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S020",
+      "b": "S059",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S053",
+      "b": "S078",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S071",
+      "b": "S077",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S002",
+      "b": "S020",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S005",
+      "b": "S036",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S005",
+      "b": "S037",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S012",
+      "b": "S030",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S012",
+      "b": "S059",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S014",
+      "b": "S038",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S015",
+      "b": "S064",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S041",
+      "b": "S068",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S050",
+      "b": "S051",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S014",
+      "b": "S036",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S014",
+      "b": "S037",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S014",
+      "b": "S039",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S029",
+      "b": "S055",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S030",
+      "b": "S055",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S008",
+      "b": "S011",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    },
+    {
+      "a": "S010",
+      "b": "S011",
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "type": "REVIEW_ONLY"
+    }
+  ],
+  "frozen_duplicate_families": [],
+  "independence_proven": false,
+  "nodes": [
+    {
+      "canonical_id": "S001",
+      "family": null,
+      "id": "S001"
+    },
+    {
+      "canonical_id": "S002",
+      "family": null,
+      "id": "S002"
+    },
+    {
+      "canonical_id": "S003",
+      "family": null,
+      "id": "S003"
+    },
+    {
+      "canonical_id": "S004",
+      "family": null,
+      "id": "S004"
+    },
+    {
+      "canonical_id": "S005",
+      "family": "REVIEWED_METHOD_S005",
+      "id": "S005"
+    },
+    {
+      "canonical_id": "S006",
+      "family": "REVIEWED_METHOD_S006",
+      "id": "S006"
+    },
+    {
+      "canonical_id": "S007",
+      "family": "REVIEWED_METHOD_S007",
+      "id": "S007"
+    },
+    {
+      "canonical_id": "S008",
+      "family": "REVIEWED_METHOD_S008",
+      "id": "S008"
+    },
+    {
+      "canonical_id": "S009",
+      "family": "REVIEWED_METHOD_S009",
+      "id": "S009"
+    },
+    {
+      "canonical_id": "S010",
+      "family": "REVIEWED_METHOD_S010",
+      "id": "S010"
+    },
+    {
+      "canonical_id": "S011",
+      "family": null,
+      "id": "S011"
+    },
+    {
+      "canonical_id": "S012",
+      "family": null,
+      "id": "S012"
+    },
+    {
+      "canonical_id": "S013",
+      "family": null,
+      "id": "S013"
+    },
+    {
+      "canonical_id": "S014",
+      "family": null,
+      "id": "S014"
+    },
+    {
+      "canonical_id": "S015",
+      "family": null,
+      "id": "S015"
+    },
+    {
+      "canonical_id": "S016",
+      "family": null,
+      "id": "S016"
+    },
+    {
+      "canonical_id": "S017",
+      "family": null,
+      "id": "S017"
+    },
+    {
+      "canonical_id": "S018",
+      "family": null,
+      "id": "S018"
+    },
+    {
+      "canonical_id": "S019",
+      "family": null,
+      "id": "S019"
+    },
+    {
+      "canonical_id": "S020",
+      "family": "REVIEWED_METHOD_S020",
+      "id": "S020"
+    },
+    {
+      "canonical_id": "S021",
+      "family": "REVIEWED_METHOD_S021",
+      "id": "S021"
+    },
+    {
+      "canonical_id": "S022",
+      "family": "REVIEWED_METHOD_S022",
+      "id": "S022"
+    },
+    {
+      "canonical_id": "S023",
+      "family": "REVIEWED_METHOD_S023",
+      "id": "S023"
+    },
+    {
+      "canonical_id": "S024",
+      "family": "REVIEWED_METHOD_S024",
+      "id": "S024"
+    },
+    {
+      "canonical_id": "S025",
+      "family": "REVIEWED_METHOD_S025",
+      "id": "S025"
+    },
+    {
+      "canonical_id": "S026",
+      "family": "REVIEWED_METHOD_S026",
+      "id": "S026"
+    },
+    {
+      "canonical_id": "S027",
+      "family": "REVIEWED_METHOD_S027",
+      "id": "S027"
+    },
+    {
+      "canonical_id": "S028",
+      "family": "REVIEWED_METHOD_S028",
+      "id": "S028"
+    },
+    {
+      "canonical_id": "S029",
+      "family": "REVIEWED_METHOD_S029",
+      "id": "S029"
+    },
+    {
+      "canonical_id": "S030",
+      "family": "REVIEWED_METHOD_S030",
+      "id": "S030"
+    },
+    {
+      "canonical_id": "S031",
+      "family": "REVIEWED_METHOD_S031",
+      "id": "S031"
+    },
+    {
+      "canonical_id": "S032",
+      "family": null,
+      "id": "S032"
+    },
+    {
+      "canonical_id": "S033",
+      "family": null,
+      "id": "S033"
+    },
+    {
+      "canonical_id": "S034",
+      "family": null,
+      "id": "S034"
+    },
+    {
+      "canonical_id": "S035",
+      "family": null,
+      "id": "S035"
+    },
+    {
+      "canonical_id": "S036",
+      "family": null,
+      "id": "S036"
+    },
+    {
+      "canonical_id": "S037",
+      "family": null,
+      "id": "S037"
+    },
+    {
+      "canonical_id": "S038",
+      "family": null,
+      "id": "S038"
+    },
+    {
+      "canonical_id": "S039",
+      "family": null,
+      "id": "S039"
+    },
+    {
+      "canonical_id": "S040",
+      "family": null,
+      "id": "S040"
+    },
+    {
+      "canonical_id": "S041",
+      "family": null,
+      "id": "S041"
+    },
+    {
+      "canonical_id": "S042",
+      "family": null,
+      "id": "S042"
+    },
+    {
+      "canonical_id": "S043",
+      "family": null,
+      "id": "S043"
+    },
+    {
+      "canonical_id": "S044",
+      "family": null,
+      "id": "S044"
+    },
+    {
+      "canonical_id": "S045",
+      "family": null,
+      "id": "S045"
+    },
+    {
+      "canonical_id": "S046",
+      "family": null,
+      "id": "S046"
+    },
+    {
+      "canonical_id": "S047",
+      "family": null,
+      "id": "S047"
+    },
+    {
+      "canonical_id": "S048",
+      "family": null,
+      "id": "S048"
+    },
+    {
+      "canonical_id": "S049",
+      "family": null,
+      "id": "S049"
+    },
+    {
+      "canonical_id": "S050",
+      "family": null,
+      "id": "S050"
+    },
+    {
+      "canonical_id": "S051",
+      "family": null,
+      "id": "S051"
+    },
+    {
+      "canonical_id": "S052",
+      "family": null,
+      "id": "S052"
+    },
+    {
+      "canonical_id": "S053",
+      "family": null,
+      "id": "S053"
+    },
+    {
+      "canonical_id": "S054",
+      "family": null,
+      "id": "S054"
+    },
+    {
+      "canonical_id": "S055",
+      "family": null,
+      "id": "S055"
+    },
+    {
+      "canonical_id": "S056",
+      "family": null,
+      "id": "S056"
+    },
+    {
+      "canonical_id": "S057",
+      "family": null,
+      "id": "S057"
+    },
+    {
+      "canonical_id": "S058",
+      "family": null,
+      "id": "S058"
+    },
+    {
+      "canonical_id": "S059",
+      "family": null,
+      "id": "S059"
+    },
+    {
+      "canonical_id": "S060",
+      "family": null,
+      "id": "S060"
+    },
+    {
+      "canonical_id": "S061",
+      "family": null,
+      "id": "S061"
+    },
+    {
+      "canonical_id": "S062",
+      "family": null,
+      "id": "S062"
+    },
+    {
+      "canonical_id": "S063",
+      "family": null,
+      "id": "S063"
+    },
+    {
+      "canonical_id": "S064",
+      "family": null,
+      "id": "S064"
+    },
+    {
+      "canonical_id": "S065",
+      "family": null,
+      "id": "S065"
+    },
+    {
+      "canonical_id": "S066",
+      "family": null,
+      "id": "S066"
+    },
+    {
+      "canonical_id": "S067",
+      "family": null,
+      "id": "S067"
+    },
+    {
+      "canonical_id": "S068",
+      "family": null,
+      "id": "S068"
+    },
+    {
+      "canonical_id": "S069",
+      "family": null,
+      "id": "S069"
+    },
+    {
+      "canonical_id": "S070",
+      "family": null,
+      "id": "S070"
+    },
+    {
+      "canonical_id": "S071",
+      "family": null,
+      "id": "S071"
+    },
+    {
+      "canonical_id": "S072",
+      "family": null,
+      "id": "S072"
+    },
+    {
+      "canonical_id": "S073",
+      "family": null,
+      "id": "S073"
+    },
+    {
+      "canonical_id": "S074",
+      "family": null,
+      "id": "S074"
+    },
+    {
+      "canonical_id": "S075",
+      "family": null,
+      "id": "S075"
+    },
+    {
+      "canonical_id": "S076",
+      "family": null,
+      "id": "S076"
+    },
+    {
+      "canonical_id": "S077",
+      "family": null,
+      "id": "S077"
+    },
+    {
+      "canonical_id": "S078",
+      "family": null,
+      "id": "S078"
+    },
+    {
+      "canonical_id": "S079",
+      "family": null,
+      "id": "S079"
+    },
+    {
+      "canonical_id": "S080",
+      "family": null,
+      "id": "S080"
+    },
+    {
+      "canonical_id": "S081",
+      "family": null,
+      "id": "S081"
+    },
+    {
+      "canonical_id": "S082",
+      "family": null,
+      "id": "S082"
+    },
+    {
+      "canonical_id": "S083",
+      "family": null,
+      "id": "S083"
+    }
+  ]
+}

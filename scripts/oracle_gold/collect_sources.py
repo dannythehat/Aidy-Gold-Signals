@@ -7,15 +7,15 @@ of a page read only, NEVER proof that protected Pine/MQL trading rules are known
 from __future__ import annotations
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
 import hashlib
 import json
-from pathlib import Path
 import subprocess
 import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "research/strategy_lab/day33_gold_edge_83_snapshot.json"
@@ -56,7 +56,7 @@ def collect(url, out):
                 receipt.update(access="PAGE_RETRIEVED_EXECUTABLE_SOURCE_UNVERIFIED",
                     http_status=res.status, content_sha256=hashlib.sha256(payload).hexdigest(),
                     bytes=len(payload), final_url=res.url, local_page=str(dest / "page.html"))
-    except (Exception, subprocess.TimeoutExpired) as exc:
+    except Exception as exc:  # noqa: BLE001 - persist every independent source failure
         receipt.update(access="SOURCE_ACCESS_BLOCKED", error_type=type(exc).__name__)
         if isinstance(exc, urllib.error.HTTPError):
             receipt["http_status"] = exc.code

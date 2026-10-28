@@ -100,8 +100,8 @@ def test_negative_publisher_entry_open_sizing_reads_future_close(originals):
     at = np.ones(n)
     ls, ss, lx, sx = (np.zeros(n, bool) for _ in range(4))
     ls[19] = True
-    kwargs = dict(spec=engine.SymbolSpec("XAUUSD", .45, max_leverage=1.),
-                  p=engine.EngineParams(sl_atr=20), start_i=19, end_i=n)
+    kwargs = {"spec": engine.SymbolSpec("XAUUSD", .45, max_leverage=1.),
+              "p": engine.EngineParams(sl_atr=20), "start_i": 19, "end_i": n}
     a = engine.simulate(o, h, l, c, np.arange(n)*3600, at, ls, ss, lx, sx, **kwargs)
     changed = c.copy()
     changed[20] = 2005.  # still inside identical OHLC; unknown at the entry open
@@ -109,12 +109,18 @@ def test_negative_publisher_entry_open_sizing_reads_future_close(originals):
     assert a.trades[0].entry_i == b.trades[0].entry_i == 20
     assert a.trades[0].entry_px == b.trades[0].entry_px == 2000.
     assert a.trades[0].units != b.trades[0].units
+    from scripts.oracle_gold.causal_sizing import causal_sizing_probe
+    causal = causal_sizing_probe(Path(os.environ["ORACLE_APEX_ROOT"])/"research/engine.py")
+    ax = causal.simulate(o, h, l, c, np.arange(n)*3600, at, ls, ss, lx, sx, **kwargs)
+    bx = causal.simulate(o, h, l, changed, np.arange(n)*3600, at, ls, ss, lx, sx, **kwargs)
+    assert ax.trades[0].units == bx.trades[0].units
 
 
 def test_generated_query_validates_string_prices_and_literal_sha_quantifier():
-    from scripts.strategy_lab import s010_run_12month_history as reader
     from datetime import UTC, datetime
     from types import SimpleNamespace
+
+    from scripts.strategy_lab import s010_run_12month_history as reader
 
     class Client:
         def __init__(self, invalid):

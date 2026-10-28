@@ -106,7 +106,7 @@ def metrics(trades, equity, times):
             "intrabar_equity_dd_verified": False}
 
 
-def run_snapshot(snapshot, out, engine, strategies, original10):
+def run_snapshot(snapshot, out, engine, strategies, original10, *, common_costs=False, causal_probe=None):
     rows, manifest = load_snapshot(snapshot)
     bars = pd.DataFrame(rows)
     x = derive_signals(bars)
@@ -149,11 +149,25 @@ def run_snapshot(snapshot, out, engine, strategies, original10):
             if any(not np.array_equal(a[:cut], b) for a, b in zip(sig, partial)):
                 raise ValueError("Publisher signal lookahead " + ident)
         signal_traces[ident] = sig[0].astype(int)-sig[1].astype(int)
-        for scenario, cost in (("base", .45), ("stress", 1.48)):
+        # Preserve native publisher-cost diagnostic; common-cost run is a new
+        # named experiment, not a rewrite of the first run's losing outcomes.
+        scenario_costs = (("base", .47), ("stress", 1.44)) if common_costs else (("base", .45), ("stress", 1.48))
+        for scenario, cost in scenario_costs:
             # Original source unchanged. Admission explicitly BLOCKED by c[i] sizing.
             r = engine.simulate(o, h, l, c, seconds, at, *sig,
                 engine.SymbolSpec("XAUUSD", cost=cost, max_leverage=20.),
                 engine.EngineParams(**engine_params), 250, len(c))
+            parity = {"status": "NOT_RUN", "native_broker_parity": False}
+            if causal_probe is not None:
+                causal = causal_probe.simulate(o, h, l, c, seconds, at, *sig,
+                    causal_probe.SymbolSpec("XAUUSD", cost=cost, max_leverage=20.),
+                    causal_probe.EngineParams(**engine_params), 250, len(c))
+                same_trades = ([vars(z) for z in r.trades] == [vars(z) for z in causal.trades])
+                same_equity = bool(np.array_equal(r.equity, causal.equity, equal_nan=True))
+                parity = {"status": "EXACT_LEDGER_AND_EQUITY_PARITY" if same_trades and same_equity else "DIVERGENCE",
+                          "same_trades": same_trades, "same_equity": same_equity,
+                          "scope": "This tape and these parameters ONLY; latent original defect preserved",
+                          "native_broker_parity": False}
             trades = [{"id": i+1, "side": "LONG" if z.dir == 1 else "SHORT",
                        "entry_utc": t.iloc[z.entry_i].isoformat(),
                        "exit_bar_utc": t.iloc[z.exit_i].isoformat(),
@@ -173,6 +187,7 @@ def run_snapshot(snapshot, out, engine, strategies, original10):
                 "method": method, "signal_params": signal_params, "engine_params": engine_params,
                 "warmup_h1_bars": 250, "rt_cost_per_oz_model": cost,
                 "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+                "causal_sizing_probe": parity,
                 "signals_causal_prefix_checked": True, "native_mql_parity": False,
                 "broker_financing_margin_lot_steps_verified": False,
                 "selection": "FIRST_SOURCE_GRID_COMBINATION" if ident in ("S007", "S008") else "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET"}
@@ -194,6 +209,8 @@ def run_snapshot(snapshot, out, engine, strategies, original10):
         "source_original_ids_evaluated": sorted(ids), "models": models, "signal_overlap": overlap,
         "source_month_coverage_only_not_market_calendar_certification": True,
         "trial_count_scenarios": len(models), "sealed_oos": False,
+        "common_total_round_trip_costs_across_systems": common_costs,
+        "cost_scope": "Common .47/1.44 per ounce RT; quote-side timing still engine-specific" if common_costs else "Original publisher .45 and diagnostic1.48 vs S010 .47/1.44; not directly cost-comparable",
         "portfolio": {"status": "BLOCKED", "reason": "Five native engines fail causal sizing; shared broker margin/hedging unverified; no sum of independent $10k accounts"},
         "gaps": ["GAP-APEX-ENTRY-SIZING-LOOKAHEAD", "GAP-SOURCE-MARKET-CALENDAR",
                  "GAP-NATIVE-BROKER-PARITY", "GAP-FINANCING-MARGIN", "GAP-INTRABAR-DD"],
@@ -212,10 +229,17 @@ def main():
     p.add_argument("--apex", type=Path, required=True)
     p.add_argument("--s010", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--common-costs", action="store_true")
+    p.add_argument("--causal-sizing-probe", action="store_true")
     args = p.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     try:
-        run_snapshot(args.snapshot, args.out, *publisher_modules(args.apex, args.s010))
+        probe = None
+        if args.causal_sizing_probe:
+            from scripts.oracle_gold.causal_sizing import causal_sizing_probe
+            probe = causal_sizing_probe(args.apex/"research/engine.py")
+        run_snapshot(args.snapshot, args.out, *publisher_modules(args.apex, args.s010),
+                     common_costs=args.common_costs, causal_probe=probe)
     except Exception as exc:
         (args.out / "BLOCKED.json").write_text(json.dumps({"status": "BLOCKED_BATCH",
             "error_type": type(exc).__name__, "detail": str(exc)[:160]}))

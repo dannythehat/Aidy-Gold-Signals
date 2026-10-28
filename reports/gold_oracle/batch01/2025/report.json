@@ -1,0 +1,1826 @@
+{
+  "gaps": [
+    "GAP-APEX-ENTRY-SIZING-LOOKAHEAD",
+    "GAP-SOURCE-MARKET-CALENDAR",
+    "GAP-NATIVE-BROKER-PARITY",
+    "GAP-FINANCING-MARGIN",
+    "GAP-INTRABAR-DD"
+  ],
+  "manifest": {
+    "broker_parity": false,
+    "calendar_market_completeness_verified": false,
+    "exclusion": "Only occupied hours with all 60 M1 present admitted; gaps are not repaired",
+    "first_utc": "2025-01-01T23:00:00+00:00",
+    "h1_gap_count": 268,
+    "identity": "BIGQUERY_HISTDATA_M1_BID_2025",
+    "last_utc": "2025-12-31T20:00:00+00:00",
+    "receipts": [
+      {
+        "calendar_month_utc": "2025-01",
+        "complete_h1": 499,
+        "monthly_source_sha256": "0033ebd766d5bdae6c38b81be5b4f2f0dd1cb01981e923550745fbee782ef34a",
+        "observed_native_m1_rows": 30197,
+        "partial_hour_excluded": 5,
+        "query_estimated_bytes_scanned": 17122786,
+        "query_job_id": "b3bae030-6f76-473f-b469-f8a4cfe74f35",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-02",
+        "complete_h1": 452,
+        "monthly_source_sha256": "8c76a227efefb12ebd9cc7b005ecf888f63a0e4c2319bfbcb82c45a2372feec4",
+        "observed_native_m1_rows": 27441,
+        "partial_hour_excluded": 6,
+        "query_estimated_bytes_scanned": 15559647,
+        "query_job_id": "928f793d-8fce-49ac-b126-f0c3f8c5b55d",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-03",
+        "complete_h1": 480,
+        "monthly_source_sha256": "b596bb6346fec5c7fd85d065e67e1ded27ca1f95af4b1a95526a31643692a246",
+        "observed_native_m1_rows": 28972,
+        "partial_hour_excluded": 3,
+        "query_estimated_bytes_scanned": 16426335,
+        "query_job_id": "bfd424e8-081b-45d3-b305-b9dabc599bd9",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-04",
+        "complete_h1": 476,
+        "monthly_source_sha256": "91775eb8e472f35a60d8ded55dab6d21378e8fdf02110267b51bc91d6fa7331d",
+        "observed_native_m1_rows": 28948,
+        "partial_hour_excluded": 7,
+        "query_estimated_bytes_scanned": 16415356,
+        "query_job_id": "4068f3e1-6fed-41c2-a9f7-6dda20213e2a",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-05",
+        "complete_h1": 501,
+        "monthly_source_sha256": "3e5037c3ecc27daf04c5ae66b673b9c3a7e986b28b2faa22cfbc8bf7287ee136",
+        "observed_native_m1_rows": 30147,
+        "partial_hour_excluded": 2,
+        "query_estimated_bytes_scanned": 17092858,
+        "query_job_id": "52bcee31-790d-4435-a0bc-f918993f821e",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-06",
+        "complete_h1": 481,
+        "monthly_source_sha256": "dfe31ac26431bd955c35b653691fe3a5a6d7216e271b435e0968df46953298b8",
+        "observed_native_m1_rows": 28889,
+        "partial_hour_excluded": 1,
+        "query_estimated_bytes_scanned": 16380146,
+        "query_job_id": "dc3aaca1-39b2-4915-9be2-e0b4c9b69cec",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-07",
+        "complete_h1": 524,
+        "monthly_source_sha256": "78b62b7d3f6f5df8c080cd2d847c3638fd0eb8632fec6d347bb76a4d45e5ad90",
+        "observed_native_m1_rows": 31499,
+        "partial_hour_excluded": 1,
+        "query_estimated_bytes_scanned": 17858360,
+        "query_job_id": "a18acecb-bbc0-4f1d-96a4-2b2a846e52f5",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-08",
+        "complete_h1": 481,
+        "monthly_source_sha256": "fa67297cc2010a53477773905e310492253647bf75681a526387f2452e93aef4",
+        "observed_native_m1_rows": 28971,
+        "partial_hour_excluded": 2,
+        "query_estimated_bytes_scanned": 16426782,
+        "query_job_id": "1e9821e3-37e1-41b3-9ff5-73a6b600ecf2",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-09",
+        "complete_h1": 503,
+        "monthly_source_sha256": "d5c7d1a7000aab8888b32019a571bf662ac73fffbc5e3d2d614aa4b166f3d249",
+        "observed_native_m1_rows": 30209,
+        "partial_hour_excluded": 1,
+        "query_estimated_bytes_scanned": 17127611,
+        "query_job_id": "ca8d6e03-af13-43f5-bf47-248b2c0637b4",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-10",
+        "complete_h1": 526,
+        "monthly_source_sha256": "3a79ddb24aa72a0c2a90d5e527fad97dd1b05bc46d0c1c8b0ad1f950fca18223",
+        "observed_native_m1_rows": 31619,
+        "partial_hour_excluded": 1,
+        "query_estimated_bytes_scanned": 17926110,
+        "query_job_id": "22ccb2ea-6ba9-4aa1-be43-6e403c7f82b0",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-11",
+        "complete_h1": 453,
+        "monthly_source_sha256": "976dde2368a4aa69ef6c5a53b44c625b3bd4c4f101549d2326e229edffbdde3f",
+        "observed_native_m1_rows": 27358,
+        "partial_hour_excluded": 4,
+        "query_estimated_bytes_scanned": 15513902,
+        "query_job_id": "f1502fd3-983f-48ec-b3f1-4a3968ae676f",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      },
+      {
+        "calendar_month_utc": "2025-12",
+        "complete_h1": 490,
+        "monthly_source_sha256": "fc7250b0c59ee9ce3b339eba28dd242a1c278e560c606b45d16d7cd131d57f27",
+        "observed_native_m1_rows": 29701,
+        "partial_hour_excluded": 6,
+        "query_estimated_bytes_scanned": 16844320,
+        "query_job_id": "97654422-0b76-4253-8fc3-e5ee949c6ed9",
+        "source_archive_sha256": [
+          "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+        ]
+      }
+    ],
+    "rows": 5866,
+    "rows_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+    "schema": "oracle.gold.year_snapshot.v1",
+    "sealed_oos": false,
+    "sha256": "208ddd557acbcaaa3098bec4554132921380286101bae842625124f5039289b6",
+    "source_months_verified": 12
+  },
+  "models": {
+    "S005/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 116,
+      "engine_params": {
+        "sl_atr": 2.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 625.8618605157878,
+      "long_trades": 72,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -16.115075717228567,
+      "method": "donchian",
+      "monthly": [
+        {
+          "ending_equity": 10470.90993128925,
+          "month": "2025-01",
+          "net_change_usd": 470.9099312892504,
+          "return_pct": 4.709099312892495,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 10423.99587580722,
+          "month": "2025-02",
+          "net_change_usd": -46.91405548202965,
+          "return_pct": -0.4480418205283221,
+          "starting_equity": 10470.90993128925
+        },
+        {
+          "ending_equity": 11121.852010344603,
+          "month": "2025-03",
+          "net_change_usd": 697.8561345373819,
+          "return_pct": 6.694708467383581,
+          "starting_equity": 10423.99587580722
+        },
+        {
+          "ending_equity": 11213.152634754213,
+          "month": "2025-04",
+          "net_change_usd": 91.30062440961046,
+          "return_pct": 0.8209120596523789,
+          "starting_equity": 11121.852010344603
+        },
+        {
+          "ending_equity": 11084.35782484464,
+          "month": "2025-05",
+          "net_change_usd": -128.79480990957381,
+          "return_pct": -1.148604804596931,
+          "starting_equity": 11213.152634754213
+        },
+        {
+          "ending_equity": 10788.454816348158,
+          "month": "2025-06",
+          "net_change_usd": -295.90300849648156,
+          "return_pct": -2.66955481925385,
+          "starting_equity": 11084.35782484464
+        },
+        {
+          "ending_equity": 10755.13053473886,
+          "month": "2025-07",
+          "net_change_usd": -33.32428160929703,
+          "return_pct": -0.30888836424285415,
+          "starting_equity": 10788.454816348158
+        },
+        {
+          "ending_equity": 10179.222141202563,
+          "month": "2025-08",
+          "net_change_usd": -575.9083935362978,
+          "return_pct": -5.354731787551303,
+          "starting_equity": 10755.13053473886
+        },
+        {
+          "ending_equity": 11341.439387721402,
+          "month": "2025-09",
+          "net_change_usd": 1162.2172465188396,
+          "return_pct": 11.417544782862322,
+          "starting_equity": 10179.222141202563
+        },
+        {
+          "ending_equity": 12033.08660925634,
+          "month": "2025-10",
+          "net_change_usd": 691.6472215349368,
+          "return_pct": 6.098407776033565,
+          "starting_equity": 11341.439387721402
+        },
+        {
+          "ending_equity": 11604.686748921375,
+          "month": "2025-11",
+          "net_change_usd": -428.3998603349646,
+          "return_pct": -3.560182638471343,
+          "starting_equity": 12033.08660925634
+        },
+        {
+          "ending_equity": 11357.31453786929,
+          "month": "2025-12",
+          "net_change_usd": -247.37221105208482,
+          "return_pct": -2.1316578069207948,
+          "starting_equity": 11604.686748921375
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": 731.4526773535067,
+      "net_usd": 1357.3145378692898,
+      "original_python_executed": true,
+      "profit_factor": 1.2216966827270235,
+      "profitable_months": 5,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 44,
+      "signal_params": {
+        "ema_filter": 200,
+        "entry_n": 24,
+        "exit_n": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 38.793103448275865,
+      "worst_month_pct": -5.354731787551303
+    },
+    "S005/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 116,
+      "engine_params": {
+        "sl_atr": 2.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 600.3720375029096,
+      "long_trades": 72,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -18.020585279641523,
+      "method": "donchian",
+      "monthly": [
+        {
+          "ending_equity": 10440.018145176571,
+          "month": "2025-01",
+          "net_change_usd": 440.0181451765711,
+          "return_pct": 4.400181451765706,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 10344.9525933881,
+          "month": "2025-02",
+          "net_change_usd": -95.06555178847157,
+          "return_pct": -0.9105879938761663,
+          "starting_equity": 10440.018145176571
+        },
+        {
+          "ending_equity": 10990.99145159679,
+          "month": "2025-03",
+          "net_change_usd": 646.0388582086907,
+          "return_pct": 6.24496683166631,
+          "starting_equity": 10344.9525933881
+        },
+        {
+          "ending_equity": 11056.234183133172,
+          "month": "2025-04",
+          "net_change_usd": 65.24273153638205,
+          "return_pct": 0.5936018768070594,
+          "starting_equity": 10990.99145159679
+        },
+        {
+          "ending_equity": 10884.234482477183,
+          "month": "2025-05",
+          "net_change_usd": -171.99970065598973,
+          "return_pct": -1.5556806938693768,
+          "starting_equity": 11056.234183133172
+        },
+        {
+          "ending_equity": 10549.663152195459,
+          "month": "2025-06",
+          "net_change_usd": -334.57133028172393,
+          "return_pct": -3.0739077775323476,
+          "starting_equity": 10884.234482477183
+        },
+        {
+          "ending_equity": 10453.875616035957,
+          "month": "2025-07",
+          "net_change_usd": -95.78753615950154,
+          "return_pct": -0.9079677216003557,
+          "starting_equity": 10549.663152195459
+        },
+        {
+          "ending_equity": 9812.257866287493,
+          "month": "2025-08",
+          "net_change_usd": -641.6177497484641,
+          "return_pct": -6.137606504177651,
+          "starting_equity": 10453.875616035957
+        },
+        {
+          "ending_equity": 10909.540257000293,
+          "month": "2025-09",
+          "net_change_usd": 1097.2823907128004,
+          "return_pct": 11.182771648132018,
+          "starting_equity": 9812.257866287493
+        },
+        {
+          "ending_equity": 11551.351540259264,
+          "month": "2025-10",
+          "net_change_usd": 641.8112832589704,
+          "return_pct": 5.88302777330274,
+          "starting_equity": 10909.540257000293
+        },
+        {
+          "ending_equity": 11107.704891559302,
+          "month": "2025-11",
+          "net_change_usd": -443.6466486999616,
+          "return_pct": -3.8406471065636327,
+          "starting_equity": 11551.351540259264
+        },
+        {
+          "ending_equity": 10840.563970083876,
+          "month": "2025-12",
+          "net_change_usd": -267.1409214754258,
+          "return_pct": -2.4050055712087293,
+          "starting_equity": 11107.704891559302
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": 240.1919325809656,
+      "net_usd": 840.5639700838765,
+      "original_python_executed": true,
+      "profit_factor": 1.1343219432987812,
+      "profitable_months": 5,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 44,
+      "signal_params": {
+        "ema_filter": 200,
+        "entry_n": 24,
+        "exit_n": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 37.93103448275862,
+      "worst_month_pct": -6.137606504177651
+    },
+    "S006/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 47,
+      "engine_params": {
+        "sl_atr": 2.0,
+        "trail_atr": 3.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 743.3032080610083,
+      "long_trades": 22,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -15.283989004658949,
+      "method": "ema_trend",
+      "monthly": [
+        {
+          "ending_equity": 9848.482671558166,
+          "month": "2025-01",
+          "net_change_usd": -151.51732844183425,
+          "return_pct": -1.5151732844183474,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9754.46640809942,
+          "month": "2025-02",
+          "net_change_usd": -94.01626345874502,
+          "return_pct": -0.9546268861319929,
+          "starting_equity": 9848.482671558166
+        },
+        {
+          "ending_equity": 10330.050795105257,
+          "month": "2025-03",
+          "net_change_usd": 575.5843870058361,
+          "return_pct": 5.900726527982214,
+          "starting_equity": 9754.46640809942
+        },
+        {
+          "ending_equity": 10742.603765020127,
+          "month": "2025-04",
+          "net_change_usd": 412.5529699148701,
+          "return_pct": 3.9937167599442214,
+          "starting_equity": 10330.050795105257
+        },
+        {
+          "ending_equity": 10965.954163402926,
+          "month": "2025-05",
+          "net_change_usd": 223.35039838279954,
+          "return_pct": 2.079108596652035,
+          "starting_equity": 10742.603765020127
+        },
+        {
+          "ending_equity": 10698.655858270087,
+          "month": "2025-06",
+          "net_change_usd": -267.29830513283923,
+          "return_pct": -2.4375289295381464,
+          "starting_equity": 10965.954163402926
+        },
+        {
+          "ending_equity": 10541.715378518658,
+          "month": "2025-07",
+          "net_change_usd": -156.94047975142894,
+          "return_pct": -1.4669177308859194,
+          "starting_equity": 10698.655858270087
+        },
+        {
+          "ending_equity": 10196.184738974018,
+          "month": "2025-08",
+          "net_change_usd": -345.5306395446405,
+          "return_pct": -3.27774586144437,
+          "starting_equity": 10541.715378518658
+        },
+        {
+          "ending_equity": 10287.831140609193,
+          "month": "2025-09",
+          "net_change_usd": 91.6464016351747,
+          "return_pct": 0.8988303368500539,
+          "starting_equity": 10196.184738974018
+        },
+        {
+          "ending_equity": 10298.87081223733,
+          "month": "2025-10",
+          "net_change_usd": 11.039671628137512,
+          "return_pct": 0.1073080562584261,
+          "starting_equity": 10287.831140609193
+        },
+        {
+          "ending_equity": 10303.407065996826,
+          "month": "2025-11",
+          "net_change_usd": 4.536253759495594,
+          "return_pct": 0.04404612740753766,
+          "starting_equity": 10298.87081223733
+        },
+        {
+          "ending_equity": 10388.621610830163,
+          "month": "2025-12",
+          "net_change_usd": 85.21454483333764,
+          "return_pct": 0.8270521031296774,
+          "starting_equity": 10303.407065996826
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -354.6815972308471,
+      "net_usd": 388.62161083016326,
+      "original_python_executed": true,
+      "profit_factor": 1.1311255872735233,
+      "profitable_months": 7,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 25,
+      "signal_params": {
+        "adx_min": 20,
+        "fast": 9,
+        "slow": 120
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 27.659574468085108,
+      "worst_month_pct": -3.27774586144437
+    },
+    "S006/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 47,
+      "engine_params": {
+        "sl_atr": 2.0,
+        "trail_atr": 3.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 733.4983604012482,
+      "long_trades": 22,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -16.541133777201033,
+      "method": "ema_trend",
+      "monthly": [
+        {
+          "ending_equity": 9832.648117077137,
+          "month": "2025-01",
+          "net_change_usd": -167.3518829228633,
+          "return_pct": -1.6735188292286374,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9722.430531780736,
+          "month": "2025-02",
+          "net_change_usd": -110.21758529640101,
+          "return_pct": -1.120934909741933,
+          "starting_equity": 9832.648117077137
+        },
+        {
+          "ending_equity": 10276.488195289101,
+          "month": "2025-03",
+          "net_change_usd": 554.0576635083653,
+          "return_pct": 5.698756722377785,
+          "starting_equity": 9722.430531780736
+        },
+        {
+          "ending_equity": 10674.906974798178,
+          "month": "2025-04",
+          "net_change_usd": 398.41877950907656,
+          "return_pct": 3.8769935014542956,
+          "starting_equity": 10276.488195289101
+        },
+        {
+          "ending_equity": 10857.641501226246,
+          "month": "2025-05",
+          "net_change_usd": 182.73452642806842,
+          "return_pct": 1.7118137596840555,
+          "starting_equity": 10674.906974798178
+        },
+        {
+          "ending_equity": 10568.514078554224,
+          "month": "2025-06",
+          "net_change_usd": -289.12742267202157,
+          "return_pct": -2.6628934344476884,
+          "starting_equity": 10857.641501226246
+        },
+        {
+          "ending_equity": 10355.128306250454,
+          "month": "2025-07",
+          "net_change_usd": -213.38577230377086,
+          "return_pct": -2.0190707105815053,
+          "starting_equity": 10568.514078554224
+        },
+        {
+          "ending_equity": 9981.337470254173,
+          "month": "2025-08",
+          "net_change_usd": -373.7908359962803,
+          "return_pct": -3.60971708839819,
+          "starting_equity": 10355.128306250454
+        },
+        {
+          "ending_equity": 10053.434190362757,
+          "month": "2025-09",
+          "net_change_usd": 72.09672010858412,
+          "return_pct": 0.7223152240212638,
+          "starting_equity": 9981.337470254173
+        },
+        {
+          "ending_equity": 10062.796404108836,
+          "month": "2025-10",
+          "net_change_usd": 9.36221374607885,
+          "return_pct": 0.09312453405279086,
+          "starting_equity": 10053.434190362757
+        },
+        {
+          "ending_equity": 10065.285504673097,
+          "month": "2025-11",
+          "net_change_usd": 2.4891005642602977,
+          "return_pct": 0.024735674501408234,
+          "starting_equity": 10062.796404108836
+        },
+        {
+          "ending_equity": 10146.68236286066,
+          "month": "2025-12",
+          "net_change_usd": 81.39685818756334,
+          "return_pct": 0.8086890148299553,
+          "starting_equity": 10065.285504673097
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -586.8159975405842,
+      "net_usd": 146.68236286065985,
+      "original_python_executed": true,
+      "profit_factor": 1.0470904588403427,
+      "profitable_months": 7,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 25,
+      "signal_params": {
+        "adx_min": 20,
+        "fast": 9,
+        "slow": 120
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 27.659574468085108,
+      "worst_month_pct": -3.60971708839819
+    },
+    "S007/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 328,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 2.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 249.1816179405576,
+      "long_trades": 146,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -18.129640334683117,
+      "method": "bollinger_mr",
+      "monthly": [
+        {
+          "ending_equity": 9329.747674850643,
+          "month": "2025-01",
+          "net_change_usd": -670.2523251493567,
+          "return_pct": -6.702523251493564,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9507.868856054514,
+          "month": "2025-02",
+          "net_change_usd": 178.12118120387095,
+          "return_pct": 1.9091746895150807,
+          "starting_equity": 9329.747674850643
+        },
+        {
+          "ending_equity": 9437.157639141928,
+          "month": "2025-03",
+          "net_change_usd": -70.71121691258668,
+          "return_pct": -0.7437125814746426,
+          "starting_equity": 9507.868856054514
+        },
+        {
+          "ending_equity": 9449.55280040281,
+          "month": "2025-04",
+          "net_change_usd": 12.39516126088165,
+          "return_pct": 0.13134422179694738,
+          "starting_equity": 9437.157639141928
+        },
+        {
+          "ending_equity": 9550.288671803215,
+          "month": "2025-05",
+          "net_change_usd": 100.73587140040581,
+          "return_pct": 1.066038504976774,
+          "starting_equity": 9449.55280040281
+        },
+        {
+          "ending_equity": 9550.778855575434,
+          "month": "2025-06",
+          "net_change_usd": 0.4901837722190976,
+          "return_pct": 0.00513265922177375,
+          "starting_equity": 9550.288671803215
+        },
+        {
+          "ending_equity": 9420.46094655253,
+          "month": "2025-07",
+          "net_change_usd": -130.31790902290413,
+          "return_pct": -1.364474154344264,
+          "starting_equity": 9550.778855575434
+        },
+        {
+          "ending_equity": 10221.07885463433,
+          "month": "2025-08",
+          "net_change_usd": 800.6179080818001,
+          "return_pct": 8.498712670474905,
+          "starting_equity": 9420.46094655253
+        },
+        {
+          "ending_equity": 9689.97343920769,
+          "month": "2025-09",
+          "net_change_usd": -531.1054154266403,
+          "return_pct": -5.196177653847489,
+          "starting_equity": 10221.07885463433
+        },
+        {
+          "ending_equity": 8797.100315228518,
+          "month": "2025-10",
+          "net_change_usd": -892.8731239791723,
+          "return_pct": -9.214402181603699,
+          "starting_equity": 9689.97343920769
+        },
+        {
+          "ending_equity": 8778.925190500171,
+          "month": "2025-11",
+          "net_change_usd": -18.175124728346418,
+          "return_pct": -0.2066035861485349,
+          "starting_equity": 8797.100315228518
+        },
+        {
+          "ending_equity": 9088.839821706695,
+          "month": "2025-12",
+          "net_change_usd": 309.91463120652406,
+          "return_pct": 3.5302115518866417,
+          "starting_equity": 8778.925190500171
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -1160.3417962338647,
+      "net_usd": -911.1601782933049,
+      "original_python_executed": true,
+      "profit_factor": 0.936867207733242,
+      "profitable_months": 6,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 182,
+      "signal_params": {
+        "bb_k": 2.0,
+        "bb_n": 20,
+        "rsi_lo": 15,
+        "rsi_n": 2
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 52.74390243902439,
+      "worst_month_pct": -9.214402181603699
+    },
+    "S007/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 328,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 2.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 212.91535514856955,
+      "long_trades": 146,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -27.740681904904097,
+      "method": "bollinger_mr",
+      "monthly": [
+        {
+          "ending_equity": 9166.647439653763,
+          "month": "2025-01",
+          "net_change_usd": -833.3525603462367,
+          "return_pct": -8.333525603462366,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9184.468230124208,
+          "month": "2025-02",
+          "net_change_usd": 17.82079047044499,
+          "return_pct": 0.1944090310853852,
+          "starting_equity": 9166.647439653763
+        },
+        {
+          "ending_equity": 8929.556928991273,
+          "month": "2025-03",
+          "net_change_usd": -254.91130113293548,
+          "return_pct": -2.775460644491645,
+          "starting_equity": 9184.468230124208
+        },
+        {
+          "ending_equity": 8858.3829379285,
+          "month": "2025-04",
+          "net_change_usd": -71.17399106277298,
+          "return_pct": -0.7970607234911609,
+          "starting_equity": 8929.556928991273
+        },
+        {
+          "ending_equity": 8847.41047388191,
+          "month": "2025-05",
+          "net_change_usd": -10.972464046590176,
+          "return_pct": -0.1238653163164849,
+          "starting_equity": 8858.3829379285
+        },
+        {
+          "ending_equity": 8750.660089889012,
+          "month": "2025-06",
+          "net_change_usd": -96.7503839928977,
+          "return_pct": -1.0935446510423663,
+          "starting_equity": 8847.41047388191
+        },
+        {
+          "ending_equity": 8481.353999651114,
+          "month": "2025-07",
+          "net_change_usd": -269.3060902378984,
+          "return_pct": -3.0775517214874926,
+          "starting_equity": 8750.660089889012
+        },
+        {
+          "ending_equity": 9033.273730316643,
+          "month": "2025-08",
+          "net_change_usd": 551.9197306655296,
+          "return_pct": 6.507448347141653,
+          "starting_equity": 8481.353999651114
+        },
+        {
+          "ending_equity": 8423.4396718549,
+          "month": "2025-09",
+          "net_change_usd": -609.8340584617436,
+          "return_pct": -6.750975080220078,
+          "starting_equity": 9033.273730316643
+        },
+        {
+          "ending_equity": 7574.430176394931,
+          "month": "2025-10",
+          "net_change_usd": -849.009495459969,
+          "return_pct": -10.079130717784457,
+          "starting_equity": 8423.4396718549
+        },
+        {
+          "ending_equity": 7506.415891648213,
+          "month": "2025-11",
+          "net_change_usd": -68.01428474671775,
+          "return_pct": -0.8979458937872109,
+          "starting_equity": 7574.430176394931
+        },
+        {
+          "ending_equity": 7687.402238998806,
+          "month": "2025-12",
+          "net_change_usd": 180.98634735059295,
+          "return_pct": 2.411088726804511,
+          "starting_equity": 7506.415891648213
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -2525.5131161497725,
+      "net_usd": -2312.597761001194,
+      "original_python_executed": true,
+      "profit_factor": 0.8331453523008268,
+      "profitable_months": 3,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 182,
+      "signal_params": {
+        "bb_k": 2.0,
+        "bb_n": 20,
+        "rsi_lo": 15,
+        "rsi_n": 2
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 52.4390243902439,
+      "worst_month_pct": -10.079130717784457
+    },
+    "S008/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 236,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 1.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 301.22546319294037,
+      "long_trades": 164,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -15.915564877911647,
+      "method": "rsi_pullback",
+      "monthly": [
+        {
+          "ending_equity": 9797.53224696718,
+          "month": "2025-01",
+          "net_change_usd": -202.46775303282084,
+          "return_pct": -2.0246775303282116,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 10252.766763010823,
+          "month": "2025-02",
+          "net_change_usd": 455.23451604364345,
+          "return_pct": 4.646420185905087,
+          "starting_equity": 9797.53224696718
+        },
+        {
+          "ending_equity": 10594.422784291526,
+          "month": "2025-03",
+          "net_change_usd": 341.6560212807035,
+          "return_pct": 3.332329986412108,
+          "starting_equity": 10252.766763010823
+        },
+        {
+          "ending_equity": 10430.865497271157,
+          "month": "2025-04",
+          "net_change_usd": -163.55728702036868,
+          "return_pct": -1.5438055508118609,
+          "starting_equity": 10594.422784291526
+        },
+        {
+          "ending_equity": 9941.964323595965,
+          "month": "2025-05",
+          "net_change_usd": -488.9011736751927,
+          "return_pct": -4.687062390010643,
+          "starting_equity": 10430.865497271157
+        },
+        {
+          "ending_equity": 9583.558732779675,
+          "month": "2025-06",
+          "net_change_usd": -358.40559081629,
+          "return_pct": -3.6049776397372613,
+          "starting_equity": 9941.964323595965
+        },
+        {
+          "ending_equity": 9382.910088036951,
+          "month": "2025-07",
+          "net_change_usd": -200.64864474272326,
+          "return_pct": -2.0936757454871446,
+          "starting_equity": 9583.558732779675
+        },
+        {
+          "ending_equity": 9466.378533912393,
+          "month": "2025-08",
+          "net_change_usd": 83.46844587544183,
+          "return_pct": 0.8895795130964945,
+          "starting_equity": 9382.910088036951
+        },
+        {
+          "ending_equity": 9265.051778753812,
+          "month": "2025-09",
+          "net_change_usd": -201.32675515858136,
+          "return_pct": -2.12675580674645,
+          "starting_equity": 9466.378533912393
+        },
+        {
+          "ending_equity": 9483.472563932659,
+          "month": "2025-10",
+          "net_change_usd": 218.42078517884693,
+          "return_pct": 2.35746966552004,
+          "starting_equity": 9265.051778753812
+        },
+        {
+          "ending_equity": 9671.574631403784,
+          "month": "2025-11",
+          "net_change_usd": 188.10206747112534,
+          "return_pct": 1.9834724696363937,
+          "starting_equity": 9483.472563932659
+        },
+        {
+          "ending_equity": 10268.80172041854,
+          "month": "2025-12",
+          "net_change_usd": 597.2270890147556,
+          "return_pct": 6.17507605303016,
+          "starting_equity": 9671.574631403784
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -32.42374277440575,
+      "net_usd": 268.80172041853984,
+      "original_python_executed": true,
+      "profit_factor": 1.0401336164311579,
+      "profitable_months": 6,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 72,
+      "signal_params": {
+        "buy_below": 10,
+        "exit_above": 55,
+        "rsi_n": 2,
+        "trend_n": 100
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 63.983050847457626,
+      "worst_month_pct": -4.687062390010643
+    },
+    "S008/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 236,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 1.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 259.13600600787163,
+      "long_trades": 164,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -22.055448057411166,
+      "method": "rsi_pullback",
+      "monthly": [
+        {
+          "ending_equity": 9654.195669841512,
+          "month": "2025-01",
+          "net_change_usd": -345.8043301584876,
+          "return_pct": -3.458043301584879,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9920.57257728344,
+          "month": "2025-02",
+          "net_change_usd": 266.37690744192696,
+          "return_pct": 2.7591828107861316,
+          "starting_equity": 9654.195669841512
+        },
+        {
+          "ending_equity": 10089.095474388301,
+          "month": "2025-03",
+          "net_change_usd": 168.52289710486184,
+          "return_pct": 1.6987214779392135,
+          "starting_equity": 9920.57257728344
+        },
+        {
+          "ending_equity": 9843.759903894002,
+          "month": "2025-04",
+          "net_change_usd": -245.33557049429874,
+          "return_pct": -2.4316904435793707,
+          "starting_equity": 10089.095474388301
+        },
+        {
+          "ending_equity": 9262.781081956247,
+          "month": "2025-05",
+          "net_change_usd": -580.9788219377551,
+          "return_pct": -5.902001141941005,
+          "starting_equity": 9843.759903894002
+        },
+        {
+          "ending_equity": 8822.432812326906,
+          "month": "2025-06",
+          "net_change_usd": -440.3482696293413,
+          "return_pct": -4.753953113359577,
+          "starting_equity": 9262.781081956247
+        },
+        {
+          "ending_equity": 8494.615562193276,
+          "month": "2025-07",
+          "net_change_usd": -327.8172501336303,
+          "return_pct": -3.7157239630728256,
+          "starting_equity": 8822.432812326906
+        },
+        {
+          "ending_equity": 8390.591045498184,
+          "month": "2025-08",
+          "net_change_usd": -104.02451669509173,
+          "return_pct": -1.2245935785260342,
+          "starting_equity": 8494.615562193276
+        },
+        {
+          "ending_equity": 8063.381406178472,
+          "month": "2025-09",
+          "net_change_usd": -327.20963931971164,
+          "return_pct": -3.899720979671273,
+          "starting_equity": 8390.591045498184
+        },
+        {
+          "ending_equity": 8194.687653374813,
+          "month": "2025-10",
+          "net_change_usd": 131.30624719634034,
+          "return_pct": 1.6284265940307519,
+          "starting_equity": 8063.381406178472
+        },
+        {
+          "ending_equity": 8298.88258268706,
+          "month": "2025-11",
+          "net_change_usd": 104.19492931224704,
+          "return_pct": 1.2714936031678503,
+          "starting_equity": 8194.687653374813
+        },
+        {
+          "ending_equity": 8723.535734405756,
+          "month": "2025-12",
+          "net_change_usd": 424.6531517186959,
+          "return_pct": 5.116991926173253,
+          "starting_equity": 8298.88258268706
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -1535.6002716021148,
+      "net_usd": -1276.4642655942444,
+      "original_python_executed": true,
+      "profit_factor": 0.8102884393690096,
+      "profitable_months": 5,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 72,
+      "signal_params": {
+        "buy_below": 10,
+        "exit_above": 55,
+        "rsi_n": 2,
+        "trend_n": 100
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 58.898305084745765,
+      "worst_month_pct": -5.902001141941005
+    },
+    "S009/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 173,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 3.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 280.82209709399837,
+      "long_trades": 100,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -11.829978352043868,
+      "method": "session_breakout",
+      "monthly": [
+        {
+          "ending_equity": 9980.506658262071,
+          "month": "2025-01",
+          "net_change_usd": -19.49334173792886,
+          "return_pct": -0.19493341737928382,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9796.329708758196,
+          "month": "2025-02",
+          "net_change_usd": -184.17694950387522,
+          "return_pct": -1.8453667314715871,
+          "starting_equity": 9980.506658262071
+        },
+        {
+          "ending_equity": 9714.406525839107,
+          "month": "2025-03",
+          "net_change_usd": -81.9231829190885,
+          "return_pct": -0.8362640433166146,
+          "starting_equity": 9796.329708758196
+        },
+        {
+          "ending_equity": 10002.738323104863,
+          "month": "2025-04",
+          "net_change_usd": 288.3317972657551,
+          "return_pct": 2.9680845299074887,
+          "starting_equity": 9714.406525839107
+        },
+        {
+          "ending_equity": 10166.025592438007,
+          "month": "2025-05",
+          "net_change_usd": 163.28726933314465,
+          "return_pct": 1.6324256824351346,
+          "starting_equity": 10002.738323104863
+        },
+        {
+          "ending_equity": 10266.20148420498,
+          "month": "2025-06",
+          "net_change_usd": 100.1758917669722,
+          "return_pct": 0.9853987761105687,
+          "starting_equity": 10166.025592438007
+        },
+        {
+          "ending_equity": 10176.117273186715,
+          "month": "2025-07",
+          "net_change_usd": -90.08421101826389,
+          "return_pct": -0.8774833725683551,
+          "starting_equity": 10266.20148420498
+        },
+        {
+          "ending_equity": 10403.205022692808,
+          "month": "2025-08",
+          "net_change_usd": 227.08774950609222,
+          "return_pct": 2.2315755942047932,
+          "starting_equity": 10176.117273186715
+        },
+        {
+          "ending_equity": 10168.694967474808,
+          "month": "2025-09",
+          "net_change_usd": -234.51005521799925,
+          "return_pct": -2.254209685442665,
+          "starting_equity": 10403.205022692808
+        },
+        {
+          "ending_equity": 10162.737536516182,
+          "month": "2025-10",
+          "net_change_usd": -5.9574309586259915,
+          "return_pct": -0.05858599336179271,
+          "starting_equity": 10168.694967474808
+        },
+        {
+          "ending_equity": 9845.486305390994,
+          "month": "2025-11",
+          "net_change_usd": -317.2512311251885,
+          "return_pct": -3.1217103657873557,
+          "starting_equity": 10162.737536516182
+        },
+        {
+          "ending_equity": 9544.462104935743,
+          "month": "2025-12",
+          "net_change_usd": -301.02420045525105,
+          "return_pct": -3.057484324470816,
+          "starting_equity": 9845.486305390994
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -736.3599921582536,
+      "net_usd": -455.5378950642571,
+      "original_python_executed": true,
+      "profit_factor": 0.922521602786177,
+      "profitable_months": 4,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 73,
+      "signal_params": {
+        "buffer_frac": 0.0,
+        "close_hour": 21,
+        "range_end": 6,
+        "range_start": 0,
+        "trade_end": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 45.08670520231214,
+      "worst_month_pct": -3.1217103657873557
+    },
+    "S009/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 173,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 3.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 264.0198034051242,
+      "long_trades": 100,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -13.29828587957065,
+      "method": "session_breakout",
+      "monthly": [
+        {
+          "ending_equity": 9920.824370497214,
+          "month": "2025-01",
+          "net_change_usd": -79.17562950278625,
+          "return_pct": -0.7917562950278678,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9672.306525001537,
+          "month": "2025-02",
+          "net_change_usd": -248.51784549567674,
+          "return_pct": -2.505012045518362,
+          "starting_equity": 9920.824370497214
+        },
+        {
+          "ending_equity": 9498.146595970293,
+          "month": "2025-03",
+          "net_change_usd": -174.15992903124425,
+          "return_pct": -1.8006039053980127,
+          "starting_equity": 9672.306525001537
+        },
+        {
+          "ending_equity": 9755.541579594696,
+          "month": "2025-04",
+          "net_change_usd": 257.3949836244028,
+          "return_pct": 2.7099495783062144,
+          "starting_equity": 9498.146595970293
+        },
+        {
+          "ending_equity": 9870.462179371578,
+          "month": "2025-05",
+          "net_change_usd": 114.92059977688223,
+          "return_pct": 1.1780032798717865,
+          "starting_equity": 9755.541579594696
+        },
+        {
+          "ending_equity": 9921.822141064506,
+          "month": "2025-06",
+          "net_change_usd": 51.359961692927754,
+          "return_pct": 0.5203399877288906,
+          "starting_equity": 9870.462179371578
+        },
+        {
+          "ending_equity": 9762.368990540075,
+          "month": "2025-07",
+          "net_change_usd": -159.45315052443038,
+          "return_pct": -1.6070954332519705,
+          "starting_equity": 9921.822141064506
+        },
+        {
+          "ending_equity": 9903.820371403961,
+          "month": "2025-08",
+          "net_change_usd": 141.4513808638858,
+          "return_pct": 1.4489452406578174,
+          "starting_equity": 9762.368990540075
+        },
+        {
+          "ending_equity": 9637.657340954209,
+          "month": "2025-09",
+          "net_change_usd": -266.1630304497521,
+          "return_pct": -2.6874783716621553,
+          "starting_equity": 9903.820371403961
+        },
+        {
+          "ending_equity": 9594.082347765589,
+          "month": "2025-10",
+          "net_change_usd": -43.57499318862028,
+          "return_pct": -0.45213262566882184,
+          "starting_equity": 9637.657340954209
+        },
+        {
+          "ending_equity": 9268.92897481632,
+          "month": "2025-11",
+          "net_change_usd": -325.1533729492694,
+          "return_pct": -3.389103419828332,
+          "starting_equity": 9594.082347765589
+        },
+        {
+          "ending_equity": 8959.84238867436,
+          "month": "2025-12",
+          "net_change_usd": -309.08658614195883,
+          "return_pct": -3.33465265492644,
+          "starting_equity": 9268.92897481632
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -1304.1774147307597,
+      "net_usd": -1040.1576113256397,
+      "original_python_executed": true,
+      "profit_factor": 0.8268993977054994,
+      "profitable_months": 4,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 73,
+      "signal_params": {
+        "buffer_frac": 0.0,
+        "close_hour": 21,
+        "range_end": 6,
+        "range_start": 0,
+        "trade_end": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 44.50867052023121,
+      "worst_month_pct": -3.389103419828332
+    },
+    "S010/base": {
+      "bars": 5866,
+      "breakeven": 0,
+      "closed_trades": 83,
+      "costs": {
+        "commission_usd_per_oz_round_trip": 0.07,
+        "label": "Illustrative base",
+        "slippage_usd_per_oz_each_side": 0.05,
+        "spread_usd_per_oz": 0.3
+      },
+      "end_utc": "2025-12-31T20:00:00+00:00",
+      "ending_marked_equity_usd": 25032.76,
+      "gold_buy_hold_1x_pct": 64.3,
+      "initial_usd": 10000.0,
+      "intrabar_dd_financing_margin_verified": false,
+      "largest_closed_winner_usd": 3890.2467,
+      "leverage": 3.28,
+      "losses": 44,
+      "marked_return_pct": 150.328,
+      "max_marked_drawdown_pct": -33.671,
+      "method": "S010_2025_SOURCE_FIXED_MA12_MA34_RSI14_NEXT_OPEN_v1",
+      "monthly": [
+        {
+          "closed_trades": 4,
+          "ending_equity": 11621.54,
+          "month": "2025-01",
+          "net_change_usd": 1621.54,
+          "return_pct": 16.215,
+          "starting_equity": 10000.0
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 12644.08,
+          "month": "2025-02",
+          "net_change_usd": 1022.55,
+          "return_pct": 8.799,
+          "starting_equity": 11621.54
+        },
+        {
+          "closed_trades": 5,
+          "ending_equity": 16159.75,
+          "month": "2025-03",
+          "net_change_usd": 3515.66,
+          "return_pct": 27.805,
+          "starting_equity": 12644.08
+        },
+        {
+          "closed_trades": 6,
+          "ending_equity": 16515.89,
+          "month": "2025-04",
+          "net_change_usd": 356.14,
+          "return_pct": 2.204,
+          "starting_equity": 16159.75
+        },
+        {
+          "closed_trades": 9,
+          "ending_equity": 14765.64,
+          "month": "2025-05",
+          "net_change_usd": -1750.24,
+          "return_pct": -10.597,
+          "starting_equity": 16515.89
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 15926.93,
+          "month": "2025-06",
+          "net_change_usd": 1161.29,
+          "return_pct": 7.865,
+          "starting_equity": 14765.64
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 15537.06,
+          "month": "2025-07",
+          "net_change_usd": -389.87,
+          "return_pct": -2.448,
+          "starting_equity": 15926.93
+        },
+        {
+          "closed_trades": 5,
+          "ending_equity": 15464.37,
+          "month": "2025-08",
+          "net_change_usd": -72.69,
+          "return_pct": -0.468,
+          "starting_equity": 15537.06
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 20973.34,
+          "month": "2025-09",
+          "net_change_usd": 5508.96,
+          "return_pct": 35.624,
+          "starting_equity": 15464.37
+        },
+        {
+          "closed_trades": 6,
+          "ending_equity": 20384.07,
+          "month": "2025-10",
+          "net_change_usd": -589.26,
+          "return_pct": -2.81,
+          "starting_equity": 20973.34
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 23359.97,
+          "month": "2025-11",
+          "net_change_usd": 2975.89,
+          "return_pct": 14.599,
+          "starting_equity": 20384.07
+        },
+        {
+          "closed_trades": 11,
+          "ending_equity": 25032.76,
+          "month": "2025-12",
+          "net_change_usd": 1672.8,
+          "return_pct": 7.161,
+          "starting_equity": 23359.97
+        }
+      ],
+      "net_closed_trade_usd": 15032.76,
+      "net_marked_pnl_usd": 15032.76,
+      "open_position": null,
+      "original_execution_parity": false,
+      "original_signal_parity": true,
+      "profit_factor": 1.66,
+      "qualification": "MODELLED_ONLY_NOT_QUALIFIED",
+      "risk_flags": [
+        "No strategy stop-loss",
+        "3.28x leverage",
+        "No leverage margin call or financing model",
+        "HistData BID-only, synthetic ASK costs",
+        "Unverified original publisher tick-level replication"
+      ],
+      "sharpe_approx": 2.272,
+      "signals": {
+        "buy": 88,
+        "sell": 91
+      },
+      "source_commit": "61dd6b2dd8b6550f668b828e023d7d808bfd8fbd",
+      "start_utc": "2025-01-01T23:00:00+00:00",
+      "status": "HISTORICAL_PROMISING",
+      "sum_closed_trade_gross_usd": 15652.54,
+      "sum_paid_execution_cost_usd": 619.78,
+      "win_rate_pct": 46.99,
+      "wins": 39
+    },
+    "S010/stress": {
+      "bars": 5866,
+      "breakeven": 0,
+      "closed_trades": 83,
+      "costs": {
+        "commission_usd_per_oz_round_trip": 0.14,
+        "label": "Illustrative stress",
+        "slippage_usd_per_oz_each_side": 0.25,
+        "spread_usd_per_oz": 0.8
+      },
+      "end_utc": "2025-12-31T20:00:00+00:00",
+      "ending_marked_equity_usd": 23186.28,
+      "gold_buy_hold_1x_pct": 64.3,
+      "initial_usd": 10000.0,
+      "intrabar_dd_financing_margin_verified": false,
+      "largest_closed_winner_usd": 3643.6712,
+      "leverage": 3.28,
+      "losses": 46,
+      "marked_return_pct": 131.863,
+      "max_marked_drawdown_pct": -33.944,
+      "method": "S010_2025_SOURCE_FIXED_MA12_MA34_RSI14_NEXT_OPEN_v1",
+      "monthly": [
+        {
+          "closed_trades": 4,
+          "ending_equity": 11558.18,
+          "month": "2025-01",
+          "net_change_usd": 1558.18,
+          "return_pct": 15.582,
+          "starting_equity": 10000.0
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 12490.01,
+          "month": "2025-02",
+          "net_change_usd": 931.83,
+          "return_pct": 8.062,
+          "starting_equity": 11558.18
+        },
+        {
+          "closed_trades": 5,
+          "ending_equity": 15866.9,
+          "month": "2025-03",
+          "net_change_usd": 3376.88,
+          "return_pct": 27.037,
+          "starting_equity": 12490.01
+        },
+        {
+          "closed_trades": 6,
+          "ending_equity": 16132.52,
+          "month": "2025-04",
+          "net_change_usd": 265.63,
+          "return_pct": 1.674,
+          "starting_equity": 15866.9
+        },
+        {
+          "closed_trades": 9,
+          "ending_equity": 14296.17,
+          "month": "2025-05",
+          "net_change_usd": -1836.35,
+          "return_pct": -11.383,
+          "starting_equity": 16132.52
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 15293.15,
+          "month": "2025-06",
+          "net_change_usd": 996.98,
+          "return_pct": 6.974,
+          "starting_equity": 14296.17
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 14805.15,
+          "month": "2025-07",
+          "net_change_usd": -487.99,
+          "return_pct": -3.191,
+          "starting_equity": 15293.15
+        },
+        {
+          "closed_trades": 5,
+          "ending_equity": 14666.18,
+          "month": "2025-08",
+          "net_change_usd": -138.97,
+          "return_pct": -0.939,
+          "starting_equity": 14805.15
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 19786.72,
+          "month": "2025-09",
+          "net_change_usd": 5120.54,
+          "return_pct": 34.914,
+          "starting_equity": 14666.18
+        },
+        {
+          "closed_trades": 6,
+          "ending_equity": 19126.72,
+          "month": "2025-10",
+          "net_change_usd": -660.0,
+          "return_pct": -3.336,
+          "starting_equity": 19786.72
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 21800.5,
+          "month": "2025-11",
+          "net_change_usd": 2673.78,
+          "return_pct": 13.979,
+          "starting_equity": 19126.72
+        },
+        {
+          "closed_trades": 11,
+          "ending_equity": 23186.28,
+          "month": "2025-12",
+          "net_change_usd": 1385.78,
+          "return_pct": 6.357,
+          "starting_equity": 21800.5
+        }
+      ],
+      "net_closed_trade_usd": 13186.28,
+      "net_marked_pnl_usd": 13186.28,
+      "open_position": null,
+      "original_execution_parity": false,
+      "original_signal_parity": true,
+      "profit_factor": 1.588,
+      "qualification": "MODELLED_ONLY_NOT_QUALIFIED",
+      "risk_flags": [
+        "No strategy stop-loss",
+        "3.28x leverage",
+        "No leverage margin call or financing model",
+        "HistData BID-only, synthetic ASK costs",
+        "Unverified original publisher tick-level replication"
+      ],
+      "sharpe_approx": 2.1,
+      "signals": {
+        "buy": 88,
+        "sell": 91
+      },
+      "source_commit": "61dd6b2dd8b6550f668b828e023d7d808bfd8fbd",
+      "start_utc": "2025-01-01T23:00:00+00:00",
+      "status": "HISTORICAL_PROMISING",
+      "sum_closed_trade_gross_usd": 15006.59,
+      "sum_paid_execution_cost_usd": 1820.31,
+      "win_rate_pct": 44.58,
+      "wins": 37
+    }
+  },
+  "orders": 0,
+  "portfolio": {
+    "reason": "Five native engines fail causal sizing; shared broker margin/hedging unverified; no sum of independent $10k accounts",
+    "status": "BLOCKED"
+  },
+  "schema": "oracle.gold.batch01.v1",
+  "sealed_oos": false,
+  "sha256": "fb9ecd1f506267b29ff2da080cb32d4b654a3eb98128bb9dada71ee6ba0f7365",
+  "signal_overlap": [
+    {
+      "a": "S005",
+      "any_signal_union": 599,
+      "b": "S006",
+      "independence_proven": false,
+      "joint_signal_hours": 11,
+      "same_hour_same_side": 11,
+      "side_correlation_including_zeros": 0.06517858628311647
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 899,
+      "b": "S007",
+      "independence_proven": false,
+      "joint_signal_hours": 340,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.5505212475075786
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 941,
+      "b": "S008",
+      "independence_proven": false,
+      "joint_signal_hours": 2,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.02031533083115316
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 679,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 63,
+      "same_hour_same_side": 63,
+      "side_correlation_including_zeros": 0.19330293717335037
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 724,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 11,
+      "same_hour_same_side": 11,
+      "side_correlation_including_zeros": 0.03597725982442458
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 722,
+      "b": "S007",
+      "independence_proven": false,
+      "joint_signal_hours": 15,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.07848153102246945
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 441,
+      "b": "S008",
+      "independence_proven": false,
+      "joint_signal_hours": 0,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": 0.00031013969793554824
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 238,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 2,
+      "same_hour_same_side": 2,
+      "side_correlation_including_zeros": 0.020082581087267688
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 230,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 3,
+      "same_hour_same_side": 2,
+      "side_correlation_including_zeros": 0.010161007345122292
+    },
+    {
+      "a": "S007",
+      "any_signal_union": 984,
+      "b": "S008",
+      "independence_proven": false,
+      "joint_signal_hours": 86,
+      "same_hour_same_side": 86,
+      "side_correlation_including_zeros": 0.17370082138682427
+    },
+    {
+      "a": "S007",
+      "any_signal_union": 806,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 63,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.17515760832098118
+    },
+    {
+      "a": "S007",
+      "any_signal_union": 832,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 30,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.08615078282494185
+    },
+    {
+      "a": "S008",
+      "any_signal_union": 527,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 46,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.17503862733777867
+    },
+    {
+      "a": "S008",
+      "any_signal_union": 556,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 10,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.03788333547721623
+    },
+    {
+      "a": "S009",
+      "any_signal_union": 362,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 3,
+      "same_hour_same_side": 3,
+      "side_correlation_including_zeros": 0.016545514320051573
+    }
+  ],
+  "source_month_coverage_only_not_market_calendar_certification": true,
+  "source_original_ids_evaluated": [
+    "S005",
+    "S006",
+    "S007",
+    "S008",
+    "S009",
+    "S010"
+  ],
+  "trial_count_scenarios": 12,
+  "year": 2025
+}
