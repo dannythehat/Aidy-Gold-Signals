@@ -16,19 +16,26 @@ import pandas as pd
 
 from gold_hunter.bible_engine import validate_h1
 
-SYSTEMS = (
-    "DONCHIAN_TREND",
-    "EMA_RSI_CROSS",
-    "BOLLINGER_REENTRY",
-    "ASIA_RANGE_BREAK",
-    "ASIA_LIQUIDITY_SWEEP",
+BASELINE_FIVE = (
+    "DONCHIAN_TREND", "EMA_RSI_CROSS", "BOLLINGER_REENTRY",
+    "ASIA_RANGE_BREAK", "ASIA_LIQUIDITY_SWEEP",
 )
+NEW_FIVE = (
+    "PREV_DAY_BREAKOUT", "ADX_DI_POWER", "EMA_PULLBACK",
+    "RSI_RECLAIM", "VOL_COMPRESSION_BREAK",
+)
+SYSTEMS = BASELINE_FIVE + NEW_FIVE
 CANDIDATE_SOURCES = {
     "DONCHIAN_TREND": "AaroNLaU0307/quant-trend-research (Donchian breakout)",
     "EMA_RSI_CROSS": "doaneruby970-hub/gold-trader (EMA, RSI trend research)",
     "BOLLINGER_REENTRY": "succoe/mt5-forx-strategies (Bollinger mean reversion)",
     "ASIA_RANGE_BREAK": "anas1412/orb-backtest-script (Asian opening range)",
     "ASIA_LIQUIDITY_SWEEP": "ajinkyarepale/Gold-London-Liquidity-Backtest (Asia sweep)",
+    "PREV_DAY_BREAKOUT": "baturdenada/gold-sweep-backtester (previous-day H/L break)",
+    "ADX_DI_POWER": "StockSharp/AlgoTrading (ADX DI/DMI directional strength)",
+    "EMA_PULLBACK": "baturdenada/gold-sweep-backtester (trend momentum pullback)",
+    "RSI_RECLAIM": "baturdenada/gold-sweep-backtester (RSI extreme reversal)",
+    "VOL_COMPRESSION_BREAK": "0xh0551/Quant_research (ATR breakout); expansion interpretation is original",
 }
 
 
@@ -76,6 +83,30 @@ def indicators(bars: pd.DataFrame) -> pd.DataFrame:
         asia_high=("high", "max"), asia_low=("low", "min"), count=("high", "size"))
     asia = asia.loc[asia["count"] == 6]
     df = df.join(asia[["asia_high","asia_low"]], on="date")
+    # A previous *completed* trading day is known to all subsequent H1 bars.
+    day = df.groupby("date", sort=True).agg(day_hi=("high","max"),day_lo=("low","min"))
+    previous_day = day.shift(1).rename(columns={
+        "day_hi":"prior_day_hi","day_lo":"prior_day_lo"})
+    df = df.join(previous_day, on="date")
+    # ADX/DMI signal uses no future candles and is calculated independently of
+    # the five frozen original source-method candidates.
+    up, down = h.diff(), -l.diff()
+    pos = pd.Series(np.where((up > down) & (up > 0), up, 0.), index=df.index)
+    neg = pd.Series(np.where((down > up) & (down > 0), down, 0.), index=df.index)
+    wilder = dict(alpha=1/14, adjust=False, min_periods=14)
+    atr_w = tr.ewm(**wilder).mean()
+    df["plus_di"] = 100*pos.ewm(**wilder).mean()/atr_w
+    df["minus_di"] = 100*neg.ewm(**wilder).mean()/atr_w
+    denom = (df["plus_di"]+df["minus_di"]).replace(0,np.nan)
+    dx = (100*(df["plus_di"]-df["minus_di"]).abs()/denom)
+    df["adx14"] = dx.ewm(**wilder).mean()
+    # Close-of-bar volatility expansion from a previously observed contraction;
+    # no current-bar information appears inside any prior rolling threshold.
+    df["prior12hi"] = h.rolling(12,min_periods=12).max().shift(1)
+    df["prior12lo"] = l.rolling(12,min_periods=12).min().shift(1)
+    df["prior_rng12"] = (h-l).rolling(12,min_periods=12).mean().shift(1)
+    df["prior_atr12"] = tr.rolling(12,min_periods=12).mean().shift(1)
+    df["prior_atr48"] = tr.rolling(48,min_periods=48).mean().shift(1)
     return df
 
 
@@ -140,6 +171,44 @@ def signal_tape(raw: pd.DataFrame) -> tuple[pd.DataFrame, tuple[tuple[dict, ...]
                     add("ASIA_LIQUIDITY_SWEEP",1,1.5,2.5)
                 if any(c["system"]=="ASIA_LIQUIDITY_SWEEP" for c in candidates):
                     prior_session_signals.add(("ASIA_LIQUIDITY_SWEEP",day))
+        # Five NEW predeclared methods are experimental and do not alter the
+        # signals or priority of the frozen BASELINE_FIVE.
+        if np.isfinite(row["prior_day_hi"]):
+            if (close > row["prior_day_hi"] and prev["close"] <= prev["prior_day_hi"]
+                    and row["ema50"] > row["ema200"]):
+                add("PREV_DAY_BREAKOUT",1,1.8,3.0)
+            elif (close < row["prior_day_lo"] and prev["close"] >= prev["prior_day_lo"]
+                  and row["ema50"] < row["ema200"]):
+                add("PREV_DAY_BREAKOUT",-1,1.8,3.0)
+        if (np.isfinite(row["adx14"]) and row["adx14"] >= 23):
+            if (row["plus_di"] > row["minus_di"] and
+                    prev["plus_di"] <= prev["minus_di"] and
+                    row["ema50"] > row["ema200"]):
+                add("ADX_DI_POWER",1,2.0,3.0)
+            elif (row["minus_di"] > row["plus_di"] and
+                  prev["minus_di"] <= prev["plus_di"] and
+                  row["ema50"] < row["ema200"]):
+                add("ADX_DI_POWER",-1,2.0,3.0)
+        # Price pulls back through EMA50 and then reclaims it with direction
+        # confirmed independently by EMA200.
+        if (row["ema50"] > row["ema200"] and
+                prev["close"] < prev["ema50"] and close > row["ema50"]):
+            add("EMA_PULLBACK",1,1.7,2.5)
+        elif (row["ema50"] < row["ema200"] and
+              prev["close"] > prev["ema50"] and close < row["ema50"]):
+            add("EMA_PULLBACK",-1,1.7,2.5)
+        if (prev["rsi14"] <= 30 and row["rsi14"] > 30 and close > prev["close"]):
+            add("RSI_RECLAIM",1,1.8,2.5)
+        elif (prev["rsi14"] >= 70 and row["rsi14"] < 70 and close < prev["close"]):
+            add("RSI_RECLAIM",-1,1.8,2.5)
+        if (np.isfinite(row["prior_atr12"]) and
+                np.isfinite(row["prior_atr48"]) and
+                row["prior_atr12"] < .85 * row["prior_atr48"] and
+                (row["high"]-row["low"]) >= 1.5*row["prior_rng12"]):
+            if close > row["prior12hi"] and row["ema12"] > row["ema34"]:
+                add("VOL_COMPRESSION_BREAK",1,2.0,3.0)
+            elif close < row["prior12lo"] and row["ema12"] < row["ema34"]:
+                add("VOL_COMPRESSION_BREAK",-1,2.0,3.0)
         output.append(tuple(candidates))
     return df,tuple(output)
 
@@ -275,8 +344,12 @@ def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
 
 def run_family_matrix(raw: pd.DataFrame, settings: Settings) -> dict:
     df,tape=signal_tape(raw)
-    groups=[("ALL_FIVE",SYSTEMS),
-            ("TREND_PAIR",SYSTEMS[:2]),
-            ("SESSION_PAIR",SYSTEMS[3:]),
-            ("MEAN_REVERSION",("BOLLINGER_REENTRY",))]+[(s,(s,)) for s in SYSTEMS]
+    groups=[
+        ("ALL_FIVE",BASELINE_FIVE),
+        ("TREND_PAIR",BASELINE_FIVE[:2]),
+        ("SESSION_PAIR",BASELINE_FIVE[3:]),
+        ("MEAN_REVERSION",("BOLLINGER_REENTRY",)),
+        ("FIVE_NEW",NEW_FIVE),
+        ("ALL_TEN",SYSTEMS),
+    ]+[(s,(s,)) for s in SYSTEMS]
     return {name:replay(df,tape,arms,settings) for name,arms in groups}
