@@ -146,3 +146,20 @@ def test_source_bound_candidate_tape_matches_uncached_and_rejects_mismatch():
         research_backtest(modified, cfg=cfg, candidate_tape=tape)
     with pytest.raises(ValueError, match='mismatch'):
         research_backtest(df, cfg=Parameters(near_level_atr=.50), candidate_tape=tape)
+
+
+def test_vector_swing_matches_original_two_left_two_right_reference():
+    import numpy as np
+    rng = np.random.default_rng(27828)
+    high = 100 + rng.integers(-8, 9, 150).astype(float)
+    low = high - rng.integers(1, 5, 150)
+    bars = pd.DataFrame({'high': high, 'low': low})
+    a, b = _confirmed_swings(bars)
+    href = []
+    lref = []
+    for i in range(2, len(bars) - 2):
+        if high[i] > max(high[i - 2:i]) and high[i] >= max(high[i + 1:i + 3]):
+            href.append(high[i])
+        if low[i] < min(low[i - 2:i]) and low[i] <= min(low[i + 1:i + 3]):
+            lref.append(low[i])
+    assert a == href and b == lref
