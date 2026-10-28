@@ -15,7 +15,7 @@ import pandas as pd
 
 from gold_hunter.bible_engine import FAMILIES, Parameters, research_backtest
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'artifacts/strategy_lab/s010_paid_customer_example'
 DEST = ROOT / 'artifacts/gold_hunter/bible_2025'
 
