@@ -1,0 +1,27 @@
+name: Oracle Gold phase04 isolated native compiler
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/native_compile.ps1'
+      - 'research/gold_oracle/phase04/mql_compile_pins.json'
+      - '.github/workflows/oracle-gold-phase04-native-compile.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-compiler-only:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticode-verified official compiler only; no terminal/account startup
+        shell: pwsh
+        run: ./scripts/oracle_gold/native_compile.ps1 -OutDir artifacts/oracle_gold/phase04_native_compile
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-phase04-native-compile-receipts
+          path: artifacts/oracle_gold/phase04_native_compile/
+          retention-days: 90
+          if-no-files-found: error
