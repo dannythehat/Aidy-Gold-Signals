@@ -39,6 +39,7 @@ class Parameters:
     near_level_atr: float = .42
     stop_buffer_atr: float = .08
     capital_usd: float = 10000.0
+    quote_model: str = 'fixed'  # 'observed_open_conservative_h1' is a distinct research arm
 
     def validate(self) -> None:
         if not (0 < self.risk_fraction <= .01 and self.min_rr >= 2 and
@@ -46,7 +47,8 @@ class Parameters:
                 0 <= self.slip_usd_oz_each_side < 20 and
                 0 <= self.commission_usd_oz_roundtrip < 20 and
                 .1 <= self.near_level_atr <= 1 and
-                0 <= self.stop_buffer_atr <= .5 and self.capital_usd > 0):
+                0 <= self.stop_buffer_atr <= .5 and self.capital_usd > 0 and
+                self.quote_model in ('fixed', 'observed_open_conservative_h1')):
             raise ValueError("Invalid or non-Bible risk configuration")
 
 
@@ -54,7 +56,11 @@ def validate_h1(bars: pd.DataFrame) -> pd.DataFrame:
     needed = ("open_time_utc", "open", "high", "low", "close", "m1_count")
     if any(col not in bars.columns for col in needed):
         raise ValueError("AIDY source must supply complete native M1-derived H1 BID")
-    df = bars.loc[:, needed].copy()
+    quote_fields = ("observed_open_ask", "observed_open_spread", "observed_max_spread")
+    present = tuple(field for field in quote_fields if field in bars.columns)
+    if present and len(present) != len(quote_fields):
+        raise ValueError("Partial archived ASK/spread evidence is not admissible")
+    df = bars.loc[:, needed + (quote_fields if present else ())].copy()
     df["open_time_utc"] = pd.to_datetime(df["open_time_utc"], utc=True)
     if (df["open_time_utc"].isna().any() or df["open_time_utc"].duplicated().any()
             or not df["open_time_utc"].is_monotonic_increasing):
@@ -71,6 +77,17 @@ def validate_h1(bars: pd.DataFrame) -> pd.DataFrame:
             or not df["high"].ge(df[["open", "low", "close"]].max(axis=1)).all()
             or not df["low"].le(df[["open", "high", "close"]].min(axis=1)).all()):
         raise ValueError("Incomplete/corrupt source or invalid OHLC geometry")
+    if present:
+        for col in quote_fields:
+            df[col] = pd.to_numeric(df[col], errors="raise").astype(float)
+        q = df[list(quote_fields)]
+        if (not np.isfinite(q.to_numpy()).all()
+                or (df["observed_open_ask"] < df["open"] - 1e-5).any()
+                or (df["observed_open_spread"] < 0).any()
+                or (df["observed_max_spread"] < df["observed_open_spread"] - 1e-5).any()
+                or not np.allclose(df["observed_open_ask"] - df["open"],
+                                   df["observed_open_spread"], atol=1e-3, rtol=0)):
+            raise ValueError("Original hourly ASK/spread evidence geometry invalid")
     if len(df) < 500:
         raise ValueError("Insufficient H1 source for multi-timeframe Bible context")
     return df.reset_index(drop=True)
@@ -223,6 +240,11 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
     d = day.iloc[:day["completed_at"].searchsorted(t, side="right")]
     w = week.iloc[:week["completed_at"].searchsorted(t, side="right")]
     c = float(df.iloc[i]["close"])
+    # At decision time the signal candle's OPEN spread is already known.
+    # Never consult a future entry candle to decide Bible admissibility.
+    spread_known = (float(df.iloc[i]["observed_open_spread"])
+                    if cfg.quote_model == "observed_open_conservative_h1"
+                    else cfg.spread_usd_oz)
     ctx = _market(h, d, w, c)
     if ctx["mode"] == "UNKNOWN":
         return []
@@ -257,13 +279,13 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
             is_inside = pattern == "INSIDE"
             # Mother-bar STOP activation: ASK for long, BID for short.
             # One cent/oz is an explicit research-only tick assumption.
-            trigger = ((float(recent[-2]["high"]) + cfg.spread_usd_oz + .01)
+            trigger = ((float(recent[-2]["high"]) + spread_known + .01)
                        if side == 1 else (float(recent[-2]["low"]) - .01)) if is_inside else None
             entry_est = (trigger + side * cfg.slip_usd_oz_each_side if is_inside
-                         else (c + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
+                         else (c + spread_known + cfg.slip_usd_oz_each_side
                                if side == 1 else c - cfg.slip_usd_oz_each_side))
             stop = (stop_edge - side * cfg.stop_buffer_atr * atr +
-                    (cfg.spread_usd_oz if side == -1 else 0.0))
+                    (spread_known if side == -1 else 0.0))
             risk = side * (entry_est - stop)
             if risk <= 0 or risk > 3 * atr:
                 continue
@@ -273,7 +295,7 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
                 continue
             target = min(viable) if side == 1 else max(viable)
             reward = (side * (target - entry_est) -
-                      (cfg.spread_usd_oz if side == -1 else 0.0) -
+                      (spread_known if side == -1 else 0.0) -
                       cfg.slip_usd_oz_each_side - cfg.commission_usd_oz_roundtrip)
             rr = reward / risk
             if rr < cfg.min_rr:
@@ -345,6 +367,8 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             f not in FAMILIES for f in families):
         raise ValueError("Unsupported Bible family or duplicates")
     df = validate_h1(bars)
+    if cfg.quote_model == "observed_open_conservative_h1" and "observed_open_ask" not in df:
+        raise ValueError("Observed quote research requires original hourly BID/ASK evidence")
     if candidate_tape is not None:
         if (type(candidate_tape) is not CandidateTape or
                 candidate_tape.source_sha256 != _candidate_source_hash(df) or
@@ -365,6 +389,11 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
         bar = df.iloc[i]
         bid_open, bid_hi, bid_lo, bid_close = [float(bar[k]) for k in
                                               ("open", "high", "low", "close")]
+        observed = cfg.quote_model == "observed_open_conservative_h1"
+        entry_spread = float(bar["observed_open_spread"]) if observed else cfg.spread_usd_oz
+        short_exit_spread = (float(bar["observed_max_spread"]) if observed
+                             else cfg.spread_usd_oz)
+        ask_open = float(bar["observed_open_ask"]) if observed else bid_open + entry_spread
         if pending is not None:
             p = pending
             side = p["side"]
@@ -378,11 +407,11 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
                     rejections["expired_pending"] += 1
                 else:
                     trigger = p["trigger"]
-                    seen = ((bid_hi + cfg.spread_usd_oz >= trigger)
+                    seen = ((bid_hi + entry_spread >= trigger)
                             if side == 1 else (bid_lo <= trigger))
                     if seen:
                         # A gap through the trigger fills at the worse open.
-                        fill = (max(trigger, bid_open + cfg.spread_usd_oz) +
+                        fill = (max(trigger, ask_open) +
                                 cfg.slip_usd_oz_each_side if side == 1 else
                                 min(trigger, bid_open) - cfg.slip_usd_oz_each_side)
                         pending = None
@@ -396,12 +425,12 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             else:
                 # Ordinary Bible patterns enter at the NEXT native BID/ASK open.
                 pending = None
-                fill = (bid_open + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
+                fill = (ask_open + cfg.slip_usd_oz_each_side
                         if side == 1 else bid_open - cfg.slip_usd_oz_each_side)
             if fill is not None:
                 risk = side * (fill - p["stop"])
                 reward = (side * (p["target"] - fill) -
-                          (cfg.spread_usd_oz if side == -1 else 0.0) -
+                          (short_exit_spread if side == -1 else 0.0) -
                           cfg.slip_usd_oz_each_side -
                           cfg.commission_usd_oz_roundtrip)
                 if risk > 0 and reward / risk >= cfg.min_rr and equity > 0:
@@ -422,8 +451,8 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             # Real bid proxy has no historical ask. For short stop/target we
             # require synthetic ask adjusted levels, never free bid exits.
             hi_exit, lo_exit = ((bid_hi, bid_lo) if side == 1 else
-                                (bid_hi + cfg.spread_usd_oz, bid_lo + cfg.spread_usd_oz))
-            at_open_exit = bid_open if side == 1 else bid_open + cfg.spread_usd_oz
+                                (bid_hi + short_exit_spread, bid_lo + short_exit_spread))
+            at_open_exit = bid_open if side == 1 else ask_open
             stop_hit = lo_exit <= stop if side == 1 else hi_exit >= stop
             target_hit = hi_exit >= target if side == 1 else lo_exit <= target
             reason, exit_price = None, None
@@ -450,7 +479,7 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
                                  "reason": reason, "net_pnl_usd": round(pnl, 4)})
                 position = None
         if position is not None:
-            close_exit = bid_close if position["side"] == 1 else bid_close + cfg.spread_usd_oz
+            close_exit = bid_close if position["side"] == 1 else bid_close + short_exit_spread
             marked = equity + ((close_exit - position["entry"]) * position["side"] -
                                cfg.commission_usd_oz_roundtrip) * position["ounces"]
         else:
@@ -483,9 +512,11 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
         unrealized_position["unrealized_model_pnl_usd"] = round(
             float(eq[-1]) - equity, 4)
     result = {
-        "schema": "gold_hunter.bible_multisystem_research.v1_1_bible_inside_stop_bidask",
+        "schema": "gold_hunter.bible_multisystem_research.v1_2_observed_hourly_quotes",
         "status": "HISTORICAL_RESEARCH_ONLY",
-        "data_basis": "H1_NATIVE_M1_HISTDATA_BID_WITH_ILLUSTRATIVE_ASK",
+        "data_basis": ("H1_OBSERVED_ORIGINAL_OPEN_ASK_AND_MAX_SPREAD_BOUNDS"
+                       if cfg.quote_model == "observed_open_conservative_h1" else
+                       "H1_NATIVE_M1_HISTDATA_BID_WITH_ILLUSTRATIVE_ASK"),
         "execution_quote_basis": "LONG_ENTRY_ASK_SHORT_ENTRY_BID_LONG_EXIT_BID_SHORT_EXIT_ASK",
         "price_rows": len(df), "start_utc": df.iloc[0]["open_time_utc"].isoformat(),
         "end_utc": df.iloc[-1]["open_time_utc"].isoformat(),
@@ -499,7 +530,10 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
         "unrealized_open_position": unrealized_position,
         "max_marked_drawdown_percent": round(float(dd.min()), 3),
         "trades": trades, "equity_marks": marks,
-        "limitations": ["Retrospective BID source; synthetic ASK/spread and slippage",
+        "limitations": [("Observed original ASK only at H1 OPEN, maximum hourly spread is NOT"
+                         " contemporaneous with BID extreme, intrabar ASK inferred"
+                         if cfg.quote_model == "observed_open_conservative_h1" else
+                         "Retrospective BID source; synthetic ASK/spread and slippage"),
                         "No actual swap/funding/contract lots/stopout/partial fills",
                         "H1 OHLC cannot establish intrabar order; stop-first tie",
                         "Inside mother-bar stop fills inferred from H1 extremes; 3-bar expiry",
