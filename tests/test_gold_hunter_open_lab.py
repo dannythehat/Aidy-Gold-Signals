@@ -27,6 +27,8 @@ def test_all_five_methods_and_costed_replay_repeatable():
     outcomes=run_family_matrix(raw,Settings())
     assert set(SYSTEMS).issubset(outcomes)
     assert "ALL_FIVE" in outcomes
+    assert "DONCHIAN_ASIA_BREAK" in outcomes
+    assert "DONCHIAN_PLUS_SESSIONS" in outcomes
     for result in outcomes.values():
         assert result["closed_trades"] == len(result["trades"])
         assert result["net_marked_usd"] == round(
