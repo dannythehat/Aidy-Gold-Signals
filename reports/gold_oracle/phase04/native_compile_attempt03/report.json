@@ -1,0 +1,211 @@
+{
+  "broker_connection": false,
+  "compiler": {
+    "sha256": "0f39a71f538760ec9bceb39d6b52abdf169707d12cc54f201c6ba7477fbe3782",
+    "signature": "Valid",
+    "signer": "CN=MetaQuotes Ltd., O=MetaQuotes Ltd., S=Lemesos, C=CY",
+    "version": "5.0.0.6292"
+  },
+  "installer": {
+    "sha256": "a879492dd9d7b168d0538edd1c0dc5604ca43dc0951825b3501818e8b18f4c93",
+    "signature": "Valid",
+    "signer": "CN=MetaQuotes Ltd, O=MetaQuotes Ltd, L=Limassol, C=CY",
+    "url": "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe"
+  },
+  "native_execution_parity": false,
+  "sources": [
+    {
+      "ex5_sha256": "1ead9af6e5459bab2b7cb2830769398da5ac41c9b1a36cac25f8501f6c505687",
+      "ids": [
+        "S044"
+      ],
+      "log_sha256": "e1b184b911063d40a889a750f5af4c5a343a572731d519596c58c9113b6d8239",
+      "path": "SuperTrendTV.mq5",
+      "source_modified": false,
+      "source_sha256": "c0632c1fe92a0ff079b748c024a5d84ef98be62d54d1d438179a0603f355858d",
+      "source_url": "https://www.mql5.com/en/code/download/77009/SuperTrendTV.mq5",
+      "status": "NATIVE_COMPILED"
+    },
+    {
+      "ex5_sha256": "082ea575ec7abbed991728f9eefddcd75adb31e86a8d072a27ff2d1d3b34704f",
+      "ids": [
+        "S036",
+        "S037",
+        "S038",
+        "S039"
+      ],
+      "log_sha256": "47f7a597b3e7f8a0a58bf655133c17c214807a41bb30b4b93ead81e0cfd2da75",
+      "path": "BreakoutExitLab.mq5",
+      "source_modified": false,
+      "source_sha256": "16cf59aa7a5c81850f6bd8090e9ae571f6cec0e82b1a576742f03b3cc198e0a6",
+      "source_url": "https://www.mql5.com/en/code/download/77687/BreakoutExitLab.mq5",
+      "status": "NATIVE_COMPILED"
+    },
+    {
+      "ex5_sha256": "b791a190ee58bc801db35a3ee5420a8da1f7ddf2ce7bd2a20e1d1571b04cf445",
+      "ids": [
+        "S045"
+      ],
+      "log_sha256": "a4128619e063c8f3394af0a7fdcb66402269ca2b309edacc3b13c099b29ea483",
+      "path": "CMEGapTracker.mq5",
+      "source_modified": false,
+      "source_sha256": "e67078db4bcaa40c079540b1350805b54b2d59421e96a19c0881f4e39a0fbbf4",
+      "source_url": "https://www.mql5.com/en/code/download/77686/CMEGapTracker.mq5",
+      "status": "NATIVE_COMPILED"
+    },
+    {
+      "ids": [
+        "S041",
+        "S042",
+        "S043"
+      ],
+      "log_sha256": "da160279e8b18d529eb8ffe017c93f03f09b99ff39f9d33f0a90b8b00eb18e8e",
+      "path": "DailyZoneRecovery.mq5",
+      "source_modified": false,
+      "source_sha256": "eb202f66865a3fa07de463a80ae789cfbd2df7e6bc8d912cb3f0234d1547db13",
+      "source_url": "https://www.mql5.com/en/code/download/75922/DailyZoneRecovery.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ids": [
+        "S040"
+      ],
+      "log_sha256": "37d477b6b51a29fc0d1acebf3a64ac4a6a2bd3d4f6acbf54ef3588df64c37af7",
+      "path": "GoldBreakoutEA.mq5",
+      "source_modified": false,
+      "source_sha256": "a904aa1a7db85fd006a3989671025ce022fc304584da3fbda7116621770dc105",
+      "source_url": "https://www.mql5.com/en/code/download/77691/GoldBreakoutEA.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ids": [
+        "S032"
+      ],
+      "log_sha256": "84cb00678302616238216c78f6e31f76a18435c2b8d8921fac2d356eb32328b1",
+      "path": "GoldLondonBreakout.mq5",
+      "source_modified": false,
+      "source_sha256": "0b0637eaa5c9067fced7aba8ae5b9174ad8098724d8be53e01ce5e3fcf335f8f",
+      "source_url": "https://www.mql5.com/en/code/download/75586/GoldLondonBreakout.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ids": [
+        "S047"
+      ],
+      "log_sha256": "ee3e05a25a5bfee16fd641b616cb608e6088aabf96e3bc98a98de15e0dc2e859",
+      "path": "Grid_EA_Pro.mq5",
+      "source_modified": false,
+      "source_sha256": "65785963b73dea786f7ba8a5e38d1f83b1037bc82a33d435f4f6f31c5983be56",
+      "source_url": "https://www.mql5.com/en/code/download/71700/Grid_EA_Pro.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ids": [
+        "S034"
+      ],
+      "log_sha256": "dbc7b9bf463f4597a5d89517cf7ec92445a880e6f26126f1b0896eeba2140bb7",
+      "path": "marsi_ea.mq5",
+      "source_modified": false,
+      "source_sha256": "844816171ab75c70421c533d68e53074d9a50e366897e6fe2d51064c472c1281",
+      "source_url": "https://www.mql5.com/en/code/download/60730/marsi_ea.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ids": [
+        "S071"
+      ],
+      "log_sha256": "6f40cacbe2d7c266e0762cc4e36126e7a82ef79a2ffd8aea6524173a33e231f0",
+      "path": "ORB_Opening_Range_Breakout_EA.mq5",
+      "source_modified": false,
+      "source_sha256": "1e0b888760acea8949854bdb7ad2e808e4f8e8301a3c86b0567e8809e47c06e3",
+      "source_url": "https://www.mql5.com/en/articles/download/20339/ORB_Opening_Range_Breakout_EA.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ids": [
+        "S049"
+      ],
+      "log_sha256": "7a283a25437ec91d7186f543da8e21842b79d048b71b227c5b54d62c353d8eed",
+      "path": "ORB_RiskManaged.mq5",
+      "source_modified": false,
+      "source_sha256": "e95ee85351c6ca2c90f8788ece3ffbce6b3e3814a366f2af2bfb0124bd3d8ba3",
+      "source_url": "https://www.mql5.com/en/code/download/77967/ORB_RiskManaged.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ex5_sha256": "4a012e3ecf2dfb10e355a9b884c271578a09e8d7cfd580e7f892faeacb494f46",
+      "ids": [
+        "S048"
+      ],
+      "log_sha256": "a1a1504e447ccbf5e4ab9d367b63fd0388637341b87f4ae176c8e461023f47f0",
+      "path": "PrecisionSniper.mq5",
+      "source_modified": false,
+      "source_sha256": "a5177b8a521459cf1e7d31222e4a59ebe04c528c2d71778203f58aa35aa3ce84",
+      "source_url": "https://www.mql5.com/en/code/download/71860/PrecisionSniper.mq5",
+      "status": "NATIVE_COMPILED"
+    },
+    {
+      "ids": [
+        "S035"
+      ],
+      "log_sha256": "a7a452d571f84caa02d0e58788f65a95a77a6c4f27d589f41363c6952d6a6cf0",
+      "path": "Quantum_XAUUSD_Silver_Trader.mq5",
+      "source_modified": false,
+      "source_sha256": "58aac58d1ba56ab25a48e7f2421a87b19b0fee31638e656faed5e815592d292d",
+      "source_url": "https://www.mql5.com/en/code/download/73622/Quantum_XAUUSD_Silver_Trader.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ex5_sha256": "cf5502d58faaae2031087c350f42421f7dde5c16474565d63d1d16e5df961bc5",
+      "ids": [
+        "S033"
+      ],
+      "log_sha256": "8eaed706a7a00d16fc864e856fe5356b99d3c7150e4cdafdda270771ce6ae774",
+      "path": "SessionRangeBreakout.mq5",
+      "source_modified": false,
+      "source_sha256": "5e3cbac5e4d5d6503ec3e150396b4402db7ec652cecb0406c839b0712f0ce435",
+      "source_url": "https://www.mql5.com/en/code/download/72882/SessionRangeBreakout.mq5",
+      "status": "NATIVE_COMPILED"
+    },
+    {
+      "ex5_sha256": "c4e1c88f66db28926e6a904321a2ac92a5bd6d57dbc164ea77b0732f9cbc8985",
+      "ids": [
+        "S046"
+      ],
+      "log_sha256": "198b5033a2859127f72b6e758b8491aa9d23fbe83755bb59fbf86f00d65baea9",
+      "path": "SessionSweepBoxes.mq5",
+      "source_modified": false,
+      "source_sha256": "e81168c95cf0f49c2c86e00d352c28dd893075e31fc7155e56ffca2b9412b0e1",
+      "source_url": "https://www.mql5.com/en/code/download/77953/SessionSweepBoxes.mq5",
+      "status": "NATIVE_COMPILED"
+    },
+    {
+      "ids": [
+        "S044"
+      ],
+      "log_sha256": "a2669842f76eef8de86fcf5db65db7194d8330f56238b37c78dae343bedb56a4",
+      "path": "SuperTrendEA.mq5",
+      "source_modified": false,
+      "source_sha256": "02ee1aacaf80abf9187942a2a139825e14642fcf4adeec7d09f68afc604ccc03",
+      "source_url": "https://www.mql5.com/en/code/download/77009/SuperTrendEA.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    },
+    {
+      "ids": [
+        "S079"
+      ],
+      "log_sha256": "0942c72b9fd5a117ce5ba8d0c71f5dd314a8de9076b41986538f6e9532bb4165",
+      "path": "XANDER_Gold_Recovery.mq5",
+      "source_modified": false,
+      "source_sha256": "61abdab360819f543140c017d0a878b70c630003280205ffe97edadb8a35985b",
+      "source_url": "https://www.mql5.com/en/code/download/72278/XANDER_Gold_Recovery.mq5",
+      "status": "NATIVE_COMPILE_FAILED"
+    }
+  ],
+  "standard_library_available": false,
+  "standard_library_root": "D:\\a\\_temp\\oracle-official-sdk\\platform\\MQL5",
+  "standard_library_sha256": {},
+  "terminal_execution_intercepted_before_install": true,
+  "terminal_processes_running": 0,
+  "terminal_started": false
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "ids": [
+      "S003"
+    ],
+    "path": "BreakoutFollowTrend.mq5",
+    "sha256": "dbe6894ae3f17cdf5334938f59261112e8be6cec4fded2e92b908525f80d659b",
+    "bytes": 28251,
+    "endpoint": "https://raw.githubusercontent.com/jzd101/breakout-follow-101/06c58c37e768818530b106c8e7f9cadd6d25c06e/src/mql5/BreakoutFollowTrend.mq5"
+  }
+]

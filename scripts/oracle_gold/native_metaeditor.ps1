@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$OutDir)
+param([Parameter(Mandatory=$true)][string]$OutDir, [switch]$InitialiseSdkOffline)
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $work = Join-Path $env:RUNNER_TEMP 'oracle-official-sdk'
@@ -38,12 +38,46 @@ try {
     }
     New-Item -ItemType Directory -Force -Path (Join-Path $sdk 'Indicators') | Out-Null
     $receipt.standard_library_available = Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh')
+    if (-not $receipt.standard_library_available -and $InitialiseSdkOffline) {
+        # The installed terminal normally extracts the bundled SDK on first
+        # start. Initialise only on this disposable host with all its network
+        # traffic denied, no account, no EA/script and automated trading OFF.
+        $terminal = Join-Path $install 'terminal64.exe'
+        $tsig = Get-AuthenticodeSignature $terminal
+        if ($tsig.Status -ne 'Valid' -or $tsig.SignerCertificate.Subject -notmatch 'MetaQuotes') {throw 'Terminal Authenticode not verified'}
+        if ((Get-Service MpsSvc).Status -ne 'Running') {throw 'Windows Firewall is not running; offline SDK bootstrap refused'}
+        foreach ($direction in @('Inbound','Outbound')) {
+            $rule = New-NetFirewallRule -DisplayName "OracleOfflineSdk$direction" -Direction $direction -Action Block -Program $terminal -Profile Any -Enabled True
+            if ($rule.Enabled -ne 'True') {throw 'Offline SDK firewall rule missing'}
+        }
+        $ini=Join-Path $work 'offline-sdk.ini'
+        @('[Common]','Login=0','Server=','Password=','KeepPrivate=0','NewsEnable=0','CertInstall=0','MQL5Login=','MQL5Password=',
+          '[Experts]','Enabled=0','AllowLiveTrading=0','AllowDllImport=0','[StartUp]','Expert=','Script=','Symbol=','Template=') |
+          Set-Content $ini -Encoding ascii
+        $receipt.sdk_initialisation = @{network='INBOUND_AND_OUTBOUND_BLOCKED_BEFORE_START'; account_credentials_supplied=$false; experts_enabled=$false; config_sha256=(Get-FileHash $ini -Algorithm SHA256).Hash.ToLower()}
+        $key='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\terminal64.exe'
+        Remove-ItemProperty $key -Name Debugger
+        try {
+            $tp=Start-Process $terminal -ArgumentList @('/portable',"/config:`"$ini`"") -PassThru
+            if (-not $tp.WaitForExit(30000)) {$tp.Kill(); $tp.WaitForExit()}
+        } finally {
+            Get-Process terminal64 -ErrorAction SilentlyContinue | Stop-Process -Force
+            New-ItemProperty $key -Name Debugger -Value 'C:\Windows\System32\cmd.exe /c exit 0' -PropertyType String -Force | Out-Null
+        }
+        $receipt.terminal_started=$true
+        $receipt.terminal_start_scope='EPHEMERAL_NETWORK_BLOCKED_SDK_EXTRACTION_ONLY; NO_ACCOUNT_OR_STRATEGY'
+        $sdk=Join-Path $install 'MQL5'
+        $receipt.standard_library_available=Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh')
+    }
     $receipt.standard_library_root = $sdk
     $receipt.standard_library_sha256 = @{}
     foreach ($f in Get-ChildItem (Join-Path $sdk 'Include') -Filter '*.mqh' -Recurse -ErrorAction SilentlyContinue) {
         $receipt.standard_library_sha256[$f.FullName.Substring($sdk.Length+1)] = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
     }
     $pins = Get-Content 'research/gold_oracle/phase04/mql_compile_pins.json' -Raw | ConvertFrom-Json
+    if (Test-Path 'research/gold_oracle/phase04/additional_native_sources.json') {
+        $pins += Get-Content 'research/gold_oracle/phase04/additional_native_sources.json' -Raw | ConvertFrom-Json
+    }
     $pins = $pins | Sort-Object @{Expression={if ($_.path -eq 'SuperTrendTV.mq5') {0} else {1}}},path
     foreach ($pin in $pins) {
         $row = @{ids=$pin.ids; source_url=$pin.endpoint; source_sha256=$pin.sha256; path=$pin.path; source_modified=$false; status='NOT_COMPILED'}
