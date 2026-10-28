@@ -100,9 +100,11 @@ def run() -> dict:
     report={
         "status":"SOURCE_VERIFIED_RESEARCH_COMPLETED",
         "year":YEAR,"trace":trace,
-        "method":"Five fixed public-inspired gold methods on one identical engine",
+        "method":"Ten candidate public-inspired gold methods with frozen original five",
         "research_not_broker_order":True,
         "no_untouched_holdout_claim":True,
+        "new_five_added_after_prior_year_review":True,
+        "candidate_mining_not_validated_edge":True,
         "source_quote_basis":("original observed open ASK, pessimistic same-hour max-spread"
                               if YEAR==2026 else "original BID with illustrative spread"),
         "result":all_results,
