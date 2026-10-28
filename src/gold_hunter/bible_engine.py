@@ -107,17 +107,15 @@ def _higher_frames(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.Dat
 
 def _confirmed_swings(x: pd.DataFrame) -> tuple[list[float], list[float]]:
     """2-left/2-right pivots known after confirmation; caller passes only past bars."""
-    highs, lows = [], []
-    for i in range(2, len(x) - 2):
-        h = float(x.iloc[i]["high"])
-        l = float(x.iloc[i]["low"])
-        if h > max(float(v) for v in x.iloc[i-2:i]["high"]) and h >= max(
-                float(v) for v in x.iloc[i+1:i+3]["high"]):
-            highs.append(h)
-        if l < min(float(v) for v in x.iloc[i-2:i]["low"]) and l <= min(
-                float(v) for v in x.iloc[i+1:i+3]["low"]):
-            lows.append(l)
-    return highs, lows
+    # Equivalent 2-left/2-right confirmed pivots, using vector comparisons.
+    h = x["high"]
+    l = x["low"]
+    valid = pd.Series(False, index=x.index)
+    if len(x) >= 5:
+        valid.iloc[2:-2] = True
+    hi = valid & h.gt(h.shift(1)) & h.gt(h.shift(2)) & h.ge(h.shift(-1)) & h.ge(h.shift(-2))
+    lo = valid & l.lt(l.shift(1)) & l.lt(l.shift(2)) & l.le(l.shift(-1)) & l.le(l.shift(-2))
+    return h.loc[hi].astype(float).tolist(), l.loc[lo].astype(float).tolist()
 
 
 def _market(h4: pd.DataFrame, daily: pd.DataFrame, weekly: pd.DataFrame,
@@ -220,9 +218,9 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
                   day: pd.DataFrame, week: pd.DataFrame,
                   cfg: Parameters) -> list[dict]:
     t = df.iloc[i]["open_time_utc"] + pd.Timedelta(hours=1)
-    h = h4.loc[h4["completed_at"] <= t]
-    d = day.loc[day["completed_at"] <= t]
-    w = week.loc[week["completed_at"] <= t]
+    h = h4.iloc[:h4["completed_at"].searchsorted(t, side="right")]
+    d = day.iloc[:day["completed_at"].searchsorted(t, side="right")]
+    w = week.iloc[:week["completed_at"].searchsorted(t, side="right")]
     c = float(df.iloc[i]["close"])
     ctx = _market(h, d, w, c)
     if ctx["mode"] == "UNKNOWN":
