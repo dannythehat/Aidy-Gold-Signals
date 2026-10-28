@@ -1,0 +1,35 @@
+name: Oracle Hub GOLD Bot — Packaging Contract (NO EXECUTION)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - docs/oracle_hub/GOLD_BOT_PACKAGING_README.md
+      - contracts/oracle_hub_gold_bot_manifest_v1.schema.json
+      - scripts/oracle_hub/build_gold_bot_package.py
+      - tests/test_oracle_gold_bot_package_contract.py
+      - tests/test_oracle_gold_bot_packager.py
+      - .github/workflows/oracle-gold-bot-packaging-contract.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-versioned-packages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install schema-test dependencies
+        run: python -m pip install --quiet "jsonschema>=4.20,<5" "pytest>=8,<10"
+      - name: Compile package source and test research-only manifests
+        run: |
+          python -m compileall -q scripts/oracle_hub/build_gold_bot_package.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_oracle_gold_bot_package_contract.py tests/test_oracle_gold_bot_packager.py
+      - name: Confirm no live deployment or account routing step exists
+        run: |
+          python -c "from pathlib import Path; s=Path('scripts/oracle_hub/build_gold_bot_package.py').read_text(); assert 'order_send(' not in s; assert 'mt5.initialize(' not in s; print('GOLD_PACKAGE_CONTRACT_RESEARCH_ONLY')"

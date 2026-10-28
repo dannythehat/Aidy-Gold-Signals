@@ -1,0 +1,36 @@
+name: Oracle Gold 83 — Conservative Duplicate Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/gold_hunter_oracle_dedup_audit.py
+      - tests/test_gold_hunter_oracle_dedup.py
+      - docs/oracle_hub/CODEX_83_GOLD_SYSTEMS_DEDUP_AND_BULK_TEST.md
+      - .github/workflows/oracle-gold-83-dedup-gate.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auditable-dedup-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test source-identity grouping cannot masquerade as logic duplicate
+        run: |
+          python -m pip install --quiet "pytest>=8,<10"
+          PYTHONPATH=src:. python -m pytest -q tests/test_gold_hunter_oracle_dedup.py
+      - name: Attest all 83 original sources and emit conservative duplicate flags
+        run: PYTHONPATH=src:. python scripts/gold_hunter_oracle_dedup_audit.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GOLD-ORACLE-83-DUPLICATE-REVIEW-NOT-PROVEN-EQUIVALENCE
+          path: artifacts/gold_hunter/oracle_dedup_review.json
+          retention-days: 90
+          if-no-files-found: error

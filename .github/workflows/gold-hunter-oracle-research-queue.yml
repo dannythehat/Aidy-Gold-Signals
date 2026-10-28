@@ -1,0 +1,36 @@
+name: Gold Hunter Oracle Hub — 83 Source Research Queue Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - docs/oracle_hub_gold_qualification_2026-10-28.md
+      - scripts/gold_hunter_oracle_research_queue.py
+      - tests/test_gold_hunter_oracle_queue.py
+      - .github/workflows/gold-hunter-oracle-research-queue.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-discovery-queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test no missing candidate and no fake broker graduation
+        run: |
+          python -m pip install --quiet pytest
+          PYTHONPATH=src:. python -m pytest -q tests/test_gold_hunter_oracle_queue.py
+      - name: Generate source-attested audit queue — no trades
+        run: PYTHONPATH=src:. python scripts/gold_hunter_oracle_research_queue.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ORACLE-GOLD-83-SOURCE-CANDIDATE-QUEUE
+          path: artifacts/gold_hunter/oracle_hub_research_queue.json
+          retention-days: 90
+          if-no-files-found: error
