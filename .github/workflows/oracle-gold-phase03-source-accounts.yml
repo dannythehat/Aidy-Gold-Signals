@@ -1,0 +1,77 @@
+name: Oracle Gold phase03 fixed-unit source accounts
+
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/pine_fixed_accounts.py'
+      - 'tests/test_oracle_gold_fixed_accounts.py'
+      - 'research/gold_oracle/phase03/account_source_pins.json'
+      - '.github/workflows/oracle-gold-phase03-source-accounts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-causality-and-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: src:.
+      ORACLE_PHASE03_PINE_ROOT: /tmp/oracle-original-pine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy cryptography pytest ruff
+      - name: Fetch only pinned PUBLIC source; never execute third-party Pine
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from scripts.oracle_gold.pine_fixed_accounts import PROFILES, source
+          for ident in PROFILES:
+              source(ident, Path('/tmp/oracle-original-pine'))
+              print('PINNED_PUBLIC_SOURCE', ident)
+          PY
+      - name: Preserve225 original evidence files; exact source predicates and native lifecycle regressions
+        run: |
+          mkdir -p artifacts/oracle_gold/phase03_accounts/tests
+          ruff check scripts/oracle_gold/pine_fixed_accounts.py tests/test_oracle_gold_fixed_accounts.py tests/test_oracle_gold_phase03.py
+          python -m pytest -q tests/test_oracle_gold_phase03.py tests/test_oracle_gold_fixed_accounts.py --junitxml=artifacts/oracle_gold/phase03_accounts/tests/junit.xml
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2023
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-encrypted/2023
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2024
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-encrypted/2024
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2025
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-encrypted/2025
+      - name: Open authorised cached snapshots only; no BigQuery/R2 requests
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for year in 2023 2024 2025; do
+            python -m scripts.oracle_gold.snapshot_bundle open-ci --source "/tmp/oracle-encrypted/${year}/snapshot.encrypted.json" --out "/tmp/oracle-minutes/${year}"
+          done
+      - name: Original one-unit accounts and capitals; native/common cost cases; no cloud credentials
+        run: python -m scripts.oracle_gold.pine_fixed_accounts --snapshots /tmp/oracle-minutes --sources /tmp/oracle-original-pine --out artifacts/oracle_gold/phase03_accounts/results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-phase03-fixed-unit-account-ledgers
+          path: artifacts/oracle_gold/phase03_accounts/
+          retention-days: 90
+          if-no-files-found: error

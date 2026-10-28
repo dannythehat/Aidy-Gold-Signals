@@ -1,0 +1,61 @@
+{
+  "artifact_identity": [
+    {
+      "digest": "sha256:d232cf92305aa70a91f558bae864cdb0487261c374350ac7dafabfadabb01291",
+      "id": 12836127625,
+      "name": "oracle-minute-2024"
+    },
+    {
+      "digest": "sha256:fba6bfb9240bde0aaa5387ac38895f499a5ada21d2fb678f3d09d4bcb94f7453",
+      "id": 12835657990,
+      "name": "oracle-minute-2025"
+    },
+    {
+      "digest": "sha256:7c056c0ad1faece8a1e50f60b71f2de3a40353f0ab53cf2506465a4d45d36c89",
+      "id": 12835558983,
+      "name": "oracle-minute-2023"
+    }
+  ],
+  "code_commit": "2e50234d892c4a4dd564c685494900bf5904454d",
+  "frozen_snapshots": {
+    "2023": {
+      "ask_ohlc_available": false,
+      "calendar_complete": false,
+      "first_utc": "2023-01-02T23:00:00+00:00",
+      "identity": "R2_ORIGINAL_TICKS_BID_M1_2023",
+      "last_utc": "2023-12-29T21:58:00+00:00",
+      "publisher_volume_available": false,
+      "rows": 308753,
+      "rows_sha256": "b4b85633b0a390075471b9cc1c217769381d61aa74f656a6018e89fbd3399999",
+      "sha256": "141f0e88240724d17e35f576c4739df9f73ab0485fe489f7fa28ba4dbd4a0dc8",
+      "year": 2023
+    },
+    "2024": {
+      "ask_ohlc_available": false,
+      "calendar_complete": false,
+      "first_utc": "2024-01-01T23:00:00+00:00",
+      "identity": "BIGQUERY_ORIGINAL_HISTDATA_BID_M1_2024",
+      "last_utc": "2024-12-31T21:57:00+00:00",
+      "publisher_volume_available": false,
+      "rows": 355592,
+      "rows_sha256": "2f26478c1a1cdad2740e4f86992fce9276bc8fc4197735df44bcf8d7a26dd8d4",
+      "sha256": "59e20f52b836abe3ca1124860f73d75d3d4fafeb7e17b91abfe7efa6b6a661eb",
+      "year": 2024
+    },
+    "2025": {
+      "ask_ohlc_available": false,
+      "calendar_complete": false,
+      "first_utc": "2025-01-01T23:00:00+00:00",
+      "identity": "BIGQUERY_ORIGINAL_HISTDATA_BID_M1_2025",
+      "last_utc": "2025-12-31T21:57:00+00:00",
+      "publisher_volume_available": false,
+      "rows": 353951,
+      "rows_sha256": "9d8ff5814971c5a24c82d9cbd5e9669071a4311cf0229990c84b8ee06c3809ee",
+      "sha256": "73f400a190337ae36af29bd1163ff6e7ec9cd696cd42512998316807a3de6a31",
+      "year": 2025
+    }
+  },
+  "plaintext_market_data_published": false,
+  "run_id": 40734084599,
+  "source_reads": "BQ SELECT-only; R2 GET-only; finer resolution; originals pinned to batch01"
+}
