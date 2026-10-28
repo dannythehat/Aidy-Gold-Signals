@@ -1,0 +1,85 @@
+name: Oracle Gold original source batch 02
+
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/batch02.py'
+      - 'research/gold_oracle/batch02_source_pin.json'
+      - 'tests/test_oracle_gold_batch02.py'
+      - '.github/workflows/oracle-gold-source-batch02.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  native-source-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: src:.
+      ORACLE_SWEEP_ROOT: /tmp/oracle-sweep
+      ORACLE_S012_ROOT: /tmp/oracle-s012
+      ORACLE_S082_ROOT: /tmp/oracle-s082
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest pandas numpy
+      - name: Fetch exact source commits without service credentials
+        run: |
+          git clone --quiet https://github.com/baturdenada/gold-sweep-backtester.git /tmp/oracle-sweep
+          git -C /tmp/oracle-sweep checkout --quiet 39dbb6ec67ad772f778bf30f4a0ada741e08bef4
+          git clone --quiet https://github.com/frankabingale1111/smc-backtest.git /tmp/oracle-s012
+          git -C /tmp/oracle-s012 checkout --quiet 2349907aad553200bac822aac7f91add67a281f7
+          git clone --quiet https://github.com/sivaram311/xauusd-virgin-rejection.git /tmp/oracle-s082
+          git -C /tmp/oracle-s082 checkout --quiet d2ac7c58f60c3588bb7b5c508f126a3e6e7f65b8
+      - name: Source integrity and adversarial causality receipts
+        run: |
+          mkdir -p artifacts/oracle_gold/batch02_tests
+          python -m pytest -q tests/test_oracle_gold_batch02.py --junitxml=artifacts/oracle_gold/batch02_tests/junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-batch02-source-tests
+          path: artifacts/oracle_gold/batch02_tests/
+          retention-days: 90
+
+  historical-replay:
+    needs: native-source-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        year: [2023, 2024, 2025]
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-gold-history-${{ matrix.year }}
+          run-id: 40684602595
+          github-token: ${{ github.token }}
+          path: artifacts/oracle_gold/history/${{ matrix.year }}/
+      - name: Fetch immutable publisher modules without database credentials
+        run: |
+          git clone --quiet https://github.com/baturdenada/gold-sweep-backtester.git /tmp/oracle-sweep
+          git -C /tmp/oracle-sweep checkout --quiet 39dbb6ec67ad772f778bf30f4a0ada741e08bef4
+      - name: Replay twelve unchanged modules; retain all losses and source defects
+        run: python -m scripts.oracle_gold.batch02 --snapshot artifacts/oracle_gold/history/${{ matrix.year }} --publisher /tmp/oracle-sweep --out artifacts/oracle_gold/batch02
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-batch02-${{ matrix.year }}-native-R-ledgers
+          path: artifacts/oracle_gold/batch02/
+          retention-days: 90
+          if-no-files-found: error
