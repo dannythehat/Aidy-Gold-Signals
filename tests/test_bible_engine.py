@@ -41,7 +41,9 @@ def test_inside_and_false_break_variants():
     inside = {'open': 101., 'high': 106., 'low': 97., 'close': 102.}
     breakout = {'open': 103., 'high': 112., 'low': 101., 'close': 111.}
     fakeout = {'open': 99., 'high': 105., 'low': 94., 'close': 101.}
-    assert 'INSIDE' in [x[0] for x in classify_pattern([mother,inside,breakout],1)]
+    # The mother/inside PAIR arms the stop at the inside bar close.
+    assert 'INSIDE' in [x[0] for x in classify_pattern([breakout,mother,inside], 1)]
+    assert 'INSIDE' not in [x[0] for x in classify_pattern([mother,inside,breakout], 1)]
     assert 'FALSE_BREAK' in [x[0] for x in classify_pattern([mother,inside,fakeout],1)]
 
 
@@ -207,3 +209,62 @@ def test_original_bid_source_never_gives_a_free_ask():
     assert common.slip_usd_oz_each_side >= 0
     assert engine.research_backtest(source, cfg=common)['execution_quote_basis'] == (
         'LONG_ENTRY_ASK_SHORT_ENTRY_BID_LONG_EXIT_BID_SHORT_EXIT_ASK')
+
+
+def test_bible_inside_stop_trigger_and_three_bar_expiry(monkeypatch):
+    """An inside bar is an armed order, not a buy at the pattern close."""
+    import gold_hunter.bible_engine as engine
+    df = historical_fixture(700)
+    cfg = Parameters()
+    close_i = len(df) - 2
+    next_bar = df.iloc[-1]
+    next_hi, next_open = float(next_bar['high']), float(next_bar['open'])
+    trigger = next_hi + cfg.spread_usd_oz - .01
+    low_safe = float(next_bar['low']) - 50
+
+    def one_order(frame, i, h4, day, week, pars):
+        if i != close_i:
+            return []
+        return [{
+            'family': 'TREND_INSIDE', 'bible_reference': 'B 137-147',
+            'signal_time_utc': (pd.to_datetime(frame.iloc[i]['open_time_utc']) +
+                                pd.Timedelta(hours=1)).isoformat(),
+            'side': 1, 'mode': 'TREND', 'level': low_safe,
+            'level_type': 'H4_SWING_OR_SMA21', 'pattern': 'INSIDE',
+            'stop': low_safe - 5, 'target': trigger + 130,
+            'estimated_rr': 4., 'signal_close': float(frame.iloc[i]['close']),
+            'entry_type': 'STOP', 'trigger': trigger,
+            'mother_high': trigger - cfg.spread_usd_oz - .01,
+            'mother_low': low_safe, 'valid_bars': 3,
+        }]
+    monkeypatch.setattr(engine, 'candidates_at', one_order)
+    filled = engine.research_backtest(df, cfg=cfg)
+    p = filled['unrealized_open_position']
+    assert p is not None and p['family'] == 'TREND_INSIDE'
+    assert p['entry'] == pytest.approx(
+        max(trigger, next_open + cfg.spread_usd_oz) +
+        cfg.slip_usd_oz_each_side)
+    assert filled['closed_trades'] == 0
+
+    signal_i = len(df) - 5
+    def never_fills(frame, i, h4, day, week, pars):
+        if i != signal_i:
+            return []
+        c = float(frame.iloc[i]['close'])
+        return [{
+            'family': 'TREND_INSIDE', 'bible_reference': 'B 137-147',
+            'signal_time_utc': (pd.to_datetime(frame.iloc[i]['open_time_utc']) +
+                                pd.Timedelta(hours=1)).isoformat(),
+            'side': 1, 'mode': 'TREND', 'level': c,
+            'level_type': 'H4_SWING_OR_SMA21', 'pattern': 'INSIDE',
+            'stop': c - 15, 'target': c + 2000,
+            'estimated_rr': 4., 'signal_close': c,
+            'entry_type': 'STOP', 'trigger': c + 1000,
+            'mother_high': c + 1000, 'mother_low': c - 1000,
+            'valid_bars': 3,
+        }]
+    monkeypatch.setattr(engine, 'candidates_at', never_fills)
+    expired = engine.research_backtest(df, cfg=cfg)
+    assert expired['closed_trades'] == 0
+    assert expired['unrealized_open_position'] is None
+    assert expired['rejections']['expired_pending'] == 1
