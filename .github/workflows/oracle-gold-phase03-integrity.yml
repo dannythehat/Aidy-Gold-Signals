@@ -1,0 +1,49 @@
+name: Oracle Gold phase03 source and account evidence integrity
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'reports/gold_oracle/phase03/**'
+      - 'research/gold_oracle/phase03/reviewed_rules.json'
+      - 'scripts/oracle_gold/build_phase03_register.py'
+      - 'scripts/oracle_gold/summarise_phase03.py'
+      - 'tests/test_oracle_gold_phase03_register.py'
+      - '.github/workflows/oracle-gold-phase03-integrity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  committed-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: src:.
+      ORACLE_PHASE03_PINE_ROOT: /tmp/oracle-pine-originals
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest pandas numpy cryptography ruff pyyaml
+      - name: Verify the four pinned public originals without executing Pine
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from scripts.oracle_gold.pine_fixed_accounts import PROFILES, source
+          for ident in PROFILES:
+              source(ident, Path(os.environ['ORACLE_PHASE03_PINE_ROOT']))
+          PY
+      - name: Original225 receipts unchanged; all125 decisions and every CI ledger reconciled
+        run: python -m pytest -q tests/test_oracle_gold_phase03.py tests/test_oracle_gold_fixed_accounts.py tests/test_oracle_gold_phase03_register.py
+      - name: New research code lint only
+        run: ruff check scripts/oracle_gold/build_phase03_register.py scripts/oracle_gold/summarise_phase03.py scripts/oracle_gold/recover_paper.py tests/test_oracle_gold_phase03_register.py
+      - name: Research workflow syntax
+        run: |
+          python - <<'PY'
+          import yaml
+          from pathlib import Path
+          for p in Path('.github/workflows').glob('oracle-gold-phase03*.yml'):
+              yaml.safe_load(p.read_text())
+          print('Phase03 workflows parsed; no source/database/broker credentials used')
+          PY

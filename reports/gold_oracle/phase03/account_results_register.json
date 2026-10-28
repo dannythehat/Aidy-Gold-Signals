@@ -1,0 +1,2885 @@
+{
+  "all83_backtested": false,
+  "artifact_id": 12838106556,
+  "artifact_zip_sha256": "73909232d1839e63a6226193448cb875a0c021b6b3b0641f53c06259bf7d8c09",
+  "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+  "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+  "committed_artifact": "reports/gold_oracle/phase03/accounts/ci_account_ledgers.zip",
+  "member_sha256": {
+    "results/S058_common_base_monthly.csv": "f68c1c0003c1b094b4fb5de0f42e2b89775946ec313f15a42ed60a33c6372c31",
+    "results/S058_common_base_trades.csv": "c35413da73061fe51f0ebee8a8d6d42d0009c5c604ca62a7e752b73b8ca77401",
+    "results/S058_common_stress_monthly.csv": "5af9404fcba25a5d4759d4243229a01031f3e360cbad136165a1a2906b88ac60",
+    "results/S058_common_stress_trades.csv": "0f4eb072c3f7ace86e8ecc8e2d3161a1556ff5f513536035be67c5db3e81886f",
+    "results/S058_native_monthly.csv": "c32ee8b2fdd44347987edf2dee4c4af0aac81830f29f93f1413b4edc17c8ed63",
+    "results/S058_native_trades.csv": "5b2c4315399b2a21334e2eac05641d4833b31c5cd303819295ff61eea471a3f9",
+    "results/S060_common_base_monthly.csv": "dcab319ec99611836aa3778731324e3416154eb6248c946be76602edbd04ebd0",
+    "results/S060_common_base_trades.csv": "adcb3673fbd5c42066b9499c0f911d686d624e40773612bc61cf91a21f5760d7",
+    "results/S060_common_stress_monthly.csv": "1aef553840bc645794e46400ed9f48e7d4ef218059a7710438f2effabcf00531",
+    "results/S060_common_stress_trades.csv": "3c863dfd1cd9e05d2d78670a3bdd2db67634ac277ebff02d047505acf4be8d52",
+    "results/S060_native_monthly.csv": "d6b6225e29b6b70cc40b2194a45932a8a81c9b25cfdb638cb20b4733bb49ad9e",
+    "results/S060_native_trades.csv": "a7b5cfe87c402927a2b2cd056ea5ccb584c5324749e9779a9ff859d26674d069",
+    "results/S061_common_base_monthly.csv": "a51bd2c4da2666772009c6b102ac7ee828a2dc73cd3e2cf8c002de24a6926c9e",
+    "results/S061_common_base_trades.csv": "53e9e9d924b1f220ed2c09997ab0bf6f58b877864cb9d8739ee4b0e6ba919e9f",
+    "results/S061_common_stress_monthly.csv": "ee8e632c8b9861f86f769dc6a9ee665814eb431fe49e8907e88e3fe3af37e6f5",
+    "results/S061_common_stress_trades.csv": "44e63c35dfad9b51885d8b043f923e5e62562df05f5c1891b170b74e2082ba17",
+    "results/S061_native_monthly.csv": "8f876b642e2c4d27bb998788ff34060e6dcb4ca7e1d691c85c91907ffa170f8f",
+    "results/S061_native_trades.csv": "00af3282fd099d62d6e7f224535d687defb95783570fc434e8fa83a51414c251",
+    "results/S081_common_base_monthly.csv": "5febc69fad678f46ac461f5ce38b6c2d05be7a6c7a199e8fc77b029b4695e9cd",
+    "results/S081_common_base_trades.csv": "3f5ae4dac0904c78a06b5633a4c2282c41de7f6bbf8c0f4fd3ecf60171490d10",
+    "results/S081_common_stress_monthly.csv": "1dfc0502ee35b06f38dfaa9beb5a808c2cf0f784410d68a08d25dc9ce95c494c",
+    "results/S081_common_stress_trades.csv": "97d5d4adcb9bd2bccac3a04e59bb8107442e28d50c654ec48a20b9d57f28f2c9",
+    "results/S081_native_monthly.csv": "bad3a20929fc8ee07159b54e17784235689c7fc544d39151be220a199a1b09a1",
+    "results/S081_native_trades.csv": "20ad7e8f7093594cc43af482252bbedce1dd3b6efc897721f7c876fa665b1e46",
+    "results/report.json": "01321a4064bda01c6063994c1610e0c677f473bd4cda55de72ca79a74dea5253",
+    "tests/junit.xml": "8f36afb1de7804cde42be2266751d87a1fab167a76dd93ab12a8d28010bd8bbd"
+  },
+  "models": {
+    "S058/common_base": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -116.16899999999916,
+      "closed_trades": 60,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 0,
+      "evidence_zip_member": "results/S058_common_base_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 10000.0,
+      "largest_closed_winner_usd": 28.483999999999725,
+      "ledger_sha256": "bdf940d08b08d83478453530094989b687c473c6c1c978a7c790148b5cc17d83",
+      "long_trades": 24,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -1.371671110018502,
+      "max_modelled_gross_notional_to_equity": 0.44493960918423175,
+      "max_modelled_pine_path_drawdown_pct": -1.4229209507797602,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 9994.786999999998,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -5.213000000001557,
+          "return_pct": -0.052130000000016885,
+          "start_equity": 10000.0
+        },
+        {
+          "end_equity": 9985.399999999998,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -9.387000000000626,
+          "return_pct": -0.09391895995383148,
+          "start_equity": 9994.786999999998
+        },
+        {
+          "end_equity": 9983.915999999994,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -3.540000000000873,
+          "return_pct": -0.03544446153255221,
+          "start_equity": 9987.455999999995
+        },
+        {
+          "end_equity": 9982.765999999992,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -1.1500000000014552,
+          "return_pct": -0.011518526397868989,
+          "start_equity": 9983.915999999994
+        },
+        {
+          "end_equity": 9979.396999999992,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -3.3690000000005966,
+          "return_pct": -0.03374816158167038,
+          "start_equity": 9982.765999999992
+        },
+        {
+          "end_equity": 9977.333999999992,
+          "month": "2023-10",
+          "net_excluding_unverified_funding_usd": -2.063000000000102,
+          "return_pct": -0.020672591740766855,
+          "start_equity": 9979.396999999992
+        },
+        {
+          "end_equity": 9976.19399999999,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -1.140000000001237,
+          "return_pct": -0.011425897940287033,
+          "start_equity": 9977.333999999992
+        },
+        {
+          "end_equity": 9974.40399999999,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -1.7900000000008731,
+          "return_pct": -0.017942714425966955,
+          "start_equity": 9976.19399999999
+        },
+        {
+          "end_equity": 9971.363999999987,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -3.040000000002692,
+          "return_pct": -0.03047801151830898,
+          "start_equity": 9974.40399999999
+        },
+        {
+          "end_equity": 9968.120999999985,
+          "month": "2024-02",
+          "net_excluding_unverified_funding_usd": -3.243000000002212,
+          "return_pct": -0.03252313324437761,
+          "start_equity": 9971.363999999987
+        },
+        {
+          "end_equity": 9962.900999999983,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -8.230000000001382,
+          "return_pct": -0.08253827975984729,
+          "start_equity": 9971.130999999985
+        },
+        {
+          "end_equity": 9958.100999999982,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -4.800000000001091,
+          "return_pct": -0.048178738301229984,
+          "start_equity": 9962.900999999983
+        },
+        {
+          "end_equity": 9956.029999999979,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -3.3470000000015716,
+          "return_pct": -0.0336065197652613,
+          "start_equity": 9959.37699999998
+        },
+        {
+          "end_equity": 9949.206999999979,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -6.82300000000032,
+          "return_pct": -0.0685313322679848,
+          "start_equity": 9956.029999999979
+        },
+        {
+          "end_equity": 9948.941999999977,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -0.2650000000012369,
+          "return_pct": -0.0026635288621568165,
+          "start_equity": 9949.206999999979
+        },
+        {
+          "end_equity": 9946.681999999977,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -3.9899999999997817,
+          "return_pct": -0.04009779440021788,
+          "start_equity": 9950.671999999977
+        },
+        {
+          "end_equity": 9944.130999999976,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -2.551000000001295,
+          "return_pct": -0.025646743305973718,
+          "start_equity": 9946.681999999977
+        },
+        {
+          "end_equity": 9927.453999999974,
+          "month": "2025-01",
+          "net_excluding_unverified_funding_usd": -16.6770000000015,
+          "return_pct": -0.16770696202615953,
+          "start_equity": 9944.130999999976
+        },
+        {
+          "end_equity": 9928.126999999973,
+          "month": "2025-03",
+          "net_excluding_unverified_funding_usd": -4.477000000000771,
+          "return_pct": -0.04507377924258815,
+          "start_equity": 9932.603999999974
+        },
+        {
+          "end_equity": 9906.926999999972,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -21.200000000000728,
+          "return_pct": -0.21353473822404156,
+          "start_equity": 9928.126999999973
+        },
+        {
+          "end_equity": 9895.35999999997,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -11.567000000002736,
+          "return_pct": -0.11675668953654572,
+          "start_equity": 9906.926999999972
+        },
+        {
+          "end_equity": 9889.04999999997,
+          "month": "2025-08",
+          "net_excluding_unverified_funding_usd": -6.309999999999491,
+          "return_pct": -0.06376726061506632,
+          "start_equity": 9895.35999999997
+        },
+        {
+          "end_equity": 9880.316999999968,
+          "month": "2025-10",
+          "net_excluding_unverified_funding_usd": -9.003000000000611,
+          "return_pct": -0.09103760420332563,
+          "start_equity": 9889.319999999969
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -87.68499999999943,
+      "net_marked_excluding_unverified_funding_usd": -87.68500000003405,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.0,
+      "open_positions_at_end": 0,
+      "profit_factor": 0.5219050734712828,
+      "profitable_months": 9,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_base",
+      "sealed_oos": false,
+      "short_trades": 36,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "a20de57eb835405dc3cb5b17284c745403e4aa9e569220be8022b9f7af28ab16",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S058",
+      "unrealised_reference_usd": 0.0,
+      "win_rate_pct": 26.666666666666668,
+      "worst_month_pct": -0.21353473822404156,
+      "years": [
+        {
+          "closed_trades": 17,
+          "end_equity": 9974.40399999999,
+          "months": 12,
+          "negative_months": 8,
+          "net_marked_excluding_funding_usd": -25.596000000010463,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.25596000000009944,
+          "start_equity": 10000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 24,
+          "end_equity": 9944.130999999976,
+          "months": 12,
+          "negative_months": 9,
+          "net_marked_excluding_funding_usd": -30.27300000001378,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.3035068561491383,
+          "start_equity": 9974.40399999999,
+          "year": 2024
+        },
+        {
+          "closed_trades": 19,
+          "end_equity": 9912.314999999966,
+          "months": 12,
+          "negative_months": 6,
+          "net_marked_excluding_funding_usd": -31.816000000009808,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.319947514770369,
+          "start_equity": 9944.130999999976,
+          "year": 2025
+        }
+      ]
+    },
+    "S058/common_stress": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -173.39899999999915,
+      "closed_trades": 60,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 0,
+      "evidence_zip_member": "results/S058_common_stress_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 10000.0,
+      "largest_closed_winner_usd": 27.513999999999726,
+      "ledger_sha256": "7450abbb28c7b271fac5accf80c82d19c79823866239489e6f9223009daa3646",
+      "long_trades": 24,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -1.929401344031334,
+      "max_modelled_gross_notional_to_equity": 0.4475564945296428,
+      "max_modelled_pine_path_drawdown_pct": -1.9758057260977235,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 9991.877000000004,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -8.122999999995955,
+          "return_pct": -0.0812299999999544,
+          "start_equity": 10000.0
+        },
+        {
+          "end_equity": 9979.580000000007,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -12.296999999996842,
+          "return_pct": -0.12306996973638906,
+          "start_equity": 9991.877000000004
+        },
+        {
+          "end_equity": 9977.756000000008,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -1.8499999999985448,
+          "return_pct": -0.018537806001539536,
+          "start_equity": 9979.606000000007
+        },
+        {
+          "end_equity": 9973.246000000008,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -4.510000000000218,
+          "return_pct": -0.04520054409027363,
+          "start_equity": 9977.756000000008
+        },
+        {
+          "end_equity": 9971.12600000001,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -2.1199999999989814,
+          "return_pct": -0.02125687063168069,
+          "start_equity": 9973.246000000008
+        },
+        {
+          "end_equity": 9966.78700000001,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -4.338999999999942,
+          "return_pct": -0.04351564707937294,
+          "start_equity": 9971.12600000001
+        },
+        {
+          "end_equity": 9963.75400000001,
+          "month": "2023-10",
+          "net_excluding_unverified_funding_usd": -3.032999999999447,
+          "return_pct": -0.030431070715164488,
+          "start_equity": 9966.78700000001
+        },
+        {
+          "end_equity": 9960.67400000001,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -3.0799999999999272,
+          "return_pct": -0.0309120437939292,
+          "start_equity": 9963.75400000001
+        },
+        {
+          "end_equity": 9957.914000000012,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -2.7599999999983993,
+          "return_pct": -0.02770896828867553,
+          "start_equity": 9960.67400000001
+        },
+        {
+          "end_equity": 9950.994000000015,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -6.919999999996435,
+          "return_pct": -0.06949246599233794,
+          "start_equity": 9957.914000000012
+        },
+        {
+          "end_equity": 9944.841000000017,
+          "month": "2024-02",
+          "net_excluding_unverified_funding_usd": -6.152999999998428,
+          "return_pct": -0.06183301889236548,
+          "start_equity": 9950.994000000015
+        },
+        {
+          "end_equity": 9936.71100000002,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -10.169999999998254,
+          "return_pct": -0.10224310515023483,
+          "start_equity": 9946.881000000018
+        },
+        {
+          "end_equity": 9929.971000000021,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -6.739999999997963,
+          "return_pct": -0.06782928476030126,
+          "start_equity": 9936.71100000002
+        },
+        {
+          "end_equity": 9929.307000000024,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -0.6639999999970314,
+          "return_pct": -0.006686827182045274,
+          "start_equity": 9929.971000000021
+        },
+        {
+          "end_equity": 9924.990000000025,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -4.316999999999098,
+          "return_pct": -0.04347735446188494,
+          "start_equity": 9929.307000000024
+        },
+        {
+          "end_equity": 9916.227000000028,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -8.762999999997191,
+          "return_pct": -0.08829228039521908,
+          "start_equity": 9924.990000000025
+        },
+        {
+          "end_equity": 9914.02200000003,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -2.2049999999981083,
+          "return_pct": -0.02223627998833022,
+          "start_equity": 9916.227000000028
+        },
+        {
+          "end_equity": 9912.842000000031,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -1.179999999998472,
+          "return_pct": -0.011902333886271155,
+          "start_equity": 9914.02200000003
+        },
+        {
+          "end_equity": 9907.882000000032,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -4.959999999999127,
+          "return_pct": -0.05003610468117259,
+          "start_equity": 9912.842000000031
+        },
+        {
+          "end_equity": 9904.361000000034,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -3.5209999999988213,
+          "return_pct": -0.035537363081217244,
+          "start_equity": 9907.882000000032
+        },
+        {
+          "end_equity": 9885.744000000035,
+          "month": "2025-01",
+          "net_excluding_unverified_funding_usd": -18.61699999999837,
+          "return_pct": -0.1879677043273964,
+          "start_equity": 9904.361000000034
+        },
+        {
+          "end_equity": 9884.477000000035,
+          "month": "2025-03",
+          "net_excluding_unverified_funding_usd": -5.447000000000116,
+          "return_pct": -0.05507625741107969,
+          "start_equity": 9889.924000000035
+        },
+        {
+          "end_equity": 9861.337000000036,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -23.139999999999418,
+          "return_pct": -0.23410444477739434,
+          "start_equity": 9884.477000000035
+        },
+        {
+          "end_equity": 9844.920000000038,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -16.416999999997643,
+          "return_pct": -0.16647843999244571,
+          "start_equity": 9861.337000000036
+        },
+        {
+          "end_equity": 9837.64000000004,
+          "month": "2025-08",
+          "net_excluding_unverified_funding_usd": -7.279999999998836,
+          "return_pct": -0.07394676645415821,
+          "start_equity": 9844.920000000038
+        },
+        {
+          "end_equity": 9835.97000000004,
+          "month": "2025-09",
+          "net_excluding_unverified_funding_usd": -1.6700000000000728,
+          "return_pct": -0.016975616103054314,
+          "start_equity": 9837.64000000004
+        },
+        {
+          "end_equity": 9825.99700000004,
+          "month": "2025-10",
+          "net_excluding_unverified_funding_usd": -9.972999999999956,
+          "return_pct": -0.10139315187012166,
+          "start_equity": 9835.97000000004
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -145.88499999999942,
+      "net_marked_excluding_unverified_funding_usd": -145.88499999995656,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.0,
+      "open_positions_at_end": 0,
+      "profit_factor": 0.3547338390428408,
+      "profitable_months": 5,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_stress",
+      "sealed_oos": false,
+      "short_trades": 36,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "a20de57eb835405dc3cb5b17284c745403e4aa9e569220be8022b9f7af28ab16",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S058",
+      "unrealised_reference_usd": 0.0,
+      "win_rate_pct": 26.666666666666668,
+      "worst_month_pct": -0.23410444477739434,
+      "years": [
+        {
+          "closed_trades": 17,
+          "end_equity": 9957.914000000012,
+          "months": 12,
+          "negative_months": 9,
+          "net_marked_excluding_funding_usd": -42.08599999998842,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.42085999999988966,
+          "start_equity": 10000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 24,
+          "end_equity": 9904.361000000034,
+          "months": 12,
+          "negative_months": 11,
+          "net_marked_excluding_funding_usd": -53.552999999978056,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.5377933571225624,
+          "start_equity": 9957.914000000012,
+          "year": 2024
+        },
+        {
+          "closed_trades": 19,
+          "end_equity": 9854.115000000043,
+          "months": 12,
+          "negative_months": 7,
+          "net_marked_excluding_funding_usd": -50.24599999999009,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.507311880089889,
+          "start_equity": 9904.361000000034,
+          "year": 2025
+        }
+      ]
+    },
+    "S058/native": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -118.46414249999917,
+      "closed_trades": 60,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 0,
+      "evidence_zip_member": "results/S058_native_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 10000.0,
+      "largest_closed_winner_usd": 28.081075799999724,
+      "ledger_sha256": "79f9f3e20384af157b857420684e7ca781b8c787f91777e4e6492949a8c9093d",
+      "long_trades": 24,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -1.3938587888521758,
+      "max_modelled_gross_notional_to_equity": 0.44505224088712375,
+      "max_modelled_pine_path_drawdown_pct": -1.4455648677465738,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 9995.0710887,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -4.928911299999527,
+          "return_pct": -0.049289112999995055,
+          "start_equity": 10000.0
+        },
+        {
+          "end_equity": 9985.973327400001,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -9.097761299999547,
+          "return_pct": -0.0910224771716206,
+          "start_equity": 9995.0710887
+        },
+        {
+          "end_equity": 9984.895013199999,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -3.4549000000006345,
+          "return_pct": -0.034589296831044614,
+          "start_equity": 9988.3499132
+        },
+        {
+          "end_equity": 9983.8276022,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -1.0674109999999928,
+          "return_pct": -0.010690257620027399,
+          "start_equity": 9984.895013199999
+        },
+        {
+          "end_equity": 9980.544617299998,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -3.2829849000008835,
+          "return_pct": -0.032883028742181075,
+          "start_equity": 9983.8276022
+        },
+        {
+          "end_equity": 9978.579780999999,
+          "month": "2023-10",
+          "net_excluding_unverified_funding_usd": -1.9648362999996607,
+          "return_pct": -0.019686664158524714,
+          "start_equity": 9980.544617299998
+        },
+        {
+          "end_equity": 9977.577996999999,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -1.0017840000000433,
+          "return_pct": -0.010039344495771374,
+          "start_equity": 9978.579780999999
+        },
+        {
+          "end_equity": 9975.852739999998,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -1.725257000000056,
+          "return_pct": -0.017291340649194797,
+          "start_equity": 9977.577996999999
+        },
+        {
+          "end_equity": 9973.064091999997,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -2.788648000001558,
+          "return_pct": -0.02795398120523096,
+          "start_equity": 9975.852739999998
+        },
+        {
+          "end_equity": 9970.017725699996,
+          "month": "2024-02",
+          "net_excluding_unverified_funding_usd": -3.0463663000009547,
+          "return_pct": -0.030545941266379995,
+          "start_equity": 9973.064091999997
+        },
+        {
+          "end_equity": 9964.840411699997,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -8.220682999999553,
+          "return_pct": -0.08242888439105034,
+          "start_equity": 9973.061094699997
+        },
+        {
+          "end_equity": 9960.027215099997,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -4.813196600000083,
+          "return_pct": -0.04830179311601235,
+          "start_equity": 9964.840411699997
+        },
+        {
+          "end_equity": 9957.971883599997,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -3.342747300001065,
+          "return_pct": -0.03355729061735868,
+          "start_equity": 9961.314630899999
+        },
+        {
+          "end_equity": 9951.123721299997,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -6.848162300000695,
+          "return_pct": -0.06877065310134656,
+          "start_equity": 9957.971883599997
+        },
+        {
+          "end_equity": 9950.769529199999,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -0.3541920999978174,
+          "return_pct": -0.003559317619972191,
+          "start_equity": 9951.123721299997
+        },
+        {
+          "end_equity": 9948.264155400002,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -4.039760999999999,
+          "return_pct": -0.04059121419456302,
+          "start_equity": 9952.303916400002
+        },
+        {
+          "end_equity": 9945.650974500002,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -2.613180899999861,
+          "return_pct": -0.026267707201776958,
+          "start_equity": 9948.264155400002
+        },
+        {
+          "end_equity": 9928.8268902,
+          "month": "2025-01",
+          "net_excluding_unverified_funding_usd": -16.82408430000214,
+          "return_pct": -0.1691602122690372,
+          "start_equity": 9945.650974500002
+        },
+        {
+          "end_equity": 9929.2489769,
+          "month": "2025-03",
+          "net_excluding_unverified_funding_usd": -4.61097030000019,
+          "return_pct": -0.04641670332085068,
+          "start_equity": 9933.8599472
+        },
+        {
+          "end_equity": 9907.735452899999,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -21.51352400000178,
+          "return_pct": -0.21666818960882628,
+          "start_equity": 9929.2489769
+        },
+        {
+          "end_equity": 9895.173410999996,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -12.562041900002441,
+          "return_pct": -0.1267902434387791,
+          "start_equity": 9907.735452899999
+        },
+        {
+          "end_equity": 9888.653445999995,
+          "month": "2025-08",
+          "net_excluding_unverified_funding_usd": -6.519965000001321,
+          "return_pct": -0.06589035612810656,
+          "start_equity": 9895.173410999996
+        },
+        {
+          "end_equity": 9888.396836999995,
+          "month": "2025-09",
+          "net_excluding_unverified_funding_usd": -0.25660900000002584,
+          "return_pct": -0.002594984255455124,
+          "start_equity": 9888.653445999995
+        },
+        {
+          "end_equity": 9879.065020699994,
+          "month": "2025-10",
+          "net_excluding_unverified_funding_usd": -9.331816300000355,
+          "return_pct": -0.0943713774216981,
+          "start_equity": 9888.396836999995
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -90.38306669999945,
+      "net_marked_excluding_unverified_funding_usd": -90.38306670000748,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.0,
+      "open_positions_at_end": 0,
+      "profit_factor": 0.5120526415035329,
+      "profitable_months": 8,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "native",
+      "sealed_oos": false,
+      "short_trades": 36,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "a20de57eb835405dc3cb5b17284c745403e4aa9e569220be8022b9f7af28ab16",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S058",
+      "unrealised_reference_usd": 0.0,
+      "win_rate_pct": 26.666666666666668,
+      "worst_month_pct": -0.21666818960882628,
+      "years": [
+        {
+          "closed_trades": 17,
+          "end_equity": 9975.852739999998,
+          "months": 12,
+          "negative_months": 8,
+          "net_marked_excluding_funding_usd": -24.147260000001552,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.24147260000001447,
+          "start_equity": 10000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 24,
+          "end_equity": 9945.650974500002,
+          "months": 12,
+          "negative_months": 9,
+          "net_marked_excluding_funding_usd": -30.201765499996327,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.3027487101819104,
+          "start_equity": 9975.852739999998,
+          "year": 2024
+        },
+        {
+          "closed_trades": 19,
+          "end_equity": 9909.616933299993,
+          "months": 12,
+          "negative_months": 7,
+          "net_marked_excluding_funding_usd": -36.0340412000096,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.36230952898305135,
+          "start_equity": 9945.650974500002,
+          "year": 2025
+        }
+      ]
+    },
+    "S060/common_base": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -761.2709488597503,
+      "closed_trades": 1854,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 23,
+      "evidence_zip_member": "results/S060_common_base_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 1000000.0,
+      "largest_closed_winner_usd": 70.22639609010028,
+      "ledger_sha256": "7f8a2f09d4bf34b1f44b2531c63578f643f671e36914177c119123ba4a055b8c",
+      "long_trades": 1077,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -0.0802531254781913,
+      "max_modelled_gross_notional_to_equity": 0.0045309826397652376,
+      "max_modelled_pine_path_drawdown_pct": -0.08041878181253015,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 999947.9362597363,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -52.063740263693035,
+          "return_pct": -0.005206374026367477,
+          "start_equity": 1000000.0
+        },
+        {
+          "end_equity": 999902.1472970136,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -45.78896272275597,
+          "return_pct": -0.004579134679150165,
+          "start_equity": 999947.9362597363
+        },
+        {
+          "end_equity": 999878.4683321869,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -23.678964826627634,
+          "return_pct": -0.0023681282104059953,
+          "start_equity": 999902.1472970136
+        },
+        {
+          "end_equity": 999863.2384656279,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -15.229866559035145,
+          "return_pct": -0.0015231717695129987,
+          "start_equity": 999878.4683321869
+        },
+        {
+          "end_equity": 999799.2321364356,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -64.0063291923143,
+          "return_pct": -0.006401508399345168,
+          "start_equity": 999863.2384656279
+        },
+        {
+          "end_equity": 999797.6521084753,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -1.580027960240841,
+          "return_pct": -0.00015803452427798348,
+          "start_equity": 999799.2321364356
+        },
+        {
+          "end_equity": 999793.4990970887,
+          "month": "2023-07",
+          "net_excluding_unverified_funding_usd": -4.153011386631988,
+          "return_pct": -0.00041538519097716886,
+          "start_equity": 999797.6521084753
+        },
+        {
+          "end_equity": 999782.1109750262,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -11.388122062548064,
+          "return_pct": -0.001139047420573025,
+          "start_equity": 999793.4990970887
+        },
+        {
+          "end_equity": 999764.8196334803,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -17.291341545875184,
+          "return_pct": -0.0017295109960513422,
+          "start_equity": 999782.1109750262
+        },
+        {
+          "end_equity": 999764.8400331142,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -24.77743055333849,
+          "return_pct": -0.0024782644388876562,
+          "start_equity": 999789.6174636675
+        },
+        {
+          "end_equity": 999726.0055032936,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -38.8345298205968,
+          "return_pct": -0.0038843664295407088,
+          "start_equity": 999764.8400331142
+        },
+        {
+          "end_equity": 999677.1489364577,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -48.85656683589332,
+          "return_pct": -0.004886995693509366,
+          "start_equity": 999726.0055032936
+        },
+        {
+          "end_equity": 999669.8618347974,
+          "month": "2024-02",
+          "net_excluding_unverified_funding_usd": -7.287101660273038,
+          "return_pct": -0.0007289455068559825,
+          "start_equity": 999677.1489364577
+        },
+        {
+          "end_equity": 999668.1526749546,
+          "month": "2024-03",
+          "net_excluding_unverified_funding_usd": -1.709159842808731,
+          "return_pct": -0.00017097242880348418,
+          "start_equity": 999669.8618347974
+        },
+        {
+          "end_equity": 999653.7258796706,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -14.426795284030959,
+          "return_pct": -0.0014431584366647598,
+          "start_equity": 999668.1526749546
+        },
+        {
+          "end_equity": 999649.9622777151,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -3.7636019554920495,
+          "return_pct": -0.0003764905644909611,
+          "start_equity": 999653.7258796706
+        },
+        {
+          "end_equity": 999625.7516360184,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -24.210641696699895,
+          "return_pct": -0.002421911930206022,
+          "start_equity": 999649.9622777151
+        },
+        {
+          "end_equity": 999591.8639163624,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -33.88771965599153,
+          "return_pct": -0.0033900406827824803,
+          "start_equity": 999625.7516360184
+        },
+        {
+          "end_equity": 999568.6968062925,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -23.167110069887713,
+          "return_pct": -0.002317656926409395,
+          "start_equity": 999591.8639163624
+        },
+        {
+          "end_equity": 999534.322578816,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -34.37422747653909,
+          "return_pct": -0.0034389059587747184,
+          "start_equity": 999568.6968062925
+        },
+        {
+          "end_equity": 999504.7141262868,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -29.608452529180795,
+          "return_pct": -0.002962224694069704,
+          "start_equity": 999534.322578816
+        },
+        {
+          "end_equity": 999453.8076474958,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -50.90647879103199,
+          "return_pct": -0.005093170454484319,
+          "start_equity": 999504.7141262868
+        },
+        {
+          "end_equity": 999416.5286900442,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -37.2789574515773,
+          "return_pct": -0.003729933006035857,
+          "start_equity": 999453.8076474958
+        },
+        {
+          "end_equity": 999405.8136502344,
+          "month": "2025-01",
+          "net_excluding_unverified_funding_usd": -10.715039809816517,
+          "return_pct": -0.001072129537804667,
+          "start_equity": 999416.5286900442
+        },
+        {
+          "end_equity": 999402.4325057215,
+          "month": "2025-02",
+          "net_excluding_unverified_funding_usd": -3.381144512910396,
+          "return_pct": -0.00033831547372464854,
+          "start_equity": 999405.8136502344
+        },
+        {
+          "end_equity": 999398.7377544766,
+          "month": "2025-03",
+          "net_excluding_unverified_funding_usd": -3.6947512448532507,
+          "return_pct": -0.00036969604282344193,
+          "start_equity": 999402.4325057215
+        },
+        {
+          "end_equity": 999380.6132634942,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -18.124490982387215,
+          "return_pct": -0.0018135395110752128,
+          "start_equity": 999398.7377544766
+        },
+        {
+          "end_equity": 999366.3714261386,
+          "month": "2025-05",
+          "net_excluding_unverified_funding_usd": -14.24183735565748,
+          "return_pct": -0.0014250664027937177,
+          "start_equity": 999380.6132634942
+        },
+        {
+          "end_equity": 999274.1382258123,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -92.23320032621268,
+          "return_pct": -0.009229167897117918,
+          "start_equity": 999366.3714261386
+        },
+        {
+          "end_equity": 999205.9720925104,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -68.16613330191467,
+          "return_pct": -0.006821564843351169,
+          "start_equity": 999274.1382258123
+        },
+        {
+          "end_equity": 999303.8975284003,
+          "month": "2025-11",
+          "net_excluding_unverified_funding_usd": -20.652490903856233,
+          "return_pct": -0.0020666450057160723,
+          "start_equity": 999324.5500193042
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -691.0445527696501,
+      "net_marked_excluding_unverified_funding_usd": -691.0445527437842,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.0,
+      "open_positions_at_end": 0,
+      "profit_factor": 0.779174596133072,
+      "profitable_months": 5,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_base",
+      "sealed_oos": false,
+      "short_trades": 777,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "7dd7ca8d96aefacd5ac49925440ea2d250a00ac11171286d132da8c4eb83d96f",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S060",
+      "unrealised_reference_usd": 0.0,
+      "win_rate_pct": 35.16720604099245,
+      "worst_month_pct": -0.009229167897117918,
+      "years": [
+        {
+          "closed_trades": 582,
+          "end_equity": 999726.0055032936,
+          "months": 12,
+          "negative_months": 11,
+          "net_marked_excluding_funding_usd": -273.9944967064075,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.027399449670639786,
+          "start_equity": 1000000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 625,
+          "end_equity": 999416.5286900442,
+          "months": 12,
+          "negative_months": 12,
+          "net_marked_excluding_funding_usd": -309.4768132494064,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.030956163143280868,
+          "start_equity": 999726.0055032936,
+          "year": 2024
+        },
+        {
+          "closed_trades": 647,
+          "end_equity": 999308.9554472562,
+          "months": 12,
+          "negative_months": 8,
+          "net_marked_excluding_funding_usd": -107.57324278797023,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.010763604533237103,
+          "start_equity": 999416.5286900442,
+          "year": 2025
+        }
+      ]
+    },
+    "S060/common_stress": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -2558.68094885975,
+      "closed_trades": 1854,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 23,
+      "evidence_zip_member": "results/S060_common_stress_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 1000000.0,
+      "largest_closed_winner_usd": 69.25639609010028,
+      "ledger_sha256": "9789bd4fe3a6537c520b8cf8dfe3cd16d5992de9123bbc60f6cf69be80900e3b",
+      "long_trades": 1077,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -0.25220720135668007,
+      "max_modelled_gross_notional_to_equity": 0.004539109465324362,
+      "max_modelled_pine_path_drawdown_pct": -0.2524767662378191,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 999871.3062597376,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -128.69374026241712,
+          "return_pct": -0.012869374026236446,
+          "start_equity": 1000000.0
+        },
+        {
+          "end_equity": 999783.3222970158,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -87.98396272177342,
+          "return_pct": -0.008799528716441074,
+          "start_equity": 999871.3062597376
+        },
+        {
+          "end_equity": 999724.2383321896,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -59.08396482618991,
+          "return_pct": -0.005909676977855494,
+          "start_equity": 999783.3222970158
+        },
+        {
+          "end_equity": 999666.328465631,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -57.909866558620706,
+          "return_pct": -0.0057925840284966945,
+          "start_equity": 999724.2383321896
+        },
+        {
+          "end_equity": 999549.9421364394,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -116.38632919162046,
+          "return_pct": -0.01164251769590896,
+          "start_equity": 999666.328465631
+        },
+        {
+          "end_equity": 999511.50210848,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -38.440027959411964,
+          "return_pct": -0.0038457335985842,
+          "start_equity": 999549.9421364394
+        },
+        {
+          "end_equity": 999458.8490970943,
+          "month": "2023-07",
+          "net_excluding_unverified_funding_usd": -52.653011385700665,
+          "return_pct": -0.0052678744841494485,
+          "start_equity": 999511.50210848
+        },
+        {
+          "end_equity": 999400.9009750324,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -57.94812206190545,
+          "return_pct": -0.005797949771946254,
+          "start_equity": 999458.8490970943
+        },
+        {
+          "end_equity": 999341.8996334872,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -59.00134154513944,
+          "return_pct": -0.005903671038076652,
+          "start_equity": 999400.9009750324
+        },
+        {
+          "end_equity": 999312.862463675,
+          "month": "2023-10",
+          "net_excluding_unverified_funding_usd": -29.037169812247157,
+          "return_pct": -0.0029056291768525533,
+          "start_equity": 999341.8996334872
+        },
+        {
+          "end_equity": 999245.8900331222,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -66.9724305528216,
+          "return_pct": -0.0067018481467062685,
+          "start_equity": 999312.862463675
+        },
+        {
+          "end_equity": 999160.9805033026,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -84.9095298195025,
+          "return_pct": -0.008497360926518205,
+          "start_equity": 999245.8900331222
+        },
+        {
+          "end_equity": 999050.0439364673,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -110.93656683538575,
+          "return_pct": -0.01110297229376389,
+          "start_equity": 999160.9805033026
+        },
+        {
+          "end_equity": 999004.4418348074,
+          "month": "2024-02",
+          "net_excluding_unverified_funding_usd": -45.60210165986791,
+          "return_pct": -0.004564546284402393,
+          "start_equity": 999050.0439364673
+        },
+        {
+          "end_equity": 998958.1126749654,
+          "month": "2024-03",
+          "net_excluding_unverified_funding_usd": -46.32915984198917,
+          "return_pct": -0.00463753291796154,
+          "start_equity": 999004.4418348074
+        },
+        {
+          "end_equity": 998888.395879682,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -69.71679528336972,
+          "return_pct": -0.006978950808722573,
+          "start_equity": 998958.1126749654
+        },
+        {
+          "end_equity": 998844.862277727,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -43.533601955045015,
+          "return_pct": -0.00435820479390836,
+          "start_equity": 998888.395879682
+        },
+        {
+          "end_equity": 998770.2116360309,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -74.65064169606194,
+          "return_pct": -0.007473697319304584,
+          "start_equity": 998844.862277727
+        },
+        {
+          "end_equity": 998682.9739163759,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -87.23771965503693,
+          "return_pct": -0.008734513568653401,
+          "start_equity": 998770.2116360309
+        },
+        {
+          "end_equity": 998610.3368063067,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -72.63711006916128,
+          "return_pct": -0.007273290119713671,
+          "start_equity": 998682.9739163759
+        },
+        {
+          "end_equity": 998517.2775788307,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -93.0592274760129,
+          "return_pct": -0.00931887284220112,
+          "start_equity": 998610.3368063067
+        },
+        {
+          "end_equity": 998420.7391263027,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -96.53845252806786,
+          "return_pct": -0.009668180480781885,
+          "start_equity": 998517.2775788307
+        },
+        {
+          "end_equity": 998332.4876475126,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -88.25147879007272,
+          "return_pct": -0.008839107135061308,
+          "start_equity": 998420.7391263027
+        },
+        {
+          "end_equity": 998245.7386900618,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -86.74895745073445,
+          "return_pct": -0.008689385402571581,
+          "start_equity": 998332.4876475126
+        },
+        {
+          "end_equity": 998177.793650253,
+          "month": "2025-01",
+          "net_excluding_unverified_funding_usd": -67.94503980886657,
+          "return_pct": -0.006806444262719147,
+          "start_equity": 998245.7386900618
+        },
+        {
+          "end_equity": 998122.5175057404,
+          "month": "2025-02",
+          "net_excluding_unverified_funding_usd": -55.276144512579776,
+          "return_pct": -0.005537705293001682,
+          "start_equity": 998177.793650253
+        },
+        {
+          "end_equity": 998053.3477544964,
+          "month": "2025-03",
+          "net_excluding_unverified_funding_usd": -69.16975124401506,
+          "return_pct": -0.0069299860518956535,
+          "start_equity": 998122.5175057404
+        },
+        {
+          "end_equity": 997978.963263515,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -74.38449098134879,
+          "return_pct": -0.007452957414422201,
+          "start_equity": 998053.3477544964
+        },
+        {
+          "end_equity": 997922.0414261603,
+          "month": "2025-05",
+          "net_excluding_unverified_funding_usd": -56.92183735477738,
+          "return_pct": -0.005703711145232937,
+          "start_equity": 997978.963263515
+        },
+        {
+          "end_equity": 997776.458225835,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -145.58320032525808,
+          "return_pct": -0.01458863461090143,
+          "start_equity": 997922.0414261603
+        },
+        {
+          "end_equity": 997658.8220925335,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -117.63613330153748,
+          "return_pct": -0.0117898285063478,
+          "start_equity": 997776.458225835
+        },
+        {
+          "end_equity": 997616.6715898949,
+          "month": "2025-09",
+          "net_excluding_unverified_funding_usd": -42.549733752035536,
+          "return_pct": -0.0042649566948882445,
+          "start_equity": 997659.221323647
+        },
+        {
+          "end_equity": 997554.9875284262,
+          "month": "2025-11",
+          "net_excluding_unverified_funding_usd": -66.24249090300873,
+          "return_pct": -0.006640044228178876,
+          "start_equity": 997621.2300193292
+        },
+        {
+          "end_equity": 997510.5754472823,
+          "month": "2025-12",
+          "net_excluding_unverified_funding_usd": -44.41208114393521,
+          "return_pct": -0.004452093538620527,
+          "start_equity": 997554.9875284262
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -2489.42455276965,
+      "net_marked_excluding_unverified_funding_usd": -2489.424552717712,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.0,
+      "open_positions_at_end": 0,
+      "profit_factor": 0.43395733521775315,
+      "profitable_months": 2,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_stress",
+      "sealed_oos": false,
+      "short_trades": 777,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "7dd7ca8d96aefacd5ac49925440ea2d250a00ac11171286d132da8c4eb83d96f",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S060",
+      "unrealised_reference_usd": 0.0,
+      "win_rate_pct": 24.271844660194176,
+      "worst_month_pct": -0.01458863461090143,
+      "years": [
+        {
+          "closed_trades": 582,
+          "end_equity": 999160.9805033026,
+          "months": 12,
+          "negative_months": 12,
+          "net_marked_excluding_funding_usd": -839.0194966973504,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.08390194966974018,
+          "start_equity": 1000000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 625,
+          "end_equity": 998245.7386900618,
+          "months": 12,
+          "negative_months": 12,
+          "net_marked_excluding_funding_usd": -915.2418132408056,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.09160103637951833,
+          "start_equity": 999160.9805033026,
+          "year": 2024
+        },
+        {
+          "closed_trades": 647,
+          "end_equity": 997510.5754472823,
+          "months": 12,
+          "negative_months": 10,
+          "net_marked_excluding_funding_usd": -735.1632427795557,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.07364551776041228,
+          "start_equity": 998245.7386900618,
+          "year": 2025
+        }
+      ]
+    },
+    "S060/native": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": 109.63905114024965,
+      "closed_trades": 1854,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 23,
+      "evidence_zip_member": "results/S060_native_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 1000000.0,
+      "largest_closed_winner_usd": 70.69639609010028,
+      "ledger_sha256": "a7aa3804532ddb54a375439cff0611c990588930229aecfd8253eddf16b0fa6f",
+      "long_trades": 1077,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -0.014931022879416389,
+      "max_modelled_gross_notional_to_equity": 0.0045270553566518585,
+      "max_modelled_pine_path_drawdown_pct": -0.01528024082305679,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 999985.0662597356,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -14.93374026438687,
+          "return_pct": -0.0014933740264400086,
+          "start_equity": 1000000.0
+        },
+        {
+          "end_equity": 999959.7222970122,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -25.343962723389268,
+          "return_pct": -0.002534434120915474,
+          "start_equity": 999985.0662597356
+        },
+        {
+          "end_equity": 999953.198332185,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -6.523964827181771,
+          "return_pct": -0.000652422760805127,
+          "start_equity": 999959.7222970122
+        },
+        {
+          "end_equity": 999920.0221364321,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -38.62632919300813,
+          "return_pct": -0.0038627926516987543,
+          "start_equity": 999958.6484656251
+        },
+        {
+          "end_equity": 1000016.2900331066,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -4.332430554321036,
+          "return_pct": -0.0004332341210777635,
+          "start_equity": 1000020.6224636609
+        },
+        {
+          "end_equity": 999999.7805032854,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -16.509529821225442,
+          "return_pct": -0.0016509260884811638,
+          "start_equity": 1000016.2900331066
+        },
+        {
+          "end_equity": 999981.0039364484,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -18.776566836982965,
+          "return_pct": -0.0018776570958389804,
+          "start_equity": 999999.7805032854
+        },
+        {
+          "end_equity": 1000032.253916349,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -8.037719656946138,
+          "return_pct": -0.0008037395817117599,
+          "start_equity": 1000040.291636006
+        },
+        {
+          "end_equity": 1000027.117578801,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -5.939227477880195,
+          "return_pct": -0.0005939031152424334,
+          "start_equity": 1000033.0568062789
+        },
+        {
+          "end_equity": 999997.1276474796,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -32.811478791642,
+          "return_pct": -0.00328104964740783,
+          "start_equity": 1000029.9391262713
+        },
+        {
+          "end_equity": 999983.8186900276,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -13.3089574520709,
+          "return_pct": -0.0013308995680194613,
+          "start_equity": 999997.1276474796
+        },
+        {
+          "end_equity": 999999.8182257913,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -66.38320032658521,
+          "return_pct": -0.0066378805954947495,
+          "start_equity": 1000066.2014261179
+        },
+        {
+          "end_equity": 999955.6220924888,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -44.196133302524686,
+          "return_pct": -0.004419614133621685,
+          "start_equity": 999999.8182257913
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": 180.33544723034993,
+      "net_marked_excluding_unverified_funding_usd": 180.33544723142404,
+      "net_sign": "NONNEGATIVE",
+      "open_entry_fee_usd": 0.0,
+      "open_positions_at_end": 0,
+      "profit_factor": 1.0695629779281806,
+      "profitable_months": 23,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "native",
+      "sealed_oos": false,
+      "short_trades": 777,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "7dd7ca8d96aefacd5ac49925440ea2d250a00ac11171286d132da8c4eb83d96f",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S060",
+      "unrealised_reference_usd": 0.0,
+      "win_rate_pct": 42.28694714131608,
+      "worst_month_pct": -0.0066378805954947495,
+      "years": [
+        {
+          "closed_trades": 582,
+          "end_equity": 999999.7805032854,
+          "months": 12,
+          "negative_months": 6,
+          "net_marked_excluding_funding_usd": -0.21949671464972198,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -2.1949671469290166e-05,
+          "start_equity": 1000000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 625,
+          "end_equity": 999983.8186900276,
+          "months": 12,
+          "negative_months": 5,
+          "net_marked_excluding_funding_usd": -15.961813257774338,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.0015961816761334013,
+          "start_equity": 999999.7805032854,
+          "year": 2024
+        },
+        {
+          "closed_trades": 647,
+          "end_equity": 1000180.3354472314,
+          "months": 12,
+          "negative_months": 2,
+          "net_marked_excluding_funding_usd": 196.5167572038481,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 0.019651993715386062,
+          "start_equity": 999983.8186900276,
+          "year": 2025
+        }
+      ]
+    },
+    "S061/common_base": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": 110.19137764798546,
+      "closed_trades": 504,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 2,
+      "evidence_zip_member": "results/S061_common_base_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 10000.0,
+      "largest_closed_winner_usd": 129.47644848317327,
+      "ledger_sha256": "2d0eed7e2c9446a202c6b7e4c824a7dd5dd0c4278d0dc53fd8f675c602a58ea7",
+      "long_trades": 316,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -5.676777473842054,
+      "max_modelled_gross_notional_to_equity": 0.4421560771914043,
+      "max_modelled_pine_path_drawdown_pct": -5.764417827031865,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 10032.844207416501,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -58.13098704813456,
+          "return_pct": -0.576069070906271,
+          "start_equity": 10090.975194464636
+        },
+        {
+          "end_equity": 10027.082151048964,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -5.762056367537298,
+          "return_pct": -0.05743193304325045,
+          "start_equity": 10032.844207416501
+        },
+        {
+          "end_equity": 9998.088342732735,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -28.99380831622875,
+          "return_pct": -0.28915498925273786,
+          "start_equity": 10027.082151048964
+        },
+        {
+          "end_equity": 9979.682106223989,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -18.406236508746588,
+          "return_pct": -0.18409755823097784,
+          "start_equity": 9998.088342732735
+        },
+        {
+          "end_equity": 9969.209894203967,
+          "month": "2023-07",
+          "net_excluding_unverified_funding_usd": -10.472212020022198,
+          "return_pct": -0.10493532668230943,
+          "start_equity": 9979.682106223989
+        },
+        {
+          "end_equity": 10044.647794103768,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -62.48847523580844,
+          "return_pct": -0.6182609353489132,
+          "start_equity": 10107.136269339577
+        },
+        {
+          "end_equity": 10127.747386499985,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -18.80521393462368,
+          "return_pct": -0.18533599218534258,
+          "start_equity": 10146.552600434608
+        },
+        {
+          "end_equity": 10108.565068736287,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -19.182317763697938,
+          "return_pct": -0.18940359619620262,
+          "start_equity": 10127.747386499985
+        },
+        {
+          "end_equity": 10103.265233967597,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -5.792659391048801,
+          "return_pct": -0.057301673926057894,
+          "start_equity": 10109.057893358646
+        },
+        {
+          "end_equity": 10086.226690517375,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -17.038543450222278,
+          "return_pct": -0.1686439290234376,
+          "start_equity": 10103.265233967597
+        },
+        {
+          "end_equity": 10064.59678018375,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -21.62991033362414,
+          "return_pct": -0.2144499721978277,
+          "start_equity": 10086.226690517375
+        },
+        {
+          "end_equity": 10009.684241015946,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -54.912539167804425,
+          "return_pct": -0.5456009849885146,
+          "start_equity": 10064.59678018375
+        },
+        {
+          "end_equity": 9979.714275863047,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -29.96996515289902,
+          "return_pct": -0.2994096959631709,
+          "start_equity": 10009.684241015946
+        },
+        {
+          "end_equity": 10033.959938379068,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -163.82429807130757,
+          "return_pct": -1.606469545469924,
+          "start_equity": 10197.784236450376
+        },
+        {
+          "end_equity": 9844.544171466025,
+          "month": "2025-05",
+          "net_excluding_unverified_funding_usd": -189.41576691304363,
+          "return_pct": -1.8877468923165996,
+          "start_equity": 10033.959938379068
+        },
+        {
+          "end_equity": 9789.69417182158,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -54.849999644444324,
+          "return_pct": -0.5571613950742904,
+          "start_equity": 9844.544171466025
+        },
+        {
+          "end_equity": 9772.923590933711,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -16.770580887869073,
+          "return_pct": -0.1713085270440895,
+          "start_equity": 9789.69417182158
+        },
+        {
+          "end_equity": 9732.704482573708,
+          "month": "2025-08",
+          "net_excluding_unverified_funding_usd": -40.21910836000279,
+          "return_pct": -0.41153609752269116,
+          "start_equity": 9772.923590933711
+        },
+        {
+          "end_equity": 10087.10377008905,
+          "month": "2025-11",
+          "net_excluding_unverified_funding_usd": -56.542826146227526,
+          "return_pct": -0.557421097134958,
+          "start_equity": 10143.646596235278
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": 239.66782613115873,
+      "net_marked_excluding_unverified_funding_usd": 271.93582613089166,
+      "net_sign": "NONNEGATIVE",
+      "open_entry_fee_usd": 0.23500000000000001,
+      "open_positions_at_end": 1,
+      "profit_factor": 1.0606815520571278,
+      "profitable_months": 17,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_base",
+      "sealed_oos": false,
+      "short_trades": 188,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "4e96677610973b77b1ee406211db3e4d7fecab4d90f192fccbfd3175fa212d0a",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S061",
+      "unrealised_reference_usd": 32.50300000000061,
+      "win_rate_pct": 29.96031746031746,
+      "worst_month_pct": -1.8877468923165996,
+      "years": [
+        {
+          "closed_trades": 166,
+          "end_equity": 10107.136269339577,
+          "months": 12,
+          "negative_months": 5,
+          "net_marked_excluding_funding_usd": 107.13626933957676,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 1.071362693395761,
+          "start_equity": 10000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 176,
+          "end_equity": 9979.714275863047,
+          "months": 12,
+          "negative_months": 8,
+          "net_marked_excluding_funding_usd": -127.42199347652968,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -1.260713124676771,
+          "start_equity": 10107.136269339577,
+          "year": 2024
+        },
+        {
+          "closed_trades": 162,
+          "end_equity": 10271.935826130892,
+          "months": 12,
+          "negative_months": 6,
+          "net_marked_excluding_funding_usd": 292.2215502678446,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 2.928155478104344,
+          "start_equity": 9979.714275863047,
+          "year": 2025
+        }
+      ]
+    },
+    "S061/common_stress": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -377.7186223520147,
+      "closed_trades": 504,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 2,
+      "evidence_zip_member": "results/S061_common_stress_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 10000.0,
+      "largest_closed_winner_usd": 128.5064484831733,
+      "ledger_sha256": "4ccb8bd8da24197dafca2a2d1273db04525ec034682cbd8e8f9dce8a89ec37a4",
+      "long_trades": 316,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -8.431727905898246,
+      "max_modelled_gross_notional_to_equity": 0.46409938803059936,
+      "max_modelled_pine_path_drawdown_pct": -8.48786061180473,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 9997.302716367136,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -2.697283632864128,
+          "return_pct": -0.026972836328642558,
+          "start_equity": 10000.0
+        },
+        {
+          "end_equity": 9995.499207416544,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -71.22598704811935,
+          "return_pct": -0.7075388040520214,
+          "start_equity": 10066.725194464663
+        },
+        {
+          "end_equity": 9980.03715104902,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -15.462056367523473,
+          "return_pct": -0.15469018651965705,
+          "start_equity": 9995.499207416544
+        },
+        {
+          "end_equity": 9937.948342732812,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -42.08880831620809,
+          "return_pct": -0.4217299763436655,
+          "start_equity": 9980.03715104902
+        },
+        {
+          "end_equity": 9908.872106224082,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -29.07623650873029,
+          "return_pct": -0.2925778591915562,
+          "start_equity": 9937.948342732812
+        },
+        {
+          "end_equity": 9885.789894204077,
+          "month": "2023-07",
+          "net_excluding_unverified_funding_usd": -23.08221202000459,
+          "return_pct": -0.23294489799202678,
+          "start_equity": 9908.872106224082
+        },
+        {
+          "end_equity": 9864.227794104008,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -81.88847523578079,
+          "return_pct": -0.8233211136714047,
+          "start_equity": 9946.11626933979
+        },
+        {
+          "end_equity": 9889.612386500305,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -34.81021393460287,
+          "return_pct": -0.3507530396083425,
+          "start_equity": 9924.422600434908
+        },
+        {
+          "end_equity": 9858.790068736616,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -30.82231776368826,
+          "return_pct": -0.311663557267039,
+          "start_equity": 9889.612386500305
+        },
+        {
+          "end_equity": 9844.247893358995,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -14.542175377620879,
+          "return_pct": -0.14750466615306435,
+          "start_equity": 9858.790068736616
+        },
+        {
+          "end_equity": 9825.845233967959,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -18.40265939103665,
+          "return_pct": -0.18693819568940118,
+          "start_equity": 9844.247893358995
+        },
+        {
+          "end_equity": 9794.741690517756,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -31.10354345020278,
+          "return_pct": -0.31654827355388493,
+          "start_equity": 9825.845233967959
+        },
+        {
+          "end_equity": 9759.046780184146,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -35.694910333610096,
+          "return_pct": -0.3644293179080549,
+          "start_equity": 9794.741690517756
+        },
+        {
+          "end_equity": 9687.15924101636,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -71.8875391677866,
+          "return_pct": -0.7366245985597208,
+          "start_equity": 9759.046780184146
+        },
+        {
+          "end_equity": 9647.48927586347,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -39.669965152888835,
+          "return_pct": -0.40951081907399933,
+          "start_equity": 9687.15924101636
+        },
+        {
+          "end_equity": 9825.789236450844,
+          "month": "2025-03",
+          "net_excluding_unverified_funding_usd": -5.997333060973688,
+          "return_pct": -0.06099942282689064,
+          "start_equity": 9831.786569511818
+        },
+        {
+          "end_equity": 9650.80993837955,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -174.97929807129367,
+          "return_pct": -1.7808167248506757,
+          "start_equity": 9825.789236450844
+        },
+        {
+          "end_equity": 9448.784171466525,
+          "month": "2025-05",
+          "net_excluding_unverified_funding_usd": -202.02576691302602,
+          "return_pct": -2.093355565003985,
+          "start_equity": 9650.80993837955
+        },
+        {
+          "end_equity": 9379.384171822092,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -69.39999964443268,
+          "return_pct": -0.7344860289433597,
+          "start_equity": 9448.784171466525
+        },
+        {
+          "end_equity": 9343.213590934245,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -36.17058088784688,
+          "return_pct": -0.3856391872348319,
+          "start_equity": 9379.384171822092
+        },
+        {
+          "end_equity": 9289.414482574257,
+          "month": "2025-08",
+          "net_excluding_unverified_funding_usd": -53.79910835998817,
+          "return_pct": -0.575809466800481,
+          "start_equity": 9343.213590934245
+        },
+        {
+          "end_equity": 9609.863770089643,
+          "month": "2025-11",
+          "net_excluding_unverified_funding_usd": -67.69782614620999,
+          "return_pct": -0.6995339215669971,
+          "start_equity": 9677.561596235853
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -249.21217386884135,
+      "net_marked_excluding_unverified_funding_usd": -217.42917386849513,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.72,
+      "open_positions_at_end": 1,
+      "profit_factor": 0.9419357819837956,
+      "profitable_months": 14,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_stress",
+      "sealed_oos": false,
+      "short_trades": 188,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "4e96677610973b77b1ee406211db3e4d7fecab4d90f192fccbfd3175fa212d0a",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S061",
+      "unrealised_reference_usd": 32.50300000000061,
+      "win_rate_pct": 29.96031746031746,
+      "worst_month_pct": -2.093355565003985,
+      "years": [
+        {
+          "closed_trades": 166,
+          "end_equity": 9946.11626933979,
+          "months": 12,
+          "negative_months": 6,
+          "net_marked_excluding_funding_usd": -53.88373066021086,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.5388373066021135,
+          "start_equity": 10000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 176,
+          "end_equity": 9647.48927586347,
+          "months": 12,
+          "negative_months": 9,
+          "net_marked_excluding_funding_usd": -298.6269934763186,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -3.002448246024181,
+          "start_equity": 9946.11626933979,
+          "year": 2024
+        },
+        {
+          "closed_trades": 162,
+          "end_equity": 9782.570826131505,
+          "months": 12,
+          "negative_months": 7,
+          "net_marked_excluding_funding_usd": 135.08155026803433,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 1.4001731062400546,
+          "start_equity": 9647.48927586347,
+          "year": 2025
+        }
+      ]
+    },
+    "S061/native": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": 89.49144433973979,
+      "closed_trades": 504,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 2,
+      "evidence_zip_member": "results/S061_native_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 10000.0,
+      "largest_closed_winner_usd": 129.089312838325,
+      "ledger_sha256": "4edb6e7310c739e2a48a329719f53d6e4d3bfe5d259372cb4948a3d2de585af9",
+      "long_trades": 316,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -5.804390970992646,
+      "max_modelled_gross_notional_to_equity": 0.4429873316284774,
+      "max_modelled_pine_path_drawdown_pct": -5.891861465879444,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 10036.390334115169,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -56.92038542103728,
+          "return_pct": -0.5639416738738134,
+          "start_equity": 10093.310719536206
+        },
+        {
+          "end_equity": 10031.333147017209,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -5.057187097960195,
+          "return_pct": -0.05038850552444574,
+          "start_equity": 10036.390334115169
+        },
+        {
+          "end_equity": 10003.294475942617,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -28.038671074591548,
+          "return_pct": -0.2795109150863784,
+          "start_equity": 10031.333147017209
+        },
+        {
+          "end_equity": 9985.792133410221,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -17.502342532396142,
+          "return_pct": -0.17496578326758883,
+          "start_equity": 10003.294475942617
+        },
+        {
+          "end_equity": 9976.360476445203,
+          "month": "2023-07",
+          "net_excluding_unverified_funding_usd": -9.431656965018192,
+          "return_pct": -0.09445076403565844,
+          "start_equity": 9985.792133410221
+        },
+        {
+          "end_equity": 10059.494410052828,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -61.23189919949073,
+          "return_pct": -0.6050148707559933,
+          "start_equity": 10120.726309252319
+        },
+        {
+          "end_equity": 10144.252388562607,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -18.803340270693297,
+          "return_pct": -0.1850166010341492,
+          "start_equity": 10163.0557288333
+        },
+        {
+          "end_equity": 10125.109945528842,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -19.14244303376472,
+          "return_pct": -0.1887023538111876,
+          "start_equity": 10144.252388562607
+        },
+        {
+          "end_equity": 10119.39858479091,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -6.08928065210057,
+          "return_pct": -0.060138145766608364,
+          "start_equity": 10125.48786544301
+        },
+        {
+          "end_equity": 10101.698029190451,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -17.700555600458756,
+          "return_pct": -0.1749170709320791,
+          "start_equity": 10119.39858479091
+        },
+        {
+          "end_equity": 10079.056355327602,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -22.64167386284862,
+          "return_pct": -0.22413730639563312,
+          "start_equity": 10101.698029190451
+        },
+        {
+          "end_equity": 10023.059851925676,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -55.99650340192602,
+          "return_pct": -0.5555728773391277,
+          "start_equity": 10079.056355327602
+        },
+        {
+          "end_equity": 9992.495234272343,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -30.5646176533337,
+          "return_pct": -0.30494298253104235,
+          "start_equity": 10023.059851925676
+        },
+        {
+          "end_equity": 10040.869148895665,
+          "month": "2025-04",
+          "net_excluding_unverified_funding_usd": -165.786641757275,
+          "return_pct": -1.6242993313157372,
+          "start_equity": 10206.65579065294
+        },
+        {
+          "end_equity": 9849.002008352409,
+          "month": "2025-05",
+          "net_excluding_unverified_funding_usd": -191.86714054325603,
+          "return_pct": -1.9108618755813378,
+          "start_equity": 10040.869148895665
+        },
+        {
+          "end_equity": 9791.146822655872,
+          "month": "2025-06",
+          "net_excluding_unverified_funding_usd": -57.855185696536864,
+          "return_pct": -0.5874218082956295,
+          "start_equity": 9849.002008352409
+        },
+        {
+          "end_equity": 9770.407848532921,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -20.73897412295082,
+          "return_pct": -0.2118135341915517,
+          "start_equity": 9791.146822655872
+        },
+        {
+          "end_equity": 9727.369011708352,
+          "month": "2025-08",
+          "net_excluding_unverified_funding_usd": -43.038836824569444,
+          "return_pct": -0.4405019472245697,
+          "start_equity": 9770.407848532921
+        },
+        {
+          "end_equity": 10070.770214095759,
+          "month": "2025-11",
+          "net_excluding_unverified_funding_usd": -60.52649995937827,
+          "return_pct": -0.5974210574191341,
+          "start_equity": 10131.296714055137
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": 218.58075717806477,
+      "net_marked_excluding_unverified_funding_usd": 250.64920237806655,
+      "net_sign": "NONNEGATIVE",
+      "open_entry_fee_usd": 0.4345548,
+      "open_positions_at_end": 1,
+      "profit_factor": 1.0551364770919647,
+      "profitable_months": 17,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "native",
+      "sealed_oos": false,
+      "short_trades": 188,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "4e96677610973b77b1ee406211db3e4d7fecab4d90f192fccbfd3175fa212d0a",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S061",
+      "unrealised_reference_usd": 32.50299999999879,
+      "win_rate_pct": 29.96031746031746,
+      "worst_month_pct": -1.9108618755813378,
+      "years": [
+        {
+          "closed_trades": 166,
+          "end_equity": 10120.726309252319,
+          "months": 12,
+          "negative_months": 5,
+          "net_marked_excluding_funding_usd": 120.72630925231897,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 1.207263092523192,
+          "start_equity": 10000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 176,
+          "end_equity": 9992.495234272343,
+          "months": 12,
+          "negative_months": 8,
+          "net_marked_excluding_funding_usd": -128.23107497997626,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -1.267014550751644,
+          "start_equity": 10120.726309252319,
+          "year": 2024
+        },
+        {
+          "closed_trades": 162,
+          "end_equity": 10250.649202378067,
+          "months": 12,
+          "negative_months": 6,
+          "net_marked_excluding_funding_usd": 258.15396810572383,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 2.583478521163607,
+          "start_equity": 9992.495234272343,
+          "year": 2025
+        }
+      ]
+    },
+    "S081/common_base": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -2902.445999999982,
+      "closed_trades": 5351,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 4130,
+      "evidence_zip_member": "results/S081_common_base_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 1000000.0,
+      "largest_closed_winner_usd": 53.09999999999971,
+      "ledger_sha256": "864511e8c1d137dd37ba4861db2df674c489cd81b671c6e1f410e06d3ee9991d",
+      "long_trades": 2675,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -0.2901078689970693,
+      "max_modelled_gross_notional_to_equity": 0.004553921521063554,
+      "max_modelled_pine_path_drawdown_pct": -0.29016648728111827,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 999877.9550000043,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -122.04499999573454,
+          "return_pct": -0.012204499999568519,
+          "start_equity": 1000000.0
+        },
+        {
+          "end_equity": 999830.7420000071,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -47.212999997194856,
+          "return_pct": -0.0047218762811107595,
+          "start_equity": 999877.9550000043
+        },
+        {
+          "end_equity": 999671.7070000101,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -159.0349999970058,
+          "return_pct": -0.015906192249992568,
+          "start_equity": 999830.7420000071
+        },
+        {
+          "end_equity": 999550.1320000128,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -121.57499999727588,
+          "return_pct": -0.012161492532591911,
+          "start_equity": 999671.7070000101
+        },
+        {
+          "end_equity": 999506.293000015,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -43.83899999782443,
+          "return_pct": -0.004385873063728063,
+          "start_equity": 999550.1320000128
+        },
+        {
+          "end_equity": 999503.4970000178,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -2.795999997179024,
+          "return_pct": -0.0002797381083774475,
+          "start_equity": 999506.293000015
+        },
+        {
+          "end_equity": 999432.0710000207,
+          "month": "2023-07",
+          "net_excluding_unverified_funding_usd": -71.42599999706727,
+          "return_pct": -0.007146148083669868,
+          "start_equity": 999503.4970000178
+        },
+        {
+          "end_equity": 999236.3790000245,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -195.6919999961974,
+          "return_pct": -0.01958032023130496,
+          "start_equity": 999432.0710000207
+        },
+        {
+          "end_equity": 999074.1790000277,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -162.19999999681022,
+          "return_pct": -0.016232395397686172,
+          "start_equity": 999236.3790000245
+        },
+        {
+          "end_equity": 998998.400000031,
+          "month": "2023-10",
+          "net_excluding_unverified_funding_usd": -75.77899999672081,
+          "return_pct": -0.007584922280001738,
+          "start_equity": 999074.1790000277
+        },
+        {
+          "end_equity": 998850.8780000338,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -147.52199999720324,
+          "return_pct": -0.014766990617520737,
+          "start_equity": 998998.400000031
+        },
+        {
+          "end_equity": 998634.2950000361,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -216.58299999765586,
+          "return_pct": -0.021683216661061433,
+          "start_equity": 998850.8780000338
+        },
+        {
+          "end_equity": 998440.7380000396,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -193.55699999653734,
+          "return_pct": -0.019382170326576187,
+          "start_equity": 998634.2950000361
+        },
+        {
+          "end_equity": 998397.296000043,
+          "month": "2024-02",
+          "net_excluding_unverified_funding_usd": -43.441999996546656,
+          "return_pct": -0.004350984324175133,
+          "start_equity": 998440.7380000396
+        },
+        {
+          "end_equity": 998179.1180000458,
+          "month": "2024-03",
+          "net_excluding_unverified_funding_usd": -218.17799999727868,
+          "return_pct": -0.021852823607537708,
+          "start_equity": 998397.296000043
+        },
+        {
+          "end_equity": 997994.5560000481,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -184.56199999770615,
+          "return_pct": -0.01848986786735507,
+          "start_equity": 998179.1180000458
+        },
+        {
+          "end_equity": 997936.0360000506,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -58.51999999745749,
+          "return_pct": -0.00586375944093831,
+          "start_equity": 997994.5560000481
+        },
+        {
+          "end_equity": 997857.3960000543,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -78.63999999628868,
+          "return_pct": -0.00788026458203861,
+          "start_equity": 997936.0360000506
+        },
+        {
+          "end_equity": 997759.981000058,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -97.41499999631196,
+          "return_pct": -0.009762416993330802,
+          "start_equity": 997857.3960000543
+        },
+        {
+          "end_equity": 997327.2220000615,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -432.75899999646936,
+          "return_pct": -0.0433730564702306,
+          "start_equity": 997759.981000058
+        },
+        {
+          "end_equity": 997209.1660000705,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -185.2199999956647,
+          "return_pct": -0.0185703872605969,
+          "start_equity": 997394.3860000662
+        },
+        {
+          "end_equity": 997208.3800000744,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -0.7859999961219728,
+          "return_pct": -7.881997307057631e-05,
+          "start_equity": 997209.1660000705
+        },
+        {
+          "end_equity": 997150.7260000777,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -57.65399999672081,
+          "return_pct": -0.0057815398619820435,
+          "start_equity": 997208.3800000744
+        },
+        {
+          "end_equity": 997821.2690000776,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -16.417000000015832,
+          "return_pct": -0.001645257563465119,
+          "start_equity": 997837.6860000776
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -2849.3459999999823,
+      "net_marked_excluding_unverified_funding_usd": -1155.0499999223975,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.23500000000000001,
+      "open_positions_at_end": 1,
+      "profit_factor": 0.7212435352789078,
+      "profitable_months": 12,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_base",
+      "sealed_oos": false,
+      "short_trades": 2676,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "277c9e8bb42caba386ff973e26398c95d7f373dde1900a0dcc183e39d057808e",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S081",
+      "unrealised_reference_usd": 1694.530999999959,
+      "win_rate_pct": 43.44982246309101,
+      "worst_month_pct": -0.0433730564702306,
+      "years": [
+        {
+          "closed_trades": 2589,
+          "end_equity": 998634.2950000361,
+          "months": 12,
+          "negative_months": 12,
+          "net_marked_excluding_funding_usd": -1365.7049999638693,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.13657049999639126,
+          "start_equity": 1000000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 2762,
+          "end_equity": 997150.7260000777,
+          "months": 12,
+          "negative_months": 11,
+          "net_marked_excluding_funding_usd": -1483.5689999584574,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.14855978884226184,
+          "start_equity": 998634.2950000361,
+          "year": 2024
+        },
+        {
+          "closed_trades": 0,
+          "end_equity": 998844.9500000776,
+          "months": 12,
+          "negative_months": 1,
+          "net_marked_excluding_funding_usd": 1694.2239999999292,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 0.1699065102019226,
+          "start_equity": 997150.7260000777,
+          "year": 2025
+        }
+      ]
+    },
+    "S081/common_stress": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -8091.945999999982,
+      "closed_trades": 5351,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 4130,
+      "evidence_zip_member": "results/S081_common_stress_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 1000000.0,
+      "largest_closed_winner_usd": 52.12999999999971,
+      "ledger_sha256": "9c4353006c1587574568e2a7de052344b56eb765b8a97df9f34156bce0863f27",
+      "long_trades": 2675,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -0.8065116682874796,
+      "max_modelled_gross_notional_to_equity": 0.00457770615793434,
+      "max_modelled_pine_path_drawdown_pct": -0.8067674403312575,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 999656.3100000072,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -343.6899999928428,
+          "return_pct": -0.034368999999279115,
+          "start_equity": 1000000.0
+        },
+        {
+          "end_equity": 999421.8870000126,
+          "month": "2023-02",
+          "net_excluding_unverified_funding_usd": -234.42299999459647,
+          "return_pct": -0.023450359653565123,
+          "start_equity": 999656.3100000072
+        },
+        {
+          "end_equity": 999080.4920000177,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -341.39499999489635,
+          "return_pct": -0.03415924790477476,
+          "start_equity": 999421.8870000126
+        },
+        {
+          "end_equity": 998799.8370000218,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -280.654999995837,
+          "return_pct": -0.028091330202439924,
+          "start_equity": 999080.4920000177
+        },
+        {
+          "end_equity": 998575.5780000276,
+          "month": "2023-05",
+          "net_excluding_unverified_funding_usd": -224.25899999425747,
+          "return_pct": -0.02245284707572681,
+          "start_equity": 998799.8370000218
+        },
+        {
+          "end_equity": 998359.3820000332,
+          "month": "2023-06",
+          "net_excluding_unverified_funding_usd": -216.19599999440834,
+          "return_pct": -0.021650439361575735,
+          "start_equity": 998575.5780000276
+        },
+        {
+          "end_equity": 998117.2360000385,
+          "month": "2023-07",
+          "net_excluding_unverified_funding_usd": -242.14599999471102,
+          "return_pct": -0.024254392191880303,
+          "start_equity": 998359.3820000332
+        },
+        {
+          "end_equity": 997650.9140000463,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -466.32199999212753,
+          "return_pct": -0.046720163040259166,
+          "start_equity": 998117.2360000385
+        },
+        {
+          "end_equity": 997246.2140000531,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -404.69999999320135,
+          "return_pct": -0.04056529135733067,
+          "start_equity": 997650.9140000463
+        },
+        {
+          "end_equity": 996932.7850000607,
+          "month": "2023-10",
+          "net_excluding_unverified_funding_usd": -313.42899999243673,
+          "return_pct": -0.03142944997858166,
+          "start_equity": 997246.2140000531
+        },
+        {
+          "end_equity": 996541.7930000684,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -390.99199999228586,
+          "return_pct": -0.039219494621423046,
+          "start_equity": 996932.7850000607
+        },
+        {
+          "end_equity": 996122.4800000739,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -419.312999994494,
+          "return_pct": -0.042076810319435776,
+          "start_equity": 996541.7930000684
+        },
+        {
+          "end_equity": 995702.91300008,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -419.5669999938691,
+          "return_pct": -0.042120021224079096,
+          "start_equity": 996122.4800000739
+        },
+        {
+          "end_equity": 995433.4610000859,
+          "month": "2024-02",
+          "net_excluding_unverified_funding_usd": -269.45199999411125,
+          "return_pct": -0.02706148555720045,
+          "start_equity": 995702.91300008
+        },
+        {
+          "end_equity": 995020.3130000915,
+          "month": "2024-03",
+          "net_excluding_unverified_funding_usd": -413.14799999445677,
+          "return_pct": -0.041504331146291484,
+          "start_equity": 995433.4610000859
+        },
+        {
+          "end_equity": 994623.3210000977,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -396.99199999379925,
+          "return_pct": -0.03989787894850272,
+          "start_equity": 995020.3130000915
+        },
+        {
+          "end_equity": 994309.6910001048,
+          "month": "2024-05",
+          "net_excluding_unverified_funding_usd": -313.6299999929033,
+          "return_pct": -0.031532540346790316,
+          "start_equity": 994623.3210000977
+        },
+        {
+          "end_equity": 994023.4710001106,
+          "month": "2024-06",
+          "net_excluding_unverified_funding_usd": -286.2199999941513,
+          "return_pct": -0.02878580009677556,
+          "start_equity": 994309.6910001048
+        },
+        {
+          "end_equity": 993690.3460001177,
+          "month": "2024-07",
+          "net_excluding_unverified_funding_usd": -333.12499999289867,
+          "return_pct": -0.03351279016156061,
+          "start_equity": 994023.4710001106
+        },
+        {
+          "end_equity": 993044.1870001237,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -646.1589999940479,
+          "return_pct": -0.06502619277675148,
+          "start_equity": 993690.3460001177
+        },
+        {
+          "end_equity": 992872.7310001306,
+          "month": "2024-09",
+          "net_excluding_unverified_funding_usd": -171.45599999302067,
+          "return_pct": -0.017265696958657095,
+          "start_equity": 993044.1870001237
+        },
+        {
+          "end_equity": 992467.3210001374,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -405.4099999932805,
+          "return_pct": -0.04083202079534498,
+          "start_equity": 992872.7310001306
+        },
+        {
+          "end_equity": 992247.3150001438,
+          "month": "2024-11",
+          "net_excluding_unverified_funding_usd": -220.0059999935329,
+          "return_pct": -0.022167581273291326,
+          "start_equity": 992467.3210001374
+        },
+        {
+          "end_equity": 991959.7710001508,
+          "month": "2024-12",
+          "net_excluding_unverified_funding_usd": -287.5439999930095,
+          "return_pct": -0.02897906556622587,
+          "start_equity": 992247.3150001438
+        },
+        {
+          "end_equity": 992630.3140001508,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -16.417000000015832,
+          "return_pct": -0.0016538612869321234,
+          "start_equity": 992646.7310001508
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -8039.815999999982,
+      "net_marked_excluding_unverified_funding_usd": -6346.004999849247,
+      "net_sign": "NEGATIVE",
+      "open_entry_fee_usd": 0.72,
+      "open_positions_at_end": 1,
+      "profit_factor": 0.4066703585800387,
+      "profitable_months": 11,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "common_stress",
+      "sealed_oos": false,
+      "short_trades": 2676,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "277c9e8bb42caba386ff973e26398c95d7f373dde1900a0dcc183e39d057808e",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S081",
+      "unrealised_reference_usd": 1694.530999999959,
+      "win_rate_pct": 29.34031022238834,
+      "worst_month_pct": -0.06502619277675148,
+      "years": [
+        {
+          "closed_trades": 2589,
+          "end_equity": 996122.4800000739,
+          "months": 12,
+          "negative_months": 12,
+          "net_marked_excluding_funding_usd": -3877.519999926095,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.3877519999926138,
+          "start_equity": 1000000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 2762,
+          "end_equity": 991959.7710001508,
+          "months": 12,
+          "negative_months": 12,
+          "net_marked_excluding_funding_usd": -4162.708999923081,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.41789128179526847,
+          "start_equity": 996122.4800000739,
+          "year": 2024
+        },
+        {
+          "closed_trades": 0,
+          "end_equity": 993653.9950001508,
+          "months": 12,
+          "negative_months": 1,
+          "net_marked_excluding_funding_usd": 1694.2239999999292,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 0.17079563602582226,
+          "start_equity": 991959.7710001508,
+          "year": 2025
+        }
+      ]
+    },
+    "S081/native": {
+      "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40735495376",
+      "closed_net_without_largest_winner_usd": -387.9459999999824,
+      "closed_trades": 5351,
+      "code_commit": "e33700c454560cc504f00f3cd8174e4495a8701f",
+      "equal_distance_bar_paths_unverified": 4130,
+      "evidence_zip_member": "results/S081_native_trades.csv",
+      "funding_verified": false,
+      "initial_capital": 1000000.0,
+      "largest_closed_winner_usd": 53.56999999999971,
+      "ledger_sha256": "23ead719fdc8ddb0d94c8be42d95b77ab45f47bd16ab9b5c3db45db24af58aef",
+      "long_trades": 2675,
+      "margin_liquidations_required": 0,
+      "max_bar_close_drawdown_pct": -0.0705005866722952,
+      "max_modelled_gross_notional_to_equity": 0.004542485674930725,
+      "max_modelled_pine_path_drawdown_pct": -0.0705465715157727,
+      "native_broker_qualified": false,
+      "native_platform_output_parity": false,
+      "negative_months": [
+        {
+          "end_equity": 999985.3500000003,
+          "month": "2023-01",
+          "net_excluding_unverified_funding_usd": -14.649999999674037,
+          "return_pct": -0.001464999999967187,
+          "start_equity": 1000000.0
+        },
+        {
+          "end_equity": 999958.1720000007,
+          "month": "2023-03",
+          "net_excluding_unverified_funding_usd": -70.67499999946449,
+          "return_pct": -0.007067296129659173,
+          "start_equity": 1000028.8470000002
+        },
+        {
+          "end_equity": 999913.6770000008,
+          "month": "2023-04",
+          "net_excluding_unverified_funding_usd": -44.49499999987893,
+          "return_pct": -0.00444968612145491,
+          "start_equity": 999958.1720000007
+        },
+        {
+          "end_equity": 1000004.5939999999,
+          "month": "2023-08",
+          "net_excluding_unverified_funding_usd": -64.56200000015087,
+          "return_pct": -0.006455753545919762,
+          "start_equity": 1000069.1560000001
+        },
+        {
+          "end_equity": 999959.8939999997,
+          "month": "2023-09",
+          "net_excluding_unverified_funding_usd": -44.700000000186265,
+          "return_pct": -0.004469979464938323,
+          "start_equity": 1000004.5939999999
+        },
+        {
+          "end_equity": 999969.7129999994,
+          "month": "2023-11",
+          "net_excluding_unverified_funding_usd": -29.552000000257976,
+          "return_pct": -0.002955202172094662,
+          "start_equity": 999999.2649999997
+        },
+        {
+          "end_equity": 999851.3599999992,
+          "month": "2023-12",
+          "net_excluding_unverified_funding_usd": -118.35300000023562,
+          "return_pct": -0.011835658466607946,
+          "start_equity": 999969.7129999994
+        },
+        {
+          "end_equity": 999767.3130000001,
+          "month": "2024-01",
+          "net_excluding_unverified_funding_usd": -84.04699999908917,
+          "return_pct": -0.008405949460232875,
+          "start_equity": 999851.3599999992
+        },
+        {
+          "end_equity": 999709.6729999988,
+          "month": "2024-03",
+          "net_excluding_unverified_funding_usd": -123.70800000044983,
+          "return_pct": -0.012372861553866521,
+          "start_equity": 999833.3809999992
+        },
+        {
+          "end_equity": 999628.0409999986,
+          "month": "2024-04",
+          "net_excluding_unverified_funding_usd": -81.63200000021607,
+          "return_pct": -0.008165570685658707,
+          "start_equity": 999709.6729999988
+        },
+        {
+          "end_equity": 999402.5069999986,
+          "month": "2024-08",
+          "net_excluding_unverified_funding_usd": -329.3590000002878,
+          "return_pct": -0.03294473360322403,
+          "start_equity": 999731.8659999989
+        },
+        {
+          "end_equity": 999506.7609999984,
+          "month": "2024-10",
+          "net_excluding_unverified_funding_usd": -78.53000000026077,
+          "return_pct": -0.007856258060945365,
+          "start_equity": 999585.2909999987
+        },
+        {
+          "end_equity": 1000336.4739999988,
+          "month": "2025-07",
+          "net_excluding_unverified_funding_usd": -16.417000000015832,
+          "return_pct": -0.0016411208632161056,
+          "start_equity": 1000352.8909999988
+        }
+      ],
+      "net_closed_excluding_unverified_funding_usd": -334.3759999999827,
+      "net_marked_excluding_unverified_funding_usd": 1360.1549999987474,
+      "net_sign": "NONNEGATIVE",
+      "open_entry_fee_usd": 0.0,
+      "open_positions_at_end": 1,
+      "profit_factor": 0.9624955485503857,
+      "profitable_months": 23,
+      "quantity_rule": "ORIGINAL_FIXED_ONE_UNIT",
+      "scenario": "native",
+      "sealed_oos": false,
+      "short_trades": 2676,
+      "signal_prefix_parity": [
+        true,
+        true
+      ],
+      "source_sha256": "277c9e8bb42caba386ff973e26398c95d7f373dde1900a0dcc183e39d057808e",
+      "status": "SOURCE_DEFINED_UNIT_ACCOUNT_MODEL_NOT_BROKER_QUALIFIED",
+      "strategy_id": "S081",
+      "unrealised_reference_usd": 1694.530999999959,
+      "win_rate_pct": 52.94337507008036,
+      "worst_month_pct": -0.03294473360322403,
+      "years": [
+        {
+          "closed_trades": 2589,
+          "end_equity": 999851.3599999992,
+          "months": 12,
+          "negative_months": 7,
+          "net_marked_excluding_funding_usd": -148.64000000082888,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.014864000000081035,
+          "start_equity": 1000000.0,
+          "year": 2023
+        },
+        {
+          "closed_trades": 2762,
+          "end_equity": 999665.9309999988,
+          "months": 12,
+          "negative_months": 5,
+          "net_marked_excluding_funding_usd": -185.42900000035297,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": -0.018545656626434148,
+          "start_equity": 999851.3599999992,
+          "year": 2024
+        },
+        {
+          "closed_trades": 0,
+          "end_equity": 1001360.1549999987,
+          "months": 12,
+          "negative_months": 1,
+          "net_marked_excluding_funding_usd": 1694.2239999999292,
+          "note": "Continuous account, NOT reset/re-sized annually; S081 date gate ends2024 but existing position carries2025",
+          "return_pct": 0.1694790176859584,
+          "start_equity": 999665.9309999988,
+          "year": 2025
+        }
+      ]
+    }
+  },
+  "negative_case_years": 27,
+  "negative_cases": 8,
+  "qualified_profitable_strategies": 0,
+  "schema": "oracle.gold.phase03.account_results.v1",
+  "scope": "4 source-default fixedONE-unit accounts,3 continuous source periods,3 friction cases; funding unknown, no native platform/broker parity or sealed OOS; full calendars/ASK not certified"
+}
