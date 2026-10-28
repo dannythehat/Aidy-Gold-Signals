@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gold_hunter.bible_engine import FAMILIES, Parameters, research_backtest
+from gold_hunter.bible_engine import FAMILIES, Parameters, research_backtest, build_candidate_tape
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'artifacts/strategy_lab/s010_paid_customer_example'
@@ -49,9 +49,11 @@ def run() -> dict:
                           commission_usd_oz_roundtrip=.14),
     }
     for scenario, cfg in scenarios.items():
+        # Source/config-attested candidate tape: no repeated HTF research per family.
+        tape = build_candidate_tape(source, cfg)
         for family_set in [FAMILIES] + [(name,) for name in FAMILIES]:
             label = 'COMBINED' if len(family_set) > 1 else family_set[0]
-            result = research_backtest(source, cfg=cfg, families=family_set)
+            result = research_backtest(source, cfg=cfg, families=family_set, candidate_tape=tape)
             key = f'{label}_{scenario}'
             if result['price_rows'] != len(source) or result['status'] != 'HISTORICAL_RESEARCH_ONLY':
                 raise ValueError('Incomplete historical account evidence')
