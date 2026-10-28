@@ -1,4 +1,4 @@
-name: Gold Hunter OPEN Strategy Lab 2025 Authenticated Data
+name: Gold Hunter TEN Strategy Candidates 2025 Genuine Source
 
 on:
   pull_request:
@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/gold_hunter/open_strategy_lab.py'
       - 'tests/test_gold_hunter_open_lab.py'
+      - 'tests/test_gold_hunter_ten_lab.py'
       - 'scripts/gold_hunter_open_strategy_research.py'
       - '.github/workflows/gold-hunter-open-strategy-2025.yml'
   workflow_dispatch:
@@ -14,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  real-five-strategy-comparison:
+  real-ten-strategy-comparison:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     env:
@@ -29,16 +30,16 @@ jobs:
       - run: python -m pip install --quiet pytest 'google-cloud-bigquery>=3.42,<4' numpy pandas
       - name: Run causal portfolio and quote tests
         run: |
-          python -m compileall -q src/gold_hunter/open_strategy_lab.py scripts/gold_hunter_open_strategy_research.py tests/test_gold_hunter_open_lab.py
-          python -m pytest -q tests/test_gold_hunter_open_lab.py
+          python -m compileall -q src/gold_hunter/open_strategy_lab.py scripts/gold_hunter_open_strategy_research.py tests/test_gold_hunter_open_lab.py tests/test_gold_hunter_ten_lab.py
+          python -m pytest -q tests/test_gold_hunter_open_lab.py tests/test_gold_hunter_ten_lab.py
       - name: Revalidate full 2025 original BigQuery source months read only
         run: python scripts/strategy_lab/s010_run_12month_history.py
-      - name: Run 5 systems and 4 combinations with real source and fees
+      - name: Run ten candidate methods (frozen first five) and portfolios with real costs
         run: python scripts/gold_hunter_open_strategy_research.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: GOLD-HUNTER-OPEN-LAB-2025-GENUINE-SOURCE
+          name: GOLD-HUNTER-TEN-LAB-2025-GENUINE-SOURCE
           path: |
             artifacts/gold_hunter/open_lab_2025/
             artifacts/strategy_lab/s010_paid_customer_example/blocked_result.json
