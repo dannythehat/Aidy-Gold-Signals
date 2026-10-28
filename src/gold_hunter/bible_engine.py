@@ -199,12 +199,13 @@ def classify_pattern(last: list[dict[str, float]], side: int) -> list[tuple[str,
         ret.append(("ENGULF", min(b["low"], c["low"]) if side == 1 else
                     max(b["high"], c["high"]),
                     c["low"] if side == 1 else c["high"]))
+    # Source-faithful inside-bar order is armed at the INSIDE bar's close.
+    # A subsequent breakout is the STOP-order fill, never a second 'signal'.
+    if c["high"] < b["high"] and c["low"] > b["low"]:
+        ret.append(("INSIDE", b["low"] if side == 1 else b["high"],
+                    b["low"] if side == 1 else b["high"]))
     inside = b["high"] < a["high"] and b["low"] > a["low"]
     if inside:
-        if (c["close"] > a["high"] if side == 1 else c["close"] < a["low"]):
-            ret.append(("INSIDE", min(a["low"], b["low"]) if side == 1
-                        else max(a["high"], b["high"]),
-                        b["low"] if side == 1 else b["high"]))
         # Mother-bar sweep and reclaim, completed third candle, no future price.
         if ((c["low"] < a["low"] and a["low"] < c["close"] < a["high"])
                 if side == 1 else
@@ -253,8 +254,14 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
                 continue
             level = min(near, key=lambda n: abs(n - touch))
             # Historical original prices are BID. Buy at ASK; sell at BID.
-            entry_est = (c + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
-                         if side == 1 else c - cfg.slip_usd_oz_each_side)
+            is_inside = pattern == "INSIDE"
+            # Mother-bar STOP activation: ASK for long, BID for short.
+            # One cent/oz is an explicit research-only tick assumption.
+            trigger = ((float(recent[-2]["high"]) + cfg.spread_usd_oz + .01)
+                       if side == 1 else (float(recent[-2]["low"]) - .01)) if is_inside else None
+            entry_est = (trigger + side * cfg.slip_usd_oz_each_side if is_inside
+                         else (c + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
+                               if side == 1 else c - cfg.slip_usd_oz_each_side))
             stop = (stop_edge - side * cfg.stop_buffer_atr * atr +
                     (cfg.spread_usd_oz if side == -1 else 0.0))
             risk = side * (entry_est - stop)
@@ -286,6 +293,11 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
                 "pattern": pattern, "stop": round(stop, 6),
                 "target": round(target, 6), "estimated_rr": round(rr, 4),
                 "signal_close": c,
+                "entry_type": "STOP" if is_inside else "MARKET",
+                "trigger": round(trigger, 6) if is_inside else None,
+                "mother_high": float(recent[-2]["high"]) if is_inside else None,
+                "mother_low": float(recent[-2]["low"]) if is_inside else None,
+                "valid_bars": 3 if is_inside else 1,
             })
     return out
 
