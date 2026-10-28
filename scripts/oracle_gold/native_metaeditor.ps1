@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$OutDir, [switch]$InitialiseSdkOffline)
+param([Parameter(Mandatory=$true)][string]$OutDir, [switch]$InitialiseSdkOffline, [string]$OnlyId='')
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $work = Join-Path $env:RUNNER_TEMP 'oracle-official-sdk'
@@ -78,6 +78,7 @@ try {
     if (Test-Path 'research/gold_oracle/phase04/additional_native_sources.json') {
         $pins += Get-Content 'research/gold_oracle/phase04/additional_native_sources.json' -Raw | ConvertFrom-Json
     }
+    if ($OnlyId) {$pins=@($pins | Where-Object {$_.ids -contains $OnlyId})}
     $pins = $pins | Sort-Object @{Expression={if ($_.path -eq 'SuperTrendTV.mq5') {0} else {1}}},path
     foreach ($pin in $pins) {
         $row = @{ids=$pin.ids; source_url=$pin.endpoint; source_sha256=$pin.sha256; path=$pin.path; source_modified=$false; status='NOT_COMPILED'}
@@ -89,7 +90,7 @@ try {
             if ((Get-FileHash $src -Algorithm SHA256).Hash.ToLower() -ne $pin.sha256) {throw 'Original bytes changed'}
             $p = Start-Process $compiler -ArgumentList @('/portable',"/compile:`"$src`"", "/include:`"$sdk`"",'/log') -PassThru
             if (-not $p.WaitForExit(60000)) {$p.Kill(); throw 'Compiler timeout'}
-            $binary = [IO.Path]::ChangeExtension($src,'.ex5')
+            $binary = [IO.Path]::ChangeExtension($src,$(if ($src.EndsWith('.mq4')) {'.ex4'} else {'.ex5'}))
             $log = [IO.Path]::ChangeExtension($src,'.log')
             $row.status = 'NATIVE_COMPILE_FAILED'
             if ((Test-Path $binary) -and (Get-Item $binary).Length -gt 0) {

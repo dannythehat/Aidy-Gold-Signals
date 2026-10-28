@@ -7,5 +7,13 @@
     "sha256": "dbe6894ae3f17cdf5334938f59261112e8be6cec4fded2e92b908525f80d659b",
     "bytes": 28251,
     "endpoint": "https://raw.githubusercontent.com/jzd101/breakout-follow-101/06c58c37e768818530b106c8e7f9cadd6d25c06e/src/mql5/BreakoutFollowTrend.mq5"
+  },
+  {
+    "ids": [
+      "S018"
+    ],
+    "path": "XAUUSD Breakout.mq4",
+    "sha256": "9f6aefe36beeb05b1ef7a5dc290b88c7b6ca3af340c23bb92c00acd28bed098b",
+    "endpoint": "https://raw.githubusercontent.com/GimsDev/XAUUSD-Breakout-EA/2c30d2db7a0da88e52c5c853eac911f47bc76451/XAUUSD%20Breakout.mq4"
   }
 ]
