@@ -51,8 +51,13 @@ def run() -> dict:
     for scenario, cfg in scenarios.items():
         # Source/config-attested candidate tape: no repeated HTF research per family.
         tape = build_candidate_tape(source, cfg)
-        for family_set in [FAMILIES] + [(name,) for name in FAMILIES]:
-            label = 'COMBINED' if len(family_set) > 1 else family_set[0]
+        regimes = [
+            ('COMBINED', FAMILIES),
+            ('TREND_ONLY', tuple(x for x in FAMILIES if x.startswith('TREND_'))),
+            ('RANGE_ONLY', tuple(x for x in FAMILIES if x.startswith('RANGE_'))),
+        ]
+        groups = regimes + [(name, (name,)) for name in FAMILIES]
+        for label, family_set in groups:
             result = research_backtest(source, cfg=cfg, families=family_set, candidate_tape=tape)
             key = f'{label}_{scenario}'
             if result['price_rows'] != len(source) or result['status'] != 'HISTORICAL_RESEARCH_ONLY':
