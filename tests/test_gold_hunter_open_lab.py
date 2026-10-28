@@ -35,7 +35,7 @@ def test_all_five_methods_and_costed_replay_repeatable():
                 if result["censored_open"] else 0),2)
         assert result["max_marked_drawdown_pct"] <= 0
         assert all(t["signal_utc"]<=t["entry_utc"] for t in result["trades"])
-        assert all(t["risk_usd"]<=10000*.005+1e-6 for t in result["trades"])
+        assert all(t["risk_usd"]<=t["equity_at_entry"]*.005+1e-6 for t in result["trades"])
     assert run_family_matrix(raw,Settings())==outcomes
 
 
