@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://oracle.invalid/contracts/oracle.gold.bot-package.v1",
+  "title": "Oracle Hub Gold bot immutable research package manifest",
+  "description": "A research-only immutable release descriptor. Broker accounts/stage permissions belong to separate audited deployment records, not this manifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "strategy_id",
+    "name",
+    "slug",
+    "version",
+    "market",
+    "engine",
+    "entrypoint",
+    "timeframe",
+    "source",
+    "research",
+    "ui",
+    "stage",
+    "execution_enabled",
+    "real_money_enabled"
+  ],
+  "properties": {
+    "schema": {
+      "const": "oracle.gold.bot-package.v1"
+    },
+    "strategy_id": {
+      "type": "string",
+      "pattern": "^S[0-9]{3}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 90
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "maxLength": 90
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "market": {
+      "const": "XAUUSD"
+    },
+    "engine": {
+      "enum": [
+        "python",
+        "mql5"
+      ]
+    },
+    "entrypoint": {
+      "type": "string",
+      "pattern": "^(strategy/)[A-Za-z0-9_.-]+\\.(py|mq5)$"
+    },
+    "timeframe": {
+      "enum": [
+        "M1",
+        "M5",
+        "M15",
+        "M30",
+        "H1",
+        "H4",
+        "D1"
+      ]
+    },
+    "stage": {
+      "const": "RESEARCH_ONLY"
+    },
+    "execution_enabled": {
+      "const": false
+    },
+    "real_money_enabled": {
+      "const": false
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "uri",
+        "commit_sha",
+        "license",
+        "mechanism_verified"
+      ],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "pattern": "^https://"
+        },
+        "commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "license": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 150
+        },
+        "mechanism_verified": {
+          "const": true
+        }
+      }
+    },
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aidy_evidence_uri",
+        "tested_calendar_years",
+        "verdict",
+        "source_digest_sha256"
+      ],
+      "properties": {
+        "aidy_evidence_uri": {
+          "type": "string",
+          "pattern": "^https://"
+        },
+        "tested_calendar_years": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 2000,
+            "maximum": 2100
+          },
+          "uniqueItems": true,
+          "minItems": 2
+        },
+        "verdict": {
+          "const": "HISTORICALLY_QUALIFIED"
+        },
+        "source_digest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "icon_path",
+        "detail_slug"
+      ],
+      "properties": {
+        "icon_path": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^assets/[a-z0-9-]+\\.(svg|webp)$"
+            }
+          ]
+        },
+        "detail_slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "engine": {
+            "const": "python"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "entrypoint": {
+            "pattern": "\\.py$"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "engine": {
+            "const": "mql5"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "entrypoint": {
+            "pattern": "\\.mq5$"
+          }
+        }
+      }
+    }
+  ],
+  "x-instructions": "Schema validates structure only. Release requires source, AIDY evidence and brand rights checked by independent human/CI reviews. It grants NO broker permission."
+}
