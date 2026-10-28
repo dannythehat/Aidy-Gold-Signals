@@ -18,7 +18,7 @@ Code is new and thresholds (swing radius 2, proximity 0.42 H4 ATR, stop buffer 0
 
 Isolated deterministic unit tests are fixtures, NOT profitable historical backtests. The workflow intentionally invokes AIDY's existing read-only all-month 2025 BigQuery source runner first, then tests all families individually and as a shared account in two cost scenarios. Missing credentials or data is a hard FAIL and creates a blocker receipt.
 
-Model limits: historical BID OHLC, fixed synthetic ASK/spread, slippage, commission; no historically executable broker quote parity, intrabar chronology, swap, margin/forced liquidation or minimum-lot constraints. Stops trigger first when OHLC contains stop and target in same H1. **No real trading is approved.** The first 2025 year is development evidence only, not sealed OOS; it is insufficient to establish sustained profitability or trade frequency.
+Model limits: historical BID OHLC, fixed synthetic ASK/spread, slippage, commission; no historically executable broker quote parity, intrabar chronology, swap, margin/forced liquidation or minimum-lot constraints. Stops trigger first when OHLC contains stop and target in the same H1. No invented time-based exit: positions open at the end of source history are CENSORED and marked as unrealised, not falsely closed. **No real trading is approved.** The first 2025 year is development evidence only, not sealed OOS; it is insufficient to establish sustained profitability or trade frequency.
 
 ## Reproduce local fixture tests
 
