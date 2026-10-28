@@ -48,7 +48,7 @@ jobs:
       - name: Replay exact Pine code defaults and separate README candidate, both years
         run: |
           PYTHONPATH=src:. python scripts/strategy_lab/s003_breakout_follow_two_period.py --source-root artifacts/strategy_lab/s003_source --out artifacts/strategy_lab/s003_2025_2026
-      - name: Proof: audited source dates, 2 independent $10k ledgers, research-only labels
+      - name: 'Proof: audited source dates, 2 independent $10k ledgers, research-only labels'
         run: |
           python - <<'PY'
           import json

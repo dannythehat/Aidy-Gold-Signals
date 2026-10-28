@@ -18,6 +18,11 @@ COMMIT = "ccc859c042453c7275217285ab187c93f52b3e92"
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--ci-results", required=True, type=Path)
+    p.add_argument("--label", default="batch01", choices=("batch01", "batch01_common"))
+    p.add_argument("--ci-run", default=RUN)
+    p.add_argument("--code-commit", default=COMMIT)
+    p.add_argument("--artifact-id", type=int, default=12813599468)
+    p.add_argument("--artifact-sha", default="4bfa62a353e8df88a4507b96a5b98c33a2f5445856efc7eac90d547ccb998fcb")
     args = p.parse_args()
     out = ROOT / "reports/gold_oracle"
     summaries, hashes, reports = [], {}, []
@@ -29,7 +34,7 @@ def main():
             raise ValueError("CI report identity changed")
         report["sha256"] = expected
         reports.append(report)
-        dest = out / "batch01" / str(year)
+        dest = out / args.label / str(year)
         dest.mkdir(parents=True, exist_ok=True)
         for f in folder.iterdir():
             if f.name == "report.json" or f.name.endswith(("_trades.csv", "_monthly.csv")) or f.name == "signal_events.csv":
@@ -51,16 +56,18 @@ def main():
                 "h1_close_marked_dd_pct": m.get("max_h1_close_marked_dd_pct", m.get("max_marked_drawdown_pct")),
                 "profit_factor": m["profit_factor"], "win_rate_pct": m["win_rate_pct"],
                 "source_snapshot_sha256": report["manifest"]["rows_sha256"],
-                "report_sha256": expected, "code_commit": COMMIT, "ci_url": RUN,
+                "report_sha256": expected, "code_commit": args.code_commit, "ci_url": args.ci_run,
+                "causal_sizing_parity_status": m.get("causal_sizing_probe", {}).get("status", "NOT_APPLICABLE"),
                 "native_broker_parity": False, "sealed_oos": False,
                 "ledger": str((dest/f"{ident}_{scenario}_trades.csv").relative_to(ROOT))})
-    with (out/"strategy_results_register.csv").open("w", newline="") as f:
+    name = "strategy_results_register" if args.label == "batch01" else "common_cost_results_register"
+    with (out/(name+".csv")).open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(summaries[0]))
         writer.writeheader()
         writer.writerows(summaries)
-    result = {"schema": "oracle.gold.strategy_results.v1", "ci_run": RUN, "code_commit": COMMIT,
-        "artifact_id": 12813599468,
-        "artifact_sha256": "4bfa62a353e8df88a4507b96a5b98c33a2f5445856efc7eac90d547ccb998fcb",
+    result = {"schema": "oracle.gold.strategy_results.v1", "ci_run": args.ci_run, "code_commit": args.code_commit,
+        "experiment": args.label,
+        "artifact_id": args.artifact_id, "artifact_sha256": args.artifact_sha,
         "experiments": summaries, "ledger_file_sha256": hashes,
         "negative_scenario_results_retained": sum(s["net_sign"] == "NEGATIVE" for s in summaries),
         "tested_original_ids": sorted({s["strategy_id"] for s in summaries}),
@@ -76,12 +83,12 @@ def main():
             "No original ZIPs or complete quote histories committed; artifacts retain detailed evidence90days",
             "No original IDs deleted, no numeric nine-factor scores, no independent family or bot approved"]}
     result["sha256"] = digest(result)
-    (out/"strategy_results_register.json").write_text(json.dumps(result, indent=2, sort_keys=True)+"\n")
+    (out/(name+".json")).write_text(json.dumps(result, indent=2, sort_keys=True)+"\n")
     # Attach results without turning diagnostic engine defects into negative edge verdicts.
     path = out/"83_source_and_duplicate_audit.json"
     register = json.loads(path.read_text())
     for row in register["rows"]:
-        row["batch01_results"] = [s for s in summaries if s["strategy_id"] == row["id"]]
+        row[args.label+"_results"] = [s for s in summaries if s["strategy_id"] == row["id"]]
     register.pop("sha256", None)
     register["sha256"] = digest(register)
     path.write_text(json.dumps(register, indent=2, sort_keys=True)+"\n")

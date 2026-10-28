@@ -1,0 +1,623 @@
+{
+  "data_and_execution_modules": [
+    {
+      "path": "scripts/strategy_lab/s010_run_12month_history.py",
+      "status": "USED_AUTHENTICATED_BIGQUERY_M1_READ"
+    },
+    {
+      "path": "src/aidy/strategy_lab_crossfire_tick_2021.py",
+      "status": "USED_REAL_R2_TICK_VALIDATION_AND_DERIVATION"
+    },
+    {
+      "path": "src/aidy/strategy_lab_s010_backtest.py",
+      "status": "USED_ORIGINAL_SIGNAL_PARITY_AND_EXISTING_BASE_STRESS_MODELS"
+    },
+    {
+      "path": "src/aidy/strategy_lab_broker_profile.py",
+      "status": "BLOCKED_UNATTESTED_NATIVE_CONTRACT"
+    },
+    {
+      "path": "src/aidy/strategy_lab_bidask_execution.py",
+      "status": "NOT_ROUTED_FULL_EVENT_ALIGNED_ASK_TAPE_UNAVAILABLE_IN_YEAR_SNAPSHOTS"
+    },
+    {
+      "path": "src/aidy/strategy_lab_fees_funding.py",
+      "status": "BLOCKED_NO_VERIFIED_FUNDING_AND_COMMISSION_TERMS"
+    },
+    {
+      "path": "src/aidy/strategy_lab_regimes.py",
+      "status": "NOT_ROUTED_SOURCE_MODULE_IS_BOUNDED_M5_DEVELOPMENT_POLICY_NOT_H1_NATIVE_CLASSIFIER"
+    },
+    {
+      "path": "src/aidy/strategy_lab_system_processor.py",
+      "status": "NOT_GENERICALLY_ROUTED_ONLY_SUPPORTS_S010_AND_LAB_DONCHIAN"
+    }
+  ],
+  "monthly_dependence": [
+    {
+      "a": "S005/base",
+      "b": "S006/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 12,
+      "joint_positive_months": 11,
+      "monthly_marked_return_correlation": 0.3389695461908374
+    },
+    {
+      "a": "S005/base",
+      "b": "S007/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 7,
+      "joint_positive_months": 4,
+      "monthly_marked_return_correlation": -0.6559098403534884
+    },
+    {
+      "a": "S005/base",
+      "b": "S008/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 9,
+      "joint_positive_months": 8,
+      "monthly_marked_return_correlation": 0.1377110648161606
+    },
+    {
+      "a": "S005/base",
+      "b": "S009/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 11,
+      "joint_positive_months": 8,
+      "monthly_marked_return_correlation": 0.36890383749917965
+    },
+    {
+      "a": "S005/base",
+      "b": "S010/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 9,
+      "joint_positive_months": 15,
+      "monthly_marked_return_correlation": 0.6352827927740373
+    },
+    {
+      "a": "S006/base",
+      "b": "S007/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 8,
+      "joint_positive_months": 5,
+      "monthly_marked_return_correlation": -0.3766769048130204
+    },
+    {
+      "a": "S006/base",
+      "b": "S008/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 10,
+      "joint_positive_months": 9,
+      "monthly_marked_return_correlation": 0.002368294008492968
+    },
+    {
+      "a": "S006/base",
+      "b": "S009/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 10,
+      "joint_positive_months": 6,
+      "monthly_marked_return_correlation": 0.08124335453578613
+    },
+    {
+      "a": "S006/base",
+      "b": "S010/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 6,
+      "joint_positive_months": 11,
+      "monthly_marked_return_correlation": 0.09490699274022903
+    },
+    {
+      "a": "S007/base",
+      "b": "S008/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 13,
+      "joint_positive_months": 9,
+      "monthly_marked_return_correlation": 0.27064542946758224
+    },
+    {
+      "a": "S007/base",
+      "b": "S009/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 11,
+      "joint_positive_months": 5,
+      "monthly_marked_return_correlation": -0.54262440870112
+    },
+    {
+      "a": "S007/base",
+      "b": "S010/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 6,
+      "joint_positive_months": 9,
+      "monthly_marked_return_correlation": -0.4103937239251535
+    },
+    {
+      "a": "S008/base",
+      "b": "S009/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 9,
+      "joint_positive_months": 5,
+      "monthly_marked_return_correlation": -0.2249806637418145
+    },
+    {
+      "a": "S008/base",
+      "b": "S010/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 6,
+      "joint_positive_months": 11,
+      "monthly_marked_return_correlation": 0.1974619063399003
+    },
+    {
+      "a": "S009/base",
+      "b": "S010/base",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 7,
+      "joint_positive_months": 10,
+      "monthly_marked_return_correlation": 0.21176031893239855
+    },
+    {
+      "a": "S005/stress",
+      "b": "S006/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 14,
+      "joint_positive_months": 10,
+      "monthly_marked_return_correlation": 0.3431618476114177
+    },
+    {
+      "a": "S005/stress",
+      "b": "S007/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 12,
+      "joint_positive_months": 1,
+      "monthly_marked_return_correlation": -0.6453854498459844
+    },
+    {
+      "a": "S005/stress",
+      "b": "S008/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 15,
+      "joint_positive_months": 2,
+      "monthly_marked_return_correlation": 0.16067656763277569
+    },
+    {
+      "a": "S005/stress",
+      "b": "S009/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 14,
+      "joint_positive_months": 6,
+      "monthly_marked_return_correlation": 0.362269315708385
+    },
+    {
+      "a": "S005/stress",
+      "b": "S010/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 10,
+      "joint_positive_months": 11,
+      "monthly_marked_return_correlation": 0.6363226495752874
+    },
+    {
+      "a": "S006/stress",
+      "b": "S007/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 9,
+      "joint_positive_months": 1,
+      "monthly_marked_return_correlation": -0.4045514506329861
+    },
+    {
+      "a": "S006/stress",
+      "b": "S008/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 13,
+      "joint_positive_months": 4,
+      "monthly_marked_return_correlation": -0.014235321054878439
+    },
+    {
+      "a": "S006/stress",
+      "b": "S009/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 11,
+      "joint_positive_months": 6,
+      "monthly_marked_return_correlation": 0.07258563093959884
+    },
+    {
+      "a": "S006/stress",
+      "b": "S010/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 7,
+      "joint_positive_months": 11,
+      "monthly_marked_return_correlation": 0.10708849007981179
+    },
+    {
+      "a": "S007/stress",
+      "b": "S008/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 22,
+      "joint_positive_months": 4,
+      "monthly_marked_return_correlation": 0.30367223037651103
+    },
+    {
+      "a": "S007/stress",
+      "b": "S009/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 15,
+      "joint_positive_months": 2,
+      "monthly_marked_return_correlation": -0.4647025962032366
+    },
+    {
+      "a": "S007/stress",
+      "b": "S010/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 9,
+      "joint_positive_months": 5,
+      "monthly_marked_return_correlation": -0.3968089118270207
+    },
+    {
+      "a": "S008/stress",
+      "b": "S009/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 15,
+      "joint_positive_months": 0,
+      "monthly_marked_return_correlation": -0.10815056652600304
+    },
+    {
+      "a": "S008/stress",
+      "b": "S010/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 11,
+      "joint_positive_months": 5,
+      "monthly_marked_return_correlation": 0.20566891424772588
+    },
+    {
+      "a": "S009/stress",
+      "b": "S010/stress",
+      "caveat": "Apex defective-engine diagnostic; unsealed and gap-qualified histories",
+      "common_months": 36,
+      "high_correlation_review_flag": false,
+      "independence_proven": false,
+      "joint_negative_months": 8,
+      "joint_positive_months": 7,
+      "monthly_marked_return_correlation": 0.21548238907485265
+    }
+  ],
+  "original_entries_or_exits_changed": false,
+  "portfolio": {
+    "missing": [
+      "verified shared margin/stopout",
+      "hedging/netting treatment",
+      "native lot steps",
+      "financing",
+      "causal source execution gate"
+    ],
+    "status": "BLOCKED",
+    "sum_of_independent_accounts_used_as_master": false
+  },
+  "regime_expert_analysis": "NOT_INTEGRATED; no invented regime labels or live-learning outputs",
+  "schema": "oracle.gold.batch01.dependence_and_tool_routing.v1",
+  "sha256": "dd039507fbe543223e8d1327d5a6bda6c56e31bb193d22fe280fefe28358869f",
+  "toolbox_use_or_exclusion": [
+    {
+      "capability": "gold_m1_candles",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_m5_structure",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_m15_structure",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_h1_structure",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_h4_structure",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_d1_context",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "session_day_map",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "price_location_reference_levels",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "liquidity_sweep_reclaim_proxies",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "realized_volatility",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "jump_vs_continuous_volatility",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "scheduled_event_context",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "economic_calendar_on_demand",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "macro_actual_surprise",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "rates_macro_vintages",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "cross_market_backdrop",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "intraday_cross_asset_reaction",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "cme_contract_state",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gvz_implied_volatility",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "breaking_news_event_search",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_movement_detector",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_movement_episode_memory",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_movement_analogue_retrieval",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_cycle_15m_memory",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "gold_contextual_marker_brain",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    },
+    {
+      "capability": "recent_gold_candles_on_demand",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "provider_history_conditional_alpha",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "recent_provider_messages",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "execution_slippage_liquidity",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "provider_historical_analogues",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "probability_ev_management",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "failure_attribution_self_critique",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "self_calibration",
+      "integrated_for_this_batch": false,
+      "owner": "super_signals",
+      "reason": "No external Super Signals data used",
+      "status": "EXCLUDED_EXTERNAL_SYSTEM"
+    },
+    {
+      "capability": "provider_decision_memory",
+      "integrated_for_this_batch": false,
+      "owner": "aidy",
+      "reason": "Original source signals frozen; no historical expert/runtime availability assumed. H1 price history is input, not proof this expert ran.",
+      "status": "NOT_INTEGRATED_IN_FROZEN_ORIGINAL_REPLAY"
+    }
+  ]
+}

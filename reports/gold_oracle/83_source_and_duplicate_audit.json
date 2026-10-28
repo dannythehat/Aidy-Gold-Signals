@@ -14,6 +14,7 @@
   "rows": [
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -40,6 +41,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -66,6 +68,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -94,6 +97,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -122,6 +126,158 @@
     },
     {
       "batch": "B01",
+      "batch01_common_results": [
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 98,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -19.924180888852906,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S005_base_trades.csv",
+          "long_trades": 52,
+          "native_broker_parity": false,
+          "net_closed_usd": 189.85716525321368,
+          "net_marked_usd": 189.85716525321368,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.041914954167528,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 46,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S005",
+          "win_rate_pct": 35.714285714285715,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 98,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -23.95757413498777,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S005_stress_trades.csv",
+          "long_trades": 52,
+          "native_broker_parity": false,
+          "net_closed_usd": -652.3412940720245,
+          "net_marked_usd": -652.3412940720245,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.865923909246891,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 46,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S005",
+          "win_rate_pct": 32.6530612244898,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 116,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -11.453083424945609,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S005_base_trades.csv",
+          "long_trades": 68,
+          "native_broker_parity": false,
+          "net_closed_usd": 1052.983041750038,
+          "net_marked_usd": 1052.983041750038,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.1780958815214517,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 48,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S005",
+          "win_rate_pct": 37.06896551724138,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 116,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -13.258891990406719,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S005_stress_trades.csv",
+          "long_trades": 68,
+          "native_broker_parity": false,
+          "net_closed_usd": 207.82839900615,
+          "net_marked_usd": 207.82839900615,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.0335684237314784,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 48,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S005",
+          "win_rate_pct": 35.3448275862069,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 116,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -16.15248576955146,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S005_base_trades.csv",
+          "long_trades": 72,
+          "native_broker_parity": false,
+          "net_closed_usd": 1347.0520561267695,
+          "net_marked_usd": 1347.0520561267695,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.2199261548967073,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 44,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S005",
+          "win_rate_pct": 38.793103448275865,
+          "year": 2025
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 116,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -17.947382866105734,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S005_stress_trades.csv",
+          "long_trades": 72,
+          "native_broker_parity": false,
+          "net_closed_usd": 860.1903957313625,
+          "net_marked_usd": 860.1903957313625,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.1375706290378054,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 44,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S005",
+          "win_rate_pct": 37.93103448275862,
+          "year": 2025
+        }
+      ],
       "batch01_results": [
         {
           "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684602595",
@@ -328,6 +484,158 @@
     },
     {
       "batch": "B01",
+      "batch01_common_results": [
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 36,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -14.692072888628694,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S006_base_trades.csv",
+          "long_trades": 17,
+          "native_broker_parity": false,
+          "net_closed_usd": 1339.0422277318248,
+          "net_marked_usd": 1339.0422277318248,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.6159642920120796,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 19,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S006",
+          "win_rate_pct": 36.111111111111114,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 36,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -16.24723016837114,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S006_stress_trades.csv",
+          "long_trades": 17,
+          "native_broker_parity": false,
+          "net_closed_usd": 895.9303355517222,
+          "net_marked_usd": 895.9303355517222,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.3748865332643128,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 19,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S006",
+          "win_rate_pct": 36.111111111111114,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 39,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -16.993151899709858,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S006_base_trades.csv",
+          "long_trades": 17,
+          "native_broker_parity": false,
+          "net_closed_usd": -1376.6092807765199,
+          "net_marked_usd": -1376.6092807765199,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.4444260016339616,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 22,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S006",
+          "win_rate_pct": 25.641025641025642,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 39,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -19.50133487867388,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S006_stress_trades.csv",
+          "long_trades": 17,
+          "native_broker_parity": false,
+          "net_closed_usd": -1658.529083414871,
+          "net_marked_usd": -1658.529083414871,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.3785097503327938,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 22,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S006",
+          "win_rate_pct": 23.076923076923077,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 47,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -15.30835935104865,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S006_base_trades.csv",
+          "long_trades": 22,
+          "native_broker_parity": false,
+          "net_closed_usd": 383.8705998470559,
+          "net_marked_usd": 383.8705998470559,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.1293928610375275,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 25,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S006",
+          "win_rate_pct": 27.659574468085108,
+          "year": 2025
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 47,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -16.49140736529765,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S006_stress_trades.csv",
+          "long_trades": 22,
+          "native_broker_parity": false,
+          "net_closed_usd": 155.97457558729548,
+          "net_marked_usd": 155.97457558729548,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.0501670578235556,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 25,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S006",
+          "win_rate_pct": 27.659574468085108,
+          "year": 2025
+        }
+      ],
       "batch01_results": [
         {
           "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684602595",
@@ -534,6 +842,158 @@
     },
     {
       "batch": "B01",
+      "batch01_common_results": [
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 262,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -23.461354386265278,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S007_base_trades.csv",
+          "long_trades": 127,
+          "native_broker_parity": false,
+          "net_closed_usd": -1777.4290804994453,
+          "net_marked_usd": -1777.4290804994453,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.848750415089811,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 135,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S007",
+          "win_rate_pct": 54.19847328244275,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 262,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -41.37531792441339,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S007_stress_trades.csv",
+          "long_trades": 127,
+          "native_broker_parity": false,
+          "net_closed_usd": -3884.7115838738,
+          "net_marked_usd": -3884.7115838738,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.6585367535443114,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 135,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S007",
+          "win_rate_pct": 50.38167938931298,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 327,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -33.931026841985535,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S007_base_trades.csv",
+          "long_trades": 132,
+          "native_broker_parity": false,
+          "net_closed_usd": -2216.203938220283,
+          "net_marked_usd": -2216.203938220283,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.8558939372568088,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 195,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S007",
+          "win_rate_pct": 50.45871559633027,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 327,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -46.85495090678796,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S007_stress_trades.csv",
+          "long_trades": 132,
+          "native_broker_parity": false,
+          "net_closed_usd": -4109.292634292456,
+          "net_marked_usd": -4109.292634292456,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.7147330443248506,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 195,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S007",
+          "win_rate_pct": 49.235474006116206,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 328,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -18.17760882600046,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S007_base_trades.csv",
+          "long_trades": 146,
+          "native_broker_parity": false,
+          "net_closed_usd": -940.6580707466837,
+          "net_marked_usd": -940.6580707466837,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.9347714902593343,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 182,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S007",
+          "win_rate_pct": 52.74390243902439,
+          "year": 2025
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 328,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -27.322585827379065,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S007_stress_trades.csv",
+          "long_trades": 146,
+          "native_broker_parity": false,
+          "net_closed_usd": -2262.425632474825,
+          "net_marked_usd": -2262.425632474825,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.837016368165118,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 182,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S007",
+          "win_rate_pct": 52.4390243902439,
+          "year": 2025
+        }
+      ],
       "batch01_results": [
         {
           "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684602595",
@@ -738,6 +1198,158 @@
     },
     {
       "batch": "B01",
+      "batch01_common_results": [
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 212,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -14.791148671021014,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S008_base_trades.csv",
+          "long_trades": 113,
+          "native_broker_parity": false,
+          "net_closed_usd": -909.6232934127638,
+          "net_marked_usd": -909.6232934127638,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.8650506014456882,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 99,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S008",
+          "win_rate_pct": 60.84905660377358,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 212,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -35.58502396723237,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S008_stress_trades.csv",
+          "long_trades": 113,
+          "native_broker_parity": false,
+          "net_closed_usd": -3472.498938787381,
+          "net_marked_usd": -3472.498938787381,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.5036021000647234,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 99,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S008",
+          "win_rate_pct": 47.16981132075472,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 243,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -17.28726264503615,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S008_base_trades.csv",
+          "long_trades": 142,
+          "native_broker_parity": false,
+          "net_closed_usd": -1290.321132199646,
+          "net_marked_usd": -1290.321132199646,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.8020505956362002,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 101,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S008",
+          "win_rate_pct": 62.96296296296296,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 243,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -35.73449445986253,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S008_stress_trades.csv",
+          "long_trades": 142,
+          "native_broker_parity": false,
+          "net_closed_usd": -3433.7729059207495,
+          "net_marked_usd": -3433.7729059207495,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.48370079825908363,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 101,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S008",
+          "win_rate_pct": 53.90946502057613,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 236,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -16.008467378551185,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S008_base_trades.csv",
+          "long_trades": 164,
+          "native_broker_parity": false,
+          "net_closed_usd": 236.3477489291945,
+          "net_marked_usd": 236.3477489291945,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.0352880990923905,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 72,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S008",
+          "win_rate_pct": 63.983050847457626,
+          "year": 2025
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 236,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -21.808593004889843,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S008_stress_trades.csv",
+          "long_trades": 164,
+          "native_broker_parity": false,
+          "net_closed_usd": -1221.0173008761067,
+          "net_marked_usd": -1221.0173008761067,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.8184649831242211,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 72,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S008",
+          "win_rate_pct": 58.898305084745765,
+          "year": 2025
+        }
+      ],
       "batch01_results": [
         {
           "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684602595",
@@ -942,6 +1554,158 @@
     },
     {
       "batch": "B01",
+      "batch01_common_results": [
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 173,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -18.82124753866259,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S009_base_trades.csv",
+          "long_trades": 90,
+          "native_broker_parity": false,
+          "net_closed_usd": -888.0105826206327,
+          "net_marked_usd": -888.0105826206327,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.8956236588146905,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 83,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S009",
+          "win_rate_pct": 39.884393063583815,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 173,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -26.221566549004905,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S009_stress_trades.csv",
+          "long_trades": 90,
+          "native_broker_parity": false,
+          "net_closed_usd": -2130.822700086166,
+          "net_marked_usd": -2130.822700086166,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.7582599645653337,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 83,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S009",
+          "win_rate_pct": 35.83815028901734,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 196,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -13.197969224360062,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S009_base_trades.csv",
+          "long_trades": 110,
+          "native_broker_parity": false,
+          "net_closed_usd": 2121.421854063068,
+          "net_marked_usd": 2121.421854063068,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.2840017327645012,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 86,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S009",
+          "win_rate_pct": 50.0,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 196,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -15.504115655529526,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S009_stress_trades.csv",
+          "long_trades": 110,
+          "native_broker_parity": false,
+          "net_closed_usd": 709.1426623767802,
+          "net_marked_usd": 709.1426623767802,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.092872982174608,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 86,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S009",
+          "win_rate_pct": 48.46938775510204,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 173,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -11.856683891483877,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S009_base_trades.csv",
+          "long_trades": 100,
+          "native_broker_parity": false,
+          "net_closed_usd": -467.24265488783567,
+          "net_marked_usd": -467.24265488783567,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.9205660647653618,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 73,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S009",
+          "win_rate_pct": 45.08670520231214,
+          "year": 2025
+        },
+        {
+          "causal_sizing_parity_status": "EXACT_LEDGER_AND_EQUITY_PARITY",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 173,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": true,
+          "h1_close_marked_dd_pct": -13.230692870687333,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S009_stress_trades.csv",
+          "long_trades": 100,
+          "native_broker_parity": false,
+          "net_closed_usd": -1018.1323845728002,
+          "net_marked_usd": -1018.1323845728002,
+          "net_sign": "NEGATIVE",
+          "profit_factor": 0.8304276413993192,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 73,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+          "strategy_id": "S009",
+          "win_rate_pct": 44.50867052023121,
+          "year": 2025
+        }
+      ],
       "batch01_results": [
         {
           "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684602595",
@@ -1147,6 +1911,158 @@
     },
     {
       "batch": "B01",
+      "batch01_common_results": [
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 65,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -23.538,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S010_base_trades.csv",
+          "long_trades": 65,
+          "native_broker_parity": false,
+          "net_closed_usd": 2484.93,
+          "net_marked_usd": 2484.93,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.399,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 38.46,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 65,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -25.27,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S010_stress_trades.csv",
+          "long_trades": 65,
+          "native_broker_parity": false,
+          "net_closed_usd": 1224.04,
+          "net_marked_usd": 1224.05,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.186,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 38.46,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 77,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -14.532,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S010_base_trades.csv",
+          "long_trades": 77,
+          "native_broker_parity": false,
+          "net_closed_usd": 11198.59,
+          "net_marked_usd": 11438.1,
+          "net_sign": "POSITIVE",
+          "profit_factor": 2.186,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 44.16,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 77,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -15.624,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S010_stress_trades.csv",
+          "long_trades": 77,
+          "native_broker_parity": false,
+          "net_closed_usd": 9114.9,
+          "net_marked_usd": 9313.18,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.941,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 42.86,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 83,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -33.671,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S010_base_trades.csv",
+          "long_trades": 83,
+          "native_broker_parity": false,
+          "net_closed_usd": 15032.76,
+          "net_marked_usd": 15032.76,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.66,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "base",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 46.99,
+          "year": 2025
+        },
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 83,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -33.944,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S010_stress_trades.csv",
+          "long_trades": 83,
+          "native_broker_parity": false,
+          "net_closed_usd": 13186.28,
+          "net_marked_usd": 13186.28,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.588,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 44.58,
+          "year": 2025
+        }
+      ],
       "batch01_results": [
         {
           "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684602595",
@@ -1348,6 +2264,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1373,6 +2290,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1398,6 +2316,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1423,6 +2342,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1448,6 +2368,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1473,6 +2394,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1498,6 +2420,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1523,6 +2446,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1548,6 +2472,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -1573,6 +2498,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Zone impulse confirmation time can postdate zone.end_index; full causal gate required",
@@ -1612,6 +2538,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "NONCAUSAL_FILL: close confirmation then retroactive intrabar level entry",
@@ -1651,6 +2578,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "NONCAUSAL_FILL: close confirmation then retroactive level fill; fixed EST differs from DST NY",
@@ -1690,6 +2618,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Close-price fill after close confirmation is conditional; bid/ask/account sizing absent",
@@ -1729,6 +2658,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full-series clustering changes prior zones with appended future swings; prefix stability unproven",
@@ -1768,6 +2698,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Conditional close fill; no authenticated account/quote replay",
@@ -1807,6 +2738,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Conditional close fill; account/risk sizing unspecified",
@@ -1846,6 +2778,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "first_touch lacks both-sided limit reach/gap-price checks; quote chronology required",
@@ -1885,6 +2818,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "first_touch quote/gap conditions and chronological protective exits unverified",
@@ -1924,6 +2858,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Source outputs independent overlapping setups; no account-level risk semantics",
@@ -1963,6 +2898,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Shared zone/limit/gap chronology unverified; full account model absent",
@@ -2002,6 +2938,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Source code does NOT require base itself quiet despite docstring; no account or broker semantics",
@@ -2041,6 +2978,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2066,6 +3004,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2091,6 +3030,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2116,6 +3056,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2141,6 +3082,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2166,6 +3108,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2191,6 +3134,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2216,6 +3160,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2241,6 +3186,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2266,6 +3212,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2291,6 +3238,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2316,6 +3264,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2341,6 +3290,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2366,6 +3316,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2391,6 +3342,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2416,6 +3368,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2441,6 +3394,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2466,6 +3420,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2491,6 +3446,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2516,6 +3472,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2541,6 +3498,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2566,6 +3524,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2591,6 +3550,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2616,6 +3576,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2641,6 +3602,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2666,6 +3628,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2691,6 +3654,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2716,6 +3680,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2741,6 +3706,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2766,6 +3732,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2791,6 +3758,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2816,6 +3784,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2841,6 +3810,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2866,6 +3836,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2891,6 +3862,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2916,6 +3888,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2941,6 +3914,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2966,6 +3940,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -2991,6 +3966,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3016,6 +3992,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3041,6 +4018,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3066,6 +4044,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3091,6 +4070,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3116,6 +4096,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3141,6 +4122,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3166,6 +4148,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3191,6 +4174,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3216,6 +4200,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3241,6 +4226,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3266,6 +4252,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Executable source not retrieved; page text/403 cannot substitute for code"
@@ -3291,6 +4278,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -3316,6 +4304,7 @@
     },
     {
       "batch": null,
+      "batch01_common_results": [],
       "batch01_results": [],
       "blockers": [
         "Full source semantics not yet audited"
@@ -3341,6 +4330,6 @@
     }
   ],
   "schema": "oracle.gold.original83.source_register.v1",
-  "sha256": "2b6fdefab14179e326ca47424e05605cea8b7f7b58c65791c8599184f756e199",
+  "sha256": "04627936b7c39e6965deb28b3b036a0d3932ddb860cd0798b04c73e1839e1068",
   "status": "PARTIAL_AUDIT_EXPLICIT_GAPS"
 }

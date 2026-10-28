@@ -8,7 +8,7 @@ Research only. Original IDs retained. No bot admitted, named, deployed or connec
 - [Draft PR #374](https://github.com/dannythehat/Aidy-Gold-Signals/pull/374), isolated branch `codex/83-source-audit-batch01-20261028`. The owner-specified parent research branch already contained other unmerged work; this PR inherits that lineage.
 - [Successful first authentic batch](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684602595), code `ccc859c042453c7275217285ab187c93f52b3e92`: six IDs, three historical periods, two economic scenarios, 36 recorded cases. **Eighteen negative scenario results retained**, including defective-engine diagnostics; these are not 18 certified strategy failures.
 - [Initial failed attempt](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40684079400): BigQuery authenticated but an added predicate compared STRING prices to numeric literals. Fixed numeric SAFE_CAST, fail-closed NULL provenance and literal SHA regex quantifiers. All twelve original 2023 R2 month reads passed and were reused, without downloading archives again.
-- Local focused checks: 25 passed. Further common-cost and causal-sizing-probe CI receipt will be recorded separately; the first results are immutable.
+- Local focused checks after evidence reconciliation: 28 passed. [Common-cost + causal-sizing parity CI](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858) passed using cached snapshots only; the first results are immutable.
 
 ## Coverage and honest limits
 
@@ -62,6 +62,18 @@ Pinned publisher `research/engine.py`, lines160–184, uses entry bar close `c[i
 Original Python close-bar exits also differ from the publisher's MQL next-bar implementation; floating ounces are not MT5 lot steps. Default per-setup engine warmup250 consumes the beginning of each yearly period. S005 figures therefore cannot be asserted equal to earlier December-warmed R2/native studies; tape, warmup and engine identity must match before comparing.
 
 First-run Apex diagnostics preserve publisher $0.45/oz RT base and diagnostic $1.48 stress. S010 uses $0.47/$1.44 RT equivalents. These first-run engine-native cost assumptions are **not directly comparable**. A new common-cost run fixes all systems to $0.47/$1.44, retains both experiments, and reuses the same immutable snapshots. Funding, margin and quote timing remain unqualified in either run.
+
+### Common-cost replay completed
+
+Code `2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7`, [run40686473858](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858): three yearly snapshots reused, zero new BigQuery/R2 source reads. Another36 scenario records retained separately in `common_cost_results_register.csv/.json` and `batch01_common/`; eighteen are negative. This is a cost sensitivity on the same source samples, not36 new independent trials or additional strategies. S010 repeated results are exact same-model controls.
+
+All30 Apex common-cost cases show **exact trade-ledger and full-equity equality** between original publisher code and the explicitly marked two-reference causal-sizing probe. The defect is real in adversarial tests but has **no observed impact for these tapes/parameters**. Do not claim these historical losses were caused by it. Original diagnostic labels remain preserved; broader native execution, calendar, financing/margin, source-feed differences and OOS gaps still prevent qualification.
+
+Common-cost stress examples: S005 2023−$652.34; S006 2024−$1,658.53; S007 negative in all three periods; S008 negative in all three periods; S009 2023/2025 negative. These are conditional model observations, not native broker-account results or final system rejections. Full ledgers retained, without selecting only winners.
+
+`common_cost_dependence_and_capability_coverage.json` contains30 pairwise monthly correlation/co-loss diagnostics across36 months, the full34-capability AIDY use/exclusion register and concrete missing execution terms. High correlation is a review flag only. No disconnected expert, current market feed, macro vintage or broker primitive is represented as used. Full original source regime-expert annotation remains an explicit gap.
+
+The inherited S003 workflow also had an unquoted colon in its step title (line51), which made GitHub reject the workflow YAML before execution. Only the step-title quoting was corrected; both research YAML files parse. Its original trading rules and historical negative reports are unchanged.
 
 ## Next executable queue and blockers
 
