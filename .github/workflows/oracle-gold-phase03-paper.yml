@@ -1,0 +1,30 @@
+name: Oracle Gold phase03 remaining original paper access
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths: ['scripts/oracle_gold/recover_paper.py', '.github/workflows/oracle-gold-phase03-paper.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-paper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet cryptography
+      - run: |
+          python -m scripts.oracle_gold.recover_paper --out /tmp/oracle-paper
+          mkdir -p artifacts/oracle_gold/phase03_paper
+          cp /tmp/oracle-paper/receipt.json artifacts/oracle_gold/phase03_paper/receipt.json
+          python -m scripts.oracle_gold.source_bundle encrypt --key research/gold_oracle/phase03/source_receipt_public.pem --source /tmp/oracle-paper --out artifacts/oracle_gold/phase03_paper/encrypted_paper.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gold-phase03-original-paper
+          path: artifacts/oracle_gold/phase03_paper/
+          retention-days: 90
