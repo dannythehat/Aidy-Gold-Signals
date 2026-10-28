@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
 import os
 import platform
 import sys
+import tomllib
 from dataclasses import asdict, replace
 from pathlib import Path
 
@@ -40,7 +42,24 @@ def verify(ident, root):
         if name.endswith(".py"):
             compile(raw, str(root/name), "exec")  # syntax only, no script execution
             syntax.append(name)
-    return {"source": pin, "original_python_files_compiled": syntax,
+    lock = None
+    if (root/"pyproject.toml").exists():
+        from packaging.requirements import Requirement
+        from packaging.specifiers import SpecifierSet
+        project = tomllib.loads((root/"pyproject.toml").read_text())["project"]
+        deps = []
+        for text in project["dependencies"]:
+            req = Requirement(text)
+            try:
+                installed = importlib.metadata.version(req.name)
+            except importlib.metadata.PackageNotFoundError:
+                installed = None
+            deps.append({"declared": text, "installed": installed,
+                         "satisfied": installed is not None and installed in req.specifier})
+        python_ok = platform.python_version() in SpecifierSet(project["requires-python"])
+        lock = {"python_required": project["requires-python"], "python_satisfied": python_ok,
+                "dependencies": deps, "all_satisfied": python_ok and all(d["satisfied"] for d in deps)}
+    return {"source": pin, "original_python_files_compiled": syntax, "source_declared_runtime_lock": lock,
             "python_runtime": platform.python_version(), "pandas": pd.__version__,
             "numpy": np.__version__, "backtrader": bt.__version__,
             "acquisition_or_optimiser_drivers_executed": False}
@@ -301,6 +320,7 @@ def main():
                             else:
                                 trades, equity, details = s019(frame,cfg,setups,capital,cost)
                                 details["signal_prefix_checks"] = checks
+                                details["source_runtime_exact_dependency_lock_verified"] = sources[ident]["source_declared_runtime_lock"]["all_satisfied"]
                             result = statistics(ident,variant,scope,capital,cost,trades,equity,details)
                             csv_out(a.out/(key+"_trades.csv"),trades)
                             csv_out(a.out/(key+"_monthly.csv"),result["monthly"])

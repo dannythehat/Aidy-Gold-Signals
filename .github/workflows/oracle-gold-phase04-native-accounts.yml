@@ -38,7 +38,7 @@ jobs:
               subprocess.run(['git','-C',str(root),'checkout','--quiet',pins[ident]['commit']],check=True)
               print(ident,verify(ident,root)['original_python_files_compiled'])
           PY
-      - name: Record whether original S019 exact dependency lock is obtainable
+      - name: Install original S019 exact runtime dependencies and preserve resolver receipt
         run: |
           mkdir -p artifacts/oracle_gold/phase04_native/tests
           python - <<'PY'
@@ -46,10 +46,12 @@ jobs:
           from pathlib import Path
           project=tomllib.loads(Path('/tmp/oracle-native-sources/S019/pyproject.toml').read_text())['project']
           deps=project['dependencies']
-          p=subprocess.run(['python','-m','pip','install','--dry-run',*deps],capture_output=True,text=True,timeout=180)
+          deps+=project.get('optional-dependencies',{}).get('dev',[])
+          p=subprocess.run(['python','-m','pip','install',*deps],capture_output=True,text=True,timeout=240)
           Path('artifacts/oracle_gold/phase04_native/tests/source_dependency_lock.log').write_text(p.stdout+p.stderr)
-          Path('artifacts/oracle_gold/phase04_native/tests/source_dependency_lock.json').write_text(json.dumps({'source_requires_python':project['requires-python'],'source_dependencies':deps,'resolver_exit':p.returncode,'exact_lock_installed':False,'used_runtime':'Separately pinned compatible research stack; actual versions in launch/source manifest'},indent=2)+'\n')
+          Path('artifacts/oracle_gold/phase04_native/tests/source_dependency_lock.json').write_text(json.dumps({'source_requires_python':project['requires-python'],'source_dependencies':deps,'resolver_exit':p.returncode,'exact_lock_installed':p.returncode==0,'used_runtime':'Original declared S019 runtime; exact installed versions independently checked by source verifier'},indent=2)+'\n')
           print('SOURCE_DEPENDENCY_RESOLVER_EXIT',p.returncode)
+          if p.returncode: raise SystemExit(p.returncode)
           PY
       - name: Preserve all earlier evidence and exercise original native lifecycle
         run: |
