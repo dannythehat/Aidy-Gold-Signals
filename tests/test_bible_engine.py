@@ -129,3 +129,20 @@ def test_open_trade_at_history_end_is_censored_not_fake_closed(monkeypatch):
     assert result['unrealized_open_position']['status'] == 'CENSORED_AT_HISTORY_END_NOT_CLOSED'
     assert result['unrealized_open_position']['family'] == 'TREND_PIN'
     assert result['ending_equity_usd'] != result['realized_balance_usd']
+
+
+def test_source_bound_candidate_tape_matches_uncached_and_rejects_mismatch():
+    from gold_hunter.bible_engine import build_candidate_tape
+    df = historical_fixture(900)
+    cfg = Parameters()
+    tape = build_candidate_tape(df, cfg)
+    cached = research_backtest(df, cfg=cfg, candidate_tape=tape)
+    uncached = research_backtest(df, cfg=cfg)
+    assert cached == uncached
+    modified = df.copy()
+    modified.loc[500, 'close'] += 0.7
+    modified.loc[500, 'high'] += 0.7
+    with pytest.raises(ValueError, match='mismatch'):
+        research_backtest(modified, cfg=cfg, candidate_tape=tape)
+    with pytest.raises(ValueError, match='mismatch'):
+        research_backtest(df, cfg=Parameters(near_level_atr=.50), candidate_tape=tape)
