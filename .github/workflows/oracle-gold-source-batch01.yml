@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: oracle-gold-batch01-${{ github.ref }}
@@ -80,6 +81,7 @@ jobs:
 
   r2-2023-month:
     needs: source-and-causality
+    if: ${{ github.event.before == '13428282bd972ce6e45679d92820e16433bedd08' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -139,8 +141,37 @@ jobs:
           path: artifacts/oracle_gold/history/2023/
           retention-days: 90
 
+  reuse-r2-year:
+    needs: source-and-causality
+    if: ${{ github.event.before != '13428282bd972ce6e45679d92820e16433bedd08' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for immutable first-run R2 year snapshot (no repeat archive downloads)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 60); do
+            count=$(gh api repos/dannythehat/Aidy-Gold-Signals/actions/runs/40684079400/artifacts --jq '[.artifacts[] | select(.name == "oracle-gold-history-2023")] | length')
+            if [ "$count" = "1" ]; then exit 0; fi
+            sleep 15
+          done
+          echo 'Original R2 snapshot unavailable; no synthetic replacement.' >&2
+          exit 1
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-gold-history-2023
+          run-id: 40684079400
+          github-token: ${{ github.token }}
+          path: artifacts/oracle_gold/history/2023/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gold-history-2023
+          path: artifacts/oracle_gold/history/2023/
+          retention-days: 90
+
   replay:
-    needs: [bigquery-history, r2-year]
+    needs: [bigquery-history, r2-year, reuse-r2-year]
     if: ${{ always() && needs.bigquery-history.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15

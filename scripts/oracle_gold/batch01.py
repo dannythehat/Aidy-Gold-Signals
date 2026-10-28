@@ -136,7 +136,7 @@ def run_snapshot(snapshot, out, engine, strategies, original10):
     signal_traces["S010"] = x.signal.to_numpy()
     o, h, l, c = [x[k].to_numpy(float) for k in ("open", "high", "low", "close")]
     at = engine.atr(h, l, c, 14)
-    hours, seconds = t.dt.hour.to_numpy(), t.astype("int64").to_numpy() // 10**9
+    hours, seconds = t.dt.hour.to_numpy(), t.array.as_unit("ns").asi8 // 10**9
     for ident, (method, signal_params, engine_params) in CASES.items():
         kw = dict(signal_params)
         if ident == "S009":

@@ -111,10 +111,37 @@ def test_negative_publisher_entry_open_sizing_reads_future_close(originals):
     assert a.trades[0].units != b.trades[0].units
 
 
-def test_bigquery_provenance_nulls_fail_closed():
+def test_generated_query_validates_string_prices_and_literal_sha_quantifier():
     from scripts.strategy_lab import s010_run_12month_history as reader
-    import inspect
-    sql = inspect.getsource(reader.retrieve_month)
+    from datetime import UTC, datetime
+    from types import SimpleNamespace
+
+    class Client:
+        def __init__(self, invalid):
+            self.invalid = invalid
+            self.sql = []
+
+        def query(self, sql, job_config):
+            self.sql.append(sql)
+            if job_config.dry_run:
+                return SimpleNamespace(total_bytes_processed=10)
+            values = [{"open_time_utc": pd.Timestamp("2024-01-01", tz="UTC")+pd.Timedelta(hours=i),
+                       "open": "1999", "high": "2000", "low": "1998", "close": "1999",
+                       "m1_count": 60, "unique_m1": 60,
+                       "invalid_original_rows": int(self.invalid and i == 0),
+                       "archive_shas": ["a"*64]} for i in range(200)]
+            return SimpleNamespace(result=lambda timeout: values, job_id="TEST_ONLY")
+
+    client = Client(False)
+    rows, _ = reader.retrieve_month(client, datetime(2024, 1, 1, tzinfo=UTC),
+                                   datetime(2024, 2, 1, tzinfo=UTC))
+    assert len(rows) == 200
+    sql = client.sql[0]
     assert "NOT COALESCE" in sql
-    assert "REGEXP_CONTAINS(source_file_sha256" in sql
+    assert "r'^[0-9a-f]{64}$'" in sql  # f-string must preserve regex braces
+    assert "MAX(SAFE_CAST(high AS FLOAT64))" in sql
+    assert "SAFE_CAST(open AS FLOAT64) > 0" in sql
     assert "source_file IS NOT NULL" in sql
+    with pytest.raises(ValueError, match="violate frozen source"):
+        reader.retrieve_month(Client(True), datetime(2024, 1, 1, tzinfo=UTC),
+                              datetime(2024, 2, 1, tzinfo=UTC))
