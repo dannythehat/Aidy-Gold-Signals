@@ -1,0 +1,6 @@
+{
+  "status": "LOCAL_DIAGNOSTIC_BEFORE_CANONICAL_CI; NO_INDEPENDENT_TRIAL",
+  "adapter_launch_hash": "NOT_RECORDED; CI launch hashes required",
+  "sha256": "65fed49bed579f5dd011bb959662317e2a520b6ef806125ffd52b9ba49420dc4",
+  "notes": "Successful S016 local replay retained; same native presets, not independent systems or fresh holdout"
+}

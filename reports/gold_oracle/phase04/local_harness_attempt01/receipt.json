@@ -1,0 +1,8 @@
+{
+  "status": "RETAINED_INITIAL_LOCAL_ATTEMPT",
+  "source_rules_modified": false,
+  "code_version_at_launch_hash": "NOT_RECORDED; historical provenance gap retained",
+  "cause": "Native Backtrader metaclass requires imported module in sys.modules; S01612 harness failures, S0196 evaluated losing cases retained",
+  "sha256": "5ef7c277dbcdc7231dbb3ebdb83831cbdd3ebb2ee2e21ae3df66eb6c30f69c46",
+  "environment": "Python3.12 diagnostic; canonical CI uses3.13"
+}
