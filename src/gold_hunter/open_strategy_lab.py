@@ -275,8 +275,14 @@ def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
 
 def run_family_matrix(raw: pd.DataFrame, settings: Settings) -> dict:
     df,tape=signal_tape(raw)
+    # NEW V1 DEVELOPMENT ABLATIONS chosen AFTER observing 2025 + 2026 V0.
+    # These are exploratory selection diagnostics, NOT independent/OOS confirmation.
     groups=[("ALL_FIVE",SYSTEMS),
             ("TREND_PAIR",SYSTEMS[:2]),
             ("SESSION_PAIR",SYSTEMS[3:]),
-            ("MEAN_REVERSION",("BOLLINGER_REENTRY",))]+[(s,(s,)) for s in SYSTEMS]
+            ("MEAN_REVERSION",("BOLLINGER_REENTRY",)),
+            ("DONCHIAN_ASIA_BREAK",("DONCHIAN_TREND","ASIA_RANGE_BREAK")),
+            ("DONCHIAN_PLUS_SESSIONS",("DONCHIAN_TREND",
+                                        "ASIA_RANGE_BREAK",
+                                        "ASIA_LIQUIDITY_SWEEP"))]+[(s,(s,)) for s in SYSTEMS]
     return {name:replay(df,tape,arms,settings) for name,arms in groups}
