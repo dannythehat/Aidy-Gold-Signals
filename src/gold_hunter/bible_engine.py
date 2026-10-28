@@ -289,8 +289,37 @@ def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
     return out
 
 
+@dataclass(frozen=True)
+class CandidateTape:
+    """Source/config-bound point-in-time candidates for shared research runs."""
+    source_sha256: str
+    configuration_sha256: str
+    choices: tuple[tuple[dict, ...], ...]
+
+
+def _candidate_source_hash(df: pd.DataFrame) -> str:
+    return hashlib.sha256(pd.util.hash_pandas_object(
+        df, index=False).to_numpy().tobytes()).hexdigest()
+
+
+def _candidate_config_hash(cfg: Parameters) -> str:
+    return hashlib.sha256(json.dumps(asdict(cfg), sort_keys=True).encode()).hexdigest()
+
+
+def build_candidate_tape(bars: pd.DataFrame, cfg: Parameters) -> CandidateTape:
+    """Evaluate Bible admissibility once per historical bar, independently of positions."""
+    cfg.validate()
+    df = validate_h1(bars)
+    h4, day, week = _higher_frames(df)
+    choices = tuple(tuple(candidates_at(df, i, h4, day, week, cfg))
+                    for i in range(len(df) - 1)) + ((),)
+    return CandidateTape(_candidate_source_hash(df),
+                         _candidate_config_hash(cfg), choices)
+
+
 def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
-                      families: tuple[str, ...] = FAMILIES) -> dict:
+                      families: tuple[str, ...] = FAMILIES,
+                      candidate_tape: CandidateTape | None = None) -> dict:
     """Research-only one-position portfolio. Simulated bid/ask; no real orders.
 
     Entry at following H1 OPEN, then stop/target on H1 range; if both touched,
@@ -303,7 +332,15 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             f not in FAMILIES for f in families):
         raise ValueError("Unsupported Bible family or duplicates")
     df = validate_h1(bars)
-    h4, day, week = _higher_frames(df)
+    if candidate_tape is not None:
+        if (type(candidate_tape) is not CandidateTape or
+                candidate_tape.source_sha256 != _candidate_source_hash(df) or
+                candidate_tape.configuration_sha256 != _candidate_config_hash(cfg) or
+                len(candidate_tape.choices) != len(df)):
+            raise ValueError("Historical candidate tape source/config mismatch")
+        h4 = day = week = None
+    else:
+        h4, day, week = _higher_frames(df)
     equity = cfg.capital_usd
     position = None
     pending = None
@@ -371,8 +408,9 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
                       "equity_usd": round(marked, 4)})
         if i == len(df) - 1:
             break
-        possible = [c for c in candidates_at(df, i, h4, day, week, cfg)
-                    if c["family"] in families]
+        decisions = (candidate_tape.choices[i] if candidate_tape is not None
+                     else candidates_at(df, i, h4, day, week, cfg))
+        possible = [c for c in decisions if c["family"] in families]
         if position or pending:
             rejections["portfolio_busy"] += len(possible)
             continue
