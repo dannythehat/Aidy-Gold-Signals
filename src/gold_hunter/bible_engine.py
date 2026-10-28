@@ -1,0 +1,547 @@
+"""Gold Hunter: mechanical XAUUSD Bible interpretation, NOT a proven trading edge.
+
+Source: The Candlestick Trading Bible, particularly printed pages 51-80,
+81-108 (pin), 109-136 (engulf), 137-157 (inside/false break).
+Machine thresholds are explicitly AI hypotheses, not quotations from the author.
+All signals use completed H1 with as-of completed H4/D1/W1 context.
+No network access, MT5 credentials, broker order API or execution capability.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+from dataclasses import asdict, dataclass
+from typing import Any
+
+import numpy as np
+import pandas as pd
+
+FAMILIES = (
+    "TREND_PIN", "TREND_ENGULF", "TREND_INSIDE", "TREND_FALSE_BREAK",
+    "RANGE_PIN", "RANGE_ENGULF", "RANGE_FALSE_BREAK",
+)
+BIBLE_SOURCES = {
+    "TREND_PIN": "B 83-99", "TREND_ENGULF": "B 109-124",
+    "TREND_INSIDE": "B 137-147", "TREND_FALSE_BREAK": "B 148-154",
+    "RANGE_PIN": "B 103-108", "RANGE_ENGULF": "B 125-135",
+    "RANGE_FALSE_BREAK": "B 148-154",
+}
+
+
+@dataclass(frozen=True)
+class Parameters:
+    # Engineering definitions requiring multi-regime evaluation; NOT book constants.
+    risk_fraction: float = .005
+    min_rr: float = 2.0  # Bible printed p133
+    spread_usd_oz: float = .30  # ILLUSTRATIVE, not observed broker spread
+    slip_usd_oz_each_side: float = .05
+    commission_usd_oz_roundtrip: float = .07
+    near_level_atr: float = .42
+    stop_buffer_atr: float = .08
+    capital_usd: float = 10000.0
+    quote_model: str = 'fixed'  # 'observed_open_conservative_h1' is a distinct research arm
+
+    def validate(self) -> None:
+        if not (0 < self.risk_fraction <= .01 and self.min_rr >= 2 and
+                0 <= self.spread_usd_oz < 20 and
+                0 <= self.slip_usd_oz_each_side < 20 and
+                0 <= self.commission_usd_oz_roundtrip < 20 and
+                .1 <= self.near_level_atr <= 1 and
+                0 <= self.stop_buffer_atr <= .5 and self.capital_usd > 0 and
+                self.quote_model in ('fixed', 'observed_open_conservative_h1')):
+            raise ValueError("Invalid or non-Bible risk configuration")
+
+
+def validate_h1(bars: pd.DataFrame) -> pd.DataFrame:
+    needed = ("open_time_utc", "open", "high", "low", "close", "m1_count")
+    if any(col not in bars.columns for col in needed):
+        raise ValueError("AIDY source must supply complete native M1-derived H1 BID")
+    quote_fields = ("observed_open_ask", "observed_open_spread", "observed_max_spread")
+    present = tuple(field for field in quote_fields if field in bars.columns)
+    if present and len(present) != len(quote_fields):
+        raise ValueError("Partial archived ASK/spread evidence is not admissible")
+    df = bars.loc[:, needed + (quote_fields if present else ())].copy()
+    df["open_time_utc"] = pd.to_datetime(df["open_time_utc"], utc=True)
+    if (df["open_time_utc"].isna().any() or df["open_time_utc"].duplicated().any()
+            or not df["open_time_utc"].is_monotonic_increasing):
+        raise ValueError("XAUUSD time not strictly increasing UTC")
+    if (df["open_time_utc"].dt.minute.ne(0).any()
+            or df["open_time_utc"].dt.second.ne(0).any()
+            or df["open_time_utc"].dt.microsecond.ne(0).any()):
+        raise ValueError("Expected whole UTC hour boundaries")
+    for col in ("open", "high", "low", "close"):
+        df[col] = pd.to_numeric(df[col], errors="raise").astype(float)
+    if (not np.isfinite(df[["open", "high", "low", "close"]].to_numpy()).all()
+            or not df[["open", "high", "low", "close"]].gt(0).all().all()
+            or not df["m1_count"].eq(60).all()
+            or not df["high"].ge(df[["open", "low", "close"]].max(axis=1)).all()
+            or not df["low"].le(df[["open", "high", "close"]].min(axis=1)).all()):
+        raise ValueError("Incomplete/corrupt source or invalid OHLC geometry")
+    if present:
+        for col in quote_fields:
+            df[col] = pd.to_numeric(df[col], errors="raise").astype(float)
+        q = df[list(quote_fields)]
+        if (not np.isfinite(q.to_numpy()).all()
+                or (df["observed_open_ask"] < df["open"] - 1e-5).any()
+                or (df["observed_open_spread"] < 0).any()
+                or (df["observed_max_spread"] < df["observed_open_spread"] - 1e-5).any()
+                or not np.allclose(df["observed_open_ask"] - df["open"],
+                                   df["observed_open_spread"], atol=1e-3, rtol=0)):
+            raise ValueError("Original hourly ASK/spread evidence geometry invalid")
+    if len(df) < 500:
+        raise ValueError("Insufficient H1 source for multi-timeframe Bible context")
+    return df.reset_index(drop=True)
+
+
+def _resample(df: pd.DataFrame, freq: str, required: int) -> pd.DataFrame:
+    x = df.set_index("open_time_utc")
+    agg = x.resample(freq, label="left", closed="left").agg({
+        "open": "first", "high": "max", "low": "min", "close": "last",
+        "m1_count": "size",
+    })
+    agg = agg.loc[agg["m1_count"] >= required].copy()
+    # A completed H4/day/week may be consulted only after its period ends.
+    offset = pd.Timedelta(hours=4) if freq == "4h" else (
+        pd.Timedelta(days=1) if freq == "1D" else pd.Timedelta(days=7))
+    agg["completed_at"] = agg.index + offset
+    agg["atr"] = (agg["high"] - agg["low"]).rolling(14).mean()
+    agg["sma21"] = agg["close"].rolling(21).mean()
+    return agg.reset_index(drop=True)
+
+
+def _higher_frames(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    h4 = _resample(df, "4h", 4)
+    day = _resample(df, "1D", 20)
+    # Calendar weeks begin Monday UTC. Only 80+ original hourly observations.
+    x = df.set_index("open_time_utc")
+    w = x.resample("W-MON", label="left", closed="left").agg({
+        "open": "first", "high": "max", "low": "min", "close": "last", "m1_count": "size"
+    })
+    w = w.loc[w["m1_count"] >= 80].copy()
+    w["completed_at"] = w.index + pd.Timedelta(days=7)
+    return h4, day, w.reset_index(drop=True)
+
+
+def _confirmed_swings(x: pd.DataFrame) -> tuple[list[float], list[float]]:
+    """2-left/2-right pivots known after confirmation; caller passes only past bars."""
+    # Equivalent 2-left/2-right confirmed pivots, using vector comparisons.
+    h = x["high"]
+    l = x["low"]
+    valid = pd.Series(False, index=x.index)
+    if len(x) >= 5:
+        valid.iloc[2:-2] = True
+    hi = valid & h.gt(h.shift(1)) & h.gt(h.shift(2)) & h.ge(h.shift(-1)) & h.ge(h.shift(-2))
+    lo = valid & l.lt(l.shift(1)) & l.lt(l.shift(2)) & l.le(l.shift(-1)) & l.le(l.shift(-2))
+    return h.loc[hi].astype(float).tolist(), l.loc[lo].astype(float).tolist()
+
+
+def _market(h4: pd.DataFrame, daily: pd.DataFrame, weekly: pd.DataFrame,
+            close: float) -> dict[str, Any]:
+    if len(h4) < 64 or len(daily) < 21 or len(weekly) < 2:
+        return {"mode": "UNKNOWN"}
+    recent = h4.tail(70)
+    hi, lo = _confirmed_swings(recent)
+    rising = len(hi) >= 2 and len(lo) >= 2 and hi[-1] > hi[-2] and lo[-1] > lo[-2]
+    falling = len(hi) >= 2 and len(lo) >= 2 and hi[-1] < hi[-2] and lo[-1] < lo[-2]
+    d = daily.iloc[-1]
+    daily_sma = float(d["sma21"])
+    if not np.isfinite(daily_sma):
+        return {"mode": "UNKNOWN"}
+    direction = (1 if rising and close >= daily_sma else
+                 -1 if falling and close <= daily_sma else 0)
+    atr = float(h4.iloc[-1]["atr"])
+    if not np.isfinite(atr) or atr <= 0:
+        return {"mode": "UNKNOWN"}
+    # Levels are actual *historical completed* H4 pivots, with 21SMA
+    # a source-sanctioned dynamic alternative. Choppy != a defined range.
+    levels_long = [v for v in hi[:-1] + lo if v < close] + [float(h4.iloc[-1]["sma21"])]
+    levels_short = [v for v in lo[:-1] + hi if v > close] + [float(h4.iloc[-1]["sma21"])]
+    resistances = sorted(v for v in hi if v > close)
+    supports = sorted((v for v in lo if v < close), reverse=True)
+    whi, wlo = _confirmed_swings(weekly.tail(28))
+    return {
+        "mode": "TREND" if direction else "CHOP",
+        "direction": direction,
+        "atr": atr,
+        "support_levels": [v for v in levels_long if np.isfinite(v) and v < close],
+        "resistance_levels": [v for v in levels_short if np.isfinite(v) and v > close],
+        "targets_long": resistances,
+        "targets_short": supports,
+        "weekly_resistances": [v for v in whi if v > close],
+        "weekly_supports": [v for v in wlo if v < close],
+        "recent_h4": recent,
+    }
+
+
+def _range_context(h4: pd.DataFrame, atr: float) -> tuple[float, float] | None:
+    r = h4.tail(38)
+    if len(r) < 38:
+        return None
+    lower, upper = float(r["low"].min()), float(r["high"].max())
+    width = upper - lower
+    if not 3 * atr < width < 18 * atr:
+        return None
+    tolerance = .30 * atr
+    # Two prior, separate H4 candles must have rejected each horizontal border.
+    touches_low = int((r["low"] <= lower + tolerance).sum())
+    touches_high = int((r["high"] >= upper - tolerance).sum())
+    if touches_low < 2 or touches_high < 2:
+        return None
+    return lower, upper
+
+
+def classify_pattern(last: list[dict[str, float]], side: int) -> list[tuple[str, float, float]]:
+    """Return (Bible pattern, stop-reference low/high, signal-level-touch price)."""
+    if len(last) < 3 or side not in (-1, 1):
+        return []
+    a, b, c = last[-3:]
+    rng = c["high"] - c["low"]
+    if rng <= 0:
+        return []
+    body = abs(c["close"] - c["open"])
+    lower = min(c["close"], c["open"]) - c["low"]
+    upper = c["high"] - max(c["close"], c["open"])
+    ret = []
+    if (body <= .35 * rng and
+            (lower >= .60 * rng and lower >= 2 * body and lower > upper
+             if side == 1 else
+             upper >= .60 * rng and upper >= 2 * body and upper > lower)):
+        ret.append(("PIN", c["low"] if side == 1 else c["high"],
+                    c["low"] if side == 1 else c["high"]))
+    if ((c["close"] > c["open"] and b["close"] < b["open"]
+         and c["open"] <= b["close"] and c["close"] >= b["open"])
+            if side == 1 else
+            (c["close"] < c["open"] and b["close"] > b["open"]
+             and c["open"] >= b["close"] and c["close"] <= b["open"])):
+        ret.append(("ENGULF", min(b["low"], c["low"]) if side == 1 else
+                    max(b["high"], c["high"]),
+                    c["low"] if side == 1 else c["high"]))
+    # Source-faithful inside-bar order is armed at the INSIDE bar's close.
+    # A subsequent breakout is the STOP-order fill, never a second 'signal'.
+    if c["high"] < b["high"] and c["low"] > b["low"]:
+        ret.append(("INSIDE", b["low"] if side == 1 else b["high"],
+                    b["low"] if side == 1 else b["high"]))
+    inside = b["high"] < a["high"] and b["low"] > a["low"]
+    if inside:
+        # Mother-bar sweep and reclaim, completed third candle, no future price.
+        if ((c["low"] < a["low"] and a["low"] < c["close"] < a["high"])
+                if side == 1 else
+                (c["high"] > a["high"] and a["low"] < c["close"] < a["high"])):
+            ret.append(("FALSE_BREAK", c["low"] if side == 1 else c["high"],
+                        c["low"] if side == 1 else c["high"]))
+    return ret
+
+
+def candidates_at(df: pd.DataFrame, i: int, h4: pd.DataFrame,
+                  day: pd.DataFrame, week: pd.DataFrame,
+                  cfg: Parameters) -> list[dict]:
+    t = df.iloc[i]["open_time_utc"] + pd.Timedelta(hours=1)
+    h = h4.iloc[:h4["completed_at"].searchsorted(t, side="right")]
+    d = day.iloc[:day["completed_at"].searchsorted(t, side="right")]
+    w = week.iloc[:week["completed_at"].searchsorted(t, side="right")]
+    c = float(df.iloc[i]["close"])
+    # At decision time the signal candle's OPEN spread is already known.
+    # Never consult a future entry candle to decide Bible admissibility.
+    spread_known = (float(df.iloc[i]["observed_open_spread"])
+                    if cfg.quote_model == "observed_open_conservative_h1"
+                    else cfg.spread_usd_oz)
+    ctx = _market(h, d, w, c)
+    if ctx["mode"] == "UNKNOWN":
+        return []
+    atr = ctx["atr"]
+    recent = df.iloc[i-2:i+1].to_dict("records")
+    market_mode = ctx["mode"]
+    contexts = []
+    if market_mode == "TREND":
+        contexts.append(("TREND", ctx["direction"], None))
+    else:
+        bound = _range_context(h, atr)
+        if bound:
+            contexts.extend([("RANGE", 1, bound), ("RANGE", -1, bound)])
+    out = []
+    for regime, side, bound in contexts:
+        if regime == "TREND":
+            levels = (ctx["support_levels"] if side == 1 else ctx["resistance_levels"])
+            targets = ctx["targets_long"] if side == 1 else ctx["targets_short"]
+        else:
+            levels = [bound[0] if side == 1 else bound[1]]
+            targets = [bound[1] if side == 1 else bound[0]]
+        if not levels or not targets:
+            continue
+        for pattern, stop_edge, touch in classify_pattern(recent, side):
+            if regime == "RANGE" and pattern == "INSIDE":
+                continue
+            near = [level for level in levels if abs(level - touch) <= cfg.near_level_atr * atr]
+            if not near:
+                continue
+            level = min(near, key=lambda n: abs(n - touch))
+            # Historical original prices are BID. Buy at ASK; sell at BID.
+            is_inside = pattern == "INSIDE"
+            # Mother-bar STOP activation: ASK for long, BID for short.
+            # One cent/oz is an explicit research-only tick assumption.
+            trigger = ((float(recent[-2]["high"]) + spread_known + .01)
+                       if side == 1 else (float(recent[-2]["low"]) - .01)) if is_inside else None
+            entry_est = (trigger + side * cfg.slip_usd_oz_each_side if is_inside
+                         else (c + spread_known + cfg.slip_usd_oz_each_side
+                               if side == 1 else c - cfg.slip_usd_oz_each_side))
+            stop = (stop_edge - side * cfg.stop_buffer_atr * atr +
+                    (spread_known if side == -1 else 0.0))
+            risk = side * (entry_est - stop)
+            if risk <= 0 or risk > 3 * atr:
+                continue
+            # Take the first actual prior meaningful opposing H4 swing/range level.
+            viable = [v for v in targets if side * (v - entry_est) > 0]
+            if not viable:
+                continue
+            target = min(viable) if side == 1 else max(viable)
+            reward = (side * (target - entry_est) -
+                      (spread_known if side == -1 else 0.0) -
+                      cfg.slip_usd_oz_each_side - cfg.commission_usd_oz_roundtrip)
+            rr = reward / risk
+            if rr < cfg.min_rr:
+                continue
+            # Weekly major levels cannot be ignored as known near-target obstacles.
+            barriers = ctx["weekly_resistances"] if side == 1 else ctx["weekly_supports"]
+            if any(0 < side * (v - entry_est) < cfg.min_rr * risk for v in barriers):
+                continue
+            family = f"{regime}_{pattern}"
+            if family not in FAMILIES:
+                continue
+            out.append({
+                "family": family, "bible_reference": BIBLE_SOURCES[family],
+                "signal_time_utc": t.isoformat(), "side": side,
+                "mode": regime, "level": round(level, 6),
+                "level_type": "H4_SWING_OR_SMA21" if regime == "TREND" else "H4_RANGE_BOUNDARY",
+                "pattern": pattern, "stop": round(stop, 6),
+                "target": round(target, 6), "estimated_rr": round(rr, 4),
+                "signal_close": c,
+                "entry_type": "STOP" if is_inside else "MARKET",
+                "trigger": round(trigger, 6) if is_inside else None,
+                "mother_high": float(recent[-2]["high"]) if is_inside else None,
+                "mother_low": float(recent[-2]["low"]) if is_inside else None,
+                "valid_bars": 3 if is_inside else 1,
+            })
+    return out
+
+
+@dataclass(frozen=True)
+class CandidateTape:
+    """Source/config-bound point-in-time candidates for shared research runs."""
+    source_sha256: str
+    configuration_sha256: str
+    choices: tuple[tuple[dict, ...], ...]
+
+
+def _candidate_source_hash(df: pd.DataFrame) -> str:
+    return hashlib.sha256(pd.util.hash_pandas_object(
+        df, index=False).to_numpy().tobytes()).hexdigest()
+
+
+def _candidate_config_hash(cfg: Parameters) -> str:
+    return hashlib.sha256(json.dumps(asdict(cfg), sort_keys=True).encode()).hexdigest()
+
+
+def build_candidate_tape(bars: pd.DataFrame, cfg: Parameters) -> CandidateTape:
+    """Evaluate Bible admissibility once per historical bar, independently of positions."""
+    cfg.validate()
+    df = validate_h1(bars)
+    h4, day, week = _higher_frames(df)
+    choices = tuple(tuple(candidates_at(df, i, h4, day, week, cfg))
+                    for i in range(len(df) - 1)) + ((),)
+    return CandidateTape(_candidate_source_hash(df),
+                         _candidate_config_hash(cfg), choices)
+
+
+def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
+                      families: tuple[str, ...] = FAMILIES,
+                      candidate_tape: CandidateTape | None = None) -> dict:
+    """Research-only one-position portfolio. Simulated bid/ask; no real orders.
+
+    Entry at following H1 OPEN, then stop/target on H1 range; if both touched,
+    adverse STOP wins. A gap across stop is filled at worse open. Never claim
+    broker-executable performance from an H1 retrospective price replay.
+    """
+    cfg = cfg or Parameters()
+    cfg.validate()
+    if not families or len(set(families)) != len(families) or any(
+            f not in FAMILIES for f in families):
+        raise ValueError("Unsupported Bible family or duplicates")
+    df = validate_h1(bars)
+    if cfg.quote_model == "observed_open_conservative_h1" and "observed_open_ask" not in df:
+        raise ValueError("Observed quote research requires original hourly BID/ASK evidence")
+    if candidate_tape is not None:
+        if (type(candidate_tape) is not CandidateTape or
+                candidate_tape.source_sha256 != _candidate_source_hash(df) or
+                candidate_tape.configuration_sha256 != _candidate_config_hash(cfg) or
+                len(candidate_tape.choices) != len(df)):
+            raise ValueError("Historical candidate tape source/config mismatch")
+        h4 = day = week = None
+    else:
+        h4, day, week = _higher_frames(df)
+    equity = cfg.capital_usd
+    position = None
+    pending = None
+    trades, marks, counts = [], [], {family: 0 for family in families}
+    rejections = {"conflicting_signals": 0, "portfolio_busy": 0, "not_bible_admitted": 0,
+                  "expired_pending": 0, "invalidated_pending": 0}
+    # CSV source is true BID, not MID: spread belongs on ASK only.
+    for i in range(len(df)):
+        bar = df.iloc[i]
+        bid_open, bid_hi, bid_lo, bid_close = [float(bar[k]) for k in
+                                              ("open", "high", "low", "close")]
+        observed = cfg.quote_model == "observed_open_conservative_h1"
+        entry_spread = float(bar["observed_open_spread"]) if observed else cfg.spread_usd_oz
+        short_exit_spread = (float(bar["observed_max_spread"]) if observed
+                             else cfg.spread_usd_oz)
+        ask_open = float(bar["observed_open_ask"]) if observed else bid_open + entry_spread
+        if pending is not None:
+            p = pending
+            side = p["side"]
+            is_stop_order = p.get("entry_type") == "STOP"
+            fill = None
+            if is_stop_order:
+                # Pending orders can fill ONLY in the 3 bars AFTER signal close.
+                age = i - p["signal_index"]
+                if age > 3:
+                    pending = None
+                    rejections["expired_pending"] += 1
+                else:
+                    trigger = p["trigger"]
+                    seen = ((bid_hi + entry_spread >= trigger)
+                            if side == 1 else (bid_lo <= trigger))
+                    if seen:
+                        # A gap through the trigger fills at the worse open.
+                        fill = (max(trigger, ask_open) +
+                                cfg.slip_usd_oz_each_side if side == 1 else
+                                min(trigger, bid_open) - cfg.slip_usd_oz_each_side)
+                        pending = None
+                    elif ((bid_close < p["mother_low"] if side == 1
+                           else bid_close > p["mother_high"])):
+                        pending = None
+                        rejections["invalidated_pending"] += 1
+                    elif age == 3:
+                        pending = None
+                        rejections["expired_pending"] += 1
+            else:
+                # Ordinary Bible patterns enter at the NEXT native BID/ASK open.
+                pending = None
+                fill = (ask_open + cfg.slip_usd_oz_each_side
+                        if side == 1 else bid_open - cfg.slip_usd_oz_each_side)
+            if fill is not None:
+                risk = side * (fill - p["stop"])
+                reward = (side * (p["target"] - fill) -
+                          (short_exit_spread if side == -1 else 0.0) -
+                          cfg.slip_usd_oz_each_side -
+                          cfg.commission_usd_oz_roundtrip)
+                if risk > 0 and reward / risk >= cfg.min_rr and equity > 0:
+                    # Includes worst-side stop slippage and round-trip fees.
+                    risk_per_oz = risk + cfg.slip_usd_oz_each_side + cfg.commission_usd_oz_roundtrip
+                    ounces = equity * cfg.risk_fraction / risk_per_oz
+                    position = dict(
+                        p, entry_utc=bar["open_time_utc"].isoformat(), entry=fill,
+                        ounces=ounces, risk_usd=ounces * risk_per_oz,
+                        entry_index=i, equity_at_entry=equity,
+                        entry_timestamp_precision=("H1_UNKNOWN_INTRABAR" if is_stop_order
+                                                   else "H1_OPEN"))
+                else:
+                    rejections["not_bible_admitted"] += 1
+        if position is not None:
+            side = position["side"]
+            stop, target = position["stop"], position["target"]
+            # Real bid proxy has no historical ask. For short stop/target we
+            # require synthetic ask adjusted levels, never free bid exits.
+            hi_exit, lo_exit = ((bid_hi, bid_lo) if side == 1 else
+                                (bid_hi + short_exit_spread, bid_lo + short_exit_spread))
+            at_open_exit = bid_open if side == 1 else ask_open
+            stop_hit = lo_exit <= stop if side == 1 else hi_exit >= stop
+            target_hit = hi_exit >= target if side == 1 else lo_exit <= target
+            reason, exit_price = None, None
+            if stop_hit:
+                reason = "STOP"  # adverse tie-break if same H1 hits both
+                exit_price = min(stop, at_open_exit) if side == 1 else max(stop, at_open_exit)
+            elif target_hit:
+                reason = "TARGET"
+                exit_price = target
+            if reason:
+                exit_price -= side * cfg.slip_usd_oz_each_side
+                pnl = (exit_price - position["entry"]) * side * position["ounces"]
+                fee = cfg.commission_usd_oz_roundtrip * position["ounces"]
+                pnl -= fee
+                equity += pnl
+                trades.append({k: position[k] for k in (
+                    "family", "bible_reference", "signal_time_utc", "entry_utc", "side",
+                    "mode", "level", "level_type", "pattern", "stop", "target",
+                    "estimated_rr", "entry", "ounces", "risk_usd")}
+                              | {"entry_type": position.get("entry_type", "MARKET"),
+                                 "entry_timestamp_precision": position["entry_timestamp_precision"],
+                                 "exit_utc": (bar["open_time_utc"] + pd.Timedelta(hours=1)).isoformat(),
+                                 "exit_price": round(exit_price, 6),
+                                 "reason": reason, "net_pnl_usd": round(pnl, 4)})
+                position = None
+        if position is not None:
+            close_exit = bid_close if position["side"] == 1 else bid_close + short_exit_spread
+            marked = equity + ((close_exit - position["entry"]) * position["side"] -
+                               cfg.commission_usd_oz_roundtrip) * position["ounces"]
+        else:
+            marked = equity
+        marks.append({"time_utc": (bar["open_time_utc"] + pd.Timedelta(hours=1)).isoformat(),
+                      "equity_usd": round(marked, 4)})
+        if i == len(df) - 1:
+            break
+        decisions = (candidate_tape.choices[i] if candidate_tape is not None
+                     else candidates_at(df, i, h4, day, week, cfg))
+        possible = [c for c in decisions if c["family"] in families]
+        if position or pending:
+            rejections["portfolio_busy"] += len(possible)
+            continue
+        if possible:
+            possible.sort(key=lambda c: (-c["estimated_rr"], FAMILIES.index(c["family"])))
+            chosen = possible[0]
+            counts[chosen["family"]] += 1
+            rejections["conflicting_signals"] += len(possible) - 1
+            pending = dict(chosen, signal_index=i)
+    eq = np.asarray([m["equity_usd"] for m in marks])
+    high = np.maximum.accumulate(np.concatenate([[cfg.capital_usd], eq]))[1:]
+    dd = (eq / high - 1) * 100
+    unrealized_position = None
+    if position is not None:
+        unrealized_position = {k: position[k] for k in (
+            "family", "signal_time_utc", "entry_utc", "side", "entry",
+            "stop", "target", "ounces", "risk_usd")}
+        unrealized_position["status"] = "CENSORED_AT_HISTORY_END_NOT_CLOSED"
+        unrealized_position["unrealized_model_pnl_usd"] = round(
+            float(eq[-1]) - equity, 4)
+    result = {
+        "schema": "gold_hunter.bible_multisystem_research.v1_2_observed_hourly_quotes",
+        "status": "HISTORICAL_RESEARCH_ONLY",
+        "data_basis": ("H1_OBSERVED_ORIGINAL_OPEN_ASK_AND_MAX_SPREAD_BOUNDS"
+                       if cfg.quote_model == "observed_open_conservative_h1" else
+                       "H1_NATIVE_M1_HISTDATA_BID_WITH_ILLUSTRATIVE_ASK"),
+        "execution_quote_basis": "LONG_ENTRY_ASK_SHORT_ENTRY_BID_LONG_EXIT_BID_SHORT_EXIT_ASK",
+        "price_rows": len(df), "start_utc": df.iloc[0]["open_time_utc"].isoformat(),
+        "end_utc": df.iloc[-1]["open_time_utc"].isoformat(),
+        "families": list(families), "bible_gate": "HTF_TREND_OR_RANGE+SIGNIFICANT_LEVEL+COMPLETED_PATTERN+RR>=2",
+        "costs_and_policy": asdict(cfg), "counts_selected": counts,
+        "rejections": rejections, "closed_trades": len(trades),
+        "win_rate_percent": round(100 * sum(t["net_pnl_usd"] > 0 for t in trades)/len(trades), 2) if trades else None,
+        "net_modelled_usd": round(float(eq[-1]) - cfg.capital_usd, 2),
+        "ending_equity_usd": round(float(eq[-1]), 2),
+        "realized_balance_usd": round(equity, 2),
+        "unrealized_open_position": unrealized_position,
+        "max_marked_drawdown_percent": round(float(dd.min()), 3),
+        "trades": trades, "equity_marks": marks,
+        "limitations": [("Observed original ASK only at H1 OPEN, maximum hourly spread is NOT"
+                         " contemporaneous with BID extreme, intrabar ASK inferred"
+                         if cfg.quote_model == "observed_open_conservative_h1" else
+                         "Retrospective BID source; synthetic ASK/spread and slippage"),
+                        "No actual swap/funding/contract lots/stopout/partial fills",
+                        "H1 OHLC cannot establish intrabar order; stop-first tie",
+                        "Inside mother-bar stop fills inferred from H1 extremes; 3-bar expiry",
+                        "Unreviewed AI mechanical thresholds; source chart parity pending",
+                        "One position shared across eligible systems; no broker orders"],
+    }
+    result["result_sha256"] = hashlib.sha256(json.dumps(
+        {k: v for k, v in result.items() if k != "result_sha256"},
+        sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode()).hexdigest()
+    return result

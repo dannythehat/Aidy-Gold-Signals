@@ -1,0 +1,92 @@
+name: Gold Hunter Bible 2026 Real Tick History Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/gold_hunter/bible_engine.py
+      - tests/test_bible_engine.py
+      - scripts/gold_hunter_2026_research.py
+      - .github/workflows/gold-hunter-bible-2026-real-history.yml
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-engine-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy pytest
+      - name: Verify deterministic Bible engine before protected archive access
+        run: |
+          python -m compileall -q src/gold_hunter/bible_engine.py scripts/gold_hunter_2026_research.py tests/test_bible_engine.py
+          PYTHONPATH=src:. python -m pytest -q tests/test_bible_engine.py
+
+  real-archive-month:
+    needs: source-and-engine-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        period: ['202512','202601','202602','202603','202604','202605','202606','202607','202608','202609']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PERIOD: ${{ matrix.period }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read verified original tick ZIP from private R2 without changing source
+        run: |
+          mkdir -p "artifacts/strategy_lab/crossfire_2026_source/${PERIOD}"
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${PERIOD}/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip" --remote --file "/tmp/GOLD_HUNTER_SOURCE_${PERIOD}.zip"
+          PYTHONPATH=src:. python scripts/strategy_lab/crossfire_2021_derive_month.py --period "${PERIOD}" --archive "/tmp/GOLD_HUNTER_SOURCE_${PERIOD}.zip" --output "artifacts/strategy_lab/crossfire_2026_source/${PERIOD}"
+          rm -f "/tmp/GOLD_HUNTER_SOURCE_${PERIOD}.zip"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: crossfire-2026-${{ matrix.period }}
+          path: artifacts/strategy_lab/crossfire_2026_source/${{ matrix.period }}/
+          retention-days: 30
+          if-no-files-found: error
+
+  nine-month-validation:
+    needs: real-archive-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: crossfire-2026-*
+          path: artifacts/strategy_lab/crossfire_2026_source/
+          merge-multiple: false
+      - run: python -m pip install --quiet pandas numpy
+      - name: Verify all ten original monthly R2 source receipts and chronology
+        run: PYTHONPATH=src:. python scripts/strategy_lab/crossfire_2026_holdout.py
+      - name: Replay seven Bible families, trend, range and combined on Jan-Sep 2026
+        run: PYTHONPATH=src:. python scripts/gold_hunter_2026_research.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: GOLD-HUNTER-2026-ORIGINAL-TICK-SOURCE-REPLAY
+          path: |
+            artifacts/gold_hunter/bible_2026/
+            artifacts/strategy_lab/crossfire_2026_holdout_result/crossfire_2026_verdict.json
+          retention-days: 90
+          if-no-files-found: error
