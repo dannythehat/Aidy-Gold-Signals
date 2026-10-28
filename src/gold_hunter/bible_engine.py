@@ -358,7 +358,8 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
     position = None
     pending = None
     trades, marks, counts = [], [], {family: 0 for family in families}
-    rejections = {"conflicting_signals": 0, "portfolio_busy": 0, "not_bible_admitted": 0}
+    rejections = {"conflicting_signals": 0, "portfolio_busy": 0, "not_bible_admitted": 0,
+                  "expired_pending": 0, "invalidated_pending": 0}
     # CSV source is true BID, not MID: spread belongs on ASK only.
     for i in range(len(df)):
         bar = df.iloc[i]
@@ -366,25 +367,55 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
                                               ("open", "high", "low", "close")]
         if pending is not None:
             p = pending
-            pending = None
             side = p["side"]
-            fill = (bid_open + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
-                    if side == 1 else bid_open - cfg.slip_usd_oz_each_side)
-            risk = side * (fill - p["stop"])
-            if (risk > 0 and (side * (p["target"] - fill) -
-                              (cfg.spread_usd_oz if side == -1 else 0.0) -
-                              cfg.slip_usd_oz_each_side -
-                              cfg.commission_usd_oz_roundtrip) / risk >= cfg.min_rr
-                    and equity > 0):
-                # Budget includes the additional adverse stop slippage and fee.
-                risk_per_oz = risk + cfg.slip_usd_oz_each_side + cfg.commission_usd_oz_roundtrip
-                ounces = equity * cfg.risk_fraction / risk_per_oz
-                position = dict(p, entry_utc=bar["open_time_utc"].isoformat(),
-                                entry=fill, ounces=ounces,
-                                risk_usd=ounces * risk_per_oz,
-                                entry_index=i, equity_at_entry=equity)
+            is_stop_order = p.get("entry_type") == "STOP"
+            fill = None
+            if is_stop_order:
+                # Pending orders can fill ONLY in the 3 bars AFTER signal close.
+                age = i - p["signal_index"]
+                if age > 3:
+                    pending = None
+                    rejections["expired_pending"] += 1
+                else:
+                    trigger = p["trigger"]
+                    seen = ((bid_hi + cfg.spread_usd_oz >= trigger)
+                            if side == 1 else (bid_lo <= trigger))
+                    if seen:
+                        # A gap through the trigger fills at the worse open.
+                        fill = (max(trigger, bid_open + cfg.spread_usd_oz) +
+                                cfg.slip_usd_oz_each_side if side == 1 else
+                                min(trigger, bid_open) - cfg.slip_usd_oz_each_side)
+                        pending = None
+                    elif ((bid_close < p["mother_low"] if side == 1
+                           else bid_close > p["mother_high"])):
+                        pending = None
+                        rejections["invalidated_pending"] += 1
+                    elif age == 3:
+                        pending = None
+                        rejections["expired_pending"] += 1
             else:
-                rejections["not_bible_admitted"] += 1
+                # Ordinary Bible patterns enter at the NEXT native BID/ASK open.
+                pending = None
+                fill = (bid_open + cfg.spread_usd_oz + cfg.slip_usd_oz_each_side
+                        if side == 1 else bid_open - cfg.slip_usd_oz_each_side)
+            if fill is not None:
+                risk = side * (fill - p["stop"])
+                reward = (side * (p["target"] - fill) -
+                          (cfg.spread_usd_oz if side == -1 else 0.0) -
+                          cfg.slip_usd_oz_each_side -
+                          cfg.commission_usd_oz_roundtrip)
+                if risk > 0 and reward / risk >= cfg.min_rr and equity > 0:
+                    # Includes worst-side stop slippage and round-trip fees.
+                    risk_per_oz = risk + cfg.slip_usd_oz_each_side + cfg.commission_usd_oz_roundtrip
+                    ounces = equity * cfg.risk_fraction / risk_per_oz
+                    position = dict(
+                        p, entry_utc=bar["open_time_utc"].isoformat(), entry=fill,
+                        ounces=ounces, risk_usd=ounces * risk_per_oz,
+                        entry_index=i, equity_at_entry=equity,
+                        entry_timestamp_precision=("H1_UNKNOWN_INTRABAR" if is_stop_order
+                                                   else "H1_OPEN"))
+                else:
+                    rejections["not_bible_admitted"] += 1
         if position is not None:
             side = position["side"]
             stop, target = position["stop"], position["target"]
@@ -412,7 +443,9 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
                     "family", "bible_reference", "signal_time_utc", "entry_utc", "side",
                     "mode", "level", "level_type", "pattern", "stop", "target",
                     "estimated_rr", "entry", "ounces", "risk_usd")}
-                              | {"exit_utc": (bar["open_time_utc"] + pd.Timedelta(hours=1)).isoformat(),
+                              | {"entry_type": position.get("entry_type", "MARKET"),
+                                 "entry_timestamp_precision": position["entry_timestamp_precision"],
+                                 "exit_utc": (bar["open_time_utc"] + pd.Timedelta(hours=1)).isoformat(),
                                  "exit_price": round(exit_price, 6),
                                  "reason": reason, "net_pnl_usd": round(pnl, 4)})
                 position = None
@@ -437,7 +470,7 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
             chosen = possible[0]
             counts[chosen["family"]] += 1
             rejections["conflicting_signals"] += len(possible) - 1
-            pending = chosen
+            pending = dict(chosen, signal_index=i)
     eq = np.asarray([m["equity_usd"] for m in marks])
     high = np.maximum.accumulate(np.concatenate([[cfg.capital_usd], eq]))[1:]
     dd = (eq / high - 1) * 100
@@ -450,7 +483,7 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
         unrealized_position["unrealized_model_pnl_usd"] = round(
             float(eq[-1]) - equity, 4)
     result = {
-        "schema": "gold_hunter.bible_multisystem_research.v1_bidask_corrected",
+        "schema": "gold_hunter.bible_multisystem_research.v1_1_bible_inside_stop_bidask",
         "status": "HISTORICAL_RESEARCH_ONLY",
         "data_basis": "H1_NATIVE_M1_HISTDATA_BID_WITH_ILLUSTRATIVE_ASK",
         "execution_quote_basis": "LONG_ENTRY_ASK_SHORT_ENTRY_BID_LONG_EXIT_BID_SHORT_EXIT_ASK",
@@ -469,6 +502,7 @@ def research_backtest(bars: pd.DataFrame, *, cfg: Parameters | None = None,
         "limitations": ["Retrospective BID source; synthetic ASK/spread and slippage",
                         "No actual swap/funding/contract lots/stopout/partial fills",
                         "H1 OHLC cannot establish intrabar order; stop-first tie",
+                        "Inside mother-bar stop fills inferred from H1 extremes; 3-bar expiry",
                         "Unreviewed AI mechanical thresholds; source chart parity pending",
                         "One position shared across eligible systems; no broker orders"],
     }
