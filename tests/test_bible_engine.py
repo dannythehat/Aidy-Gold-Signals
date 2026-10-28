@@ -163,3 +163,47 @@ def test_vector_swing_matches_original_two_left_two_right_reference():
         if low[i] < min(low[i - 2:i]) and low[i] <= min(low[i + 1:i + 3]):
             lref.append(low[i])
     assert a == href and b == lref
+
+
+def test_bid_ask_sides_and_stop_risk_budget(monkeypatch):
+    """The original price source is BID, never MID. No broker calls."""
+    import gold_hunter.bible_engine as engine
+    df = historical_fixture(700)
+    signal_i = len(df) - 2
+    bid_at_fill = float(df.iloc[-1]['open'])
+    for side in (1, -1):
+        def one_signal(frame, i, h4, day, week, cfg):
+            if i != signal_i:
+                return []
+            close = float(frame.iloc[i]['close'])
+            return [{
+                'family': 'TREND_PIN', 'bible_reference': 'B 83-99',
+                'signal_time_utc': (pd.to_datetime(frame.iloc[i]['open_time_utc']) +
+                                    pd.Timedelta(hours=1)).isoformat(),
+                'side': side, 'mode': 'TREND', 'level': close,
+                'level_type': 'H4_SWING_OR_SMA21', 'pattern': 'PIN',
+                'stop': close - 10 if side == 1 else close + 10 + .30,
+                'target': close + 50 if side == 1 else close - 50,
+                'estimated_rr': 4.0, 'signal_close': close,
+            }]
+        monkeypatch.setattr(engine, 'candidates_at', one_signal)
+        cfg = Parameters(spread_usd_oz=.30, slip_usd_oz_each_side=.05,
+                         commission_usd_oz_roundtrip=.07)
+        result = engine.research_backtest(df, cfg=cfg)
+        position = result['unrealized_open_position']
+        assert position is not None
+        expected = bid_at_fill + .35 if side == 1 else bid_at_fill - .05
+        assert position['entry'] == pytest.approx(expected)
+        assert position['risk_usd'] <= cfg.capital_usd * cfg.risk_fraction + 1e-8
+        assert position['risk_usd'] > 0
+
+
+def test_original_bid_source_never_gives_a_free_ask():
+    """Buy/sell spread is explicit, not symmetrical around BID."""
+    import gold_hunter.bible_engine as engine
+    source = validate_h1(historical_fixture(700))
+    common = engine.Parameters()
+    assert common.spread_usd_oz > 0
+    assert common.slip_usd_oz_each_side >= 0
+    assert engine.research_backtest(source, cfg=common)['execution_quote_basis'] == (
+        'LONG_ENTRY_ASK_SHORT_ENTRY_BID_LONG_EXIT_BID_SHORT_EXIT_ASK')
