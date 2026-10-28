@@ -1,0 +1,21 @@
+{
+  "broker_connection": false,
+  "compiler": {
+    "sha256": "0f39a71f538760ec9bceb39d6b52abdf169707d12cc54f201c6ba7477fbe3782",
+    "signature": "Valid",
+    "signer": "CN=MetaQuotes Ltd., O=MetaQuotes Ltd., S=Lemesos, C=CY",
+    "version": "5.0.0.6292"
+  },
+  "environment_blocker": "Official standard library not installed",
+  "installer": {
+    "sha256": "a879492dd9d7b168d0538edd1c0dc5604ca43dc0951825b3501818e8b18f4c93",
+    "signature": "Valid",
+    "signer": "CN=MetaQuotes Ltd, O=MetaQuotes Ltd, L=Limassol, C=CY",
+    "url": "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe"
+  },
+  "native_execution_parity": false,
+  "sources": [],
+  "terminal_execution_intercepted_before_install": true,
+  "terminal_processes_running": 0,
+  "terminal_started": false
+}

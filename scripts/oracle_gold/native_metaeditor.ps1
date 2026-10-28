@@ -29,9 +29,18 @@ try {
     if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'MetaQuotes') {throw 'MetaEditor Authenticode not verified'}
     $receipt.compiler = @{sha256=(Get-FileHash $compiler -Algorithm SHA256).Hash.ToLower(); signature=[string]$sig.Status; signer=[string]$sig.SignerCertificate.Subject; version=(Get-Item $compiler).VersionInfo.FileVersion}
     $sdk = Join-Path $install 'MQL5'
-    if (-not (Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh'))) {throw 'Official standard library not installed'}
+    if (-not (Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh'))) {
+        $locations = @($install, (Join-Path $env:APPDATA 'MetaQuotes'), (Join-Path $env:ProgramData 'MetaQuotes'))
+        foreach ($location in $locations) {
+            $header = Get-ChildItem $location -Filter Trade.mqh -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($header) {$sdk=Split-Path (Split-Path (Split-Path $header.FullName -Parent) -Parent) -Parent; break}
+        }
+    }
+    New-Item -ItemType Directory -Force -Path (Join-Path $sdk 'Indicators') | Out-Null
+    $receipt.standard_library_available = Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh')
+    $receipt.standard_library_root = $sdk
     $receipt.standard_library_sha256 = @{}
-    foreach ($f in Get-ChildItem (Join-Path $sdk 'Include') -Filter '*.mqh' -Recurse) {
+    foreach ($f in Get-ChildItem (Join-Path $sdk 'Include') -Filter '*.mqh' -Recurse -ErrorAction SilentlyContinue) {
         $receipt.standard_library_sha256[$f.FullName.Substring($sdk.Length+1)] = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
     }
     $pins = Get-Content 'research/gold_oracle/phase04/mql_compile_pins.json' -Raw | ConvertFrom-Json
