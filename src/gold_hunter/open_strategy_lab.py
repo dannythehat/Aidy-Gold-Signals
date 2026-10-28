@@ -184,7 +184,7 @@ def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
                 ounces=balance*settings.risk_fraction/risk_per_oz
                 position=dict(p,entry=entry,entry_utc=row["open_time_utc"].isoformat(),
                               start_index=i,ounces=ounces,
-                              risk_usd=ounces*risk_per_oz)
+                              equity_at_entry=balance,risk_usd=ounces*risk_per_oz)
                 counts[p["system"]]+=1
             else:
                 rejected["gap_or_cost_rr"]+=1
