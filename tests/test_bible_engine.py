@@ -104,3 +104,28 @@ def test_prefix_result_invariant_against_future_changes():
     d2 = validate_h1(changed)
     hh,dd,ww = _higher_frames(d2)
     assert known == candidates_at(d2, 700, hh, dd, ww, Parameters())
+def test_open_trade_at_history_end_is_censored_not_fake_closed(monkeypatch):
+    import gold_hunter.bible_engine as engine
+    df = historical_fixture(700)
+    last_signal_bar = len(df) - 2
+
+    def one_signal(frame, i, h4, day, week, cfg):
+        if i != last_signal_bar:
+            return []
+        close = float(frame.iloc[i]['close'])
+        return [{
+            'family': 'TREND_PIN', 'bible_reference': 'B 83-99',
+            'signal_time_utc': (pd.to_datetime(frame.iloc[i]['open_time_utc'])+
+                                pd.Timedelta(hours=1)).isoformat(),
+            'side': 1, 'mode': 'TREND', 'level': close - 2,
+            'level_type': 'H4_SWING_OR_SMA21', 'pattern': 'PIN',
+            'stop': close - 10, 'target': close + 50,
+            'estimated_rr': 4.0, 'signal_close': close,
+        }]
+
+    monkeypatch.setattr(engine, 'candidates_at', one_signal)
+    result = engine.research_backtest(df)
+    assert result['closed_trades'] == 0
+    assert result['unrealized_open_position']['status'] == 'CENSORED_AT_HISTORY_END_NOT_CLOSED'
+    assert result['unrealized_open_position']['family'] == 'TREND_PIN'
+    assert result['ending_equity_usd'] != result['realized_balance_usd']
