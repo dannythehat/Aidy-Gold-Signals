@@ -1441,5 +1441,29 @@
       "family": null,
       "id": "S083"
     }
+  ],
+  "within_id_variant_families": [
+    {
+      "additional_independent_original_ids": 0,
+      "class_ast_excluding_params_sha256": "29bf0617043d99846c74524226cb267cbc00dc70c42f306e2d7ea7e059bea97e",
+      "classification": "PROVEN_WITHIN_ID_PARAMETER_VARIANTS",
+      "full_program_identity_claimed": false,
+      "original_id": "S016",
+      "parameter_changes": {
+        "entry_period": [
+          20,
+          95
+        ],
+        "risk_percent": [
+          1.0,
+          2.0
+        ]
+      },
+      "scope": "STRATEGY_CLASS_ONLY",
+      "source_paths": [
+        "strategies/gold_donchian_channel_strategy.py",
+        "src/gold_donchian_channel_strategy.py"
+      ]
+    }
   ]
 }

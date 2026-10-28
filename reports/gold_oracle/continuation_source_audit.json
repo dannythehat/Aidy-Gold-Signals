@@ -1,0 +1,696 @@
+{
+  "all83_fully_audited": false,
+  "cards": {
+    "S001": {
+      "batch_route": "PRESERVE_EXISTING_S001_NEGATIVE_STUDIES; resolve native dependency before new claim",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Complete native dependency graph",
+        "M15/M5 quote tape and selected variant/account terms"
+      ],
+      "review_depth": "SELECTED_SIGNAL_AND_ENGINE_CORE; remaining dependencies not fully audited",
+      "rules": [
+        "M15 session-level sweep/reclaim; previous UK day, Asian00-08 and London08-09 levels become available after session completion",
+        "H1 pivots5left/3right and H4 pivots3left/2right; last two confirmed swings must agree",
+        "Broker-naive offset default2 converted to UK DST; entry-close reference, ATR/sweep extreme protective reference; optional targets/refinement differ from baseline"
+      ],
+      "score": null,
+      "source_commit": "7f5ba978ab15a92e992d617f27e318dd0d859cbf",
+      "source_defects_or_divergences": [
+        "Native backtester imports entry_refinement, absent from the pinned tracked file list; no native import/engine parity claimed",
+        "Source engine session rollover uses index date; wrapper session/time semantics must be compared explicitly"
+      ],
+      "source_files": [
+        "strategy_edge.py",
+        "session_levels.py",
+        "swing_structure.py",
+        "backtester.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "d763084900c02986d8691aad26b71cf87caa3af8",
+          "path": "strategy_edge.py",
+          "sha256": "b3549dbe0cd7a575713920ba1cc58822e5872efb803658f34e17a3f60d5cad8f",
+          "url": "https://github.com/eamonnkennedy93-blip/GoldEA/blob/7f5ba978ab15a92e992d617f27e318dd0d859cbf/strategy_edge.py"
+        },
+        {
+          "git_blob": "4b0302001b849a5f3c2291f4fa9ca80f4a904558",
+          "path": "session_levels.py",
+          "sha256": "e0687203b33c73d000fc9f3905ff3fdb6526988c4b59dc39cc4d4e153064ae9a",
+          "url": "https://github.com/eamonnkennedy93-blip/GoldEA/blob/7f5ba978ab15a92e992d617f27e318dd0d859cbf/session_levels.py"
+        },
+        {
+          "git_blob": "19f14e8fa9b9fd6ad53ce8bc70e87b6f7e559686",
+          "path": "swing_structure.py",
+          "sha256": "d5d00997300aad4fb8f5ca86cd4ca9d3a68025e80f5777db68849d96e91dfa38",
+          "url": "https://github.com/eamonnkennedy93-blip/GoldEA/blob/7f5ba978ab15a92e992d617f27e318dd0d859cbf/swing_structure.py"
+        },
+        {
+          "git_blob": "eca177393950575015609002bc2fe06447e317ee",
+          "path": "backtester.py",
+          "sha256": "d11dec1c701222bb75055b29cde78ee1af994e1d28efbb16f49ce9a7825560df",
+          "url": "https://github.com/eamonnkennedy93-blip/GoldEA/blob/7f5ba978ab15a92e992d617f27e318dd0d859cbf/backtester.py"
+        }
+      ]
+    },
+    "S002": {
+      "batch_route": "PRESERVE_EXISTING_S002_NEGATIVE_REPORTS; no generic replacement",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Chronological native parity, account sizing and quote/funding model"
+      ],
+      "review_depth": "TWO_CORE_MODULES_REVIEWED; notebook driver/account not fully audited",
+      "rules": [
+        "Daily bias derives sum(open-close)>=0 labelled BULLISH; retain this actual sign",
+        "M15 open-price sweep/reversal state machine around prior-day extremes",
+        "No protective fixed stop or account money sizing in original simulation"
+      ],
+      "score": null,
+      "source_commit": "f2d5c71f87ff57610f1c89e7c6f3153d6b241ddb",
+      "source_defects_or_divergences": [
+        "ExtractTrades reverses rows and removes first day; chronological ingestion needs parity",
+        "WIN state label is not proof of positive dollar return"
+      ],
+      "source_files": [
+        "TradeSimulation.py",
+        "ExtractTrades.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "d38f4bfdd54fbe742ef2bc9c3de357243201d01e",
+          "path": "TradeSimulation.py",
+          "sha256": "6b8a08a14e7fffe4d0d692b5a957611c9b60e756768a3e3d8c7dc6e29be1a514",
+          "url": "https://github.com/ikeawesom/xauusd-backtest/blob/f2d5c71f87ff57610f1c89e7c6f3153d6b241ddb/TradeSimulation.py"
+        },
+        {
+          "git_blob": "27f6d366569eb1f2f4f384f2bc187c49086967ea",
+          "path": "ExtractTrades.py",
+          "sha256": "6e928b09d94760d58a38f8e8a939b65721c2ef17ba47b93e74bc348863986805",
+          "url": "https://github.com/ikeawesom/xauusd-backtest/blob/f2d5c71f87ff57610f1c89e7c6f3153d6b241ddb/ExtractTrades.py"
+        }
+      ]
+    },
+    "S003": {
+      "batch_route": "PRESERVE_PRIOR_S003_FAILURES; inspect native broker semantics separately",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "MQL native execution and clock/volume/contract parity"
+      ],
+      "review_depth": "SELECTED_PINE_SIGNAL_AND_ORDER_CORE; native MQL full parity outstanding",
+      "rules": [
+        "EMA200 plus Bollinger15/1.5, ATR18; original volume MA15 gate",
+        "Closed-bar breakout, 1% nominal risk, 2R target, 50% partial at1.6R; cooldown6",
+        "Source uses Pine exchange hour; MQL broker/server clock requires separate attestation"
+      ],
+      "score": null,
+      "source_commit": "06c58c37e768818530b106c8e7f9cadd6d25c06e",
+      "source_defects_or_divergences": [
+        "Pine hour has no explicit New York timezone; prior AIDY New York wrapper must not imply native parity",
+        "Native volume gate requires actual source-compatible volume"
+      ],
+      "source_files": [
+        "src/pine/BreakoutFollowTrend_Strategy.pine"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "6e2155c878f90fdd1cdcedcf7b00848828d1458d",
+          "path": "src/pine/BreakoutFollowTrend_Strategy.pine",
+          "sha256": "dad1a354414240e8236f4e7d098c9a59ac4275f06cdbb53142dd11aec0ed5264",
+          "url": "https://github.com/jzd101/breakout-follow-101/blob/06c58c37e768818530b106c8e7f9cadd6d25c06e/src/pine/BreakoutFollowTrend_Strategy.pine"
+        }
+      ]
+    },
+    "S004": {
+      "batch_route": "PRESERVE_EXISTING_S004_NEGATIVE_AND_FEASIBILITY_REPORTS",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Full remaining native management review and verified broker minimum contracts"
+      ],
+      "review_depth": "EXISTING_PINNED_AIDY_SOURCE_WRAPPER_AND_SELECTED_NATIVE_CORE; large native file not fully re-reviewed",
+      "rules": [
+        "Pinned original Backtrader source, long enabled/short disabled in existing frozen run",
+        "ATR10 maximum2 gate; protective4.5ATR and target6.5ATR; three-red pullback one-bar entry window",
+        "Nominal1% sizing can be overridden by minimum contract"
+      ],
+      "score": null,
+      "source_commit": "4ab0213c5e6dd3ffb486a67f9b07bef788cdbd02",
+      "source_defects_or_divergences": [
+        "Publisher defaults, global entry-window constants and existing frozen wrapper overrides are different selections",
+        "Earlier loss and feasibility evidence remains immutable"
+      ],
+      "source_files": [
+        "src/strategy/sunrise_ogle_xauusd.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "8f3289f5e25107e0bf73f1d4f355908b9b96cc82",
+          "path": "src/strategy/sunrise_ogle_xauusd.py",
+          "sha256": "b74e7288b91b47bf050b0af2cc0f6d4eaf149cd0c6fe7043ac80a33a58ea8510",
+          "url": "https://github.com/ilahuerta-IA/backtrader-pullback-window-xauusd/blob/4ab0213c5e6dd3ffb486a67f9b07bef788cdbd02/src/strategy/sunrise_ogle_xauusd.py"
+        }
+      ]
+    },
+    "S011": {
+      "batch_route": "MACRO_DATA_BLOCKED; do not remove filters or substitute constants",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Point-in-time DXY/TNX vintages, daily instrument/calendar and original account-cost parity"
+      ],
+      "review_depth": "SELECTED_FINAL_V8_AND_SHARED_ENGINE_RULE_CORE",
+      "rules": [
+        "Daily long-only: close above SMA200, near SMA10*1.05, RSI14<50, DXY60day change<0, TNX60day change<0",
+        "Exit below SMA50 or RSI>75 at next open; frozen3ATR stop; original100k account",
+        "Default leverage1; source separately explores1.5/2/3; flat cash earns source4% APY"
+      ],
+      "score": null,
+      "source_commit": "ac3bb18872dd4e0ae5546e554bde6827fc34fcc4",
+      "source_defects_or_divergences": [
+        "Macro series date reindex/forward-fill is not publication-vintage proof",
+        "Gap-through stop filled at source stop minus slippage; no actual gap-open floor"
+      ],
+      "source_files": [
+        "strategies/final_v8.py",
+        "engine/backtest.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "cb1b29640c4f918679d71033d0a24f0af253f5d6",
+          "path": "strategies/final_v8.py",
+          "sha256": "4e749542cf37949fdaba3dfb5f4188e4e3c5931e6bc3f5438b5bf794ee5c0631",
+          "url": "https://github.com/aarontan14/xauusd-backtest/blob/ac3bb18872dd4e0ae5546e554bde6827fc34fcc4/strategies/final_v8.py"
+        },
+        {
+          "git_blob": "3c482aa884446082b733d5a575712d7ed20c46da",
+          "path": "engine/backtest.py",
+          "sha256": "02600850cfb1715429bceca7438b70caa1b93f3d9a146ccc083045bf7b9d4973",
+          "url": "https://github.com/aarontan14/xauusd-backtest/blob/ac3bb18872dd4e0ae5546e554bde6827fc34fcc4/engine/backtest.py"
+        }
+      ]
+    },
+    "S012": {
+      "batch_route": "BLOCKED_SOURCE_CAUSALITY; no silent fix",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Causal original rule clarification; source research cannot be financially graded"
+      ],
+      "review_depth": "FULL_SELECTED_HARNESS; signal/execution mismatch documented",
+      "rules": [
+        "H4 final close versus SMA20 produces bias, joined at H4 OPEN timestamp to H1",
+        "Liquidity sweep scored4 + FVG flag4 + aligned bias4; default threshold8",
+        "vectorbt from_signals uses close, fees.0001, slippage.0002,100k and size.30 default amount; no SL/TP supplied"
+      ],
+      "score": null,
+      "source_commit": "2349907aad553200bac822aac7f91add67a281f7",
+      "source_defects_or_divergences": [
+        "PROVEN_LOOKAHEAD: future H1 close rewrites earlier H4 bias; regression executes original function",
+        "Bias/prior-day joins only match boundary timestamps; no H1 forward-fill after join",
+        "ATR rolling14 backward-fill uses later seed; FVG code compares low-to-low/high-to-high, contradicting proper gap docstring",
+        "Fetch maps XAUUSD to GC=F futures proxy; no coded retest/stop/target despite prose"
+      ],
+      "source_files": [
+        "smc_backtest/smc_backtest.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "04328b6232950022cf71f5cf02a257c63a73a7ec",
+          "path": "smc_backtest/smc_backtest.py",
+          "sha256": "ed016aef0fd026c6b24030bdcf234f10a088bd203efd2e066b422cb6b9af45f9",
+          "url": "https://github.com/frankabingale1111/smc-backtest/blob/2349907aad553200bac822aac7f91add67a281f7/smc_backtest/smc_backtest.py"
+        }
+      ]
+    },
+    "S013": {
+      "batch_route": "BLOCKED_FILL_MODEL; original notebook not rewritten",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Real M5 quote chronology and native pending-entry fidelity"
+      ],
+      "review_depth": "NOTEBOOK_CELL2_STRATEGY_REVIEWED; acquisition/plot cells not executed",
+      "rules": [
+        "Four prior consecutive bullish/bearish M5 bars; breakout reference last prior high/low",
+        "Stop opposite edge of last prior bar;2R target; fixed200USD risk on50k original account",
+        "Scans next1..50 bars for exit; independent concurrent setups"
+      ],
+      "score": null,
+      "source_commit": "12a42c797b0362240e9730bfa7bbb21f78752c0e",
+      "source_defects_or_divergences": [
+        "Records entry without proving stop-order trigger/fill",
+        "Ignores entry-bar exits; target-first when stop and target touched together",
+        "No spread/fees; MT5 acquisition cell must not be run in this task"
+      ],
+      "source_files": [
+        "XAUUSD BACKTEST V2.ipynb"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "02e40b6ba46ac16f4f764d8de241064682070cd1",
+          "path": "XAUUSD BACKTEST V2.ipynb",
+          "sha256": "a5482dfbc297944df929f590f9d5f09acb1b9d5fa0fe91367878b333c5bc004f",
+          "url": "https://github.com/Shivkeerth-Laj/XAUUSD-Backtesting/blob/12a42c797b0362240e9730bfa7bbb21f78752c0e/XAUUSD%20BACKTEST%20V2.ipynb"
+        }
+      ]
+    },
+    "S014": {
+      "batch_route": "RELATED_DISTINCT_FROM_S015; no shared-URL alias",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Original implementation selection, chart clock, pending/protective execution parity"
+      ],
+      "review_depth": "PINE_CORE_AND_PYTHON_SIGNAL/SCORING_FUNCTIONS; driver/chart portions excluded",
+      "rules": [
+        "Pine: prior20 high/low sweep and reclaim with EMA50/200 side, session0930-1600 weekdays",
+        "Pine10k and1% equity NOT1% stop-risk; next-open order but signal-close reference stop/3R; BE at1R close",
+        "Python backtest_ict requests sweep+MSS+FVG on same bar; orderblock_backtest is sweep/EMA R scorer, no actual OB detection"
+      ],
+      "score": null,
+      "source_commit": "15eb8b8bdc7db7acfd198c2ce98b103f3750d48d",
+      "source_defects_or_divergences": [
+        "Pine session uses exchange timezone despite EST label; ATR-padding inputs unused",
+        "Python backtest_ict long low<prior20low and low>high[i-2] is impossible on valid OHLC; short symmetric contradiction",
+        "Orderblock scorer drops samebar stop/target ties and unresolved trades; outputs longs then shorts without timestamps; no chronological account ledger",
+        "Different implementations are not execution-parity equivalents"
+      ],
+      "source_files": [
+        "ICT_Turtle_Soup.pine",
+        "backtest_ict.py",
+        "orderblock_backtest.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "962bf261633c1bcf7a9c0df4da2c8e61c3d7d6e6",
+          "path": "ICT_Turtle_Soup.pine",
+          "sha256": "01690aba2e1a8d9dd44e37a95ded92d38b83b12b1c3b16856f2766f3eb5bc55b",
+          "url": "https://github.com/balaji4621/xauusd-turtle-soup-backtest/blob/15eb8b8bdc7db7acfd198c2ce98b103f3750d48d/ICT_Turtle_Soup.pine"
+        },
+        {
+          "git_blob": "8d4535942cf55da690bd1598a3a66a48aaca4640",
+          "path": "backtest_ict.py",
+          "sha256": "0f36c24dcf4e34e45847b9d1c5d968ffc5b9678cb958f06bb119db959d127499",
+          "url": "https://github.com/balaji4621/xauusd-turtle-soup-backtest/blob/15eb8b8bdc7db7acfd198c2ce98b103f3750d48d/backtest_ict.py"
+        },
+        {
+          "git_blob": "ff9dc8b576efbf36ac5b608ef02c9900e722016a",
+          "path": "orderblock_backtest.py",
+          "sha256": "4c5769c7d0b2c42512eed7f80295493e864aa983ed5a3fd084771fa8e811fe34",
+          "url": "https://github.com/balaji4621/xauusd-turtle-soup-backtest/blob/15eb8b8bdc7db7acfd198c2ce98b103f3750d48d/orderblock_backtest.py"
+        }
+      ]
+    },
+    "S015": {
+      "batch_route": "R_ONLY_DIAGNOSTIC_CANDIDATE; related but not parameter duplicate of S014",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Pending-fill chronology, unresolved positions, fixed-risk account treatment and native quote costs"
+      ],
+      "review_depth": "FULL_FVG_SIGNAL/FILL/OUTCOME_AND_METRICS_FUNCTIONS; report driver not financially admitted",
+      "rules": [
+        "EMA50/200 aligned three-bar FVG; bullish low[i]>high[i-2], entry high[i-2]+spread (short symmetric)",
+        "Stop prior opposite extreme plus half-spread; default3R;15-bar fill window,30-bar outcome horizon",
+        "Gold point heuristic.1 times15 points =1.5 price cost in source; risk_pct/initial_balance arguments unused in strategy"
+      ],
+      "score": null,
+      "source_commit": "15eb8b8bdc7db7acfd198c2ce98b103f3750d48d",
+      "source_defects_or_divergences": [
+        "One-sided touch admits gap fills; target-first on dual-touch entry/outcome bars",
+        "Unresolved setups omitted; overlapping results unaccounted; metric USD=R*fixed risk, not chronological compound equity",
+        "Source drawdown uses cumulative R peak without initial0; unsupported as account DD"
+      ],
+      "source_files": [
+        "pnl_backtest.py",
+        "config.json"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "e746caa8d203487f87bc7c9af8bee8b27a744e37",
+          "path": "pnl_backtest.py",
+          "sha256": "02cf51ef7fa8ef8cd66271221c6e262042c1f06818d7452eaaed871e5f3e90ae",
+          "url": "https://github.com/balaji4621/xauusd-turtle-soup-backtest/blob/15eb8b8bdc7db7acfd198c2ce98b103f3750d48d/pnl_backtest.py"
+        },
+        {
+          "git_blob": "5633ce324a2084ed51c14797ccfc9109183f73fa",
+          "path": "config.json",
+          "sha256": "5714194e4a379667f9b1b811e877bb483e9d52cd6082d16b91bc667bdbc7896c",
+          "url": "https://github.com/balaji4621/xauusd-turtle-soup-backtest/blob/15eb8b8bdc7db7acfd198c2ce98b103f3750d48d/config.json"
+        }
+      ]
+    },
+    "S016": {
+      "batch_route": "DAILY_FAMILY_ONCE; retain both labelled within-ID variants, no duplicate independent count",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Explicit authentic-data adaptation, selected variant, broker lots and cost/account parity"
+      ],
+      "review_depth": "TWO_STRATEGY_CLASSES_AND_DATA/ACCOUNT_RUNNERS_REVIEWED; exact class AST comparison",
+      "rules": [
+        "Long-only DAILY close-channel breakout and close-channel exit; ATR40 sizing; target4ATR frozen at execution",
+        "One class20entry/20exit/1% nominal ATR risk; other95entry/20exit/2%; int units capped at95%cash",
+        "10million original cash,commission.00001 per side; no protective ATR stop placed"
+      ],
+      "score": null,
+      "source_commit": "dad1684dd421ccaf134f73b9315a951a02938bd3",
+      "source_defects_or_divergences": [
+        "PROVEN_WITHIN_ID_PARAMETER_VARIANTS: class AST identical excluding params; not two original systems",
+        "Docstring120/30 differs from actual20/20 or95/20",
+        "Data loader fabricates daily high/low using seed42 random.2% noise and Open=Close from Gold Index; publisher results not real spot OHLC"
+      ],
+      "source_files": [
+        "strategies/gold_donchian_channel_strategy.py",
+        "src/gold_donchian_channel_strategy.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "3e7b05b26b69b4cea4b0e671849add774e41bd70",
+          "path": "strategies/gold_donchian_channel_strategy.py",
+          "sha256": "ebee1b46181272e0d064ac3fc4460adcded21d16d2ddbc13d4560fb3f0e5ce08",
+          "url": "https://github.com/waihin26/Systematic-Commodity-Trading/blob/dad1684dd421ccaf134f73b9315a951a02938bd3/strategies/gold_donchian_channel_strategy.py"
+        },
+        {
+          "git_blob": "d08dbbce48ac269222d0abe670ff6c00060bcbdc",
+          "path": "src/gold_donchian_channel_strategy.py",
+          "sha256": "c54b2e691cc8f7cfaa2aef4faf3f5d390e638cec3e57bcd7f6a0bcf22e1d4aa0",
+          "url": "https://github.com/waihin26/Systematic-Commodity-Trading/blob/dad1684dd421ccaf134f73b9315a951a02938bd3/src/gold_donchian_channel_strategy.py"
+        }
+      ]
+    },
+    "S017": {
+      "batch_route": "BLOCKED_DISCRETIONARY_ASOF; do not invent historical wave labels",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Finish alternative notebook branches; prove human level timestamps and source futures quotes"
+      ],
+      "review_depth": "CELLS0-3_AND_CELL4_RULE_CORE_PARTIAL; notebook has further alternative/plot cells",
+      "rules": [
+        "Fixed human-specified March2026 H4 GC=F wave scenario, not generic multi-year wave detector",
+        "RSI14 simple average crosses below its MA14; no entry before2026-03-10; short belowWaveB5238.78 above invalidation4655.23",
+        "100k,100oz/lot,2lot first leg plus2 below4996.23; staged BE/profit near4977.13, final4815.40"
+      ],
+      "score": null,
+      "source_commit": "31a66c0c7cd4031c527fb4edcdcfd8048ab0ed96",
+      "source_defects_or_divergences": [
+        "Human wave labels and fixed price levels have no verified as-of availability",
+        "Zero pre-2026 setups are by construction, not a multi-year negative edge result"
+      ],
+      "source_files": [
+        "XAUUSD_Elliott_Wave_Backtest_Preferred_Count.ipynb"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "19dff16f4c2923d0553b40f4270d21b81bb3f916",
+          "path": "XAUUSD_Elliott_Wave_Backtest_Preferred_Count.ipynb",
+          "sha256": "9993982d8ef39189418a2c95fd70524c55775cd32dc5a942ee4ebaa3bc31389d",
+          "url": "https://github.com/mnyika-quant/xauusd-elliott-wave-backtest/blob/31a66c0c7cd4031c527fb4edcdcfd8048ab0ed96/XAUUSD_Elliott_Wave_Backtest_Preferred_Count.ipynb"
+        }
+      ]
+    },
+    "S018": {
+      "batch_route": "BLOCKED_ORIGINAL_DEPENDENCY; do not invent helper behaviour",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Missing original helpers, broker point/digits, pending/OCO tick sequence and native compile/parity"
+      ],
+      "review_depth": "FULL_SINGLE_MQL4_SOURCE_REVIEWED; native compiler not available/run",
+      "rules": [
+        "Exact XAUUSD symbol; current chart timeframe despite M5 comment; five completed-bar range",
+        "Buy/sell stops range+/-50points; opposite-side80point SL buffer;TP200points;Lots.30,MaxSpread50,magic202401",
+        "No pending expiry; reset when own orders zero; hedge disallowed default"
+      ],
+      "score": null,
+      "source_commit": "2c30d2db7a0da88e52c5c853eac911f47bc76451",
+      "source_defects_or_divergences": [
+        "SOURCE_DEPENDENCY_GAP: HasOpenMarketOrder and DeletePendingOrders called but not defined or included",
+        "Compile failure inferred from missing helpers; no compiler run falsely claimed"
+      ],
+      "source_files": [
+        "XAUUSD Breakout.mq4"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "0236b2ddaecb61bf4fc68b956706ba3aaac83fc7",
+          "path": "XAUUSD Breakout.mq4",
+          "sha256": "9f6aefe36beeb05b1ef7a5dc290b88c7b6ca3af340c23bb92c00acd28bed098b",
+          "url": "https://github.com/GimsDev/XAUUSD-Breakout-EA/blob/2c30d2db7a0da88e52c5c853eac911f47bc76451/XAUUSD%20Breakout.mq4"
+        }
+      ]
+    },
+    "S019": {
+      "batch_route": "NATIVE_M1_ACCOUNT_ADAPTER_QUEUE; not replaced by H1 approximation",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Full setup/position/fills parity; authenticated M1 event tape; verified instrument/fees/funding"
+      ],
+      "review_depth": "CONFIG/INSTRUMENT/EVENT_LOOP/COST_CORE; setup and position dependency graph incomplete",
+      "rules": [
+        "DefaultD1/H1/M15 cascade,EMA55/144,2swing lookback,ATR14*.5 stop buffer, FVG min.1ATR,50%retracement,24bar pending expiry",
+        "Default3R,1%risk,100k; optional BE2R+.02; NY17 DST session",
+        "Manage earlier positions, activate decided setups, expiry then limit fill, unfilled close-invalidation; one position/order per direction; lot sizing at current closed equity"
+      ],
+      "score": null,
+      "source_commit": "bc4095c06344c7e2b2a23813f6e42299cb721261",
+      "source_defects_or_divergences": [
+        "Instrument commission/swap/spread/slippage placeholders explicitly not verified broker terms",
+        "Closed-trade event equity curve cannot certify intrabar account drawdown",
+        "Full position/gap/OCO/protective semantics not yet independently audited"
+      ],
+      "source_files": [
+        "mtf_smc/config.py",
+        "mtf_smc/risk/instrument.py",
+        "mtf_smc/engine/backtester.py",
+        "mtf_smc/engine/costs.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "6f83c7c5c90a998485bb049780ff158095106d61",
+          "path": "mtf_smc/config.py",
+          "sha256": "b9e6a9378a79e0f42b6c2aaaca4622e598f65cce590ff741f86bbf2c3e10037a",
+          "url": "https://github.com/AaroNLaU0307/quant-backtest-framework/blob/bc4095c06344c7e2b2a23813f6e42299cb721261/mtf_smc/config.py"
+        },
+        {
+          "git_blob": "146b29adddaef30756436a958f0793ac3cb0d013",
+          "path": "mtf_smc/risk/instrument.py",
+          "sha256": "2af37b47fa46df4d45afa60d5a9788e8770cbedc4aade2d3f1333b52517738eb",
+          "url": "https://github.com/AaroNLaU0307/quant-backtest-framework/blob/bc4095c06344c7e2b2a23813f6e42299cb721261/mtf_smc/risk/instrument.py"
+        },
+        {
+          "git_blob": "90b3b8a28dbbd3bc00afbc405e07d13a9720e377",
+          "path": "mtf_smc/engine/backtester.py",
+          "sha256": "cb0a90941ae072ba6410c874ce52fff4a07af6f6aee76627475295729d4b1915",
+          "url": "https://github.com/AaroNLaU0307/quant-backtest-framework/blob/bc4095c06344c7e2b2a23813f6e42299cb721261/mtf_smc/engine/backtester.py"
+        },
+        {
+          "git_blob": "407afae256fbe8b43bfe9fc718caf20c07dd64dc",
+          "path": "mtf_smc/engine/costs.py",
+          "sha256": "aa32561dafa96b72ed99a15f0a03a9bd58b7d4801cda542fd749adb0aa023019",
+          "url": "https://github.com/AaroNLaU0307/quant-backtest-framework/blob/bc4095c06344c7e2b2a23813f6e42299cb721261/mtf_smc/engine/costs.py"
+        }
+      ]
+    },
+    "S082": {
+      "batch_route": "BLOCKED_LOGICAL_ZERO_SIGNAL; no fabricated loss or profit",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Author clarification/corrected separately labelled source; M1/account terms for any changed variant"
+      ],
+      "review_depth": "FULL_SINGLE_ORIGINAL_RULE/OUTCOME_MODULE",
+      "rules": [
+        "Written M1 virgin close age6,wick>=.30,risk<=.80,close-entry,1tick beyondwick,1.5R; one position",
+        "Native is_touched uses high>=level OR low<=level; older candidate has intervening bars",
+        "Stop-first outcome walk from following bar; no dollar account/risk sizing; v2 confluence prose not implemented"
+      ],
+      "score": null,
+      "source_commit": "d2ac7c58f60c3588bb7b5c508f126a3e6e7f65b8",
+      "source_defects_or_divergences": [
+        "PROVEN_LOGICAL_ZERO_SIGNAL: for valid low<=high the OR is true for every price level; every candidate is discarded",
+        "Age loop actually starts strictly more than6bars old; do not silently changeORtoAND"
+      ],
+      "source_files": [
+        "virgin_rejection_backtest.py",
+        "STRATEGY.md"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "d5bb631f7e67ba6d82bfab8ae47e042217c12033",
+          "path": "virgin_rejection_backtest.py",
+          "sha256": "c5630b8680cb45059ab8490c03814efb9ae9f26046eceb0c2dba26d4d6355adb",
+          "url": "https://github.com/sivaram311/xauusd-virgin-rejection/blob/d2ac7c58f60c3588bb7b5c508f126a3e6e7f65b8/virgin_rejection_backtest.py"
+        },
+        {
+          "git_blob": "a843bd9a091a94577c8ddeb531a16918eac24169",
+          "path": "STRATEGY.md",
+          "sha256": "e5077631eced449372a972e9d6558be0642d185ccf881942162cd8f538b8f8d6",
+          "url": "https://github.com/sivaram311/xauusd-virgin-rejection/blob/d2ac7c58f60c3588bb7b5c508f126a3e6e7f65b8/STRATEGY.md"
+        }
+      ]
+    },
+    "S083": {
+      "batch_route": "BIDASK_M1_NATIVE_QUEUE; no synthetic ASK or H1 substitution",
+      "complete_fingerprint_withheld": true,
+      "execution_qualified": false,
+      "full_mechanics_audit": false,
+      "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+      "missing_for_execution": [
+        "Authenticated minute BID/ASK OHLC and mid-chart construction; explicit001B reference and bounded prefix/gap tests"
+      ],
+      "review_depth": "001B_SIGNAL_AND_SHARED_ENGINE/DATA/COST_CORE; other research families not reviewed",
+      "rules": [
+        "001B daily trend confirmed pivots+EMA50 (EMA50/200 option); H4EMA50 agreement; known_at backward asof",
+        "H4 confirmedk3 pivot zone requires2touches,.5ATR tolerance,.25ATR pad,maxage120; M15wick rejection with directional close third",
+        "Stop M15eightbar structure/zone+.5ATR; distance.3..4ATR; nextM15openASK/BID; oneposition,minute stop-first,3daytimeout",
+        "Native reference2R/.25%10k from run_insample; multiple grids exist and are not additional independent systems"
+      ],
+      "score": null,
+      "source_commit": "57a8af6d1d023ee25295ef63eca2f537ac859b5c",
+      "source_defects_or_divergences": [
+        "preregister.py freezes001A, not catalogue001B; cannot reuse its OOS certification for001B",
+        "Gap-through-stop fills at stop+/-slip, without open-price floor; true broker parity unverified",
+        "No lot steps, funding/margin or full intrabar equity in shared engine"
+      ],
+      "source_files": [
+        "src/strategy.py",
+        "src/engine.py",
+        "src/dataset.py",
+        "src/costs.py",
+        "src/preregister.py",
+        "src/run_insample.py"
+      ],
+      "source_original_modified": false,
+      "source_refs": [
+        {
+          "git_blob": "30f07bb307fa44a428903bc21b0d51dc441d62d5",
+          "path": "src/strategy.py",
+          "sha256": "a6fb9e5cb6b783f4325feb2eb571dd371850ddec9ae09c6679ae5c88f137c6b3",
+          "url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest/blob/57a8af6d1d023ee25295ef63eca2f537ac859b5c/src/strategy.py"
+        },
+        {
+          "git_blob": "7aed5ffd3fcfbd8642d5299bf342335068cf3ba6",
+          "path": "src/engine.py",
+          "sha256": "cb8d5b766b22729470967e745eaeb32024df7bb9985869d687e850c1ad2ddab5",
+          "url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest/blob/57a8af6d1d023ee25295ef63eca2f537ac859b5c/src/engine.py"
+        },
+        {
+          "git_blob": "ae303bc82a36c1d5b644f436fb55f0ce03970b54",
+          "path": "src/dataset.py",
+          "sha256": "3b66154fcbcbade13b9efb1922e578f8c2ca410c230b242376985e3d3860e0c9",
+          "url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest/blob/57a8af6d1d023ee25295ef63eca2f537ac859b5c/src/dataset.py"
+        },
+        {
+          "git_blob": "5bced5c0b818356d947ee1c484be910574099273",
+          "path": "src/costs.py",
+          "sha256": "0993148c50af423770d3c3ff9b148ab82967f8cd2df7ef5c2efc5778c0a2ea1a",
+          "url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest/blob/57a8af6d1d023ee25295ef63eca2f537ac859b5c/src/costs.py"
+        },
+        {
+          "git_blob": "dfff89e134439046ca9f547663e8a3894a1f3203",
+          "path": "src/preregister.py",
+          "sha256": "1390f1b50206e54a557d81cb0ef2202aa490912e4d3080b331d04be886a3a059",
+          "url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest/blob/57a8af6d1d023ee25295ef63eca2f537ac859b5c/src/preregister.py"
+        },
+        {
+          "git_blob": "88635d124e0789829fd493738370c83c5b3aea69",
+          "path": "src/run_insample.py",
+          "sha256": "299b3ad6394d2f496a50ddf2a1052f388dcd407061dced39fce339aae7b4deee",
+          "url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest/blob/57a8af6d1d023ee25295ef63eca2f537ac859b5c/src/run_insample.py"
+        }
+      ]
+    }
+  },
+  "cross_id_comparisons": [
+    {
+      "a": "S014",
+      "b": "S015",
+      "classification": "RELATED_DISTINCT_ENTRY_AND_MANAGEMENT",
+      "complete_fingerprints_available": false,
+      "evidence": "Pine sweep/reclaim with session and BE versus Python three-bar FVG pullback; shared repo does not make parameter variants"
+    },
+    {
+      "a": "S005",
+      "b": "S016",
+      "classification": "MATERIAL_RULE_DIFFERENCES_RETAIN_BOTH",
+      "complete_fingerprints_available": false,
+      "evidence": "S005 H1 high/low channels, EMA200, two-sided and ATR protective stop; S016 daily close channels, long-only, no protective stop"
+    }
+  ],
+  "independent_edges_certified": 0,
+  "note": "File hashes prove inspected source identity, not completeness of this explicitly bounded semantic review",
+  "schema": "oracle.gold.continuation.source_read.v1",
+  "sha256": "88c87b33beeaba806b9f6f5ecb667b136a82f0d771d77e5a2894b03185334925",
+  "within_id_parameter_variant_evidence": [
+    {
+      "additional_independent_original_ids": 0,
+      "class_ast_excluding_params_sha256": "29bf0617043d99846c74524226cb267cbc00dc70c42f306e2d7ea7e059bea97e",
+      "classification": "PROVEN_WITHIN_ID_PARAMETER_VARIANTS",
+      "full_program_identity_claimed": false,
+      "original_id": "S016",
+      "parameter_changes": {
+        "entry_period": [
+          20,
+          95
+        ],
+        "risk_percent": [
+          1.0,
+          2.0
+        ]
+      },
+      "scope": "STRATEGY_CLASS_ONLY",
+      "source_paths": [
+        "strategies/gold_donchian_channel_strategy.py",
+        "src/gold_donchian_channel_strategy.py"
+      ]
+    }
+  ]
+}

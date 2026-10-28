@@ -16,7 +16,7 @@ Research only. Original IDs retained. No bot admitted, named, deployed or connec
 
 All **61 distinct source URLs** attempted: 17 GitHub repositories retrieved with commit/blob/file SHA evidence; 21 readable web pages without authenticated executable code; 23 direct-access failures. At ID level, these correspond to 33 code-retrieved, 22 page-only and 28 access-blocked entries. A source receipt is **not** a completed rule audit.
 
-Detailed selected Python rule cards cover S005–S010. Twelve further source modules S020–S031 and their shared detection/exit dependencies were reviewed, with concrete rules and blockers recorded. Their exact equity sizing, selected timeframe and account semantics are incomplete; complete mechanics fingerprints are withheld. Fifteen other code-retrieved IDs still require full source-specific review. Page-only or blocked sources remain SOURCE_UNVERIFIABLE; no source rules or performance invented.
+Detailed selected Python rule cards cover S005–S010. Twelve further source modules S020–S031 and their shared detection/exit dependencies were reviewed, with concrete rules and blockers recorded. Their exact equity sizing, selected timeframe and account semantics are incomplete; complete mechanics fingerprints are withheld. Fifteen further bounded source-reading cards are now recorded in `continuation_source_audit.json`; partial dependency/notebook reviews remain explicitly unfinished. Page-only or blocked sources remain SOURCE_UNVERIFIABLE; no source rules or performance invented.
 
 MQL source-page fallback succeeded for [S036–S039](https://www.mql5.com/en/code/77687) and [S040](https://www.mql5.com/en/code/77691), but both discovered native `.mq5` downloads returned HTTP403 locally. The first is an overlapping per-setup exit-comparison indicator; the second is an account-trading EA. Marketing backtest tables were not imported as AIDY results. Native code and parity remain required.
 
@@ -24,13 +24,13 @@ MQL source-page fallback succeeded for [S036–S039](https://www.mql5.com/en/cod
 
 ## Duplicate/family decisions
 
-No exact duplicate pair or full parameter-variant pair has been frozen. No independent out-of-sample edge certified. Each original ID remains its own canonical ID pending proof.
+No cross-ID exact duplicate pair or full parameter-variant pair has been frozen. S016 has one proven within-ID strategy-class parameter family; it creates no additional original ID or independent edge. No independent out-of-sample edge certified. Each original ID remains its own canonical ID pending proof.
 
 | Shared-source group | Current disposition |
 |---|---|
 | S005–S009 | Five different signal functions in one pinned publisher module. Shared engine; selected S007/S008 settings are explicitly first source-grid combinations, not unique released gold presets. Related methodology/codebase does not prove duplicate mechanics. |
 | S020–S031 | Twelve different source modules with different triggers. Shared setup/stop-first outcome engine. Missing account semantics and multiple causal/executable-fill issues. No independence claim. |
-| S014–S015 | Source retrieved; per-method audit pending. |
+| S014–S015 | Selected originals reviewed: sweep/reclaim Pine and FVG Python have different entry/management rules; shared repository is not a parameter-variant proof. |
 | S036–S039 | Written parameter/exit alternatives identified; native code inaccessible. Provisional review only, no family frozen. |
 | S041–S043 | Native source inaccessible. UNKNOWN. |
 | S064–S065 | Shared TradingView page readable, executable Pine not retrieved. UNKNOWN. |
@@ -78,8 +78,12 @@ The inherited S003 workflow also had an unquoted colon in its step title (line51
 ## Next executable queue and blockers
 
 1. B01 S005–S010: immutable first-run ledgers retained. Common-cost/causal sizing sensitivity runs use already authenticated snapshots; no repeat source downloads.
-2. B02 S020–S031: twelve related, different source modules. Admission blocked until selected timeframe/account risk and causal fill semantics are faithful. S021/S022 confirm on close but retrospectively book a broken-level intrabar entry; S024 full-series swing clustering requires prefix stability; FVG/OB fill gap semantics need native event checks. No fabricated dollar ledger for an R-only setup scorecard.
+2. B02 S020–S031: completed three-year unchanged native R replay in [run40696344939](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40696344939).9,245 setups,216 related filter/cost scenarios,97 negatives retained. Source/fill and missing account gates remain. S024 fails tested prefixes in all years; S022 fails a2024 prefix. See `BATCH02_REVIEW.md` and all per-setup ledgers. No fabricated dollar account.
 3. Remaining code-retrieved sources: audit originals and dependencies, keep failed studies, implement source-specific parity before replay. Protected/unavailable publisher sources require actual executable source or complete original written rules. A title, page description or commercial screenshot is insufficient.
 4. Simultaneous portfolio/correlation: common-tape signal overlap traces emitted, but no independence declared. Shared broker margin, opposing positions, financing and aggregate risk remain blockers; no sum of six independent $10k models is called a master account.
 
 No production runtime, D1, original R2 objects, broker account, server, funding, orders, protected main or rival Notion journal changed. GitHub reports this repository's visibility as **public**; no original ZIPs or full historical quote datasets are committed. Do not assume a private repository or publish proprietary publisher code here.
+
+## Continued execution
+
+[Batch02 review](BATCH02_REVIEW.md), `continuation_source_audit.json`, `batch02_results_register.json` and `83_batch_assignment_register.json` contain the next completed historical replay and bounded source audits. All83 IDs are assigned to a batch or explicit blocking gate. Full83 native mechanics audit and qualified portfolio remain FALSE. Earlier losses/results above remain historical evidence, not overwritten by this continuation.

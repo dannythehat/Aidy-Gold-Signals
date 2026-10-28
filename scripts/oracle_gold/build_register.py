@@ -78,6 +78,26 @@ def cards():
     return result
 
 
+def carry_research_records(rows, previous):
+    """Rebuilding the base audit must never erase attached evidence or reviews."""
+    old = {r["id"]: r for r in previous.get("rows", [])}
+    if old and set(old) != {r["id"] for r in rows}:
+        raise ValueError("Original ID set changed during register rebuild")
+    for row in rows:
+        for key, value in old.get(row["id"], {}).items():
+            if key.endswith("_results") or key == "continuation_audit":
+                row[key] = value
+    return rows
+
+
+def write_register_csv(rows):
+    with (OUT/"83_source_and_duplicate_audit.csv").open("w", newline="") as f:
+        fields = ["id", "original_title", "source_url", "source_access", "source_commit_sha", "source_audit_status", "disposition", "family", "canonical_id", "duplicate_classification", "independence", "complete_mechanics_sha256", "licence", "batch", "evidence", "blockers", "historical_reports", "continuation_audit", "batch01_results", "batch01_common_results", "batch02_results"]
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows({k: json.dumps(r.get(k), ensure_ascii=False) if isinstance(r.get(k), (dict, list)) else r.get(k) for k in fields} for r in rows)
+
+
 def main():
     cat = json.loads((ROOT/"research/strategy_lab/day33_gold_edge_83_snapshot.json").read_text())
     access = json.loads((OUT/"source_access_receipts.json").read_text())
@@ -126,6 +146,13 @@ def main():
             row["historical_reports"] = sorted(str(p.relative_to(ROOT)) for p in (ROOT/"research/strategy_lab").glob(ident+"*.md"))
             row["prior_evidence_preserved"] = True
         rows.append(row)
+    previous_path = OUT/"83_source_and_duplicate_audit.json"
+    previous = json.loads(previous_path.read_text()) if previous_path.exists() else {}
+    if previous:
+        expected = previous.pop("sha256")
+        if digest(previous) != expected:
+            raise ValueError("Existing source register tampered")
+    rows = carry_research_records(rows, previous)
     packet = {"schema": "oracle.gold.original83.source_register.v1", "status": "PARTIAL_AUDIT_EXPLICIT_GAPS",
         "original_catalogue_sha256": dedup["catalogue_sha256"], "rows": rows,
         "coverage": {"ids_retained": 83, "upstream_urls_attempted": len(access),
@@ -133,16 +160,18 @@ def main():
             "proven_exact_duplicates": 0, "proven_parameter_variant_pairs": 0,
             "independent_edges_certified": 0, "all83_fully_audited": False},
         "qualification": "NO_STRATEGY_ADMITTED; UNKNOWN IS NOT NEGATIVE_PERFORMANCE"}
+    for key in ("continuation_bounded_source_cards", "proven_within_id_variant_families"):
+        if key in previous.get("coverage", {}):
+            packet["coverage"][key] = previous["coverage"][key]
     packet["sha256"] = digest(packet)
     (OUT/"83_source_and_duplicate_audit.json").write_text(json.dumps(packet, sort_keys=True, indent=2)+"\n")
-    with (OUT/"83_source_and_duplicate_audit.csv").open("w", newline="") as f:
-        fields = ["id", "original_title", "source_url", "source_access", "source_commit_sha", "source_audit_status", "disposition", "family", "canonical_id", "duplicate_classification", "independence", "complete_mechanics_sha256", "licence", "batch", "evidence", "blockers", "historical_reports"]
-        writer = csv.DictWriter(f, fieldnames=fields)
-        writer.writeheader()
-        writer.writerows({k: json.dumps(r.get(k), ensure_ascii=False) if isinstance(r.get(k), (dict, list)) else r.get(k) for k in fields} for r in rows)
+    write_register_csv(rows)
     graph = {"nodes": [{"id": r["id"], "family": r["family"], "canonical_id": r["canonical_id"]} for r in rows],
              "edges": [{"a": r["a"], "b": r["b"], "type": "REVIEW_ONLY", "flags": r["flags"]} for r in dedup["review_flags"]],
              "frozen_duplicate_families": [], "independence_proven": False}
+    continuation = OUT/"continuation_source_audit.json"
+    if continuation.exists():
+        graph["within_id_variant_families"] = json.loads(continuation.read_text())["within_id_parameter_variant_evidence"]
     (OUT/"family_graph.json").write_text(json.dumps(graph, sort_keys=True, indent=2)+"\n")
     (OUT/"dedup_mechanics_review.json").write_text(json.dumps(dedup, sort_keys=True, indent=2)+"\n")
     print(json.dumps(packet["coverage"], sort_keys=True))
