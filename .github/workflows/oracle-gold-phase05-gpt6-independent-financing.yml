@@ -7,6 +7,12 @@ on:
       - 'scripts/oracle_gold/phase05_independent_funding_sensitivity.py'
       - 'tests/test_oracle_gold_phase05_independent_financing.py'
       - '.github/workflows/oracle-gold-phase05-gpt6-independent-financing.yml'
+  pull_request:
+    branches: ['gold-oracle-83-dedup-bulk-research-20261028']
+    paths:
+      - 'scripts/oracle_gold/phase05_independent_funding_sensitivity.py'
+      - 'tests/test_oracle_gold_phase05_independent_financing.py'
+      - '.github/workflows/oracle-gold-phase05-gpt6-independent-financing.yml'
   workflow_dispatch:
 
 permissions:
