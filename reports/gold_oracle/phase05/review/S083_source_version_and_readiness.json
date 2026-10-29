@@ -1,0 +1,101 @@
+{
+  "blockers": [
+    "Stress2023 negative",
+    "Source gap-stop and timeout defects; native original losses/receipts preserved",
+    "Rights and actual broker contract/lot/margin/financing not verified",
+    "Already-examined history; no independent untouched holdout",
+    "Native original dataset was another provider; AIDY application is explicitly HistData R2"
+  ],
+  "classification": "BLOCKED; positive total but repeatability/native gates incomplete",
+  "disclosed_execution_sensitivity": {
+    "artifact_id": 12874836569,
+    "ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40821266442",
+    "commit": "99b496a6f6e13e8bdbbe23d29f9dd5bf05050b41",
+    "members_sha256": {
+      "results/S083_common_base_daily.csv": "db14223f8224da64f4f0b07066b0a22e96d4684a7ee438627cdb028d672fb9b5",
+      "results/S083_common_base_exact_trades.csv": "8db2e936967b903d7c8c87a6c5816be573473a3365dd501c8bb247922fd44a29",
+      "results/S083_common_base_monthly.csv": "9c989b2873eeba878c0aeb2ce69e866f7c5438df4c4d85f61ea967520f3eb254",
+      "results/S083_common_base_weekly.csv": "8a5f30e5f73fecddd22945fa3ae18bd6c084b55cd079933e0bac375b96d6e127",
+      "results/S083_common_base_yearly.csv": "ebf1abd32e4e8ebc6f47f0d6704fd41f1fb4e7b73eefb80f1670ee6d9a7c8405",
+      "results/S083_common_stress_daily.csv": "9cb0bc581e38d87d68f8e65fb24c4ff5dea325b6ce3357f7723a1a08338553ea",
+      "results/S083_common_stress_exact_trades.csv": "821df1aa33c57b876810c4bd4522d71ca5f6fb4310298f6f125dfd6232ef0a97",
+      "results/S083_common_stress_monthly.csv": "40aca82f1cd75fbee65c77667537dbd908af46ad9d9f238957043f13abdb2db7",
+      "results/S083_common_stress_weekly.csv": "f6091d795069ce22136adf1fefeef61bd4aa374b23abcf633865cfe16a833e30",
+      "results/S083_common_stress_yearly.csv": "bcc42d822550889792654a7dea5bcc9501b3aec08f63c92a8c3416aebedb349d",
+      "results/report.json": "2651b5a3729eaedc67f1cef9b24cae56877bc95748f8cd0b67230e44217c8b6c",
+      "tests.xml": "a70f94b2302cc7d63e7c34abbc5f85b9c8f3a850388c689dc9e90400e24de6da"
+    },
+    "zip_sha256": "acab30523d3edc3c18718ed5d573dd97ff94b04fe81f94a43ba9a01ddb75b562"
+  },
+  "execution_enabled": false,
+  "execution_expression_receipt": {
+    "cost_function_sha256": "f29373ed080867fc151d27a6de0ac0f89fee653f29de4deb400d45c93b3f8c92",
+    "exact_expression_change": {
+      "after": "pnl = (exit_px - entry) * s.direction * size - size * AIDY_CASH_ALLOWANCE",
+      "before": "pnl = (exit_px - entry) * s.direction * size"
+    },
+    "gap_execution": "Long min(stop,observed minute BID open)-source slippage; short max(stop,observed minute ASK open)+source slippage",
+    "native_function_sha256": "39e25edc8045861d1aa933d832bf828f9770e479b590bb0e52c2ad4a45268804",
+    "source_files_modified": false,
+    "strategy_parameters_changed": false
+  },
+  "historically_qualified": false,
+  "original_native_evidence": {
+    "artifact_id": 12874561812,
+    "ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40819738674",
+    "commit": "63ddd5637c9bc21101cddf804d136f39c7607068",
+    "members_sha256": {
+      "S083_refused_setups.csv": "92cd301327bab0af1a4fbff6f01676affa523d620046c5dc82e7cad980afb873",
+      "S083_signals.csv": "6608cf300d5e9871e69d39693d64a552882750eac16fed053f77fb2e1279ed2f",
+      "S083_source_double_spread_daily.csv": "795bdd491240bcce309ee91eff2b89d10929ec80141e7e0735606c794c39b3d4",
+      "S083_source_double_spread_monthly.csv": "ac242ecd49b66955e0a7efe9e46b5ce7f400fada882e9586211fb1a1eb496e06",
+      "S083_source_double_spread_observer.json": "76a2319e4848b10988c2532287b51a9520091f7a2bdc826ed2d32cc2cdd5154c",
+      "S083_source_double_spread_trades.csv": "68917a6173c8a0393ee21942d4286dbeefc59a866e35d80a89ef99bc56a5cbef",
+      "S083_source_double_spread_weekly.csv": "90ad26c184538b135acb7eb8afe6a7eb9a4dbaf5d0e13ac730c9bcf8edfce7e3",
+      "S083_source_double_spread_yearly.csv": "12d28b8f795e23ce5444630918a29038df8404e32f093a5a8a7d16d0a37dcfae",
+      "S083_source_real_spread_daily.csv": "ec3adacefc13e3402185469e31adb92d59ce4872583048ade3b39a5695d4d672",
+      "S083_source_real_spread_monthly.csv": "958f7eb963b7e77b9322cdba046ca42a5b641d968726afa27d37e815902d5195",
+      "S083_source_real_spread_observer.json": "fe3abd563f12462a1f1c0693bf74f238683b00f97901f4dcbde4d29c1e53c2e3",
+      "S083_source_real_spread_trades.csv": "55e30a52b01c434ec2622f2c2fcb53e122e11aee8239c091d2c1b46141a5134e",
+      "S083_source_real_spread_weekly.csv": "c7fcf2b329f4a4de483edbaf53068a1576c91d14bfc467984fb65af0c984c0e5",
+      "S083_source_real_spread_yearly.csv": "a10eb10a91cfbf0ab5f4a726485b59b718ef3cd26bbf48857738f795f00a2fe4",
+      "S083_source_stressed_spread_slippage_daily.csv": "499cbaeea3035f78f8b8d369c442a180d3f075e12af0035717a436da4a3d06fc",
+      "S083_source_stressed_spread_slippage_monthly.csv": "7a05f8c691e0c965eea7bd8f2be43f098a53a2f411548f8bc83a4819668ef1d2",
+      "S083_source_stressed_spread_slippage_observer.json": "d2bb3e1b987018b8f78f55f8c69804713b8ec75d85351452ecd4c5c068c3d2de",
+      "S083_source_stressed_spread_slippage_trades.csv": "1c24f2585555be86278251e269e7fedc3932b3c5fb919795d265f9c13b5da799",
+      "S083_source_stressed_spread_slippage_weekly.csv": "1a747f9f1ecf51b65e6e62ba0e3c1b5e760690101bd935c11c6707a84fc61dde",
+      "S083_source_stressed_spread_slippage_yearly.csv": "41d1040323190ba8022a903b22c2b9cb956ccda21e0fdbf56388ca39655720c0",
+      "report.json": "fe0109037e04154579446bd1a84a8568fcad3939b4f2c5e689c24ee74d3ac086"
+    },
+    "zip_sha256": "eb50bc86e360cc5e98bbad34ded5ed8b09739626a8f5250b396d03af3f00fcfc"
+  },
+  "reference_defaults": "001B/ema50/session/2R/0.25percent/10000",
+  "release_created": false,
+  "source": {
+    "commit": "57a8af6d1d023ee25295ef63eca2f537ac859b5c",
+    "files": {
+      "src/costs.py": "0993148c50af423770d3c3ff9b148ab82967f8cd2df7ef5c2efc5778c0a2ea1a",
+      "src/dataset.py": "3b66154fcbcbade13b9efb1922e578f8c2ca410c230b242376985e3d3860e0c9",
+      "src/engine.py": "cb8d5b766b22729470967e745eaeb32024df7bb9985869d687e850c1ad2ddab5",
+      "src/families.py": "4126d34dbd39fa63baaa12128125b0bb1fce0a0b173a351f8e0f689e00a0640c",
+      "src/fetch_dukascopy.py": "3a22572dc89dc8bbbc2736fd8ee05e0d0038d03b2bfc614a90cf3821f3e59da5",
+      "src/fetch_freeserv.py": "bbdec09f9081a7f43a4153865248188fb6ea755d16cacd056f54ff71a7c49b39",
+      "src/preregister.py": "1390f1b50206e54a557d81cb0ef2202aa490912e4d3080b331d04be886a3a059",
+      "src/regime.py": "9526a500db023f2b4ccc3ccc376da028dfb776666713e66599a0e4e09920acf1",
+      "src/regime_map.py": "c9bc1e9f3b15049774af46f52043bd876864be0a7958979158f3b87ebd51cba7",
+      "src/report.py": "aa3d96fceab718145211a1cfa02c795b89a08fb24e441ad9f093931105e1f1ca",
+      "src/report_insample.py": "c890c5d9d6fb910a8561744e96dbf30c6ac2dfa0e9cfd210bbea59b656196e3a",
+      "src/report_oos.py": "0eeea3276330e56201bc92f6db90ae9caf4de1c65b0720e8e598657a54eed1e3",
+      "src/report_validation.py": "c9bf5487f2a7b3cb1ac9639dd4ffa4f41d5a0180fbe7117fff87d54a390af432",
+      "src/run_backtest.py": "7d0338107a325f1e464d83c23cfe746bf79adf6551a258de4b184fe10d7c40e8",
+      "src/run_dev.py": "0a11a64eea53741e3bc8d1df9521c1dbed29327a2072e71d8fd6bcb7a637ce4c",
+      "src/run_insample.py": "299b3ad6394d2f496a50ddf2a1052f388dcd407061dced39fce339aae7b4deee",
+      "src/run_oos.py": "273792a972e1c20c0bec2e6317a99881d3904a87626068989b336e9d37fbd66a",
+      "src/run_validation.py": "0774ac57bfea1bbc9d5822b8ded9d6d63561d9902719adce714c006bb7be9d24",
+      "src/strategy.py": "a6fb9e5cb6b783f4325feb2eb571dd371850ddec9ae09c6679ae5c88f137c6b3",
+      "src/validate_sources.py": "ec3ff3e57b8a40e47a1484a590a8b777d47141f74b87e6da6c918c7e5c1b34ea",
+      "src/verify_data.py": "b356f9f73d338145621fc1df462c83f690d2424cbc30ad7b449fa10c738ea1c9"
+    },
+    "source_url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest.git"
+  }
+}

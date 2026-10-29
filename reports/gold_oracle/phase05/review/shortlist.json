@@ -1,0 +1,240 @@
+{
+  "earlier_watchlist_preserved": [
+    {
+      "continuous_account": false,
+      "historically_qualified": false,
+      "id": "S010",
+      "period_results": [
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 65,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -25.27,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2023/S010_stress_trades.csv",
+          "long_trades": 65,
+          "native_broker_parity": false,
+          "net_closed_usd": 1224.04,
+          "net_marked_usd": 1224.05,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.186,
+          "report_sha256": "f64c31fb0d24586be0277f83ccadd5b706ce64b5430f0c39c71152f67c00e3b1",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "e46220062688617797bd660e403c601c0913fb281deb8047658575ac8d46995c",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 38.46,
+          "year": 2023
+        },
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 77,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -15.624,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2024/S010_stress_trades.csv",
+          "long_trades": 77,
+          "native_broker_parity": false,
+          "net_closed_usd": 9114.9,
+          "net_marked_usd": 9313.18,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.941,
+          "report_sha256": "f180f6af0a49af101d6bb6ecc9af3c94f8ddf809337b28c9caeed33d34287008",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 42.86,
+          "year": 2024
+        },
+        {
+          "causal_sizing_parity_status": "NOT_APPLICABLE",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40686473858",
+          "closed_trades": 83,
+          "code_commit": "2a5fab2be60f1b088fd508274cf0e6ef9ac8dbe7",
+          "diagnostic_only": false,
+          "h1_close_marked_dd_pct": -33.944,
+          "initial_usd": 10000.0,
+          "ledger": "reports/gold_oracle/batch01_common/2025/S010_stress_trades.csv",
+          "long_trades": 83,
+          "native_broker_parity": false,
+          "net_closed_usd": 13186.28,
+          "net_marked_usd": 13186.28,
+          "net_sign": "POSITIVE",
+          "profit_factor": 1.588,
+          "report_sha256": "ce682de62cb2830c4972a6bd6d37add4cce260aef2c1f7d0211f8cb0a527f229",
+          "scenario": "stress",
+          "sealed_oos": false,
+          "short_trades": 0,
+          "source_snapshot_sha256": "b3612c373abd7422ab50566c6254697a41afa0f0d4408040db208d5c618cded8",
+          "status": "HISTORICAL_PROMISING",
+          "strategy_id": "S010",
+          "win_rate_pct": 44.58,
+          "year": 2025
+        }
+      ],
+      "reason_not_native_shortlist": "Source signals verified previously; original publisher return accounting differs from AIDY account and financing/margin unresolved",
+      "status": "EARLIER_PROFITABLE_DIAGNOSTICS; NATIVE_ACCOUNT/FUNDING_GATES_REMAIN"
+    }
+  ],
+  "historically_qualified": [],
+  "new_account_tested_distinct_systems": 3,
+  "new_blocked": 1,
+  "new_execution_research_watchlist": [
+    {
+      "classification": "BLOCKED",
+      "evidence": {
+        "artifact_id": 12874836569,
+        "ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40821266442",
+        "commit": "99b496a6f6e13e8bdbbe23d29f9dd5bf05050b41",
+        "members_sha256": {
+          "results/S083_common_base_daily.csv": "db14223f8224da64f4f0b07066b0a22e96d4684a7ee438627cdb028d672fb9b5",
+          "results/S083_common_base_exact_trades.csv": "8db2e936967b903d7c8c87a6c5816be573473a3365dd501c8bb247922fd44a29",
+          "results/S083_common_base_monthly.csv": "9c989b2873eeba878c0aeb2ce69e866f7c5438df4c4d85f61ea967520f3eb254",
+          "results/S083_common_base_weekly.csv": "8a5f30e5f73fecddd22945fa3ae18bd6c084b55cd079933e0bac375b96d6e127",
+          "results/S083_common_base_yearly.csv": "ebf1abd32e4e8ebc6f47f0d6704fd41f1fb4e7b73eefb80f1670ee6d9a7c8405",
+          "results/S083_common_stress_daily.csv": "9cb0bc581e38d87d68f8e65fb24c4ff5dea325b6ce3357f7723a1a08338553ea",
+          "results/S083_common_stress_exact_trades.csv": "821df1aa33c57b876810c4bd4522d71ca5f6fb4310298f6f125dfd6232ef0a97",
+          "results/S083_common_stress_monthly.csv": "40aca82f1cd75fbee65c77667537dbd908af46ad9d9f238957043f13abdb2db7",
+          "results/S083_common_stress_weekly.csv": "f6091d795069ce22136adf1fefeef61bd4aa374b23abcf633865cfe16a833e30",
+          "results/S083_common_stress_yearly.csv": "bcc42d822550889792654a7dea5bcc9501b3aec08f63c92a8c3416aebedb349d",
+          "results/report.json": "2651b5a3729eaedc67f1cef9b24cae56877bc95748f8cd0b67230e44217c8b6c",
+          "tests.xml": "a70f94b2302cc7d63e7c34abbc5f85b9c8f3a850388c689dc9e90400e24de6da"
+        },
+        "zip_sha256": "acab30523d3edc3c18718ed5d573dd97ff94b04fe81f94a43ba9a01ddb75b562"
+      },
+      "execution_cost_extension": {
+        "cost_function_sha256": "f29373ed080867fc151d27a6de0ac0f89fee653f29de4deb400d45c93b3f8c92",
+        "exact_expression_change": {
+          "after": "pnl = (exit_px - entry) * s.direction * size - size * AIDY_CASH_ALLOWANCE",
+          "before": "pnl = (exit_px - entry) * s.direction * size"
+        },
+        "gap_execution": "Long min(stop,observed minute BID open)-source slippage; short max(stop,observed minute ASK open)+source slippage",
+        "native_function_sha256": "39e25edc8045861d1aa933d832bf828f9770e479b590bb0e52c2ad4a45268804",
+        "source_files_modified": false,
+        "strategy_parameters_changed": false
+      },
+      "family": "S083_001B_ZONE_REJECTION",
+      "id": "S083",
+      "is_independent_certified_winner": false,
+      "net_stressed_allowance_usd": 298.1003311771419,
+      "reason": "Positive total, but stress2023 negative; modest61-trade sample; venue/lot/margin/funding and independent validation unresolved",
+      "research_priority": 2,
+      "source_version": {
+        "commit": "57a8af6d1d023ee25295ef63eca2f537ac859b5c",
+        "files": {
+          "src/costs.py": "0993148c50af423770d3c3ff9b148ab82967f8cd2df7ef5c2efc5778c0a2ea1a",
+          "src/dataset.py": "3b66154fcbcbade13b9efb1922e578f8c2ca410c230b242376985e3d3860e0c9",
+          "src/engine.py": "cb8d5b766b22729470967e745eaeb32024df7bb9985869d687e850c1ad2ddab5",
+          "src/families.py": "4126d34dbd39fa63baaa12128125b0bb1fce0a0b173a351f8e0f689e00a0640c",
+          "src/fetch_dukascopy.py": "3a22572dc89dc8bbbc2736fd8ee05e0d0038d03b2bfc614a90cf3821f3e59da5",
+          "src/fetch_freeserv.py": "bbdec09f9081a7f43a4153865248188fb6ea755d16cacd056f54ff71a7c49b39",
+          "src/preregister.py": "1390f1b50206e54a557d81cb0ef2202aa490912e4d3080b331d04be886a3a059",
+          "src/regime.py": "9526a500db023f2b4ccc3ccc376da028dfb776666713e66599a0e4e09920acf1",
+          "src/regime_map.py": "c9bc1e9f3b15049774af46f52043bd876864be0a7958979158f3b87ebd51cba7",
+          "src/report.py": "aa3d96fceab718145211a1cfa02c795b89a08fb24e441ad9f093931105e1f1ca",
+          "src/report_insample.py": "c890c5d9d6fb910a8561744e96dbf30c6ac2dfa0e9cfd210bbea59b656196e3a",
+          "src/report_oos.py": "0eeea3276330e56201bc92f6db90ae9caf4de1c65b0720e8e598657a54eed1e3",
+          "src/report_validation.py": "c9bf5487f2a7b3cb1ac9639dd4ffa4f41d5a0180fbe7117fff87d54a390af432",
+          "src/run_backtest.py": "7d0338107a325f1e464d83c23cfe746bf79adf6551a258de4b184fe10d7c40e8",
+          "src/run_dev.py": "0a11a64eea53741e3bc8d1df9521c1dbed29327a2072e71d8fd6bcb7a637ce4c",
+          "src/run_insample.py": "299b3ad6394d2f496a50ddf2a1052f388dcd407061dced39fce339aae7b4deee",
+          "src/run_oos.py": "273792a972e1c20c0bec2e6317a99881d3904a87626068989b336e9d37fbd66a",
+          "src/run_validation.py": "0774ac57bfea1bbc9d5822b8ded9d6d63561d9902719adce714c006bb7be9d24",
+          "src/strategy.py": "a6fb9e5cb6b783f4325feb2eb571dd371850ddec9ae09c6679ae5c88f137c6b3",
+          "src/validate_sources.py": "ec3ff3e57b8a40e47a1484a590a8b777d47141f74b87e6da6c918c7e5c1b34ea",
+          "src/verify_data.py": "b356f9f73d338145621fc1df462c83f690d2424cbc30ad7b449fa10c738ea1c9"
+        },
+        "source_url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest.git"
+      },
+      "years": [
+        {
+          "end_equity": 9990.394063944135,
+          "net_usd": -9.605936055864731,
+          "period": "2023-12-31T00:00:00+00:00",
+          "return_pct": -0.09605936055864239,
+          "start_equity": 10000.0
+        },
+        {
+          "end_equity": 10191.683240417326,
+          "net_usd": 201.2891764731903,
+          "period": "2024-12-31T00:00:00+00:00",
+          "return_pct": 2.0148271948516427,
+          "start_equity": 9990.394063944135
+        },
+        {
+          "end_equity": 10298.100331177142,
+          "net_usd": 106.41709075981635,
+          "period": "2025-12-31T00:00:00+00:00",
+          "return_pct": 1.0441561835222268,
+          "start_equity": 10191.683240417326
+        }
+      ]
+    }
+  ],
+  "new_full_execution_and_independent_validation_passes": 0,
+  "new_positive_in_every_stressed_tested_year": 0,
+  "new_positive_stressed_model_total": 1,
+  "new_rejected": 2,
+  "new_rejected_as_tested": [
+    "S052",
+    "S066"
+  ],
+  "next_engineering_priority": "S040 native entry/indicator evidence; full account tests still require actual execution contract and native tester prerequisites",
+  "no_fresh_holdout_claim": true,
+  "packaging_ready": [],
+  "primary_provisional_family_preserved": [
+    {
+      "beats_passive_net_return": false,
+      "case": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "closed_net_without_largest_winner_usd": 2234.378999999999,
+      "closed_trades": 30,
+      "family": "S016_DAILY_CLOSE_DONCHIAN",
+      "historically_qualified": false,
+      "id": "S016",
+      "minute_close_drawdown_pct": -8.800138796887447,
+      "observed_period_screen_passed": true,
+      "paper_or_funded_activation_authorised": false,
+      "passive_benchmark_net_usd": 12454.11,
+      "profitable_months": 18,
+      "research_rank": 1,
+      "screen_failures": [],
+      "stress_net_marked_usd": 2493.880000000012,
+      "stress_return_pct": 24.938800000000118,
+      "stress_years": [
+        {
+          "closed_trades": 6,
+          "negative_months": 3,
+          "net_usd": 738.5920000000006,
+          "return_pct": 7.385920000000001,
+          "year": 2023
+        },
+        {
+          "closed_trades": 10,
+          "negative_months": 5,
+          "net_usd": 548.9690000000082,
+          "return_pct": 5.1121133943817565,
+          "year": 2024
+        },
+        {
+          "closed_trades": 14,
+          "negative_months": 5,
+          "net_usd": 1206.3190000000031,
+          "return_pct": 10.687153761561085,
+          "year": 2025
+        }
+      ],
+      "variant": "entry20_risk1",
+      "worst_month_pct": -4.053199017129616
+    }
+  ],
+  "profit_scope": "After declared AIDY cost allowances; excludes unverified financing. Two new Pine accounts are continuous-quantity diagnostic models, not native platform certificates."
+}

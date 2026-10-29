@@ -1,0 +1,29 @@
+{
+  "artifact_id": 12874561812,
+  "ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40819738674",
+  "commit": "63ddd5637c9bc21101cddf804d136f39c7607068",
+  "members_sha256": {
+    "S083_refused_setups.csv": "92cd301327bab0af1a4fbff6f01676affa523d620046c5dc82e7cad980afb873",
+    "S083_signals.csv": "6608cf300d5e9871e69d39693d64a552882750eac16fed053f77fb2e1279ed2f",
+    "S083_source_double_spread_daily.csv": "795bdd491240bcce309ee91eff2b89d10929ec80141e7e0735606c794c39b3d4",
+    "S083_source_double_spread_monthly.csv": "ac242ecd49b66955e0a7efe9e46b5ce7f400fada882e9586211fb1a1eb496e06",
+    "S083_source_double_spread_observer.json": "76a2319e4848b10988c2532287b51a9520091f7a2bdc826ed2d32cc2cdd5154c",
+    "S083_source_double_spread_trades.csv": "68917a6173c8a0393ee21942d4286dbeefc59a866e35d80a89ef99bc56a5cbef",
+    "S083_source_double_spread_weekly.csv": "90ad26c184538b135acb7eb8afe6a7eb9a4dbaf5d0e13ac730c9bcf8edfce7e3",
+    "S083_source_double_spread_yearly.csv": "12d28b8f795e23ce5444630918a29038df8404e32f093a5a8a7d16d0a37dcfae",
+    "S083_source_real_spread_daily.csv": "ec3adacefc13e3402185469e31adb92d59ce4872583048ade3b39a5695d4d672",
+    "S083_source_real_spread_monthly.csv": "958f7eb963b7e77b9322cdba046ca42a5b641d968726afa27d37e815902d5195",
+    "S083_source_real_spread_observer.json": "fe3abd563f12462a1f1c0693bf74f238683b00f97901f4dcbde4d29c1e53c2e3",
+    "S083_source_real_spread_trades.csv": "55e30a52b01c434ec2622f2c2fcb53e122e11aee8239c091d2c1b46141a5134e",
+    "S083_source_real_spread_weekly.csv": "c7fcf2b329f4a4de483edbaf53068a1576c91d14bfc467984fb65af0c984c0e5",
+    "S083_source_real_spread_yearly.csv": "a10eb10a91cfbf0ab5f4a726485b59b718ef3cd26bbf48857738f795f00a2fe4",
+    "S083_source_stressed_spread_slippage_daily.csv": "499cbaeea3035f78f8b8d369c442a180d3f075e12af0035717a436da4a3d06fc",
+    "S083_source_stressed_spread_slippage_monthly.csv": "7a05f8c691e0c965eea7bd8f2be43f098a53a2f411548f8bc83a4819668ef1d2",
+    "S083_source_stressed_spread_slippage_observer.json": "d2bb3e1b987018b8f78f55f8c69804713b8ec75d85351452ecd4c5c068c3d2de",
+    "S083_source_stressed_spread_slippage_trades.csv": "1c24f2585555be86278251e269e7fedc3932b3c5fb919795d265f9c13b5da799",
+    "S083_source_stressed_spread_slippage_weekly.csv": "1a747f9f1ecf51b65e6e62ba0e3c1b5e760690101bd935c11c6707a84fc61dde",
+    "S083_source_stressed_spread_slippage_yearly.csv": "41d1040323190ba8022a903b22c2b9cb956ccda21e0fdbf56388ca39655720c0",
+    "report.json": "fe0109037e04154579446bd1a84a8568fcad3939b4f2c5e689c24ee74d3ac086"
+  },
+  "zip_sha256": "eb50bc86e360cc5e98bbad34ded5ed8b09739626a8f5250b396d03af3f00fcfc"
+}
