@@ -52,13 +52,16 @@ def compare(private, common, out):
     price_checks = {c: bool(np.allclose(joined[c], joined[c+'_reference'], atol=1e-7, rtol=0)) for c in ('open', 'high', 'low', 'close')}
     ema_error = float((joined.ema-joined.ema200).abs().max())
     atr_error = float((joined.atr-joined.atr20_sma).abs().max())
-    mismatches = joined.loc[joined.direction != joined.reference_direction]
-    signals = trace.loc[trace.direction != 0]
+    tested = joined.function_tested.astype(bool) if 'function_tested' in joined else pd.Series(True, index=joined.index)
+    mismatches = joined.loc[tested & (joined.direction != joined.reference_direction)]
+    signals = trace.loc[(trace.direction != 0)&(trace.direction != 999)]
     signals.to_csv(out/'S040_native_entry_signals.csv')
     # Public output retains derived entry events, not the entire price history.
     report = {'schema': 'oracle.gold.phase05.S040_native_signal_parity.v1',
-        'status': 'NATIVE_ENTRY_FUNCTION_PARITY_OBSERVED' if len(trace) > 500 and all(price_checks.values()) and not len(mismatches) and ema_error < 1e-7 and atr_error < 1e-7 else 'PARITY_DIFFERENCE_PRESERVED',
+        'status': ('NATIVE_INDICATORS_AND_LATEST_ENTRY_PARITY_OBSERVED' if 'function_tested' in trace else 'NATIVE_ENTRY_FUNCTION_PARITY_OBSERVED') if len(trace) > 500 and all(price_checks.values()) and not len(mismatches) and ema_error < 1e-7 and atr_error < 1e-7 else 'PARITY_DIFFERENCE_PRESERVED',
         'native_closed_bars': len(trace), 'native_entry_signals': len(signals),
+        'native_original_entry_function_rows_actually_executed': int(tested.sum()),
+        'complete_historical_native_entry_trace': bool(tested.all()),
         'price_checks': price_checks, 'source_signal_mismatches': len(mismatches),
         'native_iMA200_vs_first_close_seeded_EMA_max_abs_error': ema_error,
         'native_iATR20_vs_TR_rolling_SMA_max_abs_error': atr_error,
@@ -66,7 +69,7 @@ def compare(private, common, out):
         'input': json.loads((private/'receipts.json').read_text()),
         'source_function': 'Unchanged original S040 CheckBreakout; source OnInit creates actual native iMA/iATR. Original OnTick order path NEVER invoked.',
         'source_parameters': 'Original defaults:20entry/ATR20/EMA200/long only',
-        'scope': 'BAR_ENTRY_AND_INDICATOR_PARITY_ONLY; broker sessions/spread/risk/sizing/margin/order management/funding NOT covered',
+        'scope': 'Native indicators compared on every emitted bar. Original entry function compared ONLY on rows explicitly marked function_tested. Broker sessions/spread/risk/sizing/margin/order management/funding NOT covered.',
         'account_backtest': False, 'native_broker_execution_qualified': False, 'packaging_ready': False,
         'mismatch_examples': json.loads(mismatches.head(5).to_json(orient='table', date_format='iso'))['data']}
     (out/'parity.json').write_text(json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+'\n')

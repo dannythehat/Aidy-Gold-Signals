@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$OutDir, [Parameter(Mandatory=$true)][string]$Quotes)
+param([Parameter(Mandatory=$true)][string]$OutDir, [Parameter(Mandatory=$true)][string]$Quotes, [switch]$IndicatorsOnly)
 $ErrorActionPreference='Stop'
 # Reuse verified signed installation, SDK, custom-symbol and tester bootstrap.
 & ./scripts/oracle_gold/mt5_offline_probe.ps1 -OutDir (Join-Path $OutDir 'bootstrap')
@@ -85,7 +85,40 @@ void OnStart() {
   int out=FileOpen("oracle_rates_import.txt",FILE_WRITE|FILE_TXT|FILE_COMMON);if(out!=INVALID_HANDLE){FileWrite(out,total,stored);FileClose(out);}
 }
 '@|Set-Content $script -Encoding ascii
-    foreach($file in @($ea,$script)){
+    $indicator=Join-Path $sdk 'Scripts/OracleIndicatorRead.mq5'
+    @'
+#define OnInit OriginalOnInit
+#define OnDeinit OriginalOnDeinit
+#define OnTick OriginalOnTick
+#define OnTester OriginalOnTester
+#include "..\Experts\OracleSignalParity\GoldBreakoutEA.mq5"
+#undef OnInit
+#undef OnDeinit
+#undef OnTick
+#undef OnTester
+void OnStart() {
+  if(TerminalInfoInteger(TERMINAL_CONNECTED)) return;
+  MqlRates rates[];double em[],av[];
+  int count=0;
+  for(int i=0;i<200;i++){count=CopyRates(_Symbol,PERIOD_H4,0,100000,rates);if(count>500)break;Sleep(50);}
+  if(count<500){Print("ORACLE_INDICATOR_RATES_BLOCKED ",GetLastError());return;}
+  if(OriginalOnInit()!=INIT_SUCCEEDED){Print("ORACLE_INDICATOR_INIT_FAILED ",GetLastError());return;}
+  int ce=-1,ca=-1;
+  for(int i=0;i<200;i++){ce=CopyBuffer(g_emaHandle,0,0,count,em);ca=CopyBuffer(g_atrHandle,0,0,count,av);if(ce==count&&ca==count)break;Sleep(50);}
+  if(ce!=count||ca!=count){PrintFormat("ORACLE_INDICATOR_BUFFER_BLOCKED rates=%d ema=%d atr=%d error=%d",count,ce,ca,GetLastError());OriginalOnDeinit(0);return;}
+  int lastSignal=CheckBreakout();
+  int f=FileOpen("oracle_s040_native_trace.csv",FILE_WRITE|FILE_CSV|FILE_ANSI|FILE_COMMON,',');
+  if(f==INVALID_HANDLE){OriginalOnDeinit(0);return;}
+  FileWrite(f,"closed_epoch","open","high","low","close","ema","atr","direction","function_tested");
+  for(int i=202;i<count-1;i++){
+    bool tested=(i==count-2);
+    FileWrite(f,(long)rates[i].time,DoubleToString(rates[i].open,10),DoubleToString(rates[i].high,10),DoubleToString(rates[i].low,10),DoubleToString(rates[i].close,10),DoubleToString(em[i],10),DoubleToString(av[i],10),tested?lastSignal:999,tested?1:0);
+  }
+  FileClose(f);OriginalOnDeinit(0);
+  PrintFormat("ORACLE_NATIVE_READONLY_INDICATORS_COMPLETE bars=%d original_entry_calls=1 connected=0 orders=0",count);
+}
+'@|Set-Content $indicator -Encoding ascii
+    foreach($file in @($ea,$script,$indicator)){
         $p=Start-Process $compiler -ArgumentList @('/portable',"/compile:`"$file`"","/include:`"$sdk`"",'/log') -PassThru
         if(-not $p.WaitForExit(60000)){$p.Kill();throw 'Native adapter compile timeout'}
         Copy-Item ([IO.Path]::ChangeExtension($file,'.log')) (Join-Path $OutDir ([IO.Path]::GetFileName($file)+'.log'))
@@ -96,6 +129,10 @@ void OnStart() {
       @{name='import_actual_bid'; wait=180000; lines=@('[StartUp]','Script=OracleImportRates','Symbol=EURUSD','Period=M1','ShutdownTerminal=1')},
       @{name='s040_entry_only'; wait=720000; lines=@('[StartUp]','Script=','Expert=','[Tester]','Expert=OracleSignalParity\S040EntryOnly','Symbol=AIDY_GOLD_RESEARCH','Period=H4','Model=1','Optimization=0','FromDate=2023.01.01','ToDate=2026.01.01','Deposit=10000','Currency=USD','Leverage=1:1','UseLocal=1','UseRemote=0','UseCloud=0','Visual=0','Report=oracle_s040_signal_only.htm','ReplaceReport=0','ShutdownTerminal=1')}
     )
+    if($IndicatorsOnly){
+        $configs=@($configs[0],@{name='readonly_native_indicators';wait=180000;lines=@('[StartUp]','Script=OracleIndicatorRead','Symbol=AIDY_GOLD_RESEARCH','Period=H4','ShutdownTerminal=1')})
+        $receipt.price_strategy_tester_blocker_preserved='Previous native run refused price testing: account is not specified. Read-only script fallback uses no account or order path.'
+    }
     $receipt.attempts=@()
     foreach($config in $configs){
         $ini=Join-Path $work ($config.name+'.ini');($base+$config.lines)|Set-Content $ini -Encoding ascii

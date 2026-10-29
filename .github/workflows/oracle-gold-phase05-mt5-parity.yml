@@ -38,7 +38,7 @@ jobs:
           }
       - name: Execute original entry function and native indicators; no order path or broker connection
         shell: pwsh
-        run: ./scripts/oracle_gold/mt5_signal_parity.ps1 -Quotes "$env:RUNNER_TEMP/quotes" -OutDir artifacts/native_entry
+        run: ./scripts/oracle_gold/mt5_signal_parity.ps1 -Quotes "$env:RUNNER_TEMP/quotes" -OutDir artifacts/native_entry -IndicatorsOnly
       - name: Encrypt private native price trace; no original code executes with credential
         shell: pwsh
         env:
