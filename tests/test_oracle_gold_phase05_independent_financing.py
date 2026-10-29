@@ -1,23 +1,27 @@
 """Independent signed-evidence cash-carry sensitivity, with NO strategy execution."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from scripts.oracle_gold.phase05_independent_funding_sensitivity import (
-    ROOT, SOURCE, exposure_years, audit_one, run,
+    ROOT,
+    SOURCE,
+    audit_one,
+    exposure_years,
+    run,
 )
 
 
 def test_year_boundary_split_is_exact():
-    first = datetime(2023, 12, 31, 12, tzinfo=timezone.utc)
-    last = datetime(2024, 1, 2, 12, tzinfo=timezone.utc)
+    first = datetime(2023, 12, 31, 12, tzinfo=UTC)
+    last = datetime(2024, 1, 2, 12, tzinfo=UTC)
     assert exposure_years(first, last, 2) == {"2023": 1, "2024": 3}
 
 
 def test_reverse_position_and_negative_ounces_rejected():
-    a = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    b = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    a = datetime(2024, 1, 1, tzinfo=UTC)
+    b = datetime(2024, 1, 2, tzinfo=UTC)
     with pytest.raises(ValueError):
         exposure_years(b, a, 1)
     with pytest.raises(ValueError):
