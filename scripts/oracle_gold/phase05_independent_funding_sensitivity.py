@@ -12,7 +12,7 @@ import argparse
 import csv
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
 from pathlib import Path
 from zipfile import ZipFile
@@ -34,7 +34,7 @@ RATES = (0.0, 0.10, 0.25, 0.50, 1.0, 1.5, 2.0)
 
 
 def utc(value):
-    out = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    out = datetime.fromisoformat(value)
     if out.tzinfo is None or out.utcoffset().total_seconds() != 0:
         raise ValueError("Explicit UTC dates required")
     return out
@@ -45,7 +45,7 @@ def exposure_years(start, end, ounces):
         raise ValueError("Reverse dates or negative ounces")
     out = {}
     while start < end:
-        boundary = datetime(start.year + 1, 1, 1, tzinfo=timezone.utc)
+        boundary = datetime(start.year + 1, 1, 1, tzinfo=UTC)
         stop = min(end, boundary)
         year = str(start.year)
         out[year] = out.get(year, 0.0) + ounces * (stop-start).total_seconds()/86400
