@@ -1,0 +1,102 @@
+name: Oracle Gold phase05 authentic bidask native batch
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/bidask_history.py'
+      - 'scripts/oracle_gold/phase05_native_accounts.py'
+      - '.github/workflows/oracle-gold-phase05-native-batch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  bidask-month:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        period: ['202301', '202302', '202303', '202304', '202305', '202306', '202307', '202308', '202309', '202310', '202311', '202312', '202401', '202402', '202403', '202404', '202405', '202406', '202407', '202408', '202409', '202410', '202411', '202412', '202501', '202502', '202503', '202504', '202505', '202506', '202507', '202508', '202509', '202510', '202511', '202512']
+    env:
+      PYTHONPATH: src:.
+      PERIOD: ${{ matrix.period }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest ruff
+      - name: Check immutable evidence and quote derivation before source access
+        run: |
+          ruff check scripts/oracle_gold/bidask_history.py scripts/oracle_gold/phase05_native_accounts.py tests/test_oracle_gold_phase05.py
+          python -m pytest -q tests/test_oracle_gold_phase05.py
+      - name: GET private original ticks only; no broker or archive writes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${PERIOD}/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip" --remote --file /tmp/original.zip
+      - name: Validate all original quotes and retain both sides
+        run: python -m scripts.oracle_gold.bidask_history --archive /tmp/original.zip --period "${PERIOD}" --out /tmp/quotes
+      - name: Encrypt immutable research derivative; public receipt has no raw quotes
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p artifacts/cache
+          cp /tmp/quotes/manifest.json artifacts/cache/manifest.json
+          python -m scripts.oracle_gold.snapshot_bundle seal --key research/gold_oracle/phase03/source_receipt_public.pem --source /tmp/quotes --out artifacts/cache/snapshot.encrypted.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-bidask-${{ matrix.period }}
+          path: artifacts/cache/
+          retention-days: 90
+          if-no-files-found: warn
+  native001B:
+    needs: bidask-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-*
+          path: /tmp/encrypted
+      - name: Unwrap authenticated caches; no data acquisition credentials reach strategy
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for folder in /tmp/encrypted/oracle-bidask-*; do
+            period="${folder##*oracle-bidask-}"
+            python -m scripts.oracle_gold.snapshot_bundle open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Clone pinned original engine without running acquisition or optimisation drivers
+        run: |
+          python - <<'PYCODE'
+          import json,subprocess
+          from pathlib import Path
+          from scripts.oracle_gold.phase05_native_accounts import verify_source
+          pin=json.loads(Path('research/gold_oracle/phase05/S083_source_pin.json').read_text())
+          subprocess.run(['git','clone','--quiet',pin['source_url'],'/tmp/S083'],check=True)
+          subprocess.run(['git','-C','/tmp/S083','checkout','--quiet',pin['commit']],check=True)
+          verify_source(Path('/tmp/S083'))
+          PYCODE
+      - name: Run unchanged001B account and all original spread stresses over2023–2025
+        run: python -m scripts.oracle_gold.phase05_native_accounts --quotes /tmp/quotes --source /tmp/S083 --out artifacts/native001B
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-phase05-S083-native-account-evidence
+          path: artifacts/native001B/
+          retention-days: 90
+          if-no-files-found: warn
