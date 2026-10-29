@@ -1,0 +1,58 @@
+name: Oracle Gold phase05 native S040 entry parity
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths: ['scripts/oracle_gold/mt5_signal_parity.py', 'scripts/oracle_gold/mt5_signal_parity.ps1', '.github/workflows/oracle-gold-phase05-mt5-parity.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-source-entry-parity:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: 'src;.'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography ruff
+      - run: ruff check scripts/oracle_gold/mt5_signal_parity.py
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: '${{ runner.temp }}/encrypted_quotes'
+      - name: Unwrap36 authenticated caches; no archive GET or warehouse query
+        shell: pwsh
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          foreach($folder in Get-ChildItem "$env:RUNNER_TEMP/encrypted_quotes" -Directory){
+            $period=$folder.Name.Replace('oracle-bidask-','')
+            python -m scripts.oracle_gold.snapshot_bundle open-ci --source "$($folder.FullName)/snapshot.encrypted.json" --out "$env:RUNNER_TEMP/quotes/$period"
+            if($LASTEXITCODE -ne 0){throw 'Quote unwrap failed'}
+          }
+      - name: Execute original entry function and native indicators; no order path or broker connection
+        shell: pwsh
+        run: ./scripts/oracle_gold/mt5_signal_parity.ps1 -Quotes "$env:RUNNER_TEMP/quotes" -OutDir artifacts/native_entry -IndicatorsOnly
+      - name: Encrypt private native price trace; no original code executes with credential
+        shell: pwsh
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          $folder="$env:RUNNER_TEMP/oracle-official-sdk/private_trace"
+          if(Test-Path $folder){
+            python -m scripts.oracle_gold.snapshot_bundle seal --key research/gold_oracle/phase03/source_receipt_public.pem --source $folder --out artifacts/native_entry/native_trace.encrypted.json
+            if($LASTEXITCODE -ne 0){throw 'Private trace encryption failed'}
+          }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-phase05-native-S040-entry-parity
+          path: artifacts/native_entry/
+          retention-days: 90
+          if-no-files-found: error

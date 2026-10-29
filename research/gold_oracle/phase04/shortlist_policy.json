@@ -1,0 +1,18 @@
+{
+  "schema": "oracle.gold.research_shortlist_policy.v1",
+  "policy_scope": "POSTHOC_EVIDENCE_REVIEW_NOT_A_PREREGISTERED_HYPOTHESIS",
+  "comparison_periods": [2023, 2024, 2025],
+  "minimum_closed_trades_total": 12,
+  "minimum_closed_trades_per_period": 4,
+  "require_each_stress_period_positive": true,
+  "require_positive_closed_net_without_largest_winner": true,
+  "require_unchanged_native_engine_and_prefix_parity": true,
+  "parameter_variants_share_one_family": true,
+  "historical_qualification_additional_gates": [
+    "Full relevant market calendar/data integrity",
+    "Actual executable instrument/venue contract, lot/margin/fill/funding terms",
+    "Redistribution rights and source/dependency licences",
+    "Fresh independent validation after observed variant selection"
+  ],
+  "notes": "A research shortlist is not Oracle Hub qualification, a trading recommendation or authorisation. Show passive benchmark and losing periods even when a candidate passes the observed-period screen. Only two published S016 presets examined; no parameter optimisation. All historical periods already examined."
+}

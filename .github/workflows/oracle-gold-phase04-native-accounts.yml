@@ -1,0 +1,98 @@
+name: Oracle Gold phase04 unchanged native Python accounts
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/native_python_accounts.py'
+      - 'tests/test_oracle_gold_native_python_accounts.py'
+      - '.github/workflows/oracle-gold-phase04-native-accounts.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native-source-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONPATH: src:.
+      ORACLE_PHASE04_S016_ROOT: /tmp/oracle-native-sources/S016
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Research runtime; source-claimed dependency lock checked separately
+        run: python -m pip install --quiet backtrader==1.9.78.123 pandas==2.2.3 numpy==2.3.5 matplotlib==3.10.7 pytest==8.4.2 pyyaml==6.0.3 cryptography ruff
+      - name: Pin original repositories, every imported source/test/dependency file; no acquisition drivers
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          from scripts.oracle_gold.native_python_accounts import verify
+          pins=json.loads(Path('research/gold_oracle/phase04/python_source_pins.json').read_text())
+          for ident in ('S016','S019'):
+              root=Path('/tmp/oracle-native-sources')/ident
+              subprocess.run(['git','clone','--quiet',pins[ident]['source_url'],str(root)],check=True)
+              subprocess.run(['git','-C',str(root),'checkout','--quiet',pins[ident]['commit']],check=True)
+              print(ident,verify(ident,root)['original_python_files_compiled'])
+          PY
+      - name: Install original S019 exact runtime dependencies and preserve resolver receipt
+        run: |
+          mkdir -p artifacts/oracle_gold/phase04_native/tests
+          python - <<'PY'
+          import json,subprocess,tomllib
+          from pathlib import Path
+          project=tomllib.loads(Path('/tmp/oracle-native-sources/S019/pyproject.toml').read_text())['project']
+          deps=project['dependencies']
+          deps+=project.get('optional-dependencies',{}).get('dev',[])
+          p=subprocess.run(['python','-m','pip','install',*deps],capture_output=True,text=True,timeout=240)
+          Path('artifacts/oracle_gold/phase04_native/tests/source_dependency_lock.log').write_text(p.stdout+p.stderr)
+          Path('artifacts/oracle_gold/phase04_native/tests/source_dependency_lock.json').write_text(json.dumps({'source_requires_python':project['requires-python'],'source_dependencies':deps,'resolver_exit':p.returncode,'exact_lock_installed':p.returncode==0,'used_runtime':'Original declared S019 runtime; exact installed versions independently checked by source verifier'},indent=2)+'\n')
+          print('SOURCE_DEPENDENCY_RESOLVER_EXIT',p.returncode)
+          if p.returncode: raise SystemExit(p.returncode)
+          PY
+      - name: Preserve all earlier evidence and exercise original native lifecycle
+        run: |
+          ruff check scripts/oracle_gold/native_python_accounts.py tests/test_oracle_gold_native_python_accounts.py
+          python -m pytest -q tests/test_oracle_gold_phase03.py tests/test_oracle_gold_phase03_register.py tests/test_oracle_gold_native_python_accounts.py --junitxml=artifacts/oracle_gold/phase04_native/tests/aidy.xml
+      - name: Original S019 pure risk/fill/session/prefix fixtures; no historic data acquisition
+        env:
+          PYTHONPATH: /tmp/oracle-native-sources/S019
+        run: |
+          python -m pytest -q /tmp/oracle-native-sources/S019/tests/test_risk_sizing.py /tmp/oracle-native-sources/S019/tests/test_fills_costs.py /tmp/oracle-native-sources/S019/tests/test_sessions.py /tmp/oracle-native-sources/S019/tests/test_resample.py /tmp/oracle-native-sources/S019/tests/test_trade_fsm.py /tmp/oracle-native-sources/S019/tests/test_engine_prefix_invariance.py --junitxml=artifacts/oracle_gold/phase04_native/tests/original_s019.xml
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2023
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-cached/2023
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2024
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-cached/2024
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2025
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-cached/2025
+      - name: Unwrap authorised research cache only; no BigQuery or R2 requests
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for year in 2023 2024 2025; do
+            python -m scripts.oracle_gold.snapshot_bundle open-ci --source "/tmp/oracle-cached/${year}/snapshot.encrypted.json" --out "/tmp/oracle-minutes/${year}"
+          done
+      - name: Unchanged source-native accounts and separately labelled standard10k comparisons
+        run: python -m scripts.oracle_gold.native_python_accounts --snapshots /tmp/oracle-minutes --sources /tmp/oracle-native-sources --out artifacts/oracle_gold/phase04_native/results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-phase04-native-python-account-evidence
+          path: artifacts/oracle_gold/phase04_native/
+          retention-days: 90
+          if-no-files-found: error

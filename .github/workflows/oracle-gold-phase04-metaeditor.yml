@@ -1,0 +1,24 @@
+name: Oracle Gold phase04 official MetaEditor SDK compilation
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths: ['scripts/oracle_gold/native_metaeditor.ps1', '.github/workflows/oracle-gold-phase04-metaeditor.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile-originals-no-terminal:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Signed compiler, network-blocked SDK extraction if needed, original bytes unchanged
+        shell: pwsh
+        run: ./scripts/oracle_gold/native_metaeditor.ps1 -OutDir artifacts/oracle_gold/phase04_metaeditor -InitialiseSdkOffline -OnlyId S018
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-phase04-metaeditor-receipts
+          path: artifacts/oracle_gold/phase04_metaeditor/
+          retention-days: 90
+          if-no-files-found: error

@@ -1,0 +1,346 @@
+{
+  "S001": {
+    "batch_route": "PRESERVE_EXISTING_S001_NEGATIVE_STUDIES; resolve native dependency before new claim",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Complete native dependency graph",
+      "M15/M5 quote tape and selected variant/account terms"
+    ],
+    "review_depth": "SELECTED_SIGNAL_AND_ENGINE_CORE; remaining dependencies not fully audited",
+    "rules": [
+      "M15 session-level sweep/reclaim; previous UK day, Asian00-08 and London08-09 levels become available after session completion",
+      "H1 pivots5left/3right and H4 pivots3left/2right; last two confirmed swings must agree",
+      "Broker-naive offset default2 converted to UK DST; entry-close reference, ATR/sweep extreme protective reference; optional targets/refinement differ from baseline"
+    ],
+    "source_defects_or_divergences": [
+      "Native backtester imports entry_refinement, absent from the pinned tracked file list; no native import/engine parity claimed",
+      "Source engine session rollover uses index date; wrapper session/time semantics must be compared explicitly"
+    ],
+    "source_files": [
+      "strategy_edge.py",
+      "session_levels.py",
+      "swing_structure.py",
+      "backtester.py"
+    ]
+  },
+  "S002": {
+    "batch_route": "PRESERVE_EXISTING_S002_NEGATIVE_REPORTS; no generic replacement",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Chronological native parity, account sizing and quote/funding model"
+    ],
+    "review_depth": "TWO_CORE_MODULES_REVIEWED; notebook driver/account not fully audited",
+    "rules": [
+      "Daily bias derives sum(open-close)>=0 labelled BULLISH; retain this actual sign",
+      "M15 open-price sweep/reversal state machine around prior-day extremes",
+      "No protective fixed stop or account money sizing in original simulation"
+    ],
+    "source_defects_or_divergences": [
+      "ExtractTrades reverses rows and removes first day; chronological ingestion needs parity",
+      "WIN state label is not proof of positive dollar return"
+    ],
+    "source_files": [
+      "TradeSimulation.py",
+      "ExtractTrades.py"
+    ]
+  },
+  "S003": {
+    "batch_route": "PRESERVE_PRIOR_S003_FAILURES; inspect native broker semantics separately",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "MQL native execution and clock/volume/contract parity"
+    ],
+    "review_depth": "SELECTED_PINE_SIGNAL_AND_ORDER_CORE; native MQL full parity outstanding",
+    "rules": [
+      "EMA200 plus Bollinger15/1.5, ATR18; original volume MA15 gate",
+      "Closed-bar breakout, 1% nominal risk, 2R target, 50% partial at1.6R; cooldown6",
+      "Source uses Pine exchange hour; MQL broker/server clock requires separate attestation"
+    ],
+    "source_defects_or_divergences": [
+      "Pine hour has no explicit New York timezone; prior AIDY New York wrapper must not imply native parity",
+      "Native volume gate requires actual source-compatible volume"
+    ],
+    "source_files": [
+      "src/pine/BreakoutFollowTrend_Strategy.pine"
+    ]
+  },
+  "S004": {
+    "batch_route": "PRESERVE_EXISTING_S004_NEGATIVE_AND_FEASIBILITY_REPORTS",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Full remaining native management review and verified broker minimum contracts"
+    ],
+    "review_depth": "EXISTING_PINNED_AIDY_SOURCE_WRAPPER_AND_SELECTED_NATIVE_CORE; large native file not fully re-reviewed",
+    "rules": [
+      "Pinned original Backtrader source, long enabled/short disabled in existing frozen run",
+      "ATR10 maximum2 gate; protective4.5ATR and target6.5ATR; three-red pullback one-bar entry window",
+      "Nominal1% sizing can be overridden by minimum contract"
+    ],
+    "source_defects_or_divergences": [
+      "Publisher defaults, global entry-window constants and existing frozen wrapper overrides are different selections",
+      "Earlier loss and feasibility evidence remains immutable"
+    ],
+    "source_files": [
+      "src/strategy/sunrise_ogle_xauusd.py"
+    ]
+  },
+  "S011": {
+    "batch_route": "MACRO_DATA_BLOCKED; do not remove filters or substitute constants",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Point-in-time DXY/TNX vintages, daily instrument/calendar and original account-cost parity"
+    ],
+    "review_depth": "SELECTED_FINAL_V8_AND_SHARED_ENGINE_RULE_CORE",
+    "rules": [
+      "Daily long-only: close above SMA200, near SMA10*1.05, RSI14<50, DXY60day change<0, TNX60day change<0",
+      "Exit below SMA50 or RSI>75 at next open; frozen3ATR stop; original100k account",
+      "Default leverage1; source separately explores1.5/2/3; flat cash earns source4% APY"
+    ],
+    "source_defects_or_divergences": [
+      "Macro series date reindex/forward-fill is not publication-vintage proof",
+      "Gap-through stop filled at source stop minus slippage; no actual gap-open floor"
+    ],
+    "source_files": [
+      "strategies/final_v8.py",
+      "engine/backtest.py"
+    ]
+  },
+  "S012": {
+    "batch_route": "BLOCKED_SOURCE_CAUSALITY; no silent fix",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Causal original rule clarification; source research cannot be financially graded"
+    ],
+    "review_depth": "FULL_SELECTED_HARNESS; signal/execution mismatch documented",
+    "rules": [
+      "H4 final close versus SMA20 produces bias, joined at H4 OPEN timestamp to H1",
+      "Liquidity sweep scored4 + FVG flag4 + aligned bias4; default threshold8",
+      "vectorbt from_signals uses close, fees.0001, slippage.0002,100k and size.30 default amount; no SL/TP supplied"
+    ],
+    "source_defects_or_divergences": [
+      "PROVEN_LOOKAHEAD: future H1 close rewrites earlier H4 bias; regression executes original function",
+      "Bias/prior-day joins only match boundary timestamps; no H1 forward-fill after join",
+      "ATR rolling14 backward-fill uses later seed; FVG code compares low-to-low/high-to-high, contradicting proper gap docstring",
+      "Fetch maps XAUUSD to GC=F futures proxy; no coded retest/stop/target despite prose"
+    ],
+    "source_files": [
+      "smc_backtest/smc_backtest.py"
+    ]
+  },
+  "S013": {
+    "batch_route": "BLOCKED_FILL_MODEL; original notebook not rewritten",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Real M5 quote chronology and native pending-entry fidelity"
+    ],
+    "review_depth": "NOTEBOOK_CELL2_STRATEGY_REVIEWED; acquisition/plot cells not executed",
+    "rules": [
+      "Four prior consecutive bullish/bearish M5 bars; breakout reference last prior high/low",
+      "Stop opposite edge of last prior bar;2R target; fixed200USD risk on50k original account",
+      "Scans next1..50 bars for exit; independent concurrent setups"
+    ],
+    "source_defects_or_divergences": [
+      "Records entry without proving stop-order trigger/fill",
+      "Ignores entry-bar exits; target-first when stop and target touched together",
+      "No spread/fees; MT5 acquisition cell must not be run in this task"
+    ],
+    "source_files": [
+      "XAUUSD BACKTEST V2.ipynb"
+    ]
+  },
+  "S014": {
+    "batch_route": "RELATED_DISTINCT_FROM_S015; no shared-URL alias",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Original implementation selection, chart clock, pending/protective execution parity"
+    ],
+    "review_depth": "PINE_CORE_AND_PYTHON_SIGNAL/SCORING_FUNCTIONS; driver/chart portions excluded",
+    "rules": [
+      "Pine: prior20 high/low sweep and reclaim with EMA50/200 side, session0930-1600 weekdays",
+      "Pine10k and1% equity NOT1% stop-risk; next-open order but signal-close reference stop/3R; BE at1R close",
+      "Python backtest_ict requests sweep+MSS+FVG on same bar; orderblock_backtest is sweep/EMA R scorer, no actual OB detection"
+    ],
+    "source_defects_or_divergences": [
+      "Pine session uses exchange timezone despite EST label; ATR-padding inputs unused",
+      "Python backtest_ict long low<prior20low and low>high[i-2] is impossible on valid OHLC; short symmetric contradiction",
+      "Orderblock scorer drops samebar stop/target ties and unresolved trades; outputs longs then shorts without timestamps; no chronological account ledger",
+      "Different implementations are not execution-parity equivalents"
+    ],
+    "source_files": [
+      "ICT_Turtle_Soup.pine",
+      "backtest_ict.py",
+      "orderblock_backtest.py"
+    ]
+  },
+  "S015": {
+    "batch_route": "R_ONLY_DIAGNOSTIC_CANDIDATE; related but not parameter duplicate of S014",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Pending-fill chronology, unresolved positions, fixed-risk account treatment and native quote costs"
+    ],
+    "review_depth": "FULL_FVG_SIGNAL/FILL/OUTCOME_AND_METRICS_FUNCTIONS; report driver not financially admitted",
+    "rules": [
+      "EMA50/200 aligned three-bar FVG; bullish low[i]>high[i-2], entry high[i-2]+spread (short symmetric)",
+      "Stop prior opposite extreme plus half-spread; default3R;15-bar fill window,30-bar outcome horizon",
+      "Gold point heuristic.1 times15 points =1.5 price cost in source; risk_pct/initial_balance arguments unused in strategy"
+    ],
+    "source_defects_or_divergences": [
+      "One-sided touch admits gap fills; target-first on dual-touch entry/outcome bars",
+      "Unresolved setups omitted; overlapping results unaccounted; metric USD=R*fixed risk, not chronological compound equity",
+      "Source drawdown uses cumulative R peak without initial0; unsupported as account DD"
+    ],
+    "source_files": [
+      "pnl_backtest.py",
+      "config.json"
+    ]
+  },
+  "S016": {
+    "batch_route": "DAILY_FAMILY_ONCE; retain both labelled within-ID variants, no duplicate independent count",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Explicit authentic-data adaptation, selected variant, broker lots and cost/account parity"
+    ],
+    "review_depth": "TWO_STRATEGY_CLASSES_AND_DATA/ACCOUNT_RUNNERS_REVIEWED; exact class AST comparison",
+    "rules": [
+      "Long-only DAILY close-channel breakout and close-channel exit; ATR40 sizing; target4ATR frozen at execution",
+      "One class20entry/20exit/1% nominal ATR risk; other95entry/20exit/2%; int units capped at95%cash",
+      "10million original cash,commission.00001 per side; no protective ATR stop placed"
+    ],
+    "source_defects_or_divergences": [
+      "PROVEN_WITHIN_ID_PARAMETER_VARIANTS: class AST identical excluding params; not two original systems",
+      "Docstring120/30 differs from actual20/20 or95/20",
+      "Data loader fabricates daily high/low using seed42 random.2% noise and Open=Close from Gold Index; publisher results not real spot OHLC"
+    ],
+    "source_files": [
+      "strategies/gold_donchian_channel_strategy.py",
+      "src/gold_donchian_channel_strategy.py"
+    ]
+  },
+  "S017": {
+    "batch_route": "BLOCKED_DISCRETIONARY_ASOF; do not invent historical wave labels",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Finish alternative notebook branches; prove human level timestamps and source futures quotes"
+    ],
+    "review_depth": "CELLS0-3_AND_CELL4_RULE_CORE_PARTIAL; notebook has further alternative/plot cells",
+    "rules": [
+      "Fixed human-specified March2026 H4 GC=F wave scenario, not generic multi-year wave detector",
+      "RSI14 simple average crosses below its MA14; no entry before2026-03-10; short belowWaveB5238.78 above invalidation4655.23",
+      "100k,100oz/lot,2lot first leg plus2 below4996.23; staged BE/profit near4977.13, final4815.40"
+    ],
+    "source_defects_or_divergences": [
+      "Human wave labels and fixed price levels have no verified as-of availability",
+      "Zero pre-2026 setups are by construction, not a multi-year negative edge result"
+    ],
+    "source_files": [
+      "XAUUSD_Elliott_Wave_Backtest_Preferred_Count.ipynb"
+    ]
+  },
+  "S018": {
+    "batch_route": "BLOCKED_ORIGINAL_DEPENDENCY; do not invent helper behaviour",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Missing original helpers, broker point/digits, pending/OCO tick sequence and native compile/parity"
+    ],
+    "review_depth": "FULL_SINGLE_MQL4_SOURCE_REVIEWED; native compiler not available/run",
+    "rules": [
+      "Exact XAUUSD symbol; current chart timeframe despite M5 comment; five completed-bar range",
+      "Buy/sell stops range+/-50points; opposite-side80point SL buffer;TP200points;Lots.30,MaxSpread50,magic202401",
+      "No pending expiry; reset when own orders zero; hedge disallowed default"
+    ],
+    "source_defects_or_divergences": [
+      "SOURCE_DEPENDENCY_GAP: HasOpenMarketOrder and DeletePendingOrders called but not defined or included",
+      "Compile failure inferred from missing helpers; no compiler run falsely claimed"
+    ],
+    "source_files": [
+      "XAUUSD Breakout.mq4"
+    ]
+  },
+  "S019": {
+    "batch_route": "NATIVE_M1_ACCOUNT_ADAPTER_QUEUE; not replaced by H1 approximation",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Full setup/position/fills parity; authenticated M1 event tape; verified instrument/fees/funding"
+    ],
+    "review_depth": "CONFIG/INSTRUMENT/EVENT_LOOP/COST_CORE; setup and position dependency graph incomplete",
+    "rules": [
+      "DefaultD1/H1/M15 cascade,EMA55/144,2swing lookback,ATR14*.5 stop buffer, FVG min.1ATR,50%retracement,24bar pending expiry",
+      "Default3R,1%risk,100k; optional BE2R+.02; NY17 DST session",
+      "Manage earlier positions, activate decided setups, expiry then limit fill, unfilled close-invalidation; one position/order per direction; lot sizing at current closed equity"
+    ],
+    "source_defects_or_divergences": [
+      "Instrument commission/swap/spread/slippage placeholders explicitly not verified broker terms",
+      "Closed-trade event equity curve cannot certify intrabar account drawdown",
+      "Full position/gap/OCO/protective semantics not yet independently audited"
+    ],
+    "source_files": [
+      "mtf_smc/config.py",
+      "mtf_smc/risk/instrument.py",
+      "mtf_smc/engine/backtester.py",
+      "mtf_smc/engine/costs.py"
+    ]
+  },
+  "S082": {
+    "batch_route": "BLOCKED_LOGICAL_ZERO_SIGNAL; no fabricated loss or profit",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Author clarification/corrected separately labelled source; M1/account terms for any changed variant"
+    ],
+    "review_depth": "FULL_SINGLE_ORIGINAL_RULE/OUTCOME_MODULE",
+    "rules": [
+      "Written M1 virgin close age6,wick>=.30,risk<=.80,close-entry,1tick beyondwick,1.5R; one position",
+      "Native is_touched uses high>=level OR low<=level; older candidate has intervening bars",
+      "Stop-first outcome walk from following bar; no dollar account/risk sizing; v2 confluence prose not implemented"
+    ],
+    "source_defects_or_divergences": [
+      "PROVEN_LOGICAL_ZERO_SIGNAL: for valid low<=high the OR is true for every price level; every candidate is discarded",
+      "Age loop actually starts strictly more than6bars old; do not silently changeORtoAND"
+    ],
+    "source_files": [
+      "virgin_rejection_backtest.py",
+      "STRATEGY.md"
+    ]
+  },
+  "S083": {
+    "batch_route": "BIDASK_M1_NATIVE_QUEUE; no synthetic ASK or H1 substitution",
+    "complete_fingerprint_withheld": true,
+    "licence": "UNQUALIFIED_FOR_REDISTRIBUTION_OR_DEPLOYMENT",
+    "missing_for_execution": [
+      "Authenticated minute BID/ASK OHLC and mid-chart construction; explicit001B reference and bounded prefix/gap tests"
+    ],
+    "review_depth": "001B_SIGNAL_AND_SHARED_ENGINE/DATA/COST_CORE; other research families not reviewed",
+    "rules": [
+      "001B daily trend confirmed pivots+EMA50 (EMA50/200 option); H4EMA50 agreement; known_at backward asof",
+      "H4 confirmedk3 pivot zone requires2touches,.5ATR tolerance,.25ATR pad,maxage120; M15wick rejection with directional close third",
+      "Stop M15eightbar structure/zone+.5ATR; distance.3..4ATR; nextM15openASK/BID; oneposition,minute stop-first,3daytimeout",
+      "Native reference2R/.25%10k from run_insample; multiple grids exist and are not additional independent systems"
+    ],
+    "source_defects_or_divergences": [
+      "preregister.py freezes001A, not catalogue001B; cannot reuse its OOS certification for001B",
+      "Gap-through-stop fills at stop+/-slip, without open-price floor; true broker parity unverified",
+      "No lot steps, funding/margin or full intrabar equity in shared engine"
+    ],
+    "source_files": [
+      "src/strategy.py",
+      "src/engine.py",
+      "src/dataset.py",
+      "src/costs.py",
+      "src/preregister.py",
+      "src/run_insample.py"
+    ]
+  }
+}

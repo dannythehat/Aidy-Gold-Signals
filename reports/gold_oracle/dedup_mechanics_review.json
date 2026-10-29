@@ -1,0 +1,1786 @@
+{
+  "audited_equivalence_pairs": [],
+  "automatic_deletion_or_promotion": false,
+  "candidates": 83,
+  "catalogue_sha256": "e1bcc7e5a0f3b3f4b2a5e6fc9bc60285e1fc33a46a983e8bba636d66751ba8d7",
+  "distinct_upstream_urls": 61,
+  "instructions": [
+    "Same GitHub URL does NOT imply same strategy",
+    "Title tokens do NOT prove executable rule equivalence",
+    "Same audited full mechanics = review canonical duplicate",
+    "Same audited core, changed parameters/risk = parameter variant",
+    "Different rules can still be portfolio-correlated: compare signal event timings and returns across the identical original AIDY archives",
+    "Retain all original IDs, losing outcomes and links; never delete evidence"
+  ],
+  "live_trading_changes": 0,
+  "review_flags": [
+    {
+      "a": "S041",
+      "b": "S042",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.8889,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SIMILAR_DESCRIPTION_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout"
+      ],
+      "title_jaccard": 0.8
+    },
+    {
+      "a": "S036",
+      "b": "S037",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.9118,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SIMILAR_DESCRIPTION_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout",
+        "channel",
+        "turtle"
+      ],
+      "title_jaccard": 0.7143
+    },
+    {
+      "a": "S041",
+      "b": "S043",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.7429,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SIMILAR_DESCRIPTION_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "retest"
+      ],
+      "title_jaccard": 0.6667
+    },
+    {
+      "a": "S022",
+      "b": "S025",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.8,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.5
+    },
+    {
+      "a": "S042",
+      "b": "S043",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6032,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.5
+    },
+    {
+      "a": "S029",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6909,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "block",
+        "order"
+      ],
+      "title_jaccard": 0.4286
+    },
+    {
+      "a": "S064",
+      "b": "S065",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.7179,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "trend"
+      ],
+      "title_jaccard": 0.4286
+    },
+    {
+      "a": "S036",
+      "b": "S038",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6269,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.375
+    },
+    {
+      "a": "S037",
+      "b": "S038",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6269,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.375
+    },
+    {
+      "a": "S038",
+      "b": "S039",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.7536,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.375
+    },
+    {
+      "a": "S036",
+      "b": "S039",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6286,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S037",
+      "b": "S039",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6286,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S025",
+      "b": "S026",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "momentum"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S007",
+      "b": "S008",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3429,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "rsi"
+      ],
+      "title_jaccard": 0.2
+    },
+    {
+      "a": "S027",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "fvg"
+      ],
+      "title_jaccard": 0.2
+    },
+    {
+      "a": "S006",
+      "b": "S008",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1538,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "ema"
+      ],
+      "title_jaccard": 0.1667
+    },
+    {
+      "a": "S020",
+      "b": "S023",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4561,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "reversal"
+      ],
+      "title_jaccard": 0.1667
+    },
+    {
+      "a": "S005",
+      "b": "S008",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3396,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "trend"
+      ],
+      "title_jaccard": 0.1429
+    },
+    {
+      "a": "S005",
+      "b": "S009",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5085,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout"
+      ],
+      "title_jaccard": 0.1429
+    },
+    {
+      "a": "S021",
+      "b": "S022",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4615,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout"
+      ],
+      "title_jaccard": 0.1429
+    },
+    {
+      "a": "S021",
+      "b": "S025",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4528,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "breakout"
+      ],
+      "title_jaccard": 0.1429
+    },
+    {
+      "a": "S020",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.459,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [
+        "sweep"
+      ],
+      "title_jaccard": 0.125
+    },
+    {
+      "a": "S029",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4151,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.125
+    },
+    {
+      "a": "S005",
+      "b": "S006",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1667,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S005",
+      "b": "S007",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1818,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S006",
+      "b": "S007",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2667,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S006",
+      "b": "S009",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3111,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S007",
+      "b": "S009",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3902,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S008",
+      "b": "S009",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.32,
+      "flags": [
+        "AUDITED_MECHANICS_DIFFER",
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S014",
+      "b": "S015",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1127,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S021",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.25,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S022",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1429,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S024",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2712,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S025",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1404,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S026",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1569,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S027",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1739,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3077,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2581,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S020",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4068,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S023",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3019,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S024",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2182,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S026",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2128,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S027",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.0476,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2083,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1724,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2807,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S021",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2182,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S023",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2222,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S024",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2979,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S026",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2564,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S027",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1765,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2449,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S022",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2553,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S024",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.25,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S025",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3913,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S026",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S027",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2286,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.439,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1961,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.36,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S023",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.375,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S024",
+      "b": "S025",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.375,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S024",
+      "b": "S026",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.0952,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S024",
+      "b": "S027",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1081,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S024",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3256,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S024",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3396,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S024",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3077,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S024",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.48,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S025",
+      "b": "S027",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.0571,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S025",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2439,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S025",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2745,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S025",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.28,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S025",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.25,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S026",
+      "b": "S027",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2069,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S026",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1143,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S026",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1778,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S026",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.1364,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S026",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3333,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S027",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.25,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S027",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2051,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S027",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.0541,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S028",
+      "b": "S029",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3043,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S028",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.2667,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S028",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3256,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S030",
+      "b": "S031",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3077,
+      "flags": [
+        "SAME_UPSTREAM_URL_ONLY"
+      ],
+      "same_source_url": true,
+      "shared_method_words": [],
+      "title_jaccard": 0.0
+    },
+    {
+      "a": "S076",
+      "b": "S077",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.8966,
+      "flags": [
+        "SIMILAR_DESCRIPTION_ONLY",
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "london"
+      ],
+      "title_jaccard": 0.75
+    },
+    {
+      "a": "S022",
+      "b": "S071",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6471,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.6
+    },
+    {
+      "a": "S008",
+      "b": "S080",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6667,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "ema",
+        "rsi",
+        "trend"
+      ],
+      "title_jaccard": 0.5
+    },
+    {
+      "a": "S003",
+      "b": "S005",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5714,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "trend"
+      ],
+      "title_jaccard": 0.4
+    },
+    {
+      "a": "S009",
+      "b": "S022",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.56,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.4
+    },
+    {
+      "a": "S009",
+      "b": "S025",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.549,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.4
+    },
+    {
+      "a": "S022",
+      "b": "S077",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.7037,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.4
+    },
+    {
+      "a": "S025",
+      "b": "S077",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6909,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.4
+    },
+    {
+      "a": "S006",
+      "b": "S080",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.35,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "adx",
+        "ema"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S008",
+      "b": "S060",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6818,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "pullback",
+        "rsi"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S009",
+      "b": "S032",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5538,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "asian",
+        "breakout"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S009",
+      "b": "S077",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4667,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S011",
+      "b": "S060",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "ma",
+        "pullback",
+        "rsi"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S012",
+      "b": "S028",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "fvg",
+        "retest"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S025",
+      "b": "S071",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5797,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.3333
+    },
+    {
+      "a": "S008",
+      "b": "S078",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6038,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "ema",
+        "pullback"
+      ],
+      "title_jaccard": 0.2857
+    },
+    {
+      "a": "S009",
+      "b": "S071",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4324,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.2857
+    },
+    {
+      "a": "S010",
+      "b": "S060",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3077,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "ma",
+        "rsi"
+      ],
+      "title_jaccard": 0.2857
+    },
+    {
+      "a": "S012",
+      "b": "S020",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6562,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "liquidity",
+        "sweep"
+      ],
+      "title_jaccard": 0.2857
+    },
+    {
+      "a": "S020",
+      "b": "S059",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6479,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "liquidity",
+        "sweep"
+      ],
+      "title_jaccard": 0.2857
+    },
+    {
+      "a": "S053",
+      "b": "S078",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4706,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "ema",
+        "vwap"
+      ],
+      "title_jaccard": 0.2857
+    },
+    {
+      "a": "S071",
+      "b": "S077",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5897,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "range"
+      ],
+      "title_jaccard": 0.2857
+    },
+    {
+      "a": "S002",
+      "b": "S020",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5714,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "reversal",
+        "sweep"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S005",
+      "b": "S036",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6769,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "channel"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S005",
+      "b": "S037",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6769,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "channel"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S012",
+      "b": "S030",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4561,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "smc",
+        "sweep"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S012",
+      "b": "S059",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6567,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "liquidity",
+        "sweep"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S014",
+      "b": "S038",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6349,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S015",
+      "b": "S064",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4474,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "fvg",
+        "trend"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S041",
+      "b": "S068",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6957,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "retest"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S050",
+      "b": "S051",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.566,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "ny",
+        "orb"
+      ],
+      "title_jaccard": 0.25
+    },
+    {
+      "a": "S014",
+      "b": "S036",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6562,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.2222
+    },
+    {
+      "a": "S014",
+      "b": "S037",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6562,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.2222
+    },
+    {
+      "a": "S014",
+      "b": "S039",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.6061,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "breakout",
+        "turtle"
+      ],
+      "title_jaccard": 0.2222
+    },
+    {
+      "a": "S029",
+      "b": "S055",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.4483,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "block",
+        "order"
+      ],
+      "title_jaccard": 0.2222
+    },
+    {
+      "a": "S030",
+      "b": "S055",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5263,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "block",
+        "order"
+      ],
+      "title_jaccard": 0.2222
+    },
+    {
+      "a": "S008",
+      "b": "S011",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.5294,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "pullback",
+        "rsi"
+      ],
+      "title_jaccard": 0.2
+    },
+    {
+      "a": "S010",
+      "b": "S011",
+      "cannot_assert_duplicate_without_source_audit": true,
+      "description_similarity": 0.3158,
+      "flags": [
+        "SHARED_METHOD_WORDS_ONLY"
+      ],
+      "same_source_url": false,
+      "shared_method_words": [
+        "ma",
+        "rsi"
+      ],
+      "title_jaccard": 0.1818
+    }
+  ],
+  "review_flags_count": 125,
+  "schema": "oracle.gold.83.conservative_dedup.v1",
+  "shared_source_groups": [
+    {
+      "candidate_count": 2,
+      "classification": "SHARED_SOURCE_NOT_PROOF_OF_DUPLICATE",
+      "ids": [
+        "S014",
+        "S015"
+      ],
+      "source_url": "https://github.com/balaji4621/xauusd-turtle-soup-backtest"
+    },
+    {
+      "candidate_count": 12,
+      "classification": "SHARED_SOURCE_NOT_PROOF_OF_DUPLICATE",
+      "ids": [
+        "S020",
+        "S021",
+        "S022",
+        "S023",
+        "S024",
+        "S025",
+        "S026",
+        "S027",
+        "S028",
+        "S029",
+        "S030",
+        "S031"
+      ],
+      "source_url": "https://github.com/baturdenada/gold-sweep-backtester"
+    },
+    {
+      "candidate_count": 5,
+      "classification": "SHARED_SOURCE_NOT_PROOF_OF_DUPLICATE",
+      "ids": [
+        "S005",
+        "S006",
+        "S007",
+        "S008",
+        "S009"
+      ],
+      "source_url": "https://github.com/sbrakni/mql5-trading-bot-claude-experiment"
+    },
+    {
+      "candidate_count": 3,
+      "classification": "SHARED_SOURCE_NOT_PROOF_OF_DUPLICATE",
+      "ids": [
+        "S041",
+        "S042",
+        "S043"
+      ],
+      "source_url": "https://www.mql5.com/en/code/75922"
+    },
+    {
+      "candidate_count": 4,
+      "classification": "SHARED_SOURCE_NOT_PROOF_OF_DUPLICATE",
+      "ids": [
+        "S036",
+        "S037",
+        "S038",
+        "S039"
+      ],
+      "source_url": "https://www.mql5.com/en/code/77687"
+    },
+    {
+      "candidate_count": 2,
+      "classification": "SHARED_SOURCE_NOT_PROOF_OF_DUPLICATE",
+      "ids": [
+        "S064",
+        "S065"
+      ],
+      "source_url": "https://www.tradingview.com/script/tnumdlbv"
+    }
+  ],
+  "shared_source_groups_count": 6,
+  "source_audited_rule_signatures_count": 6,
+  "source_catalog_date_utc": "2026-10-15",
+  "source_reuse_excess_references": 22,
+  "status": "DISCOVERY_PRECHECK_NEEDS_SOURCE_PARITY_AND_TRADE_OVERLAP"
+}

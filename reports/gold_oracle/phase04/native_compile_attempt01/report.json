@@ -1,0 +1,210 @@
+{
+  "compiler": {
+    "available": false,
+    "broker_connection": false,
+    "error": "Response status code does not indicate success: 404 (Not Found).",
+    "terminal_started": false,
+    "url": "https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mql64.exe"
+  },
+  "notes": "Official standalone compiler only. No MetaTrader terminal, broker login, strategy tester or account started. Missing native SDK is a dependency blocker, not a strategy loss.",
+  "schema": "oracle.gold.native_compile_attempt.v1",
+  "sources": [
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S044"
+      ],
+      "path": "SuperTrendTV.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "c0632c1fe92a0ff079b748c024a5d84ef98be62d54d1d438179a0603f355858d",
+      "source_url": "https://www.mql5.com/en/code/download/77009/SuperTrendTV.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S036",
+        "S037",
+        "S038",
+        "S039"
+      ],
+      "path": "BreakoutExitLab.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "16cf59aa7a5c81850f6bd8090e9ae571f6cec0e82b1a576742f03b3cc198e0a6",
+      "source_url": "https://www.mql5.com/en/code/download/77687/BreakoutExitLab.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S045"
+      ],
+      "path": "CMEGapTracker.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "e67078db4bcaa40c079540b1350805b54b2d59421e96a19c0881f4e39a0fbbf4",
+      "source_url": "https://www.mql5.com/en/code/download/77686/CMEGapTracker.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S041",
+        "S042",
+        "S043"
+      ],
+      "path": "DailyZoneRecovery.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "eb202f66865a3fa07de463a80ae789cfbd2df7e6bc8d912cb3f0234d1547db13",
+      "source_url": "https://www.mql5.com/en/code/download/75922/DailyZoneRecovery.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S040"
+      ],
+      "path": "GoldBreakoutEA.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "a904aa1a7db85fd006a3989671025ce022fc304584da3fbda7116621770dc105",
+      "source_url": "https://www.mql5.com/en/code/download/77691/GoldBreakoutEA.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S032"
+      ],
+      "path": "GoldLondonBreakout.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "0b0637eaa5c9067fced7aba8ae5b9174ad8098724d8be53e01ce5e3fcf335f8f",
+      "source_url": "https://www.mql5.com/en/code/download/75586/GoldLondonBreakout.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S047"
+      ],
+      "path": "Grid_EA_Pro.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "65785963b73dea786f7ba8a5e38d1f83b1037bc82a33d435f4f6f31c5983be56",
+      "source_url": "https://www.mql5.com/en/code/download/71700/Grid_EA_Pro.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S034"
+      ],
+      "path": "marsi_ea.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "844816171ab75c70421c533d68e53074d9a50e366897e6fe2d51064c472c1281",
+      "source_url": "https://www.mql5.com/en/code/download/60730/marsi_ea.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S071"
+      ],
+      "path": "ORB_Opening_Range_Breakout_EA.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "1e0b888760acea8949854bdb7ad2e808e4f8e8301a3c86b0567e8809e47c06e3",
+      "source_url": "https://www.mql5.com/en/articles/download/20339/ORB_Opening_Range_Breakout_EA.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S049"
+      ],
+      "path": "ORB_RiskManaged.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "e95ee85351c6ca2c90f8788ece3ffbce6b3e3814a366f2af2bfb0124bd3d8ba3",
+      "source_url": "https://www.mql5.com/en/code/download/77967/ORB_RiskManaged.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S048"
+      ],
+      "path": "PrecisionSniper.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "a5177b8a521459cf1e7d31222e4a59ebe04c528c2d71778203f58aa35aa3ce84",
+      "source_url": "https://www.mql5.com/en/code/download/71860/PrecisionSniper.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S035"
+      ],
+      "path": "Quantum_XAUUSD_Silver_Trader.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "58aac58d1ba56ab25a48e7f2421a87b19b0fee31638e656faed5e815592d292d",
+      "source_url": "https://www.mql5.com/en/code/download/73622/Quantum_XAUUSD_Silver_Trader.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S033"
+      ],
+      "path": "SessionRangeBreakout.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "5e3cbac5e4d5d6503ec3e150396b4402db7ec652cecb0406c839b0712f0ce435",
+      "source_url": "https://www.mql5.com/en/code/download/72882/SessionRangeBreakout.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S046"
+      ],
+      "path": "SessionSweepBoxes.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "e81168c95cf0f49c2c86e00d352c28dd893075e31fc7155e56ffca2b9412b0e1",
+      "source_url": "https://www.mql5.com/en/code/download/77953/SessionSweepBoxes.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S044"
+      ],
+      "path": "SuperTrendEA.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "02ee1aacaf80abf9187942a2a139825e14642fcf4adeec7d09f68afc604ccc03",
+      "source_url": "https://www.mql5.com/en/code/download/77009/SuperTrendEA.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    },
+    {
+      "error": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE",
+      "ids": [
+        "S079"
+      ],
+      "path": "XANDER_Gold_Recovery.mq5",
+      "platform_execution_parity": false,
+      "source_modified": false,
+      "source_sha256": "61abdab360819f543140c017d0a878b70c630003280205ffe97edadb8a35985b",
+      "source_url": "https://www.mql5.com/en/code/download/72278/XANDER_Gold_Recovery.mq5",
+      "status": "BLOCKED_OFFICIAL_COMPILER_UNAVAILABLE"
+    }
+  ]
+}

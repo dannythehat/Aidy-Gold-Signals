@@ -1,0 +1,5 @@
+{
+  "status": "SUPERSEDED_HARNESS_DIAGNOSTIC_PRESERVED",
+  "defect": "S066 newly replaced marketable bracket on close was left until next bar; corrected before CI. Original first local outputs are retained, not used in shortlist.",
+  "zip_sha256": "1d1e02af3ba6d8ba8a7f2e2da7b01e573bc1c5654524835fba320b38f6303ee6"
+}

@@ -1,0 +1,20 @@
+{
+  "artifact_id": 12874836569,
+  "ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40821266442",
+  "commit": "99b496a6f6e13e8bdbbe23d29f9dd5bf05050b41",
+  "members_sha256": {
+    "results/S083_common_base_daily.csv": "db14223f8224da64f4f0b07066b0a22e96d4684a7ee438627cdb028d672fb9b5",
+    "results/S083_common_base_exact_trades.csv": "8db2e936967b903d7c8c87a6c5816be573473a3365dd501c8bb247922fd44a29",
+    "results/S083_common_base_monthly.csv": "9c989b2873eeba878c0aeb2ce69e866f7c5438df4c4d85f61ea967520f3eb254",
+    "results/S083_common_base_weekly.csv": "8a5f30e5f73fecddd22945fa3ae18bd6c084b55cd079933e0bac375b96d6e127",
+    "results/S083_common_base_yearly.csv": "ebf1abd32e4e8ebc6f47f0d6704fd41f1fb4e7b73eefb80f1670ee6d9a7c8405",
+    "results/S083_common_stress_daily.csv": "9cb0bc581e38d87d68f8e65fb24c4ff5dea325b6ce3357f7723a1a08338553ea",
+    "results/S083_common_stress_exact_trades.csv": "821df1aa33c57b876810c4bd4522d71ca5f6fb4310298f6f125dfd6232ef0a97",
+    "results/S083_common_stress_monthly.csv": "40aca82f1cd75fbee65c77667537dbd908af46ad9d9f238957043f13abdb2db7",
+    "results/S083_common_stress_weekly.csv": "f6091d795069ce22136adf1fefeef61bd4aa374b23abcf633865cfe16a833e30",
+    "results/S083_common_stress_yearly.csv": "bcc42d822550889792654a7dea5bcc9501b3aec08f63c92a8c3416aebedb349d",
+    "results/report.json": "2651b5a3729eaedc67f1cef9b24cae56877bc95748f8cd0b67230e44217c8b6c",
+    "tests.xml": "a70f94b2302cc7d63e7c34abbc5f85b9c8f3a850388c689dc9e90400e24de6da"
+  },
+  "zip_sha256": "acab30523d3edc3c18718ed5d573dd97ff94b04fe81f94a43ba9a01ddb75b562"
+}

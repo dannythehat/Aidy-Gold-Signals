@@ -1,0 +1,24 @@
+name: Oracle Gold phase05 offline native runtime probe
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths: ['scripts/oracle_gold/mt5_offline_probe.ps1', '.github/workflows/oracle-gold-phase05-mt5-probe.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile-originals-no-terminal:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Account-free native runtime probe; network blocked before terminal and tester start
+        shell: pwsh
+        run: ./scripts/oracle_gold/mt5_offline_probe.ps1 -OutDir artifacts/oracle_gold/phase05_offline_probe
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-phase05-offline-native-probe
+          path: artifacts/oracle_gold/phase05_offline_probe/
+          retention-days: 90
+          if-no-files-found: error

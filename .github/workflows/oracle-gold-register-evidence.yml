@@ -1,0 +1,77 @@
+name: Oracle Gold committed evidence integrity
+
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'reports/gold_oracle/**'
+      - 'scripts/oracle_gold/build_register.py'
+      - 'scripts/oracle_gold/record_results.py'
+      - 'scripts/oracle_gold/diagnostics.py'
+      - 'scripts/oracle_gold/record_batch02.py'
+      - 'scripts/oracle_gold/continuation_audit.py'
+      - 'scripts/oracle_gold/batch_queue.py'
+      - 'research/gold_oracle/continuation_rule_cards.json'
+      - 'tests/test_oracle_gold_continuation.py'
+      - 'tests/test_oracle_gold_register.py'
+      - '.github/workflows/oracle-gold-register-evidence.yml'
+      - '.github/workflows/s003-breakout-follow-two-period.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-result-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: src:.
+      ORACLE_APEX_ROOT: /tmp/oracle-apex
+      ORACLE_S010_ROOT: /tmp/oracle-s010
+      ORACLE_SWEEP_ROOT: /tmp/oracle-sweep
+      ORACLE_S012_ROOT: /tmp/oracle-s012
+      ORACLE_S014_ROOT: /tmp/oracle-s014
+      ORACLE_S016_ROOT: /tmp/oracle-s016
+      ORACLE_S082_ROOT: /tmp/oracle-s082
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest pandas numpy matplotlib google-cloud-bigquery ruff pyyaml
+      - name: Source originals only; no historical database or broker credentials
+        run: |
+          git clone --quiet https://github.com/sbrakni/MQL5-trading-bot-claude-experiment.git /tmp/oracle-apex
+          git -C /tmp/oracle-apex checkout --quiet 3dab20e20a846edae9ac6fcf56d6b090dbba9f98
+          git clone --quiet https://github.com/AluminumShark/Tick-Backtest.git /tmp/oracle-s010
+          git -C /tmp/oracle-s010 checkout --quiet 61dd6b2dd8b6550f668b828e023d7d808bfd8fbd
+          git clone --quiet https://github.com/baturdenada/gold-sweep-backtester.git /tmp/oracle-sweep
+          git -C /tmp/oracle-sweep checkout --quiet 39dbb6ec67ad772f778bf30f4a0ada741e08bef4
+          git clone --quiet https://github.com/frankabingale1111/smc-backtest.git /tmp/oracle-s012
+          git -C /tmp/oracle-s012 checkout --quiet 2349907aad553200bac822aac7f91add67a281f7
+          git clone --quiet https://github.com/balaji4621/xauusd-turtle-soup-backtest.git /tmp/oracle-s014
+          git -C /tmp/oracle-s014 checkout --quiet 15eb8b8bdc7db7acfd198c2ce98b103f3750d48d
+          git clone --quiet https://github.com/waihin26/Systematic-Commodity-Trading.git /tmp/oracle-s016
+          git -C /tmp/oracle-s016 checkout --quiet dad1684dd421ccaf134f73b9315a951a02938bd3
+          git clone --quiet https://github.com/sivaram311/xauusd-virgin-rejection.git /tmp/oracle-s082
+          git -C /tmp/oracle-s082 checkout --quiet d2ac7c58f60c3588bb7b5c508f126a3e6e7f65b8
+      - name: Reconcile every committed ledger, source identity, failure and known defect
+        run: |
+          mkdir -p artifacts/oracle_gold/register_integrity
+          ruff check scripts/oracle_gold tests/test_oracle_gold_batch01.py tests/test_oracle_gold_batch02.py tests/test_oracle_gold_continuation.py tests/test_oracle_gold_register.py
+          python -m pytest -q tests/test_oracle_gold_batch01.py tests/test_oracle_gold_batch02.py tests/test_oracle_gold_continuation.py tests/test_oracle_gold_register.py tests/test_gold_hunter_oracle_dedup.py tests/test_strategy_lab_s010_backtest.py tests/test_strategy_lab_system_processor.py --junitxml=artifacts/oracle_gold/register_integrity/junit.xml
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+          for name in ('s003-breakout-follow-two-period.yml', 'oracle-gold-source-batch01.yml', 'oracle-gold-source-batch02.yml', 'oracle-gold-register-evidence.yml'):
+              yaml.safe_load((Path('.github/workflows')/name).read_text())
+          print('RESEARCH_WORKFLOW_YAML_VALID')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-83-register-and-ledger-integrity
+          path: artifacts/oracle_gold/register_integrity/
+          retention-days: 90
+          if-no-files-found: error

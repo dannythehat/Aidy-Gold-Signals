@@ -1,0 +1,112 @@
+param([Parameter(Mandatory=$true)][string]$OutDir, [switch]$InitialiseSdkOffline, [string]$OnlyId='')
+$ErrorActionPreference = 'Stop'
+New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+$work = Join-Path $env:RUNNER_TEMP 'oracle-official-sdk'
+New-Item -ItemType Directory -Force -Path $work | Out-Null
+$install = Join-Path $work 'platform'
+$receipt = @{terminal_started=$false; broker_connection=$false; native_execution_parity=$false; sources=@()}
+try {
+    # Ephemeral hosted runner only. Intercept every terminal/tester launch
+    # BEFORE installation, including any installer automatic startup.
+    foreach ($exe in @('terminal.exe','terminal64.exe','metatester.exe','metatester64.exe')) {
+        $key = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\$exe"
+        New-Item -Path $key -Force | Out-Null
+        New-ItemProperty -Path $key -Name Debugger -Value 'C:\Windows\System32\cmd.exe /c exit 0' -PropertyType String -Force | Out-Null
+        if ((Get-ItemProperty $key).Debugger -ne 'C:\Windows\System32\cmd.exe /c exit 0') {throw 'Terminal execution interception not established'}
+    }
+    $receipt.terminal_execution_intercepted_before_install = $true
+    $setup = Join-Path $work 'mt5setup.exe'
+    $url = 'https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe'
+    Invoke-WebRequest -Uri $url -OutFile $setup -TimeoutSec 60
+    $sig = Get-AuthenticodeSignature $setup
+    $receipt.installer = @{url=$url; sha256=(Get-FileHash $setup -Algorithm SHA256).Hash.ToLower(); signature=[string]$sig.Status; signer=[string]$sig.SignerCertificate.Subject}
+    if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'MetaQuotes') {throw 'Official installer Authenticode not verified'}
+    $p = Start-Process $setup -ArgumentList @('/auto',"/path:`"$install`"") -PassThru
+    if (-not $p.WaitForExit(360000)) {$p.Kill(); throw 'Official SDK installer timeout'}
+    $compiler = Join-Path $install 'metaeditor64.exe'
+    if (-not (Test-Path $compiler)) {throw 'Official MetaEditor not installed'}
+    $sig = Get-AuthenticodeSignature $compiler
+    if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'MetaQuotes') {throw 'MetaEditor Authenticode not verified'}
+    $receipt.compiler = @{sha256=(Get-FileHash $compiler -Algorithm SHA256).Hash.ToLower(); signature=[string]$sig.Status; signer=[string]$sig.SignerCertificate.Subject; version=(Get-Item $compiler).VersionInfo.FileVersion}
+    $sdk = Join-Path $install 'MQL5'
+    if (-not (Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh'))) {
+        $locations = @($install, (Join-Path $env:APPDATA 'MetaQuotes'), (Join-Path $env:ProgramData 'MetaQuotes'))
+        foreach ($location in $locations) {
+            $header = Get-ChildItem $location -Filter Trade.mqh -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($header) {$sdk=Split-Path (Split-Path (Split-Path $header.FullName -Parent) -Parent) -Parent; break}
+        }
+    }
+    New-Item -ItemType Directory -Force -Path (Join-Path $sdk 'Indicators') | Out-Null
+    $receipt.standard_library_available = Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh')
+    if (-not $receipt.standard_library_available -and $InitialiseSdkOffline) {
+        # The installed terminal normally extracts the bundled SDK on first
+        # start. Initialise only on this disposable host with all its network
+        # traffic denied, no account, no EA/script and automated trading OFF.
+        $terminal = Join-Path $install 'terminal64.exe'
+        $tsig = Get-AuthenticodeSignature $terminal
+        if ($tsig.Status -ne 'Valid' -or $tsig.SignerCertificate.Subject -notmatch 'MetaQuotes') {throw 'Terminal Authenticode not verified'}
+        if ((Get-Service MpsSvc).Status -ne 'Running') {throw 'Windows Firewall is not running; offline SDK bootstrap refused'}
+        foreach ($direction in @('Inbound','Outbound')) {
+            $rule = New-NetFirewallRule -DisplayName "OracleOfflineSdk$direction" -Direction $direction -Action Block -Program $terminal -Profile Any -Enabled True
+            if ($rule.Enabled -ne 'True') {throw 'Offline SDK firewall rule missing'}
+        }
+        $ini=Join-Path $work 'offline-sdk.ini'
+        @('[Common]','Login=0','Server=','Password=','KeepPrivate=0','NewsEnable=0','CertInstall=0','MQL5Login=','MQL5Password=',
+          '[Experts]','Enabled=0','AllowLiveTrading=0','AllowDllImport=0','[StartUp]','Expert=','Script=','Symbol=','Template=') |
+          Set-Content $ini -Encoding ascii
+        $receipt.sdk_initialisation = @{network='INBOUND_AND_OUTBOUND_BLOCKED_BEFORE_START'; account_credentials_supplied=$false; experts_enabled=$false; config_sha256=(Get-FileHash $ini -Algorithm SHA256).Hash.ToLower()}
+        $key='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\terminal64.exe'
+        Remove-ItemProperty $key -Name Debugger
+        try {
+            $tp=Start-Process $terminal -ArgumentList @('/portable',"/config:`"$ini`"") -PassThru
+            if (-not $tp.WaitForExit(30000)) {$tp.Kill(); $tp.WaitForExit()}
+        } finally {
+            Get-Process terminal64 -ErrorAction SilentlyContinue | Stop-Process -Force
+            New-ItemProperty $key -Name Debugger -Value 'C:\Windows\System32\cmd.exe /c exit 0' -PropertyType String -Force | Out-Null
+        }
+        $receipt.terminal_started=$true
+        $receipt.terminal_start_scope='EPHEMERAL_NETWORK_BLOCKED_SDK_EXTRACTION_ONLY; NO_ACCOUNT_OR_STRATEGY'
+        $sdk=Join-Path $install 'MQL5'
+        $receipt.standard_library_available=Test-Path (Join-Path $sdk 'Include/Trade/Trade.mqh')
+    }
+    $receipt.standard_library_root = $sdk
+    $receipt.standard_library_sha256 = @{}
+    foreach ($f in Get-ChildItem (Join-Path $sdk 'Include') -Filter '*.mqh' -Recurse -ErrorAction SilentlyContinue) {
+        $receipt.standard_library_sha256[$f.FullName.Substring($sdk.Length+1)] = (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower()
+    }
+    $pins = Get-Content 'research/gold_oracle/phase04/mql_compile_pins.json' -Raw | ConvertFrom-Json
+    if (Test-Path 'research/gold_oracle/phase04/additional_native_sources.json') {
+        $pins += Get-Content 'research/gold_oracle/phase04/additional_native_sources.json' -Raw | ConvertFrom-Json
+    }
+    if ($OnlyId) {$pins=@($pins | Where-Object {$_.ids -contains $OnlyId})}
+    $pins = $pins | Sort-Object @{Expression={if ($_.path -eq 'SuperTrendTV.mq5') {0} else {1}}},path
+    foreach ($pin in $pins) {
+        $row = @{ids=$pin.ids; source_url=$pin.endpoint; source_sha256=$pin.sha256; path=$pin.path; source_modified=$false; status='NOT_COMPILED'}
+        try {
+            $dir = Join-Path $work $pin.sha256.Substring(0,16)
+            New-Item -ItemType Directory -Force -Path $dir | Out-Null
+            $src = Join-Path $dir $pin.path
+            Invoke-WebRequest -Uri $pin.endpoint -OutFile $src -TimeoutSec 45 -UserAgent 'Mozilla/5.0'
+            if ((Get-FileHash $src -Algorithm SHA256).Hash.ToLower() -ne $pin.sha256) {throw 'Original bytes changed'}
+            $p = Start-Process $compiler -ArgumentList @('/portable',"/compile:`"$src`"", "/include:`"$sdk`"",'/log') -PassThru
+            if (-not $p.WaitForExit(60000)) {$p.Kill(); throw 'Compiler timeout'}
+            $binary = [IO.Path]::ChangeExtension($src,$(if ($src.EndsWith('.mq4')) {'.ex4'} else {'.ex5'}))
+            $log = [IO.Path]::ChangeExtension($src,'.log')
+            $row.status = 'NATIVE_COMPILE_FAILED'
+            if ((Test-Path $binary) -and (Get-Item $binary).Length -gt 0) {
+                $row.status = 'NATIVE_COMPILED'
+                $row.ex5_sha256 = (Get-FileHash $binary -Algorithm SHA256).Hash.ToLower()
+                if ($pin.path -eq 'SuperTrendTV.mq5') {Copy-Item $binary (Join-Path $sdk 'Indicators/SuperTrendTV.ex5') -Force}
+            }
+            if (Test-Path $log) {
+                $row.log_sha256 = (Get-FileHash $log -Algorithm SHA256).Hash.ToLower()
+                Copy-Item $log (Join-Path $OutDir ($pin.path+'.log'))
+            }
+        } catch {$row.error=$_.Exception.Message}
+        $receipt.sources += $row
+        Write-Output "$($row.path) $($row.status)"
+    }
+} catch {$receipt.environment_blocker=$_.Exception.Message}
+$receipt.terminal_processes_running = @(Get-Process -Name terminal,terminal64,metatester,metatester64 -ErrorAction SilentlyContinue).Count
+if ($receipt.terminal_processes_running -ne 0) {throw 'Unexpected terminal process'}
+$receipt | ConvertTo-Json -Depth 12 | Set-Content (Join-Path $OutDir 'native_metaeditor_report.json') -Encoding utf8

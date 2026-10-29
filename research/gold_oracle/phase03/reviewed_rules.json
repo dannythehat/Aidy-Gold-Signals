@@ -1,0 +1,371 @@
+{
+  "S032": {
+    "entry": "Asian server00-07 range; London07-11 dual pending breakout, buffer .15 chart ATR14, one placement attempt daily",
+    "exit": "Stop1.2 ATR14, target1.8R; pending expiry11; positions can carry across days",
+    "filters": "Range .15-.70 forming D1 ATR14; broker stops/freeze levels and live bid/ask entry validity",
+    "sizing": "1% equity stop-risk; broker tick value/size, lot floor then min/max clamp, margin check",
+    "management": "Manual tick OCO; no atomic simultaneous-fill guarantee; range includes boundary forming bar",
+    "blockers": ["Broker server clock/calendar, point/tick/lot/margin contract and quote chronology unbound", "D1/chart ATR shift0 and boundary range must be reconstructed tick-causally"],
+    "refs": ["Calculate", "Place", "OnTick", "Lot", "Range"]
+  },
+  "S033": {
+    "entry": "Indicator arrows: server00-06 range, first close beyond range plus20points through10:00",
+    "exit": "Absent: indicator has no order exits",
+    "filters": "First signal per direction/day; current forming bar is included, no closed-bar guard",
+    "sizing": "Absent: no account quantity",
+    "management": "Latched intrabar arrow can differ from reload; not executable EA",
+    "blockers": ["Original contains no account sizing, exits or execution contract"],
+    "refs": ["OnCalculate"]
+  },
+  "S034": {
+    "entry": "Live bid above SMA14 and RSI14<30 buys; bid below SMA and RSI>70 sells; CopyBuffer count2 physical ordering matters",
+    "exit": "100pip protective stop and300pip target; pip=10Point for digits3/5 otherwisePoint",
+    "filters": "Any position on symbol blocks a new entry; chart timeframe",
+    "sizing": "RiskPercent10 but lot formula divides by numeric stopLoss*tickValue/tickSize without PipSize conversion; round2dec; fallback .1lot",
+    "management": "Market orders, no magic isolation; slippage input unused",
+    "blockers": ["Broker quote/contract/timeframe and native buffer/execution parity unbound", "Do not repair sizing-unit inconsistency silently"],
+    "refs": ["OnTick", "calculateLot", "Pip"]
+  },
+  "S035": {
+    "entry": "Weighted RSI14, ADX14, SMA50/200 difference in broker points, chaos mean-return/std and random45-state score; threshold .65; M15 default",
+    "exit": "Gold preset8ATR14 stop, .7ATR target (not .7R); minimum target .5ATR; adaptive trailing",
+    "filters": "Chaos>=.35, server market calendar, min1bar Gold preset, margin and position-cost cap",
+    "sizing": ".5% base balance risk adjusted by sin(chaos*pi) and micro-equity correction, cap2%; broker lot rounding/min clamp; cap uses margin not notional",
+    "management": "MathSrand(GetTickCount), optional FILE_COMMON saved weights, account-wide unfiltered OnTrade latest deal; trail every30sec; DD halt returns before daily reset; hard stop off default",
+    "blockers": ["Original stochastic seed and saved weight state not specified/recoverable", "Broker contract, server clock, tick path, account history and native margin unbound"],
+    "refs": ["XP_GenerateTradeSignal", "XP_CalculateLotSize", "XP_Check", "XP_ApplyTrailing", "XP_UpdateLearning", "OnInit", "OnTick", "OnTimer", "OnTrade"]
+  },
+  "S036": {
+    "entry": "Fresh close breakout of prior20 high/low channel; next-open reference; same source also calculates55/20 input selection",
+    "exit": "Selected channel10 exit, initial2ATR20 stop; source independently scores ATR-trail and fixed2R branches too",
+    "filters": "EMA200 filter off by default; score last365days, arrows across loaded history",
+    "sizing": "Independent R setups, no dollar/equity quantity",
+    "management": "Overlapping independent setups; stop-first same bar, gap-aware stop/target, mark open setups at last closed bar",
+    "blockers": ["Indicator/R scorecard lacks account sizing/concurrency", "Catalogue20/10 channel selection is not a separate published executable"],
+    "refs": ["RunExit", "OnCalculate"]
+  },
+  "S037": {
+    "entry": "Fresh close breakout of prior55 high/low channel; same executable as S036 with entry lookback parameter changed",
+    "exit": "Selected channel20 exit, initial2ATR20 stop; same channel branch as S036",
+    "filters": "EMA200 filter off default; last365day score window",
+    "sizing": "Independent R setups, no dollar/equity quantity",
+    "management": "Same RunExit channel branch as S036; overlapping setups; only20/10 to55/20 parameters differ in catalogue selection",
+    "blockers": ["Indicator/R scorecard lacks account sizing/concurrency", "No source preset artifact uniquely binds catalogue55/20 selection"],
+    "refs": ["RunExit", "OnCalculate"]
+  },
+  "S038": {
+    "entry": "Same fresh Donchian entry family as S036-S039; default entry20",
+    "exit": "ATR trailing branch: initial2ATR20, best favorable extreme minus/plus3current ATR, updated after bar exits",
+    "filters": "EMA200 optional off; score365days",
+    "sizing": "R scorecard only, no account quantity",
+    "management": "Source calculates this exit method alongside channel and fixed target, not a separate independent bot",
+    "blockers": ["Indicator lacks executable account sizing/concurrency"],
+    "refs": ["RunExit", "OnCalculate"]
+  },
+  "S039": {
+    "entry": "Same fresh Donchian entry family as S036-S039; default20",
+    "exit": "Fixed2R target against initial2ATR20 stop; differs structurally from channel/trailing branches",
+    "filters": "EMA200 optional off; score365days",
+    "sizing": "R scorecard only, no account quantity",
+    "management": "Independent overlapping R setups and stop-first OHLC outcomes",
+    "blockers": ["Indicator lacks executable account sizing/concurrency"],
+    "refs": ["RunExit", "OnCalculate"]
+  },
+  "S040": {
+    "entry": "Fresh Donchian20 breakout from closed bar, default LONG ONLY",
+    "exit": "Initial2ATR20 stop and2R target default; optional channel10 or3ATR trail; attach to actual fill",
+    "filters": "EMA200 ON default, market calendar and15min before close, spread/risk<=.10; Friday filter optional off",
+    "sizing": "1% BALANCE risk through broker OrderCalcProfit; floor lot step, skip below minimum, cap maximum, margin check",
+    "management": "One own position; new-bar management; open without stops then attach; failed attachment attempts close immediately",
+    "blockers": ["Broker calendar, quote fills, volume contract, margin and native attachment parity unbound"],
+    "refs": ["OnTick", "Risk", "Lot", "Manage", "Open", "Market"]
+  },
+  "S041": {
+    "entry": "DailyZone CheckSignalS1: prior-day extreme zone, breakout excursion followed by closed M15 retest; source can emit both sides",
+    "exit": "Shared engine synthetic basket SL1.5%, TP.15% of weighted average, checked only first tick of each M1",
+    "filters": "Prior day range25-150% of mean4daily HIGH-LOW (not true-range ATR); max spread3000points only gates first entries",
+    "sizing": "Fixed .01 broker lots, floored then clamped; grid repeats FIRST lot at .34% adverse last-price distance",
+    "management": "All3 modules enabled default, separate magic numbers; hedging/netting lock differs; no source grid-count cap; no server SL/TP orders",
+    "blockers": ["Broker hedging/netting, margin, server day, lot/quote/funding contract unbound", "Shared3-module default account is not3 independent standalone accounts"],
+    "refs": ["CheckSignalS1", "CheckSL", "CheckTP", "ProcessGrid", "ProcessSymbol", "CalcLot", "IsStrategyBlocked"]
+  },
+  "S042": {
+    "entry": "DailyZone CheckSignalS2 state machine: closed M12 touches low/high zone then traverses beyond opposite daily extreme by .4%; stage reset after signal attempt",
+    "exit": "Shared basket SL1.5%, TP.01% weighted-average price, first M1 tick only",
+    "filters": "Same mean-daily-range4 filter and first-entry spread gate as S041",
+    "sizing": "Fixed .01 broker lots, repeated first lot grid at .01% adverse last-price distance",
+    "management": "Materially different signal state from S041/S043; shared uncapped recovery engine; default simultaneously enabled",
+    "blockers": ["Broker hedging/netting, margin, server day, lot/quote/funding contract unbound", "No source standalone account selection receipt"],
+    "refs": ["CheckSignalS2", "CheckSL", "CheckTP", "ProcessGrid", "ProcessSymbol", "CalcLot"]
+  },
+  "S043": {
+    "entry": "DailyZone CheckSignalS3: closed M6 level touch, .4% pullback, then zone retest; three-stage state rather than S042 traverse",
+    "exit": "Shared basket SL1.5%, TP.06% weighted-average price; first M1 tick only",
+    "filters": "Same mean-daily-range4 and spread first-entry gate",
+    "sizing": "Fixed .01 broker lots; repeated first lot grid .32% adverse distance",
+    "management": "Shared engine with distinct staged entry; SL/TP before grid, then entry checks; all3 modules enabled default",
+    "blockers": ["Broker hedging/netting, margin, server day, lot/quote/funding contract unbound", "No source standalone account selection receipt"],
+    "refs": ["CheckSignalS3", "CheckSL", "CheckTP", "ProcessGrid", "ProcessSymbol", "CalcLot"]
+  },
+  "S044": {
+    "entry": "Closed-bar SuperTrend10/factor3 direction flip; embedded original SuperTrendTV uses Wilder SMA-seeded RMA with up direction -1",
+    "exit": "Close previous own position on opposite flip; static stop at entry SuperTrend line plus buffer; no TP",
+    "filters": "Reject stale wrong-side SL; broker stop/freeze distance plus spread+2points; close must succeed before reversal",
+    "sizing": "Fixed .10 broker LOTS, nearest-step/clamp and margin affordability reduction",
+    "management": "Resource indicator must be compiled into EA; SL not trailed along each new SuperTrend line",
+    "blockers": ["Native MQL compilation/resource parity and broker volume/margin/quote contract unbound"],
+    "refs": ["OnTick", "OnCalculate", "Lot", "Open", "Stop"]
+  },
+  "S045": {
+    "entry": "Indicator fades CME-clock Friday16:00 to Sunday17:00 Chicago gap >=.30% on available spot bars; explicit server DST conversion",
+    "exit": "R scorecard stop1gap against entry, target Friday close, timeout5days; stop wins same-bar ambiguity",
+    "filters": "104week score window; rejects large time holes; US and EU DST routines",
+    "sizing": "No account sizing; independent R outcomes only",
+    "management": "Includes entry-bar high/low; spread from native signal bar; gap fill/heat statistics are distinct from closed-trade R",
+    "blockers": ["Indicator has no account quantity/concurrency", "Server offset/DST and spot-vs-CME source mapping require attestation"],
+    "refs": ["FindGaps", "ScoreGap", "UtcToServer", "OnCalculate"]
+  },
+  "S046": {
+    "entry": "Closed-bar sweep/reclaim of completed Asia00-08, London07-16, NY12-21 GMT ranges; one sweep/level default",
+    "exit": "None: indicator arrows and levels only",
+    "filters": "Cancel level on close beyond it;20day rolling display; session rebuild skips instances starting before window",
+    "sizing": "No quantity/account rules",
+    "management": "Forming bar updates graphics only; auto server offset unavailable in tester so manual+2 fallback; levels retired on next session instance",
+    "blockers": ["Original has no executable exits or sizing", "Server offset history not verified"],
+    "refs": ["FullPass", "ProcessBar", "CheckSweep", "DetectOffset", "InSession"]
+  },
+  "S047": {
+    "entry": "Default RSI10 H4 closed <=30 buy or >=70 sell; alternative fixed-points timer trigger; both directions default",
+    "exit": "Virtual basket TP500points, SL disabled; trail50+50points; overlap after5positions closes selected winner/loser pair",
+    "filters": "Server working hours00-00 disabled; native free margin/order limits; magic -1 includes ANY symbol-matching position",
+    "sizing": "Default .01 lot per1000BALANCE; adverse grid100points grows linearly by (count-1)*1.1 capped1000; lots last*1.1 cap999.9",
+    "management": "OnTimer calls OnTick every1sec as well as actual ticks; swap affects virtual P/L levels; order-count change resets trail; no grid-count limit",
+    "blockers": ["Broker lot/margin/funding/hedging contract and timer/tick ordering unbound", "Interactive chart buttons can change runtime state; no selected native state receipt"],
+    "refs": ["OnTick", "OnTimer", "OVERLAP", "ORDER_SEND", "LOT_CALCULATE", "VIRTUAL", "OPENED_VALUES", "TOTAL_VALUE"]
+  },
+  "S048": {
+    "entry": "Indicator EMA9/21 crossover with trend55, weighted RSI/MACD/ADX/DI/candle/volume score>=5 and5bar cooldown; default preset not Gold preset",
+    "exit": "Visual structure10bar SL plus .2ATR with .5ATR floor;1/2/3R milestones and stepped trail",
+    "filters": "Score grade, body>.1ATR, extension<1.5ATR, HTF bias; HTF buffers indexed by chart bar not timestamp and fallback current index0",
+    "sizing": "No account quantity or partial exit allocation",
+    "management": "R scorecard force-close value derived from milestone FLAGS rather than actual close P/L; TP flags updated before old-stop test can credit same-bar targets; end history state recorded on full recalc",
+    "blockers": ["Indicator lacks account sizing and fill rules", "Native tick volume unavailable; optional HTF mapping/recalc and scorecard defects preclude account claims"],
+    "refs": ["ApplyPreset", "FilterOK", "RecordTrade", "OnCalculate"]
+  },
+  "S049": {
+    "entry": "Generic-symbol US100 template: server16:30 15min OR, pending breakout +/-20points until18:30",
+    "exit": "Opposite range edge plus buffer stop,2R target; force close22:45; cancel opposite pending",
+    "filters": "Range .05-.60 prior D1 ATR14;3% daily loss and8% INITIAL balance hard stop; partial M1 range accepted if at least half bars",
+    "sizing": ".5% BALANCE via OrderCalcProfit and floored broker lot step, skip below min",
+    "management": "Tick equity protections; carry positions close next day; one placement attempt/day; OCO not atomic",
+    "blockers": ["Gold application requires actual broker clock, point/lot/margin/quote terms; publisher template is US100", "No native MQL execution parity"],
+    "refs": ["OnTick", "Range", "Risk", "Lot", "Protect", "Close"]
+  },
+  "S050": {
+    "entry": "LONG ONLY UTC13:00 OR, close crosses ORhigh during14:00-16:30; bullish candle",
+    "exit": "Signal-close minus ORrange stop, +2.5range target;20:00 close queues next-open fill",
+    "filters": "Date>=2024-01-01, weekdays, volume>1.5SMA20, ATR14<=2meanATR20, range<=2.5ATR",
+    "sizing": "100% EQUITY not1% stop risk;10kcapital; commission.02%, slippage2ticks",
+    "management": "Once/day; next-open orders; full current range targets frozen from signal close",
+    "blockers": ["Native source-compatible volume and native quantity rounding unavailable"],
+    "refs": ["strategy", "long", "entry", "exit", "close"]
+  },
+  "S051": {
+    "entry": "Actual LONG ONLY OR breakout, despite bidirectional catalogue label; UTC13range and14-16:30 entries",
+    "exit": "1R target vs ORrange stop;16:30 close queues next-open fill, differs from S05020:00",
+    "filters": "Same volume/ATR regime/range and weekday gates as S050",
+    "sizing": "Explicit1.5% EQUITY stop-risk / max(range,.01), clamp .001units;10kcapital",
+    "management": "One entry/day; sizing and exit changes materially alter account risk/return",
+    "blockers": ["Native source-compatible volume and native quantity rounding unavailable"],
+    "refs": ["strategy", "long", "entry", "exit", "close", "qty"]
+  },
+  "S052": {
+    "entry": "H1 Asia range00-08 exchange NY;09-17 failed breakout: previous close outside after prior inside, current closes back inside",
+    "exit": "Signal-close stop1.5ATR14 and2R target; next-open entry; reversal allowed",
+    "filters": "Killzone09-17 source defaults, not published example09:30-17/Asia00-04",
+    "sizing": "Explicit1% equity / stop distance overrides percent-entry default;25kcapital",
+    "management": "Source defaults RR2/pyramiding1 differ from published example RR3/pyramiding5; never conflate",
+    "blockers": ["Native fractional quantity rounding/minimum unverified; no guessed broker lots"],
+    "refs": ["strategy", "entry", "exit", "qty", "risk"]
+  },
+  "S053": {
+    "entry": "EMA9 cross Bollinger20 midpoint, EMA21 and close-VWAP alignment; flat only",
+    "exit": "Frozen signal-close1.5ATR stop/2ATR target; process orders on close",
+    "filters": "UTC Asia/London on, NY off; Mon-Thu on Friday off",
+    "sizing": "10% EQUITY entry, margin100; source platform capital default",
+    "management": "calc_on_order_fills and calc_on_every_tick TRUE; historical fill recalculation changes evaluation lifecycle",
+    "blockers": ["Original vendor volume for VWAP and native quantity rounding missing", "Native intrabar fill-recalculation parity not implemented"],
+    "refs": ["strategy", "entry", "exit", "long", "short"]
+  },
+  "S054": {
+    "entry": "Indicator EMA9/21 cross, EMA200 side,10bar liquidity sweep, RSI14>55/<45, MACD12/26/9 agreement",
+    "exit": "Plotted ATR14*1 stop and2ATR target only",
+    "filters": "Trend/momentum concurrence",
+    "sizing": "Absent",
+    "management": "Alerts/graphics, no orders or account lifecycle",
+    "blockers": ["No original executable account sizing/management"],
+    "refs": ["long", "short", "buy", "sell", "signal", "atr"]
+  },
+  "S055": {
+    "entry": "Indicator confirmed10bar pivot orderblock from prior20 opposite candle body>=.3ATR; touched rejection candle",
+    "exit": "Visual ATR14*1.5 stop, targets1.5R/2.5R with no partial allocation",
+    "filters": "EMA50, daily hlc3 VWAP, DMI14ADX>=20; London08:30-16:30 local, NY09:30-16 local",
+    "sizing": "Absent",
+    "management": "Block invalidates .3ATR beyond; one alert per continuous touch, resets outside",
+    "blockers": ["No account sizing/partial allocation/orders", "Native volume unavailable for VWAP"],
+    "refs": ["pivot", "bull", "bear", "long", "short", "alert", "atr"]
+  },
+  "S058": {
+    "entry": "M15 confirmed pivot5 sweep + MSS beyond previous bar + three-bar FVG; source fixed one unit",
+    "exit": "Current wick stop and2R, process-on-close entry",
+    "filters": "Exchange America/New_York07-10 and12:30-16",
+    "sizing": "ONE price unit,10kcapital,.01% per-fill commission; sourcev5 margin0",
+    "management": "Pyramiding0; default source settings; published example BTC not gold evidence",
+    "blockers": ["Native platform output parity, funding and broker fill qualification unverified"],
+    "refs": ["strategy", "entry", "exit", "pivot", "sweep", "mss", "fvg"]
+  },
+  "S059": {
+    "entry": "20/50bar sweep; Balanced default also SMMA9/13 cross or reclaim, above/below VWAP; Conservative MSS or Aggressive immediate sweep selectable",
+    "exit": "Frozen sweep wick buffered .5% stop, current20bar opposite extreme target, CRV>=1.5;50% partial next-open on SMMA cross",
+    "filters": "UTC08-20 inclusive; daily hlc3 VWAP;5bar active sweep; Conservative pivots3 confirmed",
+    "sizing": "2% EQUITY entry not2% stop-risk;10kcapital,.03%commission,slip2ticks,margin100",
+    "management": "Independent if-long and if-short share flat snapshot; partial cancels original full exit then new remainder exit; native OCA reservations matter",
+    "blockers": ["Native volume, fractional quantity rounding and partial/OCA fill parity missing"],
+    "refs": ["strategy", "Signal", "Valid", "strategy.entry", "strategy.exit", "strategy.close", "partial"]
+  },
+  "S060": {
+    "entry": "M5 EMA50>100>200>600 and RSI6 crosses BELOW20 buys; inverse trend with RSI crosses ABOVE80 sells",
+    "exit": "Every close resets stop1ATR14 / target2ATR14 around current close, may LOOSEN stop",
+    "filters": "EMA ladder only, no session filter",
+    "sizing": "Native compiled default ONE unit,1millioncapital,margin100,zero declared commission",
+    "management": "Default next-open fill, pyramiding default1; no invented fixed risk or fixed entry stop",
+    "blockers": ["Native platform output parity, funding and broker fill qualification unverified"],
+    "refs": ["strategy", "entry", "exit", "rsi", "ema"]
+  },
+  "S061": {
+    "entry": "H1 prior10bar sweep/reclaim above/below EMA200; native compiled defaultONE unit",
+    "exit": "Stop1.5ATR14 and3R from visible position average; no protective bracket on entry bar until close calculation",
+    "filters": "EMA200 direction only",
+    "sizing": "10kcapital,ONE unit,.01%commission,margin100",
+    "management": "Reversal can issue bracket for new side anchored to OLD position average; preserve; example FX:XAGUSD not gold evidence",
+    "blockers": ["Native platform output parity, funding and broker fill qualification unverified"],
+    "refs": ["strategy", "entry", "exit", "sweep", "atr"]
+  },
+  "S062": {
+    "entry": "Published weekly chart; EMA50/200 CROSS with RSI14<30 and close above upper BB20/2 long, inverse short",
+    "exit": "Dynamic price distance=(equity*.01)/(position-average or close), target2distance",
+    "filters": "Conjunction of contradictory-looking momentum criteria retained literally",
+    "sizing": "RiskPercent input DOES NOT size orders; defaultONE unit and1millioncapital",
+    "management": "Same strategy.exit ID called for both Long and Short; native replacement/association semantics not attested",
+    "blockers": ["Native exit-ID parity missing", "Weekly source must not silently become H1 strategy"],
+    "refs": ["strategy", "entry", "exit", "risk", "stop"]
+  },
+  "S063": {
+    "entry": "M1 fixed manual resistance4298.449/support4253.635 FVG reversal, ADX14/DI filters;2026Sep-2027Jan date window",
+    "exit": "Fib.618 reward toward opposite fixed level, stop=.8*(reward/2.5); source process-on-close",
+    "filters": "M1/time/date/manual levels; DISABLE_* day/hour/demo flags alter ALERT text, do not block actual strategy.entry",
+    "sizing": "Fixed$250risk / ((SLdistance+.15)*100+10), qty*100,20x notional cap;25kcapital",
+    "management": "varip and calc_every_tick true; source alert demo after2losses does not remove account trades",
+    "blockers": ["Manual level point-in-time provenance and realtime varip lifecycle missing", "Date window does not define2023-25 strategy; no invented historical levels"],
+    "refs": ["strategy", "entry", "exit", "risk", "DISABLE", "varip"]
+  },
+  "S064": {
+    "entry": "FVG component of shared composite with S065; SMA200 (not EMA),3bar gap then delayed one-sided zone touch; FVG priority",
+    "exit": "Zone far-edge +/-5*tick*10 stop,2R; optional trail off; BE inputs unused",
+    "filters": "Exchange02-16 weekdays, SMA200 direction and flat/distance logic; both components enabled default",
+    "sizing": "Fixed TWO units,.5cash/order,slip2ticks,platform1millioncapital; i_capital10k/i_risk1% UNUSED",
+    "management": "One shared account, consume zone on entry; gap-through one-sided touch can yield inverted stop/target; no silent repair",
+    "blockers": ["No standalone component default selection receipt", "Native both-marketable bracket priority and platform parity unverified"],
+    "refs": ["strategy", "entry", "exit", "fvg", "FVG", "free", "sma"]
+  },
+  "S065": {
+    "entry": "BB component of SAME composite program as S064; BB20/2 both open/close outside, body>=3*tick*10, wrong wick/body<=2",
+    "exit": "Wick +/-7*tick*10 stop; target ALWAYS BB midline despite target input",
+    "filters": "Shared SMA200/session/flat filter and account with S064; FVG gets priority",
+    "sizing": "Same fixedTWO units/.5cash per order/slip2ticks/1millioncapital; displayed risk inputs unused",
+    "management": "Separate entry component in shared account, not exact duplicate standalone strategy; BE inputs unused",
+    "blockers": ["No standalone component source selection receipt", "Shared account order arbitration/native platform parity unverified"],
+    "refs": ["strategy", "entry", "exit", "bb", "BB", "free", "sma"]
+  },
+  "S066": {
+    "entry": "Supertrend2/10 with RSI14 cross55/45; source labels direction+1 UP although native Pine up=-1",
+    "exit": "Dynamic risk=max(abs(avg-ST),abs(close-ST),10ticks),2R; NY19 end flatten on close",
+    "filters": "NY07-19; direction guard prevents adds despite pyramiding3",
+    "sizing": "Fixed$240k NOTIONAL / (close*pointvalue), not fixed risk; native default1millioncapital",
+    "management": "Bracket starts only when position visible; preserve actual countertrend sign rather than fix comment",
+    "blockers": ["Native fractional quantity/minimum and platform lifecycle parity missing"],
+    "refs": ["strategy", "entry", "exit", "qty", "stDir", "risk"]
+  },
+  "S067": {
+    "entry": "Indicator EMA9/21 cross OR confirmed pivot3 bounce within.3%; RSI14 50-70/30-50",
+    "exit": "Visual exit opposite cross, RSI extreme or EMA21 side; ATR14*1.5 stop and2R guide",
+    "filters": "Volume>SMA20 default; EMA50/200 trend OR short-term alignment",
+    "sizing": "Absent",
+    "management": "Signals and chart guides only, no account execution",
+    "blockers": ["No account sizing/exit order lifecycle", "Native vendor volume unavailable"],
+    "refs": ["buy", "sell", "exit", "signal", "pivot", "volume"]
+  },
+  "S068": {
+    "entry": "Indicator prior20bar high/low breakout AND retest on SAME bar, RSI14>30/<70",
+    "exit": "Absent",
+    "filters": "Not a persistent breakout-then-later-retest state machine",
+    "sizing": "Absent",
+    "management": "No strategy/account orders",
+    "blockers": ["Original lacks exits, sizing and account management"],
+    "refs": ["buy", "sell", "break", "retest", "rsi"]
+  },
+  "S069": {
+    "entry": "EMA200/50/20, double smoothed range27*1.8, momentum9/6/3 cross, RSI/MACD/volume/VWAP/80bar volume node",
+    "exit": "Basket .6% target or4% DD from average, close_all on close",
+    "filters": "Session filter OFF default; native volume/VWAP conditions active",
+    "sizing": "Explicit .5,.5,1,2,4unit grid at1/2/3/4% against FIRST fill",
+    "management": "Pyramiding4 despite five requested legs; count advances even if native rejects5th; process-on-close; FIFO/margin matter",
+    "blockers": ["Native volume unavailable", "Multi-entry FIFO, margin rejection and actual fill lifecycle unverified"],
+    "refs": ["strategy", "entry", "close_all", "dca", "qty", "vwap"]
+  },
+  "S070": {
+    "entry": "Indicator London07-12 sweeps prior Asia00-06; NY13-17 sweeps prior London; Asia sweeps priorNY; exchange clock",
+    "exit": "Absent; levels/labels only",
+    "filters": "MA50/200 cloud and ADR14 are display context, not sweep filters; no barstate confirmed guard",
+    "sizing": "Absent",
+    "management": "Default security daily OHLC displayed; prevHigh=dHigh[1] is previous chart bar of daily series, not necessarily previous completed day",
+    "blockers": ["No original account exits/sizing", "Intrabar labels can repaint; source indicator semantics retained"],
+    "refs": ["Sweep", "sweep", "request.security", "prevHigh", "alertcondition"]
+  },
+  "S071": {
+    "entry": "Server09:00 M5 OR30minutes then confirmed closed-M5 breakout; defaultConfirmBars1; UseBreakoutFilter empty no-op",
+    "exit": "Opposite range edge SL and2*RANGE TP, not2*actual risk; optional static50points/trailing off",
+    "filters": "One TOTAL trade/session outer guard despite per-direction max input; no EOD flatten",
+    "sizing": "Fixed .01 broker LOTS",
+    "management": "09:00 minute reset compares sessionStart09:00 against midnight, repeatedly resets each tick; missing09:00 ticks misses reset; trailing sell requires newSL<existingSL",
+    "blockers": ["Broker clock/lot/point/quote contract and native tick reset/fill parity unverified"],
+    "refs": ["OnTick", "ActivePositions", "ApplyPointsTrailing"]
+  },
+  "S079": {
+    "entry": "New-bar failed Keltner breakout: close2 outside then close1 back inside; EMA10 vs200; midEMA50 plus mean50HIGH-LOW incl forming bar",
+    "exit": "Basket+$30 / -$200 includes swap/commission; initialSLoff,TP500pips; trail300/300/100pips",
+    "filters": "Server02:30-21 initial entry; max spread65POINTS gate BEFORE ALL management; recovery bypasses session",
+    "sizing": "Fixed .01lot then recovery*1.4 every300pips adverse, max5; nearest broker lotstep/clamp,margincheck",
+    "management": "Tick recovery adds withoutSL/TP; wide spread delays basket risk controls; obtainedv1.2 updated2026-10-25 after catalogue freeze",
+    "blockers": ["Broker contract/time/quotes/funding unbound", "Current source version not proven identical to2026-10-15 catalogue original"],
+    "refs": ["GetSignal", "GetChannelRange", "OnTick", "Recovery", "Basket", "Lot", "Trail"]
+  },
+  "S080": {
+    "entry": "Indicator XAUUSD M15 EMA9/21 cross with EMA200 side,RSI14>55/<45,customADX14>=18",
+    "exit": "ATR14*1.5stop/2ATR target displayed, recalculated from latest signal price and CURRENT ATR",
+    "filters": "Explicit symbol/timeframe guard",
+    "sizing": "Absent",
+    "management": "No executable account orders; dynamic visual target not fixed risk execution",
+    "blockers": ["No original sizing/account lifecycle"],
+    "refs": ["buy", "sell", "signal", "adx", "atr"]
+  },
+  "S081": {
+    "entry": "M1 EMA3/33cross,RSI12>56/<45,HMA66slope and14bar room>.5ATR14;2023-2024 date gate",
+    "exit": "NO exit orders; opposite strategy.entry reverses; last position remains through2025",
+    "filters": "Unused minimumATR input; actualRSI56 not comment55",
+    "sizing": "Native compiled defaultONE unit,1millioncapital,margin0; published example100units/100k is DIFFERENT override",
+    "management": "Default next-open fills; no invented end-of-period liquidation; source-default account preserved",
+    "blockers": ["Native platform output parity, funding and broker fill qualification unverified"],
+    "refs": ["strategy", "entry", "rsi", "hma", "time"]
+  }
+}

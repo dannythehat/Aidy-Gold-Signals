@@ -1,0 +1,2777 @@
+{
+  "blockers": [
+    "No qualified source-faithful account engines share a verified venue/netting/lot/margin/funding contract",
+    "Source cash-stocklike S016 and continuous-ounce S083 cannot be added into an executable gold CFD account",
+    "Shared position/correlation/drawdown policy and broker contract require explicit reproducible simulation before a master result"
+  ],
+  "limits": [
+    "Already-examined36months",
+    "Different data/chart/capital/account-reset conventions",
+    "Cost sensitivity and source parameter relatives are not independent strategies",
+    "No independence inferred from correlation alone"
+  ],
+  "master_account_simulated": false,
+  "master_profit_claimed": false,
+  "pairs": [
+    {
+      "a": "S052_original_common_base",
+      "b": "S052_standard10000_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 1.0,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-09",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S066_original_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.11842071598118206,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-09",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S066_standard10000_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S083_gap_and_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.05609489860743652,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.15850475527890096,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.037102113421925445,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.00705499180263343,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.0316206337513039,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2024-02",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.15851900087196272,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.16496182872449772,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.2386572429211466,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2024-02",
+        "2024-05",
+        "2024-08",
+        "2025-07",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.037539427906001406,
+      "simultaneous_losing_months": [
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-08",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.038504545565037324,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2025-07",
+        "2025-08",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S052_standard10000_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.9999999999999996,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-09",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S066_original_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.12221241915730928,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-09",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S066_standard10000_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S083_gap_and_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.06263808295617299,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.16954627804215136,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.03862555325100021,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.06732193336485996,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.046160078825386495,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2024-02",
+        "2024-05",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.15012156038871574,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.17744316714640157,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.19751790850992845,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2025-07",
+        "2025-08",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.0916914054624089,
+      "simultaneous_losing_months": [
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-08",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_original_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.04804154819553715,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2025-07",
+        "2025-08",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S066_original_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.118420715981182,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-09",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S066_standard10000_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S083_gap_and_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.056094898607436876,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.15850475527890293,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.037102113421925355,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.007054991802633767,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.03162063375130546,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2024-02",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.15851900087196177,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.1649618287244976,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.23865724292114612,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2024-02",
+        "2024-05",
+        "2024-08",
+        "2025-07",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.03753942790600281,
+      "simultaneous_losing_months": [
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-08",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.0385045455650393,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2025-07",
+        "2025-08",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S066_original_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.12221241915730875,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-09",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S066_standard10000_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S083_gap_and_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.0626380829561741,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.1695462780421514,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.038625553251001137,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.06732193336486048,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.04616007882538594,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2024-02",
+        "2024-05",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.1501215603887162,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-08",
+        "2024-08",
+        "2024-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.17744316714640174,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.19751790850992718,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-05",
+        "2024-08",
+        "2025-07",
+        "2025-08",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.09169140546240993,
+      "simultaneous_losing_months": [
+        "2023-06",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-08",
+        "2024-09",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S052_standard10000_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.04804154819553769,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2025-07",
+        "2025-08",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S066_standard10000_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S083_gap_and_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.10727928862161248,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2024-05",
+        "2024-06",
+        "2024-10",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.09448443551610473,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2024-12",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.11264800315852577,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-11",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.016039981038786316,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.1667203367675719,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-06",
+        "2023-07",
+        "2024-02",
+        "2024-06",
+        "2024-08",
+        "2024-12",
+        "2025-02",
+        "2025-05",
+        "2025-07",
+        "2025-08",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.04283466365753215,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-06",
+        "2023-07",
+        "2024-03",
+        "2024-06",
+        "2024-08",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-02",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.1049246540474048,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2023-11",
+        "2024-03",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-10",
+        "2024-11",
+        "2024-12",
+        "2025-01",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.20702283645807126,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-10",
+        "2024-02",
+        "2024-03",
+        "2024-05",
+        "2024-06",
+        "2024-08",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-05",
+        "2025-07",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.030217799620670612,
+      "simultaneous_losing_months": [
+        "2023-02",
+        "2023-04",
+        "2023-06",
+        "2023-07",
+        "2023-09",
+        "2023-11",
+        "2024-02",
+        "2024-08",
+        "2024-10",
+        "2025-01",
+        "2025-02",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.03845627188333879,
+      "simultaneous_losing_months": [
+        "2023-02",
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2024-06",
+        "2024-12",
+        "2025-05",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S066_standard10000_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S083_gap_and_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.037189710686903625,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2023-12",
+        "2024-01",
+        "2024-05",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2025-03",
+        "2025-07",
+        "2025-08",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.12481176338911264,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2024-12",
+        "2025-06",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.041085420591034615,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-11",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-11",
+        "2025-06",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.08489209991212318,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2023-09",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.08969434078311672,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-04",
+        "2023-05",
+        "2023-06",
+        "2023-07",
+        "2023-08",
+        "2024-01",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-08",
+        "2024-09",
+        "2024-10",
+        "2024-12",
+        "2025-02",
+        "2025-05",
+        "2025-06",
+        "2025-07",
+        "2025-08",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.05020173036634209,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-06",
+        "2023-07",
+        "2023-08",
+        "2024-01",
+        "2024-03",
+        "2024-06",
+        "2024-08",
+        "2024-09",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-02",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.006639283960012919,
+      "simultaneous_losing_months": [
+        "2023-02",
+        "2023-03",
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2023-11",
+        "2023-12",
+        "2024-02",
+        "2024-03",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-09",
+        "2024-10",
+        "2024-11",
+        "2024-12",
+        "2025-01",
+        "2025-03",
+        "2025-05",
+        "2025-06",
+        "2025-07",
+        "2025-09",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.30469270732704024,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-02",
+        "2023-03",
+        "2023-04",
+        "2023-05",
+        "2023-07",
+        "2023-08",
+        "2023-09",
+        "2023-10",
+        "2023-11",
+        "2023-12",
+        "2024-02",
+        "2024-03",
+        "2024-04",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-08",
+        "2024-10",
+        "2024-11",
+        "2024-12",
+        "2025-01",
+        "2025-05",
+        "2025-06",
+        "2025-07",
+        "2025-08",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.07102403935989599,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-02",
+        "2023-04",
+        "2023-06",
+        "2023-07",
+        "2023-08",
+        "2023-09",
+        "2023-10",
+        "2023-11",
+        "2023-12",
+        "2024-01",
+        "2024-02",
+        "2024-08",
+        "2024-09",
+        "2024-10",
+        "2025-01",
+        "2025-02",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S066_original_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.08680531798938461,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-02",
+        "2023-05",
+        "2023-06",
+        "2023-09",
+        "2024-01",
+        "2024-02",
+        "2024-04",
+        "2024-06",
+        "2024-12",
+        "2025-05",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S083_gap_and_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S083_gap_and_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S066_standard10000_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": null,
+      "simultaneous_losing_months": []
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.09851694144947443,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-06",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.15563904506136017,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2024-06",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.09415184764242028,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.16607724643787716,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2024-01",
+        "2024-06",
+        "2024-09",
+        "2025-07",
+        "2025-08",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.10968319367582391,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-01",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.0017667183054818757,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2023-12",
+        "2024-05",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2025-03",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.1405523418178488,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-10",
+        "2023-12",
+        "2024-05",
+        "2024-06",
+        "2024-10",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.04420540720003602,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-09",
+        "2023-12",
+        "2024-01",
+        "2024-10",
+        "2025-03",
+        "2025-07",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.18725860869109603,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.0892085842597747,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-06",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.15306958788667532,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2024-06",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.1196799606502676,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.17542886506683672,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2024-01",
+        "2024-05",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2025-07",
+        "2025-08",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.10996006439220937,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-01",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.004651199066385939,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2023-12",
+        "2024-05",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2025-03",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.10105055899555933,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2023-12",
+        "2024-05",
+        "2024-06",
+        "2024-10",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.050860881093544474,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-09",
+        "2023-10",
+        "2023-12",
+        "2024-01",
+        "2024-09",
+        "2024-10",
+        "2025-03",
+        "2025-07",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S083_gap_and_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.19055828910721562,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-01",
+        "2024-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.7366026475519599,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2025-06",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.17494235561392207,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.5086440336521787,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-02",
+        "2024-06",
+        "2024-12",
+        "2025-06",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.05503301004185871,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2024-06",
+        "2024-11",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.2900410073600293,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2024-12",
+        "2025-06",
+        "2025-07",
+        "2025-10",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.10400256020798164,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2025-04",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.18969408268879445,
+      "simultaneous_losing_months": [
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2025-07",
+        "2025-10",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.7135589305558512,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-06",
+        "2024-12",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.7351125877635332,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2025-06",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.20215321150075735,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.5120366895654977,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-12",
+        "2025-06",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.06174572121349869,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2024-06",
+        "2024-11",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.2812296242755119,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2024-12",
+        "2025-04",
+        "2025-06",
+        "2025-07",
+        "2025-10",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.11626395292376718,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2024-12",
+        "2025-04",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.1809486589866707,
+      "simultaneous_losing_months": [
+        "2023-08",
+        "2023-09",
+        "2024-02",
+        "2025-07",
+        "2025-10",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.7115914587558483,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-06",
+        "2024-12",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.24469303152436317,
+      "simultaneous_losing_months": [
+        "2025-06"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.3800061481997119,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-06",
+        "2025-06",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.11290543001315623,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-06",
+        "2024-11",
+        "2025-06"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.06846875097876938,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-11",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-11",
+        "2025-06",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.18979320879645362,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2024-06",
+        "2024-11",
+        "2025-06"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.11792741467475769,
+      "simultaneous_losing_months": [
+        "2023-11",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.5028402143556295,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-06",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.12473101938018048,
+      "simultaneous_losing_months": [
+        "2025-06"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.37798481713388216,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-05",
+        "2024-06",
+        "2025-06",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.10982576289784729,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-06",
+        "2024-11",
+        "2025-06"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.08071710414318195,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-11",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-11",
+        "2025-06",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.16933393630766772,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-11",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-11",
+        "2025-06"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.12229827303427442,
+      "simultaneous_losing_months": [
+        "2023-11",
+        "2025-10",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.5018927088094599,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-06",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S005_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.24837974811284855,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.166512159355363,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.2742038344794532,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.022151400580107325,
+      "simultaneous_losing_months": [
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.004157870695172491,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2023-09",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.069549101123161,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S005_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.015733118122342103,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.3168675251247868,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.0015407421387169337,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.03509295410973754,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2023-09",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.08424490423952709,
+      "simultaneous_losing_months": [
+        "2023-07",
+        "2023-09",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.11561668297438879,
+      "simultaneous_losing_months": [
+        "2023-09",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S005_common_base",
+      "b": "S006_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.33904278851443237,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-06",
+        "2023-07",
+        "2024-01",
+        "2024-06",
+        "2024-08",
+        "2024-09",
+        "2025-02",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S005_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.6561054861415883,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2024-06",
+        "2024-09",
+        "2024-12",
+        "2025-06",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S005_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.1380410817292409,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-04",
+        "2023-05",
+        "2024-02",
+        "2024-06",
+        "2024-08",
+        "2025-05",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S005_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.3687257026172103,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-04",
+        "2023-06",
+        "2023-07",
+        "2024-01",
+        "2024-02",
+        "2024-08",
+        "2025-02",
+        "2025-07",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S005_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.6353829496590627,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-06",
+        "2024-02",
+        "2024-06",
+        "2024-12",
+        "2025-05",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S005_common_stress",
+      "b": "S006_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.3429841605506363,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-06",
+        "2023-07",
+        "2023-08",
+        "2024-01",
+        "2024-06",
+        "2024-08",
+        "2024-09",
+        "2024-10",
+        "2025-02",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S005_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.6465136199953923,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-05",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2024-12",
+        "2025-05",
+        "2025-06",
+        "2025-07",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S005_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.15960247614267206,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-04",
+        "2023-05",
+        "2023-07",
+        "2023-08",
+        "2024-02",
+        "2024-05",
+        "2024-06",
+        "2024-08",
+        "2024-10",
+        "2024-12",
+        "2025-05",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S005_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.36243268325295913,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-04",
+        "2023-06",
+        "2023-07",
+        "2023-08",
+        "2024-01",
+        "2024-02",
+        "2024-08",
+        "2024-09",
+        "2024-10",
+        "2025-02",
+        "2025-07",
+        "2025-11",
+        "2025-12"
+      ]
+    },
+    {
+      "a": "S005_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.6361888542287649,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-06",
+        "2024-01",
+        "2024-02",
+        "2024-06",
+        "2024-12",
+        "2025-05",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S006_common_base",
+      "b": "S007_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.3774656953291705,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-03",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S006_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.0018997651177538532,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2024-03",
+        "2024-06",
+        "2024-08",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S006_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.08103315832879182,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-06",
+        "2023-07",
+        "2023-08",
+        "2024-01",
+        "2024-08",
+        "2024-10",
+        "2025-01",
+        "2025-02",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S006_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.09520430508930548,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-06",
+        "2024-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S006_common_stress",
+      "b": "S007_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.403942042288843,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2024-03",
+        "2024-06",
+        "2024-09",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-06",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S006_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.013876536279987183,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-07",
+        "2023-08",
+        "2024-03",
+        "2024-06",
+        "2024-08",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S006_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.07283859453810847,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-06",
+        "2023-07",
+        "2023-08",
+        "2024-01",
+        "2024-08",
+        "2024-09",
+        "2024-10",
+        "2025-01",
+        "2025-02",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S006_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.10651790506555314,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2023-06",
+        "2024-01",
+        "2024-06",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S007_common_base",
+      "b": "S008_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.270691884216312,
+      "simultaneous_losing_months": [
+        "2023-03",
+        "2023-04",
+        "2023-05",
+        "2023-10",
+        "2023-12",
+        "2024-03",
+        "2024-05",
+        "2024-06",
+        "2024-10",
+        "2024-11",
+        "2025-01",
+        "2025-06",
+        "2025-07",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S007_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.5416015407188872,
+      "simultaneous_losing_months": [
+        "2023-04",
+        "2023-09",
+        "2023-11",
+        "2023-12",
+        "2024-10",
+        "2025-01",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S007_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.4102730814015513,
+      "simultaneous_losing_months": [
+        "2023-05",
+        "2023-09",
+        "2024-06",
+        "2024-12",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S007_common_stress",
+      "b": "S008_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.3014239830001778,
+      "simultaneous_losing_months": [
+        "2023-02",
+        "2023-03",
+        "2023-04",
+        "2023-05",
+        "2023-09",
+        "2023-10",
+        "2023-11",
+        "2023-12",
+        "2024-02",
+        "2024-03",
+        "2024-05",
+        "2024-06",
+        "2024-07",
+        "2024-10",
+        "2024-11",
+        "2024-12",
+        "2025-01",
+        "2025-04",
+        "2025-05",
+        "2025-06",
+        "2025-07",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S007_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.46856401991847413,
+      "simultaneous_losing_months": [
+        "2023-02",
+        "2023-04",
+        "2023-09",
+        "2023-10",
+        "2023-11",
+        "2023-12",
+        "2024-02",
+        "2024-09",
+        "2024-10",
+        "2025-01",
+        "2025-03",
+        "2025-07",
+        "2025-09",
+        "2025-10",
+        "2025-11"
+      ]
+    },
+    {
+      "a": "S007_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.3975447220336137,
+      "simultaneous_losing_months": [
+        "2023-02",
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-06",
+        "2024-12",
+        "2025-05",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S008_common_base",
+      "b": "S009_common_base",
+      "months": 36,
+      "pearson_monthly_returns": -0.22324198663904374,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-04",
+        "2023-12",
+        "2024-02",
+        "2024-08",
+        "2024-10",
+        "2025-01",
+        "2025-07",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S008_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.19769675321420951,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-05",
+        "2024-02",
+        "2024-06",
+        "2025-05",
+        "2025-07"
+      ]
+    },
+    {
+      "a": "S008_common_stress",
+      "b": "S009_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": -0.11341090445315814,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-02",
+        "2023-04",
+        "2023-07",
+        "2023-08",
+        "2023-09",
+        "2023-10",
+        "2023-11",
+        "2023-12",
+        "2024-02",
+        "2024-08",
+        "2024-10",
+        "2025-01",
+        "2025-07",
+        "2025-09"
+      ]
+    },
+    {
+      "a": "S008_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.2058373563783506,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-02",
+        "2023-05",
+        "2023-09",
+        "2024-02",
+        "2024-04",
+        "2024-06",
+        "2024-12",
+        "2025-05",
+        "2025-07",
+        "2025-08"
+      ]
+    },
+    {
+      "a": "S009_common_base",
+      "b": "S010_common_base",
+      "months": 36,
+      "pearson_monthly_returns": 0.21178395498462035,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-02",
+        "2023-06",
+        "2023-09",
+        "2024-02",
+        "2025-07",
+        "2025-10"
+      ]
+    },
+    {
+      "a": "S009_common_stress",
+      "b": "S010_common_stress",
+      "months": 36,
+      "pearson_monthly_returns": 0.2154989172496609,
+      "simultaneous_losing_months": [
+        "2023-01",
+        "2023-02",
+        "2023-06",
+        "2023-09",
+        "2024-01",
+        "2024-02",
+        "2025-07",
+        "2025-10"
+      ]
+    }
+  ]
+}

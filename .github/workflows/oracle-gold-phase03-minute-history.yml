@@ -1,0 +1,148 @@
+name: Oracle Gold phase03 authenticated minute cache
+
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/minute_history.py'
+      - 'scripts/oracle_gold/snapshot_bundle.py'
+      - '.github/workflows/oracle-gold-phase03-minute-history.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy cryptography pytest ruff
+      - name: Preserve225 prior files; source boundaries; authenticated cache and tamper checks
+        run: |
+          ruff check scripts/oracle_gold/minute_history.py scripts/oracle_gold/snapshot_bundle.py scripts/oracle_gold/recover_sources.py scripts/oracle_gold/source_bundle.py tests/test_oracle_gold_phase03.py
+          python -m pytest -q tests/test_oracle_gold_phase03.py
+
+  bigquery-minute:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        year: [2024, 2025]
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy google-cloud-bigquery cryptography
+      - name: SELECT original M1 once; validate all provenance and prior archive identities
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: python -m scripts.oracle_gold.minute_history bigquery --year ${{ matrix.year }} --out /tmp/oracle-minute-${{ matrix.year }}
+      - name: Confidential immutable cache; never upload plaintext market history
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p artifacts/oracle-minute-${{ matrix.year }}
+          cp /tmp/oracle-minute-${{ matrix.year }}/manifest.json artifacts/oracle-minute-${{ matrix.year }}/manifest.json
+          python -m scripts.oracle_gold.snapshot_bundle seal --key research/gold_oracle/phase03/source_receipt_public.pem --source /tmp/oracle-minute-${{ matrix.year }} --out artifacts/oracle-minute-${{ matrix.year }}/snapshot.encrypted.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-minute-${{ matrix.year }}
+          path: artifacts/oracle-minute-${{ matrix.year }}/
+          retention-days: 90
+          if-no-files-found: error
+
+  r2-minute-month:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        period: ['202301','202302','202303','202304','202305','202306','202307','202308','202309','202310','202311','202312']
+    env:
+      PYTHONPATH: src:.
+      PERIOD: ${{ matrix.period }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install --quiet pandas numpy cryptography
+      - name: GET original R2 archive for finer resolution; no archive/source writes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${PERIOD}/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip" --remote --file /tmp/oracle-original.zip
+      - name: Match frozen archive/payload SHA; sort only a separate minute derivative
+        run: python -m scripts.oracle_gold.minute_history r2-month --period "${PERIOD}" --archive /tmp/oracle-original.zip --out "/tmp/oracle-minute-${PERIOD}"
+      - name: Seal finer-resolution research cache
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p "artifacts/oracle-minute-${PERIOD}"
+          cp "/tmp/oracle-minute-${PERIOD}/manifest.json" "artifacts/oracle-minute-${PERIOD}/manifest.json"
+          python -m scripts.oracle_gold.snapshot_bundle seal --key research/gold_oracle/phase03/source_receipt_public.pem --source "/tmp/oracle-minute-${PERIOD}" --out "artifacts/oracle-minute-${PERIOD}/snapshot.encrypted.json"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-minute-${{ matrix.period }}
+          path: artifacts/oracle-minute-${{ matrix.period }}/
+          retention-days: 90
+          if-no-files-found: error
+
+  r2-minute-year:
+    needs: r2-minute-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas numpy cryptography
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-minute-2023??
+          path: /tmp/oracle-encrypted-months
+      - name: Open authenticated monthly caches, without another archive GET
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for period in 202301 202302 202303 202304 202305 202306 202307 202308 202309 202310 202311 202312; do
+            python -m scripts.oracle_gold.snapshot_bundle open-ci --source "/tmp/oracle-encrypted-months/oracle-minute-${period}/snapshot.encrypted.json" --out "/tmp/oracle-plain-months/oracle-minute-${period}"
+          done
+      - run: python -m scripts.oracle_gold.minute_history combine --year 2023 --root /tmp/oracle-plain-months --out /tmp/oracle-minute-2023
+      - name: Seal immutable2023 minute cache
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          mkdir -p artifacts/oracle-minute-2023
+          cp /tmp/oracle-minute-2023/manifest.json artifacts/oracle-minute-2023/manifest.json
+          python -m scripts.oracle_gold.snapshot_bundle seal --key research/gold_oracle/phase03/source_receipt_public.pem --source /tmp/oracle-minute-2023 --out artifacts/oracle-minute-2023/snapshot.encrypted.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-minute-2023
+          path: artifacts/oracle-minute-2023/
+          retention-days: 90
+          if-no-files-found: error

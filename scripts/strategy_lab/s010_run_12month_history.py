@@ -35,11 +35,11 @@ def retrieve_month(client, first: datetime, end: datetime) -> tuple[list[dict], 
     sql = f"""
       SELECT TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(open_time_utc),3600)*3600)
           AS open_time_utc,
-        ARRAY_AGG(open ORDER BY open_time_utc ASC LIMIT 1)[OFFSET(0)] AS open,
-        MAX(high) AS high, MIN(low) AS low,
-        ARRAY_AGG(close ORDER BY open_time_utc DESC LIMIT 1)[OFFSET(0)] AS close,
+        ARRAY_AGG(SAFE_CAST(open AS FLOAT64) ORDER BY open_time_utc ASC LIMIT 1)[OFFSET(0)] AS open,
+        MAX(SAFE_CAST(high AS FLOAT64)) AS high, MIN(SAFE_CAST(low AS FLOAT64)) AS low,
+        ARRAY_AGG(SAFE_CAST(close AS FLOAT64) ORDER BY open_time_utc DESC LIMIT 1)[OFFSET(0)] AS close,
         COUNT(*) AS m1_count, COUNT(DISTINCT open_time_utc) AS unique_m1,
-        COUNTIF(NOT(
+        COUNTIF(NOT COALESCE((
           source='histdata' AND symbol='XAUUSD' AND timeframe='M1'
           AND price_basis='bid' AND source_dataset='generic_ascii_m1'
           AND source_timezone='EST_FIXED_UTC_MINUS_05'
@@ -49,10 +49,17 @@ def retrieve_month(client, first: datetime, end: datetime) -> tuple[list[dict], 
           AND input_rows=1
           AND source_open_time=FORMAT_TIMESTAMP('%Y%m%d %H%M%S',
              TIMESTAMP_SUB(open_time_utc, INTERVAL 5 HOUR),'UTC')
-          AND LENGTH(source_file_sha256)=64
-          AND LENGTH(source_payload_sha256)=64
+          AND REGEXP_CONTAINS(source_file_sha256, r'^[0-9a-f]{{64}}$')
+          AND REGEXP_CONTAINS(source_payload_sha256, r'^[0-9a-f]{{64}}$')
           AND research_identity IS NOT NULL
-        )) AS invalid_original_rows,
+          AND source_file IS NOT NULL
+          AND SAFE_CAST(open AS FLOAT64) > 0 AND SAFE_CAST(low AS FLOAT64) > 0
+          AND SAFE_CAST(high AS FLOAT64) >= SAFE_CAST(low AS FLOAT64)
+          AND SAFE_CAST(high AS FLOAT64) >= SAFE_CAST(open AS FLOAT64)
+          AND SAFE_CAST(high AS FLOAT64) >= SAFE_CAST(close AS FLOAT64)
+          AND SAFE_CAST(low AS FLOAT64) <= SAFE_CAST(open AS FLOAT64)
+          AND SAFE_CAST(low AS FLOAT64) <= SAFE_CAST(close AS FLOAT64)
+        ), FALSE)) AS invalid_original_rows,
         ARRAY_AGG(DISTINCT source_file_sha256 IGNORE NULLS) AS archive_shas
       FROM {chr(96)}{TABLE}{chr(96)}
       WHERE symbol='XAUUSD' AND timeframe='M1'

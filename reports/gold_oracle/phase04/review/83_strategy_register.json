@@ -1,0 +1,2249 @@
+{
+  "all83_full_native_dependency_and_execution_verification": false,
+  "dependency_inventory": "reports/gold_oracle/phase04/dependency_inventory_python312.json",
+  "deployment_or_trading_activation": false,
+  "historically_qualified_families": 0,
+  "native_accounts_ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+  "native_compilation_ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40742985260",
+  "native_mql5_original_ids_covered": 21,
+  "native_mql5_source_files_compiled": 17,
+  "new_native_account_ids": 2,
+  "new_unique_account_comparisons": 18,
+  "prior_evidence_unchanged": true,
+  "provisional_research_families": 1,
+  "repeated_runtime_replay_is_not_new_strategies": true,
+  "rows": [
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S001",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S001",
+      "historically_qualified": false,
+      "id": "S001",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S001",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "GoldEA: session sweep and reclaim"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S002",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S002",
+      "historically_qualified": false,
+      "id": "S002",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S002",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Previous-day high/low sweep and reversal"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S003",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S003",
+      "historically_qualified": false,
+      "id": "S003",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "d9ae792919c8c3d4b509ce65f4684a2552a2af1e7fbb3b5785f5ff34288fbd19",
+          "ids": [
+            "S003"
+          ],
+          "log_sha256": "59f61edc96e45cac6b11dbdae11c0e30391af8b01ae7fa68913eee197d999228",
+          "path": "BreakoutFollowTrend.mq5",
+          "source_modified": false,
+          "source_sha256": "dbe6894ae3f17cdf5334938f59261112e8be6cec4fded2e92b908525f80d659b",
+          "source_url": "https://raw.githubusercontent.com/jzd101/breakout-follow-101/06c58c37e768818530b106c8e7f9cadd6d25c06e/src/mql5/BreakoutFollowTrend.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S003",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Breakout Follow Trend 101"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S004",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S004",
+      "historically_qualified": false,
+      "id": "S004",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S004",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Four-phase volatility pullback window"
+    },
+    {
+      "blockers": [
+        "GAP-APEX-ENTRY-SIZING-LOOKAHEAD",
+        "NATIVE_BROKER_AND_SEALED_OOS_UNQUALIFIED"
+      ],
+      "canonical_original_id": "S005",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S005",
+      "historically_qualified": false,
+      "id": "S005",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S005",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Apex research: Donchian channel trend breakout"
+    },
+    {
+      "blockers": [
+        "GAP-APEX-ENTRY-SIZING-LOOKAHEAD",
+        "NATIVE_BROKER_AND_SEALED_OOS_UNQUALIFIED"
+      ],
+      "canonical_original_id": "S006",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S006",
+      "historically_qualified": false,
+      "id": "S006",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S006",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Apex research: EMA crossover plus ADX"
+    },
+    {
+      "blockers": [
+        "GAP-APEX-ENTRY-SIZING-LOOKAHEAD",
+        "NATIVE_BROKER_AND_SEALED_OOS_UNQUALIFIED"
+      ],
+      "canonical_original_id": "S007",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S007",
+      "historically_qualified": false,
+      "id": "S007",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S007",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Apex research: Bollinger plus RSI"
+    },
+    {
+      "blockers": [
+        "GAP-APEX-ENTRY-SIZING-LOOKAHEAD",
+        "NATIVE_BROKER_AND_SEALED_OOS_UNQUALIFIED"
+      ],
+      "canonical_original_id": "S008",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S008",
+      "historically_qualified": false,
+      "id": "S008",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S008",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Apex research: RSI pullback in EMA trend"
+    },
+    {
+      "blockers": [
+        "GAP-APEX-ENTRY-SIZING-LOOKAHEAD",
+        "NATIVE_BROKER_AND_SEALED_OOS_UNQUALIFIED"
+      ],
+      "canonical_original_id": "S009",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S009",
+      "historically_qualified": false,
+      "id": "S009",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S009",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Apex research: Asian-session range breakout"
+    },
+    {
+      "blockers": [
+        "GAP-NATIVE-ENGINE-ACCOUNTING-AND-BROKER-PARITY",
+        "NATIVE_BROKER_AND_SEALED_OOS_UNQUALIFIED"
+      ],
+      "canonical_original_id": "S010",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S010",
+      "historically_qualified": false,
+      "id": "S010",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S010",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "MA crossover + RSI tick-research backtest"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S011",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S011",
+      "historically_qualified": false,
+      "id": "S011",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S011",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "MacroTrend v8: DXY/yield/MA/RSI regime pullback"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S012",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S012",
+      "historically_qualified": false,
+      "id": "S012",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S012",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "SMC: liquidity sweep + FVG retest"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S013",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S013",
+      "historically_qualified": false,
+      "id": "S013",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S013",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Four consecutive candles continuation / reversal"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S014",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S014",
+      "historically_qualified": false,
+      "id": "S014",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S014",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "ICT Turtle Soup false breakout"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S015",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S015",
+      "historically_qualified": false,
+      "id": "S015",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S015",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Institutional FVG trend-following variant"
+    },
+    {
+      "blockers": [
+        "No explicit upstream redistribution licence found at pinned commit",
+        "Observed UTC daily XAUUSD application differs from publisher synthetic Gold Index OHLC loader",
+        "Full broker calendar/quote/fill/lot/margin/funding contract not attested",
+        "Cash stocklike source engine is not a broker CFD execution contract",
+        "Two published variants examined on already-seen history; independent future validation required",
+        "Trails passive gold net return; no independent alpha certificate",
+        "No protective stop; downside beyond these observed periods unqualified"
+      ],
+      "canonical_original_id": "S016",
+      "execution_enabled": false,
+      "family": "S016_DAILY_CLOSE_DONCHIAN",
+      "historically_qualified": false,
+      "id": "S016",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [
+        "S016_entry20_risk1_ORIGINAL_CAPITAL_common_base",
+        "S016_entry20_risk1_ORIGINAL_CAPITAL_common_stress",
+        "S016_entry20_risk1_ORIGINAL_CAPITAL_source_declared",
+        "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+        "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+        "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_source_declared",
+        "S016_entry95_risk2_ORIGINAL_CAPITAL_common_base",
+        "S016_entry95_risk2_ORIGINAL_CAPITAL_common_stress",
+        "S016_entry95_risk2_ORIGINAL_CAPITAL_source_declared",
+        "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+        "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+        "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_source_declared"
+      ],
+      "new_case_evidence": [
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry20_risk1_ORIGINAL_CAPITAL_common_base",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry20_risk1_ORIGINAL_CAPITAL_common_base_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry20_risk1_ORIGINAL_CAPITAL_common_stress",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry20_risk1_ORIGINAL_CAPITAL_common_stress_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry20_risk1_ORIGINAL_CAPITAL_source_declared",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry20_risk1_ORIGINAL_CAPITAL_source_declared_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_base_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_common_stress_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_source_declared",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry20_risk1_STANDARDISED_CAPITAL_COMPARISON_source_declared_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry95_risk2_ORIGINAL_CAPITAL_common_base",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry95_risk2_ORIGINAL_CAPITAL_common_base_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry95_risk2_ORIGINAL_CAPITAL_common_stress",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry95_risk2_ORIGINAL_CAPITAL_common_stress_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry95_risk2_ORIGINAL_CAPITAL_source_declared",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry95_risk2_ORIGINAL_CAPITAL_source_declared_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_base_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_common_stress_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_source_declared",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S016_entry95_risk2_STANDARDISED_CAPITAL_COMPARISON_source_declared_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        }
+      ],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S016",
+      "provisional_shortlist": true,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Donchian commodity system"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S017",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S017",
+      "historically_qualified": false,
+      "id": "S017",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S017",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Elliott-wave / ABC correction strategy"
+    },
+    {
+      "blockers": [
+        "Available MetaEditor5 rejects MQL4 extension; this is not a valid native MQL4 compiler verdict",
+        "Original source also refers to two missing helpers in prior static audit; no silent repair",
+        "MQL4 compiler/platform and actual broker contract remain unverified"
+      ],
+      "canonical_original_id": "S018",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S018",
+      "historically_qualified": false,
+      "id": "S018",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [
+        {
+          "ids": [
+            "S018"
+          ],
+          "log_sha256": "4039aada7a3dc89cb861d53cd8e426c5448d14d6f1ed18a3f123c50ec5673375",
+          "path": "XAUUSD Breakout.mq4",
+          "source_modified": false,
+          "source_sha256": "9f6aefe36beeb05b1ef7a5dc290b88c7b6ca3af340c23bb92c00acd28bed098b",
+          "source_url": "https://raw.githubusercontent.com/GimsDev/XAUUSD-Breakout-EA/2c30d2db7a0da88e52c5c853eac911f47bc76451/XAUUSD%20Breakout.mq4",
+          "status": "NATIVE_COMPILE_FAILED"
+        }
+      ],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S018",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "XAUUSD breakout straddle MT4"
+    },
+    {
+      "blockers": [
+        "Native default lost in observed2023/2025 and made no trades2024; only8 closed trades",
+        "Original lot, fill, swap and gap conventions are source placeholders, not a verified broker contract",
+        "Complete-calendar and fresh validation remain unqualified"
+      ],
+      "canonical_original_id": "S019",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S019",
+      "historically_qualified": false,
+      "id": "S019",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [
+        "S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_common_base",
+        "S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_common_stress",
+        "S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_source_declared",
+        "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+        "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+        "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_source_declared"
+      ],
+      "new_case_evidence": [
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_common_base",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_common_base_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_common_stress",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_common_stress_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_source_declared",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S019_default_cascade_D1_H1_M15_ORIGINAL_CAPITAL_source_declared_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_base_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_common_stress_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        },
+        {
+          "archive": "reports/gold_oracle/phase04/native_accounts_exact_stack/ci_evidence.zip",
+          "case": "S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_source_declared",
+          "ci_url": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40743356844",
+          "json_member": "results/report.json",
+          "trades_member": "results/S019_default_cascade_D1_H1_M15_STANDARDISED_CAPITAL_COMPARISON_source_declared_trades.csv",
+          "zip_sha256": "7758db40f79f58de426784a7461d46aa463dfd2c3231da18a9e19d7b1b00c154"
+        }
+      ],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S019",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "SMC multi-timeframe price-action backtest"
+    },
+    {
+      "blockers": [
+        "Zone impulse confirmation time can postdate zone.end_index; full causal gate required",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S020",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S020",
+      "historically_qualified": false,
+      "id": "S020",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S020",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: liquidity sweep \u2192 imbalance reversal"
+    },
+    {
+      "blockers": [
+        "NONCAUSAL_FILL: close confirmation then retroactive intrabar level entry",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S021",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S021",
+      "historically_qualified": false,
+      "id": "S021",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S021",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: previous-day high/low breakout"
+    },
+    {
+      "blockers": [
+        "NONCAUSAL_FILL: close confirmation then retroactive level fill; fixed EST differs from DST NY",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S022",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S022",
+      "historically_qualified": false,
+      "id": "S022",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S022",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: opening range breakout"
+    },
+    {
+      "blockers": [
+        "Close-price fill after close confirmation is conditional; bid/ask/account sizing absent",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S023",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S023",
+      "historically_qualified": false,
+      "id": "S023",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S023",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: RSI exhaustion reversal"
+    },
+    {
+      "blockers": [
+        "Full-series clustering changes prior zones with appended future swings; prefix stability unproven",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S024",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S024",
+      "historically_qualified": false,
+      "id": "S024",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S024",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: support/resistance bounce"
+    },
+    {
+      "blockers": [
+        "Conditional close fill; no authenticated account/quote replay",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S025",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S025",
+      "historically_qualified": false,
+      "id": "S025",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S025",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: momentum range breakout"
+    },
+    {
+      "blockers": [
+        "Conditional close fill; account/risk sizing unspecified",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S026",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S026",
+      "historically_qualified": false,
+      "id": "S026",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S026",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: momentum pullback"
+    },
+    {
+      "blockers": [
+        "first_touch lacks both-sided limit reach/gap-price checks; quote chronology required",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S027",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S027",
+      "historically_qualified": false,
+      "id": "S027",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S027",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: ICT FVG first fill"
+    },
+    {
+      "blockers": [
+        "first_touch quote/gap conditions and chronological protective exits unverified",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S028",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S028",
+      "historically_qualified": false,
+      "id": "S028",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S028",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: inverse FVG retest"
+    },
+    {
+      "blockers": [
+        "Source outputs independent overlapping setups; no account-level risk semantics",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S029",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S029",
+      "historically_qualified": false,
+      "id": "S029",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S029",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: order-block return after BOS/CHoCH"
+    },
+    {
+      "blockers": [
+        "Shared zone/limit/gap chronology unverified; full account model absent",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S030",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S030",
+      "historically_qualified": false,
+      "id": "S030",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S030",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: SMC sweep \u2192 CHoCH \u2192 order block"
+    },
+    {
+      "blockers": [
+        "Source code does NOT require base itself quiet despite docstring; no account or broker semantics",
+        "NO_UNIQUE_TIMEFRAME_OR_ACCOUNT_SIZING; complete fingerprint withheld"
+      ],
+      "canonical_original_id": "S031",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S031",
+      "historically_qualified": false,
+      "id": "S031",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S031",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Gold Strategy Lab: supply/demand base-and-return"
+    },
+    {
+      "blockers": [
+        "Broker server clock/calendar, point/tick/lot/margin contract and quote chronology unbound",
+        "D1/chart ATR shift0 and boundary range must be reconstructed tick-causally"
+      ],
+      "canonical_original_id": "S032",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S032",
+      "historically_qualified": false,
+      "id": "S032",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "95ce38317bf5f538774bdc0c09e723769862aeef4c57420b6bf03ee4dc16484a",
+          "ids": [
+            "S032"
+          ],
+          "log_sha256": "b2e8685880430fdc20a427f5565a3b4689dfc7379c6b29afe82073b27d4b214f",
+          "path": "GoldLondonBreakout.mq5",
+          "source_modified": false,
+          "source_sha256": "0b0637eaa5c9067fced7aba8ae5b9174ad8098724d8be53e01ce5e3fcf335f8f",
+          "source_url": "https://www.mql5.com/en/code/download/75586/GoldLondonBreakout.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S032",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "GoldLondonBreakout: Asian OCO breakout"
+    },
+    {
+      "blockers": [
+        "Original contains no account sizing, exits or execution contract"
+      ],
+      "canonical_original_id": "S033",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S033",
+      "historically_qualified": false,
+      "id": "S033",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "a467754bcaa602479f9be60cc320dc877ed1b7335c8adc97291e8da952cd9307",
+          "ids": [
+            "S033"
+          ],
+          "log_sha256": "453e87aa5128e55d74d218e16736ad92b59b4ddfc6c3475f48c93eb4cab4693f",
+          "path": "SessionRangeBreakout.mq5",
+          "source_modified": false,
+          "source_sha256": "5e3cbac5e4d5d6503ec3e150396b4402db7ec652cecb0406c839b0712f0ce435",
+          "source_url": "https://www.mql5.com/en/code/download/72882/SessionRangeBreakout.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S033",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "SessionRangeBreakout M15"
+    },
+    {
+      "blockers": [
+        "Broker quote/contract/timeframe and native buffer/execution parity unbound",
+        "Do not repair sizing-unit inconsistency silently"
+      ],
+      "canonical_original_id": "S034",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S034",
+      "historically_qualified": false,
+      "id": "S034",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "3859d9b3bb7d14d5ed15240a166201ff9c93492a902b108d6648a2b73374bd40",
+          "ids": [
+            "S034"
+          ],
+          "log_sha256": "a1d521000c78b38d1f85df89cf991ab297fc6664c24d6c1ac5ab9613445a5c9f",
+          "path": "marsi_ea.mq5",
+          "source_modified": false,
+          "source_sha256": "844816171ab75c70421c533d68e53074d9a50e366897e6fe2d51064c472c1281",
+          "source_url": "https://www.mql5.com/en/code/download/60730/marsi_ea.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S034",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Moving Average \u00d7 RSI EA"
+    },
+    {
+      "blockers": [
+        "Original stochastic seed and saved weight state not specified/recoverable",
+        "Broker contract, server clock, tick path, account history and native margin unbound"
+      ],
+      "canonical_original_id": "S035",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S035",
+      "historically_qualified": false,
+      "id": "S035",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "3f836fc8dde2b2b0db3763724d74b29114d7e70ea6c7047f4d8afa897e7d40b9",
+          "ids": [
+            "S035"
+          ],
+          "log_sha256": "cb240a2a111c5caacc72235a88834c08254acff903db5cbcc375fec238b8984e",
+          "path": "Quantum_XAUUSD_Silver_Trader.mq5",
+          "source_modified": false,
+          "source_sha256": "58aac58d1ba56ab25a48e7f2421a87b19b0fee31638e656faed5e815592d292d",
+          "source_url": "https://www.mql5.com/en/code/download/73622/Quantum_XAUUSD_Silver_Trader.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S035",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Quantum XAUUSD Silver Trader"
+    },
+    {
+      "blockers": [
+        "Indicator/R scorecard lacks account sizing/concurrency",
+        "Catalogue20/10 channel selection is not a separate published executable"
+      ],
+      "canonical_original_id": "S036",
+      "execution_enabled": false,
+      "family": "BREAKOUT_EXIT_LAB_SHARED_ENTRY",
+      "historically_qualified": false,
+      "id": "S036",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "fc5c6e6bccef1c91bb6f79895ee4e7981d493dd593e3093188552d5318af3151",
+          "ids": [
+            "S036",
+            "S037",
+            "S038",
+            "S039"
+          ],
+          "log_sha256": "6f74a639b242ac89adc5065795f09175b298a44c0a5daa38a0dc12be186a906d",
+          "path": "BreakoutExitLab.mq5",
+          "source_modified": false,
+          "source_sha256": "16cf59aa7a5c81850f6bd8090e9ae571f6cec0e82b1a576742f03b3cc198e0a6",
+          "source_url": "https://www.mql5.com/en/code/download/77687/BreakoutExitLab.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S036",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Turtle Breakout Exit Lab: 20 / 10 channel"
+    },
+    {
+      "blockers": [
+        "Indicator/R scorecard lacks account sizing/concurrency",
+        "No source preset artifact uniquely binds catalogue55/20 selection"
+      ],
+      "canonical_original_id": "S037",
+      "execution_enabled": false,
+      "family": "BREAKOUT_EXIT_LAB_SHARED_ENTRY",
+      "historically_qualified": false,
+      "id": "S037",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "fc5c6e6bccef1c91bb6f79895ee4e7981d493dd593e3093188552d5318af3151",
+          "ids": [
+            "S036",
+            "S037",
+            "S038",
+            "S039"
+          ],
+          "log_sha256": "6f74a639b242ac89adc5065795f09175b298a44c0a5daa38a0dc12be186a906d",
+          "path": "BreakoutExitLab.mq5",
+          "source_modified": false,
+          "source_sha256": "16cf59aa7a5c81850f6bd8090e9ae571f6cec0e82b1a576742f03b3cc198e0a6",
+          "source_url": "https://www.mql5.com/en/code/download/77687/BreakoutExitLab.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S037",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Turtle Breakout Exit Lab: 55 / 20 channel"
+    },
+    {
+      "blockers": [
+        "Indicator lacks executable account sizing/concurrency"
+      ],
+      "canonical_original_id": "S038",
+      "execution_enabled": false,
+      "family": "BREAKOUT_EXIT_LAB_SHARED_ENTRY",
+      "historically_qualified": false,
+      "id": "S038",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "fc5c6e6bccef1c91bb6f79895ee4e7981d493dd593e3093188552d5318af3151",
+          "ids": [
+            "S036",
+            "S037",
+            "S038",
+            "S039"
+          ],
+          "log_sha256": "6f74a639b242ac89adc5065795f09175b298a44c0a5daa38a0dc12be186a906d",
+          "path": "BreakoutExitLab.mq5",
+          "source_modified": false,
+          "source_sha256": "16cf59aa7a5c81850f6bd8090e9ae571f6cec0e82b1a576742f03b3cc198e0a6",
+          "source_url": "https://www.mql5.com/en/code/download/77687/BreakoutExitLab.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S038",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Turtle Exit Lab: breakout + ATR trailing"
+    },
+    {
+      "blockers": [
+        "Indicator lacks executable account sizing/concurrency"
+      ],
+      "canonical_original_id": "S039",
+      "execution_enabled": false,
+      "family": "BREAKOUT_EXIT_LAB_SHARED_ENTRY",
+      "historically_qualified": false,
+      "id": "S039",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "fc5c6e6bccef1c91bb6f79895ee4e7981d493dd593e3093188552d5318af3151",
+          "ids": [
+            "S036",
+            "S037",
+            "S038",
+            "S039"
+          ],
+          "log_sha256": "6f74a639b242ac89adc5065795f09175b298a44c0a5daa38a0dc12be186a906d",
+          "path": "BreakoutExitLab.mq5",
+          "source_modified": false,
+          "source_sha256": "16cf59aa7a5c81850f6bd8090e9ae571f6cec0e82b1a576742f03b3cc198e0a6",
+          "source_url": "https://www.mql5.com/en/code/download/77687/BreakoutExitLab.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S039",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Turtle Exit Lab: breakout + fixed 2R target"
+    },
+    {
+      "blockers": [
+        "Broker calendar, quote fills, volume contract, margin and native attachment parity unbound"
+      ],
+      "canonical_original_id": "S040",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S040",
+      "historically_qualified": false,
+      "id": "S040",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "963d53fbd317d078682d50b69ff549c0b77ce2819cc9ea6b374c67afd63a1b50",
+          "ids": [
+            "S040"
+          ],
+          "log_sha256": "dffdd5e13c4b2501140a09ecbb986a4a2257a83f9af42dd360fa9577a7bf1a68",
+          "path": "GoldBreakoutEA.mq5",
+          "source_modified": false,
+          "source_sha256": "a904aa1a7db85fd006a3989671025ce022fc304584da3fbda7116621770dc105",
+          "source_url": "https://www.mql5.com/en/code/download/77691/GoldBreakoutEA.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S040",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Gold Breakout EA H4"
+    },
+    {
+      "blockers": [
+        "Broker hedging/netting, margin, server day, lot/quote/funding contract unbound",
+        "Shared3-module default account is not3 independent standalone accounts"
+      ],
+      "canonical_original_id": "S041",
+      "execution_enabled": false,
+      "family": "DAILY_ZONE_RECOVERY_COMPOSITE",
+      "historically_qualified": false,
+      "id": "S041",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "a693c4018084184c019f96697582fc80e890adb27700b3ad5a9a27976b7d857b",
+          "ids": [
+            "S041",
+            "S042",
+            "S043"
+          ],
+          "log_sha256": "31e35ff3e7cf790353e4eefa57bf053f7c8e1204f895a8ddc4fe3221df708bf1",
+          "path": "DailyZoneRecovery.mq5",
+          "source_modified": false,
+          "source_sha256": "eb202f66865a3fa07de463a80ae789cfbd2df7e6bc8d912cb3f0234d1547db13",
+          "source_url": "https://www.mql5.com/en/code/download/75922/DailyZoneRecovery.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S041",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Daily Zone Recovery: breakout \u2192 retest"
+    },
+    {
+      "blockers": [
+        "Broker hedging/netting, margin, server day, lot/quote/funding contract unbound",
+        "No source standalone account selection receipt"
+      ],
+      "canonical_original_id": "S042",
+      "execution_enabled": false,
+      "family": "DAILY_ZONE_RECOVERY_COMPOSITE",
+      "historically_qualified": false,
+      "id": "S042",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "a693c4018084184c019f96697582fc80e890adb27700b3ad5a9a27976b7d857b",
+          "ids": [
+            "S041",
+            "S042",
+            "S043"
+          ],
+          "log_sha256": "31e35ff3e7cf790353e4eefa57bf053f7c8e1204f895a8ddc4fe3221df708bf1",
+          "path": "DailyZoneRecovery.mq5",
+          "source_modified": false,
+          "source_sha256": "eb202f66865a3fa07de463a80ae789cfbd2df7e6bc8d912cb3f0234d1547db13",
+          "source_url": "https://www.mql5.com/en/code/download/75922/DailyZoneRecovery.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S042",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Daily Zone Recovery: test \u2192 breakout"
+    },
+    {
+      "blockers": [
+        "Broker hedging/netting, margin, server day, lot/quote/funding contract unbound",
+        "No source standalone account selection receipt"
+      ],
+      "canonical_original_id": "S043",
+      "execution_enabled": false,
+      "family": "DAILY_ZONE_RECOVERY_COMPOSITE",
+      "historically_qualified": false,
+      "id": "S043",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "a693c4018084184c019f96697582fc80e890adb27700b3ad5a9a27976b7d857b",
+          "ids": [
+            "S041",
+            "S042",
+            "S043"
+          ],
+          "log_sha256": "31e35ff3e7cf790353e4eefa57bf053f7c8e1204f895a8ddc4fe3221df708bf1",
+          "path": "DailyZoneRecovery.mq5",
+          "source_modified": false,
+          "source_sha256": "eb202f66865a3fa07de463a80ae789cfbd2df7e6bc8d912cb3f0234d1547db13",
+          "source_url": "https://www.mql5.com/en/code/download/75922/DailyZoneRecovery.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S043",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Daily Zone Recovery: test \u2192 pullback \u2192 retest"
+    },
+    {
+      "blockers": [
+        "Native MQL compilation/resource parity and broker volume/margin/quote contract unbound"
+      ],
+      "canonical_original_id": "S044",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S044",
+      "historically_qualified": false,
+      "id": "S044",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "887681c7a629d66342c6f2b8b6a61d178192f9fdf3e9af65840e9988741da497",
+          "ids": [
+            "S044"
+          ],
+          "log_sha256": "2a1ac88c51d9cf1d4cbe8354a460ea5de166b0b6f36b2accc8e4b1b1280e9eb3",
+          "path": "SuperTrendTV.mq5",
+          "source_modified": false,
+          "source_sha256": "c0632c1fe92a0ff079b748c024a5d84ef98be62d54d1d438179a0603f355858d",
+          "source_url": "https://www.mql5.com/en/code/download/77009/SuperTrendTV.mq5",
+          "status": "NATIVE_COMPILED"
+        },
+        {
+          "ex5_sha256": "1519fdc74b7cdb884ae9ef70bf010e84c4363bc9589c4e5ed7058f2c430f56e9",
+          "ids": [
+            "S044"
+          ],
+          "log_sha256": "025a3fad74d2292f9254d5a78c54dc40ead19e5f5dbcf1d19acbdec7d46decd1",
+          "path": "SuperTrendEA.mq5",
+          "source_modified": false,
+          "source_sha256": "02ee1aacaf80abf9187942a2a139825e14642fcf4adeec7d09f68afc604ccc03",
+          "source_url": "https://www.mql5.com/en/code/download/77009/SuperTrendEA.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S044",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "SuperTrend TV EA: closed-bar flip"
+    },
+    {
+      "blockers": [
+        "Indicator has no account quantity/concurrency",
+        "Server offset/DST and spot-vs-CME source mapping require attestation"
+      ],
+      "canonical_original_id": "S045",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S045",
+      "historically_qualified": false,
+      "id": "S045",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "07d29dc3594a6527630bb4eea51a3fa4b2d54fd694f170f15ed334da06183e66",
+          "ids": [
+            "S045"
+          ],
+          "log_sha256": "fae29d2616f4bc829fbda2fa565a038703f9adbec9510eb1349988b22ac189d2",
+          "path": "CMEGapTracker.mq5",
+          "source_modified": false,
+          "source_sha256": "e67078db4bcaa40c079540b1350805b54b2d59421e96a19c0881f4e39a0fbbf4",
+          "source_url": "https://www.mql5.com/en/code/download/77686/CMEGapTracker.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S045",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "CME weekend gap fade test"
+    },
+    {
+      "blockers": [
+        "Original has no executable exits or sizing",
+        "Server offset history not verified"
+      ],
+      "canonical_original_id": "S046",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S046",
+      "historically_qualified": false,
+      "id": "S046",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "088cc1ebacf0e0d896efee185ca4502e58f61400a2039f37f112f5c0733dabbd",
+          "ids": [
+            "S046"
+          ],
+          "log_sha256": "c78c84e5034f12c85d5d656b60e5b5dd2d24b5e0a487b4508a103ecf57e0fdfd",
+          "path": "SessionSweepBoxes.mq5",
+          "source_modified": false,
+          "source_sha256": "e81168c95cf0f49c2c86e00d352c28dd893075e31fc7155e56ffca2b9412b0e1",
+          "source_url": "https://www.mql5.com/en/code/download/77953/SessionSweepBoxes.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S046",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Session Sweep Boxes: session-level reclaim"
+    },
+    {
+      "blockers": [
+        "Broker lot/margin/funding/hedging contract and timer/tick ordering unbound",
+        "Interactive chart buttons can change runtime state; no selected native state receipt"
+      ],
+      "canonical_original_id": "S047",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S047",
+      "historically_qualified": false,
+      "id": "S047",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "8971a87d577984d345ecf08772ff5331e099e425561f051e00cb01417703a71e",
+          "ids": [
+            "S047"
+          ],
+          "log_sha256": "6959890aa301d266ce78ae55a24d61769a90be2dcef22714d2e9ecec7a7d610c",
+          "path": "Grid_EA_Pro.mq5",
+          "source_modified": false,
+          "source_sha256": "65785963b73dea786f7ba8a5e38d1f83b1037bc82a33d435f4f6f31c5983be56",
+          "source_url": "https://www.mql5.com/en/code/download/71700/Grid_EA_Pro.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S047",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "RSI Grid EA Pro"
+    },
+    {
+      "blockers": [
+        "Indicator lacks account sizing and fill rules",
+        "Native tick volume unavailable; optional HTF mapping/recalc and scorecard defects preclude account claims"
+      ],
+      "canonical_original_id": "S048",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S048",
+      "historically_qualified": false,
+      "id": "S048",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "346a06cfe5cb4b8350113d0ba4506061732518862dc82d5e85559b182f08e4eb",
+          "ids": [
+            "S048"
+          ],
+          "log_sha256": "bd4803808522e6363e57c0457be12fd22577b1b46ba13700dbe6583725fc07c6",
+          "path": "PrecisionSniper.mq5",
+          "source_modified": false,
+          "source_sha256": "a5177b8a521459cf1e7d31222e4a59ebe04c528c2d71778203f58aa35aa3ce84",
+          "source_url": "https://www.mql5.com/en/code/download/71860/PrecisionSniper.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S048",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Precision Sniper: scored confluence"
+    },
+    {
+      "blockers": [
+        "Gold application requires actual broker clock, point/lot/margin/quote terms; publisher template is US100",
+        "No native MQL execution parity"
+      ],
+      "canonical_original_id": "S049",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S049",
+      "historically_qualified": false,
+      "id": "S049",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "ee7da75f25c8eb4b55d0d563b08866e24b6b3c9b3419aac4766c63a591670f87",
+          "ids": [
+            "S049"
+          ],
+          "log_sha256": "3ceed48d15b4ae0039417c944aa6b69c5cbb31bc784c59bfd6333378f9f411bc",
+          "path": "ORB_RiskManaged.mq5",
+          "source_modified": false,
+          "source_sha256": "e95ee85351c6ca2c90f8788ece3ffbce6b3e3814a366f2af2bfb0124bd3d8ba3",
+          "source_url": "https://www.mql5.com/en/code/download/77967/ORB_RiskManaged.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S049",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "ORB Risk Managed: first-session range OCO"
+    },
+    {
+      "blockers": [
+        "Native source-compatible volume and native quantity rounding unavailable"
+      ],
+      "canonical_original_id": "S050",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S050",
+      "historically_qualified": false,
+      "id": "S050",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S050",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Gold NY ORB v19: filtered long-only"
+    },
+    {
+      "blockers": [
+        "Native source-compatible volume and native quantity rounding unavailable"
+      ],
+      "canonical_original_id": "S051",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S051",
+      "historically_qualified": false,
+      "id": "S051",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S051",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Gold NY ORB v11: bidirectional"
+    },
+    {
+      "blockers": [
+        "Native fractional quantity rounding/minimum unverified; no guessed broker lots"
+      ],
+      "canonical_original_id": "S052",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S052",
+      "historically_qualified": false,
+      "id": "S052",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S052",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Gold H1 Breakout Failure v11"
+    },
+    {
+      "blockers": [
+        "Original vendor volume for VWAP and native quantity rounding missing",
+        "Native intrabar fill-recalculation parity not implemented"
+      ],
+      "canonical_original_id": "S053",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S053",
+      "historically_qualified": false,
+      "id": "S053",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S053",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Gold Intraday EMA / BB / VWAP"
+    },
+    {
+      "blockers": [
+        "No original executable account sizing/management"
+      ],
+      "canonical_original_id": "S054",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S054",
+      "historically_qualified": false,
+      "id": "S054",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S054",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Lions Gold Digger: trend + sweep + momentum"
+    },
+    {
+      "blockers": [
+        "No account sizing/partial allocation/orders",
+        "Native volume unavailable for VWAP"
+      ],
+      "canonical_original_id": "S055",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S055",
+      "historically_qualified": false,
+      "id": "S055",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S055",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Ro's Alerts: order block + VWAP + ADX"
+    },
+    {
+      "blockers": [
+        "Original TradingView publication returns404; no public PUB metadata/plaintext recovered"
+      ],
+      "canonical_original_id": "S056",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S056",
+      "historically_qualified": false,
+      "id": "S056",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S056",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "VWAP Rejection Strategy XAUUSD"
+    },
+    {
+      "blockers": [
+        "Original TradingView publication returns404; no public PUB metadata/plaintext recovered"
+      ],
+      "canonical_original_id": "S057",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S057",
+      "historically_qualified": false,
+      "id": "S057",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S057",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "XAUUSD FVG + CISD scalping"
+    },
+    {
+      "blockers": [
+        "Native platform output parity, funding and broker fill qualification unverified"
+      ],
+      "canonical_original_id": "S058",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S058",
+      "historically_qualified": false,
+      "id": "S058",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S058",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "SMC/ICT XAUUSD + MNQ backtest"
+    },
+    {
+      "blockers": [
+        "Native volume, fractional quantity rounding and partial/OCA fill parity missing"
+      ],
+      "canonical_original_id": "S059",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S059",
+      "historically_qualified": false,
+      "id": "S059",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S059",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Liquidity Sweep Mean Reversion Gold / Silver"
+    },
+    {
+      "blockers": [
+        "Native platform output parity, funding and broker fill qualification unverified"
+      ],
+      "canonical_original_id": "S060",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S060",
+      "historically_qualified": false,
+      "id": "S060",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S060",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Multi-MA + RSI pullback Jordan"
+    },
+    {
+      "blockers": [
+        "Native platform output parity, funding and broker fill qualification unverified"
+      ],
+      "canonical_original_id": "S061",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S061",
+      "historically_qualified": false,
+      "id": "S061",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S061",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Hemant Gold Strategy"
+    },
+    {
+      "blockers": [
+        "Native exit-ID parity missing",
+        "Weekly source must not silently become H1 strategy"
+      ],
+      "canonical_original_id": "S062",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S062",
+      "historically_qualified": false,
+      "id": "S062",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S062",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "XAUUSD Trend Strategy (Marwanefxx)"
+    },
+    {
+      "blockers": [
+        "Manual level point-in-time provenance and realtime varip lifecycle missing",
+        "Date window does not define2023-25 strategy; no invented historical levels"
+      ],
+      "canonical_original_id": "S063",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S063",
+      "historically_qualified": false,
+      "id": "S063",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S063",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Walkerz multi-timeframe FVG breakout"
+    },
+    {
+      "blockers": [
+        "No standalone component default selection receipt",
+        "Native both-marketable bracket priority and platform parity unverified"
+      ],
+      "canonical_original_id": "S064",
+      "execution_enabled": false,
+      "family": "FVG_BB_SHARED_COMPOSITE",
+      "historically_qualified": false,
+      "id": "S064",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S064",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Kinzamvwete: FVG return in EMA200 trend"
+    },
+    {
+      "blockers": [
+        "No standalone component source selection receipt",
+        "Shared account order arbitration/native platform parity unverified"
+      ],
+      "canonical_original_id": "S065",
+      "execution_enabled": false,
+      "family": "FVG_BB_SHARED_COMPOSITE",
+      "historically_qualified": false,
+      "id": "S065",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S065",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Kinzamvwete: Bollinger reversal in EMA200 trend"
+    },
+    {
+      "blockers": [
+        "Native fractional quantity/minimum and platform lifecycle parity missing"
+      ],
+      "canonical_original_id": "S066",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S066",
+      "historically_qualified": false,
+      "id": "S066",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S066",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "XAUUSD M5 SuperTrend + RSI session"
+    },
+    {
+      "blockers": [
+        "No account sizing/exit order lifecycle",
+        "Native vendor volume unavailable"
+      ],
+      "canonical_original_id": "S067",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S067",
+      "historically_qualified": false,
+      "id": "S067",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S067",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "XAUUSD 9/21 EMA + RSI50"
+    },
+    {
+      "blockers": [
+        "Original lacks exits, sizing and account management"
+      ],
+      "canonical_original_id": "S068",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S068",
+      "historically_qualified": false,
+      "id": "S068",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S068",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Breakout + retest at role-flipped level"
+    },
+    {
+      "blockers": [
+        "Native volume unavailable",
+        "Multi-entry FIFO, margin rejection and actual fill lifecycle unverified"
+      ],
+      "canonical_original_id": "S069",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S069",
+      "historically_qualified": false,
+      "id": "S069",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S069",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Tomukas Wave VWAP DCA Scalper"
+    },
+    {
+      "blockers": [
+        "No original account exits/sizing",
+        "Intrabar labels can repaint; source indicator semantics retained"
+      ],
+      "canonical_original_id": "S070",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S070",
+      "historically_qualified": false,
+      "id": "S070",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S070",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Session Sweep System WarRoomXYZ"
+    },
+    {
+      "blockers": [
+        "Broker clock/lot/point/quote contract and native tick reset/fill parity unverified"
+      ],
+      "canonical_original_id": "S071",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S071",
+      "historically_qualified": false,
+      "id": "S071",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "b897c62cf3cbec3e5b75b26faa183cf7476db853b0cbb7832d92c1370d44c63b",
+          "ids": [
+            "S071"
+          ],
+          "log_sha256": "06d8cb5d6c78149cf6a35c0be6b0db31f1e497e85a5bd54d17a83969583ba820",
+          "path": "ORB_Opening_Range_Breakout_EA.mq5",
+          "source_modified": false,
+          "source_sha256": "1e0b888760acea8949854bdb7ad2e808e4f8e8301a3c86b0567e8809e47c06e3",
+          "source_url": "https://www.mql5.com/en/articles/download/20339/ORB_Opening_Range_Breakout_EA.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S071",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Opening-range breakout MQL5 tutorial implementation"
+    },
+    {
+      "blockers": [
+        "Commercial MQL Market listing exposes no original .mq4/.mq5 source; demo/compiled product is not source code"
+      ],
+      "canonical_original_id": "S072",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S072",
+      "historically_qualified": false,
+      "id": "S072",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S072",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "Gold Matrix Bollinger EA"
+    },
+    {
+      "blockers": [
+        "Commercial MQL Market listing exposes no original .mq4/.mq5 source; demo/compiled product is not source code"
+      ],
+      "canonical_original_id": "S073",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S073",
+      "historically_qualified": false,
+      "id": "S073",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S073",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "Gold Moving Average inverted MA EA"
+    },
+    {
+      "blockers": [
+        "Commercial MQL Market listing exposes no original .mq4/.mq5 source; demo/compiled product is not source code"
+      ],
+      "canonical_original_id": "S074",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S074",
+      "historically_qualified": false,
+      "id": "S074",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S074",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "Gold Scalping RS EA"
+    },
+    {
+      "blockers": [
+        "Commercial MQL Market listing exposes no original .mq4/.mq5 source; demo/compiled product is not source code"
+      ],
+      "canonical_original_id": "S075",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S075",
+      "historically_qualified": false,
+      "id": "S075",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S075",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "Gold Scalper PRO"
+    },
+    {
+      "blockers": [
+        "Commercial MQL Market listing exposes no original .mq4/.mq5 source; demo/compiled product is not source code"
+      ],
+      "canonical_original_id": "S076",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S076",
+      "historically_qualified": false,
+      "id": "S076",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S076",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "London Gold Breakout commercial EA"
+    },
+    {
+      "blockers": [
+        "Commercial MQL Market listing exposes no original .mq4/.mq5 source; demo/compiled product is not source code"
+      ],
+      "canonical_original_id": "S077",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S077",
+      "historically_qualified": false,
+      "id": "S077",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S077",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "Gold London Range Breakout commercial EA"
+    },
+    {
+      "blockers": [
+        "SSRN abstract is not complete executable rules; observed PDF delivery attempts tracked separately"
+      ],
+      "canonical_original_id": "S078",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S078",
+      "historically_qualified": false,
+      "id": "S078",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S078",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "BLOCKED_ORIGINAL_EXECUTABLE_SOURCE",
+      "title": "Bhatti VWAP\u2013EMA regime pullback"
+    },
+    {
+      "blockers": [
+        "Broker contract/time/quotes/funding unbound",
+        "Current source version not proven identical to2026-10-15 catalogue original"
+      ],
+      "canonical_original_id": "S079",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S079",
+      "historically_qualified": false,
+      "id": "S079",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [
+        {
+          "ex5_sha256": "e259958b945a286b8304d97be7e644567da1fb979083f38080bacbc156be85b5",
+          "ids": [
+            "S079"
+          ],
+          "log_sha256": "b7107f546eeba73468d5503876b57467b7535873c8683b21a124b0f897dc6170",
+          "path": "XANDER_Gold_Recovery.mq5",
+          "source_modified": false,
+          "source_sha256": "61abdab360819f543140c017d0a878b70c630003280205ffe97edadb8a35985b",
+          "source_url": "https://www.mql5.com/en/code/download/72278/XANDER_Gold_Recovery.mq5",
+          "status": "NATIVE_COMPILED"
+        }
+      ],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S079",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "XANDER Gold Recovery: Keltner failed breakout"
+    },
+    {
+      "blockers": [
+        "No original sizing/account lifecycle"
+      ],
+      "canonical_original_id": "S080",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S080",
+      "historically_qualified": false,
+      "id": "S080",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S080",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Hassi XAUUSD EMA / RSI / ADX trend bot"
+    },
+    {
+      "blockers": [
+        "Native platform output parity, funding and broker fill qualification unverified"
+      ],
+      "canonical_original_id": "S081",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S081",
+      "historically_qualified": false,
+      "id": "S081",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S081",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "ORIGINAL_EXECUTABLE_SOURCE_OBTAINED",
+      "title": "Precision Trading Strategy: Golden Edge"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S082",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S082",
+      "historically_qualified": false,
+      "id": "S082",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S082",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "Virgin Close Rejection"
+    },
+    {
+      "blockers": [
+        "Full source semantics not yet audited"
+      ],
+      "canonical_original_id": "S083",
+      "execution_enabled": false,
+      "family": "ORIGINAL_ID_S083",
+      "historically_qualified": false,
+      "id": "S083",
+      "independent_profitable_edge_certified": false,
+      "native_compilation": [],
+      "native_mql4_attempt": [],
+      "new_account_cases": [],
+      "new_case_evidence": [],
+      "prior_audit_and_results": "reports/gold_oracle/phase03/independent_strategy_register.json#/rows/id=S083",
+      "provisional_shortlist": false,
+      "score": null,
+      "source_status": "PREVIOUSLY_OBTAINED_ORIGINAL_SOURCE",
+      "title": "001B multi-timeframe zone rejection"
+    }
+  ],
+  "schema": "oracle.gold.phase04.original83_register.v1",
+  "source_blocked_ids": 9,
+  "source_obtained_ids": 74,
+  "unresolved_duplicate_comparisons": [
+    {
+      "a": "S076",
+      "b": "S077",
+      "reason": "Original source still inaccessible; no new rule evidence"
+    },
+    {
+      "a": "S022",
+      "b": "S077",
+      "reason": "Original source still inaccessible; no new rule evidence"
+    },
+    {
+      "a": "S025",
+      "b": "S077",
+      "reason": "Original source still inaccessible; no new rule evidence"
+    },
+    {
+      "a": "S009",
+      "b": "S077",
+      "reason": "Original source still inaccessible; no new rule evidence"
+    },
+    {
+      "a": "S008",
+      "b": "S078",
+      "reason": "Original source still inaccessible; no new rule evidence"
+    },
+    {
+      "a": "S053",
+      "b": "S078",
+      "reason": "Original source still inaccessible; no new rule evidence"
+    },
+    {
+      "a": "S071",
+      "b": "S077",
+      "reason": "Original source still inaccessible; no new rule evidence"
+    }
+  ]
+}

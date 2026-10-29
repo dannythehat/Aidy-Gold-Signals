@@ -1,0 +1,1586 @@
+{
+  "input_manifests": [
+    {
+      "ask_ohlc_available": false,
+      "calendar_complete": false,
+      "first_utc": "2023-01-02T23:00:00+00:00",
+      "identity": "R2_ORIGINAL_TICKS_BID_M1_2023",
+      "last_utc": "2023-12-29T21:58:00+00:00",
+      "publisher_volume_available": false,
+      "raw_source_modified": false,
+      "receipts": [
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "4786f42be652e22eb9ae9f567301b744ff0c0bc03b9fd6ff60173cc86c33a4a2",
+          "original_tick_rows": 3609301,
+          "payload_sha256": "2fdbc864828e0e58c7630ee8379ecd1262c73849501c945437e1156ac4dd148b",
+          "period": "202301",
+          "raw_modified": false,
+          "rows_sha256": "158f73f37ea024337aefb35fe32a5794a6b4987ce1441e903b6bf9ac02018ada",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "df52b8e238b7672aedbf423cdd58185abeb752493d97045f27b4223b4ea00e9a",
+          "original_tick_rows": 2907855,
+          "payload_sha256": "50f365bf6b66a191e90272f5456067d5921b008cd9ed7e3e480f8b07c5dba534",
+          "period": "202302",
+          "raw_modified": false,
+          "rows_sha256": "dfd802cf9f714ab45d1129c2a47058a15088f0a33c20da64cd8b9858dfe75644",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "0253badd41c0f1285e8f7d0193b086d692a0bdd3c7050cf6940c5f9d318b2bf6",
+          "original_tick_rows": 2956910,
+          "payload_sha256": "e0083747bf80ae33550dd43a35661877c2715f676b7c7d41f48afb834e2ce1eb",
+          "period": "202303",
+          "raw_modified": false,
+          "rows_sha256": "d344c5f631ae9834b3817d461968365f1f7a7f92f2095182ea6f8dbd4bfb5c33",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "b4225ba3e4480da6490b6fb175623a9a4a4497190a0cfbe621c8cfa5a79df829",
+          "original_tick_rows": 2067972,
+          "payload_sha256": "fe1a1d9dea1e18d5df527822f306663d79ef7338185d45c8ce0513b685a75caf",
+          "period": "202304",
+          "raw_modified": false,
+          "rows_sha256": "d104e91eb496d65b28483b23dd73438d1e8d19322d2e421f228310b62e454cd2",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "0d9e920775789173e62f89849ddaa7a5313ddd6bf577ef18f0a49c1403e7cf5b",
+          "original_tick_rows": 2667169,
+          "payload_sha256": "0fd764980be276256a94487781aa01676a2d9ead37ffb2cee439b5ed04318f34",
+          "period": "202305",
+          "raw_modified": false,
+          "rows_sha256": "3be2efbc5ba8eb014628c31a04b31c07921e94adeac2c5a11e9cbb71bd6230e4",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "f526c6ab1c4a2b8d7e687c3031a8354bd81bdcb7c4002a9de57cc736676d9318",
+          "original_tick_rows": 2110542,
+          "payload_sha256": "90209403d145d4b1ddb93adec0daa63fc0d482dd4c70878b3e0ae9e93d8542fc",
+          "period": "202306",
+          "raw_modified": false,
+          "rows_sha256": "0045d1bf079e6eac3deae9ef188cd3ae8cc8972ea51043adae68abba5842c670",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "e831abd73c9148718e7fc4610bfcaae7f9ecd621e299f5f6252d8898c2ae8a5b",
+          "original_tick_rows": 1955173,
+          "payload_sha256": "539984178ba28da8bf705d121ec68bc0be3e62601033209f2c040f3d27ea95dd",
+          "period": "202307",
+          "raw_modified": false,
+          "rows_sha256": "96f45236914b61a225cf64f75ad2f6527d15bb553d9b1c228782144e28317c5e",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "3f7960427cc2a24c549cf44c3a961f699de2c647e9ab1187caf10131e7f59f57",
+          "original_tick_rows": 2370472,
+          "payload_sha256": "0a384405e5161a04076428f457f4142ae3a4d0f7305cdbe77c9d170f0547dfd1",
+          "period": "202308",
+          "raw_modified": false,
+          "rows_sha256": "7cdf93e61ef6f541a9d8778fe940d58fcbd2cd8d8ea4154768304a44b7a0cb3e",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "aa0bcf95751334ad31c90211b9635e23e4c01ad05b24ebac3edd2db8affd0499",
+          "original_tick_rows": 1880797,
+          "payload_sha256": "6564c068f0b95d8ea6f728f7e565d6e07c5887a8bcb844d0b9ecf6087628a423",
+          "period": "202309",
+          "raw_modified": false,
+          "rows_sha256": "b866bd418db15449babcf68b229da304ee07aa84d6a5bae07beee5d6d15df45d",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "dc29013c1f8403d0763de0b5a7462e57eb347b5095c12663da2defb389d58d76",
+          "original_tick_rows": 2861448,
+          "payload_sha256": "9f5f917c33dc58881877b93fb34ca413613136744d70333bfef0ccb47ad21e6f",
+          "period": "202310",
+          "raw_modified": false,
+          "rows_sha256": "b9b63aba821709f5f0c9d4afd0076a16bb818fb6aaa0e29a915b1d21280cc2aa",
+          "source_inversions": 1
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "d6cb3e5be053f9d049bf3fd60a2723c8d74a5eb9c8ee2829b82170718cc41383",
+          "original_tick_rows": 2493176,
+          "payload_sha256": "ea82ce6057602aa1c11eea5f1f594d10d7b6003efa4ba3473e62bce8856dc319",
+          "period": "202311",
+          "raw_modified": false,
+          "rows_sha256": "4ce306099eee9a296495e9c20c65169fa97bf735fc44ea058a0dc2e66c5d7550",
+          "source_inversions": 0
+        },
+        {
+          "chronology": "separate (timestamp,source_line) derivative",
+          "clock": "EST_FIXED_UTC_MINUS_05",
+          "original_archive_sha256": "aa9937564474a11738c863a9f3498ce94433c0ff2bf93b386d7621cdf9a1b3b7",
+          "original_tick_rows": 2748304,
+          "payload_sha256": "f5ffc9723b03a7f53fc5cf4f80a6e5ef11052a39652939c524d43361faf7ce2d",
+          "period": "202312",
+          "raw_modified": false,
+          "rows_sha256": "8124b99aafebe41b78daa9f3c4fab6d91d072d17984616008748f96a50d03981",
+          "source_inversions": 0
+        }
+      ],
+      "rows": 308753,
+      "rows_sha256": "b4b85633b0a390075471b9cc1c217769381d61aa74f656a6018e89fbd3399999",
+      "schema": "oracle.gold.minute_snapshot.v1",
+      "sealed_oos": false,
+      "sha256": "141f0e88240724d17e35f576c4739df9f73ab0485fe489f7fa28ba4dbd4a0dc8",
+      "year": 2023
+    },
+    {
+      "ask_ohlc_available": false,
+      "calendar_complete": false,
+      "first_utc": "2024-01-01T23:00:00+00:00",
+      "identity": "BIGQUERY_ORIGINAL_HISTDATA_BID_M1_2024",
+      "last_utc": "2024-12-31T21:57:00+00:00",
+      "publisher_volume_available": false,
+      "raw_source_modified": false,
+      "receipts": [
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 1,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "9440a531-716e-439f-a1b3-84e45ffc71a7",
+          "read_only": true,
+          "rows": 30028,
+          "rows_sha256": "154e6966e42ceff4df899ae9e9b5c24f17f705e545bdb032e8b6b38d60035e28",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 2,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "e01b7101-99bb-4074-83eb-557748cd2a2f",
+          "read_only": true,
+          "rows": 28808,
+          "rows_sha256": "d8d43fb59372459a3bf9c586dcc4ab613fb8a2a9c4dc257b739c9de266f6aa85",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 3,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "182f445a-a4b3-4b0e-812f-f7c1b1fe083e",
+          "read_only": true,
+          "rows": 27589,
+          "rows_sha256": "77c9bbc0aa041e47ec5bece282adfff2e970b007334456b104e6d0ac0b3d0648",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 4,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "91b5b2f2-af1a-495c-b0a3-0e4df10a7efe",
+          "read_only": true,
+          "rows": 30299,
+          "rows_sha256": "7fcccb1e0d25717749cb9446c33d59bb1cd533fe29b3d4dbcbacf222d08025f5",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 5,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "c98f07c5-fb14-4fde-90d5-7f85da97dba1",
+          "read_only": true,
+          "rows": 31523,
+          "rows_sha256": "ca2c160323b73fcd5c7ad27c423dd9961cb57b460d9c3bbd7b4070851ccf7156",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 6,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "1647d0db-d7dd-4d86-9f7c-731f5ddc384f",
+          "read_only": true,
+          "rows": 27507,
+          "rows_sha256": "6825fe981ccb175652effe2f4953251a2f5889847ed20c0de7e5b698e9a4e3ec",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 7,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "eea94ffb-5c52-4fde-8cb9-7da75cadcb65",
+          "read_only": true,
+          "rows": 31587,
+          "rows_sha256": "7f6b890b06d9ac8c3fac1857d8386b69931fd96aa03852325ec71501b18c35ea",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 8,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "72f44dcb-5711-4015-a7d0-4b402fed35e7",
+          "read_only": true,
+          "rows": 30300,
+          "rows_sha256": "f057d56df2b69d2a7b95bff73331cc7b32f23987541b8172dfe18500e9c30d83",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 9,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "70712d0d-9289-4eb1-8c95-92d87afaf4c1",
+          "read_only": true,
+          "rows": 28885,
+          "rows_sha256": "d78ab8ba4f3ffda78f13a0c30056d888b23719e2866c0738b71aee105753e14f",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 10,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "6df6fe03-8f5e-4aa9-b72c-f18bd522274e",
+          "read_only": true,
+          "rows": 31731,
+          "rows_sha256": "bf747e9cb59d2b3a6a9fec39948548a6e2949b585ea8cd809c595290237d994d",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 11,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "961d8e8c-5816-496a-ba6f-672597db5cad",
+          "read_only": true,
+          "rows": 28572,
+          "rows_sha256": "021607e317470f8b4f76ca96e7a6fc504f742ced2f71c350a9030893d2b435c0",
+          "year": 2024
+        },
+        {
+          "archive_sha256": [
+            "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+          ],
+          "month": 12,
+          "payload_sha256": [
+            "03dec44d8965c88eeba54e8ef5d13e31f28deca6f01fa727f9db55641bee5480"
+          ],
+          "query_job_id": "c588294b-891a-4333-8c3e-c2b989531435",
+          "read_only": true,
+          "rows": 28763,
+          "rows_sha256": "63d3b58237325f88e32bbe29a5de7367a30f97a449ffc645a7953f40955b8e33",
+          "year": 2024
+        }
+      ],
+      "rows": 355592,
+      "rows_sha256": "2f26478c1a1cdad2740e4f86992fce9276bc8fc4197735df44bcf8d7a26dd8d4",
+      "schema": "oracle.gold.minute_snapshot.v1",
+      "sealed_oos": false,
+      "sha256": "59e20f52b836abe3ca1124860f73d75d3d4fafeb7e17b91abfe7efa6b6a661eb",
+      "year": 2024
+    },
+    {
+      "ask_ohlc_available": false,
+      "calendar_complete": false,
+      "first_utc": "2025-01-01T23:00:00+00:00",
+      "identity": "BIGQUERY_ORIGINAL_HISTDATA_BID_M1_2025",
+      "last_utc": "2025-12-31T21:57:00+00:00",
+      "publisher_volume_available": false,
+      "raw_source_modified": false,
+      "receipts": [
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 1,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "80fa2387-f0e1-48f8-a84e-3af72318f8a2",
+          "read_only": true,
+          "rows": 30197,
+          "rows_sha256": "fe8a4d224290f99e04a997890df771f30fcaea51ee6bfea462dbf2be2d040627",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 2,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "2437d90f-884c-4e2e-8382-9297d6908180",
+          "read_only": true,
+          "rows": 27441,
+          "rows_sha256": "e09c93ab591cef01c3752593b73373ebcebc0c7703d8d09d6779fb679dd89276",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 3,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "fd128f22-27d4-484f-ad2d-8f0cf2b72f1d",
+          "read_only": true,
+          "rows": 28972,
+          "rows_sha256": "cc2e246fbb034c1b33cd4011dbdf66b8339c01160b3bc65e714a95fd46a9607c",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 4,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "507dd276-e3f3-47de-ae76-2897e3483528",
+          "read_only": true,
+          "rows": 28948,
+          "rows_sha256": "d6fd3db86c02d6ab2e647141e1d13b2ed38fb7b4837de4f18bcb9cc62c0acd2b",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 5,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "3d9946a2-0fcf-4be3-8da6-cc1f2d0b8af5",
+          "read_only": true,
+          "rows": 30147,
+          "rows_sha256": "e4dfcd0f9f5d28031c84eaaab4544b843d5a88b5e3c2e42653c03b9d183a46bb",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 6,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "6c7fc4bb-d42e-419a-b6fd-2c85a8045c28",
+          "read_only": true,
+          "rows": 28889,
+          "rows_sha256": "a64caa965ae013d016dd0610ed547f55a3f2af84b011f0a08384f46085ec0bbd",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 7,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "2ae1ec74-1842-431d-a14b-63281b76d47b",
+          "read_only": true,
+          "rows": 31499,
+          "rows_sha256": "6dbfc6b05c8d74af503b2cb58dce2d0546320b125d7b848eebf5b70b40d4dfd1",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 8,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "0ebaea37-0eb6-46cb-a09d-ed36d4a434f3",
+          "read_only": true,
+          "rows": 28971,
+          "rows_sha256": "023f6e47360178f8fa265c1054a208087975ea1b243ceb0095db42075f5903d7",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 9,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "b1557ca3-973a-41ea-b4cf-404333c06bc4",
+          "read_only": true,
+          "rows": 30209,
+          "rows_sha256": "15429b405c44b6132e9e217f4c45348ca3a62621dbdbe82c56089ae8116ed25c",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 10,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "7235a9d7-7f7c-4253-a9d6-5d389f53c7a5",
+          "read_only": true,
+          "rows": 31619,
+          "rows_sha256": "6410e6ec0c851966c3acabd7eda8c94a5ee14ac33604a88a991a0c364dba5ed0",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 11,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "6a133d28-6a87-4006-8d83-6ec6f9e4b0d0",
+          "read_only": true,
+          "rows": 27358,
+          "rows_sha256": "e9db318a8af36387ceebaf193b85aafd466889faa264bf5f65c886ae1f63fd8f",
+          "year": 2025
+        },
+        {
+          "archive_sha256": [
+            "dd0b4dc6983c07fafd89ba83b0c7f514aa16977654eaeb4c9fc8884ed359d98e"
+          ],
+          "month": 12,
+          "payload_sha256": [
+            "1b302280d4f95f9c8ecdbb293e5659ca8a86eed314a7a061635f9f73fe96c2bc"
+          ],
+          "query_job_id": "91bb6bfe-5217-48cd-b7e1-be7509c434bb",
+          "read_only": true,
+          "rows": 29701,
+          "rows_sha256": "2ddd2d59b91b556c00fb18dcbcb20148541309c2c7f47bf5c02c58342a5477af",
+          "year": 2025
+        }
+      ],
+      "rows": 353951,
+      "rows_sha256": "9d8ff5814971c5a24c82d9cbd5e9669071a4311cf0229990c84b8ee06c3809ee",
+      "schema": "oracle.gold.minute_snapshot.v1",
+      "sealed_oos": false,
+      "sha256": "73f400a190337ae36af29bd1163ff6e7ec9cd696cd42512998316807a3de6a31",
+      "year": 2025
+    }
+  ],
+  "interpretation": "Passive reference shares price history/cash-cost convention; different time exposure. Native strategy trails rising-gold passive return; positive P&L alone is not alpha.",
+  "models": {
+    "10000000_common_base": {
+      "actual_broker_qualified": false,
+      "capital": 10000000.0,
+      "cost": "common_base",
+      "entry_price": 1826.837,
+      "estimated_exit_cost_if_liquidated_usd": 1221.7649999999999,
+      "minute_close_drawdown_pct": -12.002411250639932,
+      "monthly": [
+        {
+          "end_equity": 10520555.074000001,
+          "month": "2023-01",
+          "net_usd": 520555.07400000095,
+          "return_pct": 5.20555074000002,
+          "start_equity": 10000000.0
+        },
+        {
+          "end_equity": 9991281.277,
+          "month": "2023-02",
+          "net_usd": -529273.7970000003,
+          "return_pct": -5.0308542969184415,
+          "start_equity": 10520555.074000001
+        },
+        {
+          "end_equity": 10736573.524,
+          "month": "2023-03",
+          "net_usd": 745292.2469999995,
+          "return_pct": 7.459426137022751,
+          "start_equity": 9991281.277
+        },
+        {
+          "end_equity": 10842097.627,
+          "month": "2023-04",
+          "net_usd": 105524.10300000012,
+          "return_pct": 0.9828471137846462,
+          "start_equity": 10736573.524
+        },
+        {
+          "end_equity": 10723576.024,
+          "month": "2023-05",
+          "net_usd": -118521.60300000012,
+          "return_pct": -1.0931611859392065,
+          "start_equity": 10842097.627
+        },
+        {
+          "end_equity": 10480730.734000001,
+          "month": "2023-06",
+          "net_usd": -242845.2899999991,
+          "return_pct": -2.2645924219355296,
+          "start_equity": 10723576.024
+        },
+        {
+          "end_equity": 10719312.844,
+          "month": "2023-07",
+          "net_usd": 238582.1099999994,
+          "return_pct": 2.2763881265075003,
+          "start_equity": 10480730.734000001
+        },
+        {
+          "end_equity": 10586894.314000001,
+          "month": "2023-08",
+          "net_usd": -132418.52999999933,
+          "return_pct": -1.2353266662435303,
+          "start_equity": 10719312.844
+        },
+        {
+          "end_equity": 10109314.174,
+          "month": "2023-09",
+          "net_usd": -477580.1400000006,
+          "return_pct": -4.511050416064455,
+          "start_equity": 10586894.314000001
+        },
+        {
+          "end_equity": 10813919.047,
+          "month": "2023-10",
+          "net_usd": 704604.8729999997,
+          "return_pct": 6.9698582997070435,
+          "start_equity": 10109314.174
+        },
+        {
+          "end_equity": 11107038.667000001,
+          "month": "2023-11",
+          "net_usd": 293119.62000000104,
+          "return_pct": 2.7105771619523766,
+          "start_equity": 10813919.047
+        },
+        {
+          "end_equity": 11224967.584,
+          "month": "2023-12",
+          "net_usd": 117928.91699999943,
+          "return_pct": 1.0617494053601906,
+          "start_equity": 11107038.667000001
+        },
+        {
+          "end_equity": 11106102.847000001,
+          "month": "2024-01",
+          "net_usd": -118864.73699999973,
+          "return_pct": -1.0589316727241949,
+          "start_equity": 11224967.584
+        },
+        {
+          "end_equity": 11128770.487,
+          "month": "2024-02",
+          "net_usd": 22667.639999998733,
+          "return_pct": 0.20410075714472065,
+          "start_equity": 11106102.847000001
+        },
+        {
+          "end_equity": 12130201.866999999,
+          "month": "2024-03",
+          "net_usd": 1001431.379999999,
+          "return_pct": 8.99858058147407,
+          "start_equity": 11128770.487
+        },
+        {
+          "end_equity": 12413183.437,
+          "month": "2024-04",
+          "net_usd": 282981.57000000216,
+          "return_pct": 2.332867771721503,
+          "start_equity": 12130201.866999999
+        },
+        {
+          "end_equity": 12599099.677,
+          "month": "2024-05",
+          "net_usd": 185916.23999999836,
+          "return_pct": 1.4977321566507884,
+          "start_equity": 12413183.437
+        },
+        {
+          "end_equity": 12585530.287,
+          "month": "2024-06",
+          "net_usd": -13569.389999998733,
+          "return_pct": -0.10770126713712802,
+          "start_equity": 12599099.677
+        },
+        {
+          "end_equity": 13225210.048,
+          "month": "2024-07",
+          "net_usd": 639679.7609999999,
+          "return_pct": 5.082660375945736,
+          "start_equity": 12585530.287
+        },
+        {
+          "end_equity": 13513759.747000001,
+          "month": "2024-08",
+          "net_usd": 288549.69900000095,
+          "return_pct": 2.1818156229861607,
+          "start_equity": 13225210.048
+        },
+        {
+          "end_equity": 14199559.837000001,
+          "month": "2024-09",
+          "net_usd": 685800.0899999999,
+          "return_pct": 5.074828196144643,
+          "start_equity": 13513759.747000001
+        },
+        {
+          "end_equity": 14780340.127,
+          "month": "2024-10",
+          "net_usd": 580780.2899999991,
+          "return_pct": 4.090128825589723,
+          "start_equity": 14199559.837000001
+        },
+        {
+          "end_equity": 14278116.727000002,
+          "month": "2024-11",
+          "net_usd": -502223.3999999985,
+          "return_pct": -3.3979150390630153,
+          "start_equity": 14780340.127
+        },
+        {
+          "end_equity": 14144034.517,
+          "month": "2024-12",
+          "net_usd": -134082.2100000009,
+          "return_pct": -0.9390748973668983,
+          "start_equity": 14278116.727000002
+        },
+        {
+          "end_equity": 15048296.587000001,
+          "month": "2025-01",
+          "net_usd": 904262.0700000003,
+          "return_pct": 6.39323998335235,
+          "start_equity": 14144034.517
+        },
+        {
+          "end_equity": 15354585.274,
+          "month": "2025-02",
+          "net_usd": 306288.686999999,
+          "return_pct": 2.0353711480181502,
+          "start_equity": 15048296.587000001
+        },
+        {
+          "end_equity": 16735179.724,
+          "month": "2025-03",
+          "net_usd": 1380594.4499999993,
+          "return_pct": 8.991414781731466,
+          "start_equity": 15354585.274
+        },
+        {
+          "end_equity": 17518705.417000003,
+          "month": "2025-04",
+          "net_usd": 783525.6930000037,
+          "return_pct": 4.681907848747779,
+          "start_equity": 16735179.724
+        },
+        {
+          "end_equity": 17599861.807,
+          "month": "2025-05",
+          "net_usd": 81156.38999999687,
+          "return_pct": 0.46325563486695476,
+          "start_equity": 17518705.417000003
+        },
+        {
+          "end_equity": 17715539.557,
+          "month": "2025-06",
+          "net_usd": 115677.75,
+          "return_pct": 0.6572651039452593,
+          "start_equity": 17599861.807
+        },
+        {
+          "end_equity": 17630187.574,
+          "month": "2025-07",
+          "net_usd": -85351.98299999908,
+          "return_pct": -0.48179160857831915,
+          "start_equity": 17715539.557
+        },
+        {
+          "end_equity": 18436292.524000004,
+          "month": "2025-08",
+          "net_usd": 806104.950000003,
+          "return_pct": 4.57229933950789,
+          "start_equity": 17630187.574
+        },
+        {
+          "end_equity": 20567362.624,
+          "month": "2025-09",
+          "net_usd": 2131070.0999999978,
+          "return_pct": 11.559103313346819,
+          "start_equity": 18436292.524000004
+        },
+        {
+          "end_equity": 21304877.167000003,
+          "month": "2025-10",
+          "net_usd": 737514.5430000015,
+          "return_pct": 3.5858488834120017,
+          "start_equity": 20567362.624
+        },
+        {
+          "end_equity": 22450216.867000002,
+          "month": "2025-11",
+          "net_usd": 1145339.6999999993,
+          "return_pct": 5.375950731948187,
+          "start_equity": 21304877.167000003
+        },
+        {
+          "end_equity": 22952305.093000002,
+          "month": "2025-12",
+          "net_usd": 502088.2259999998,
+          "return_pct": 2.2364515629157644,
+          "start_equity": 22450216.867000002
+        }
+      ],
+      "net_marked_usd": 12952305.093000002,
+      "rule": "95%initial cash, integer source-model units, first observed open, fixed holding; no added final liquidation",
+      "units": 5199
+    },
+    "10000000_common_stress": {
+      "actual_broker_qualified": false,
+      "capital": 10000000.0,
+      "cost": "common_stress",
+      "entry_price": 1826.837,
+      "estimated_exit_cost_if_liquidated_usd": 3742.56,
+      "minute_close_drawdown_pct": -12.003047914196596,
+      "monthly": [
+        {
+          "end_equity": 10517933.918,
+          "month": "2023-01",
+          "net_usd": 517933.9179999996,
+          "return_pct": 5.179339179999998,
+          "start_equity": 10000000.0
+        },
+        {
+          "end_equity": 9988761.923999999,
+          "month": "2023-02",
+          "net_usd": -529171.9940000009,
+          "return_pct": -5.031140128142431,
+          "start_equity": 10517933.918
+        },
+        {
+          "end_equity": 10733910.818,
+          "month": "2023-03",
+          "net_usd": 745148.8940000013,
+          "return_pct": 7.4598724012996165,
+          "start_equity": 9988761.923999999
+        },
+        {
+          "end_equity": 10839414.624,
+          "month": "2023-04",
+          "net_usd": 105503.80599999987,
+          "return_pct": 0.9829018312978555,
+          "start_equity": 10733910.818
+        },
+        {
+          "end_equity": 10720915.818,
+          "month": "2023-05",
+          "net_usd": -118498.80599999987,
+          "return_pct": -1.0932214525462225,
+          "start_equity": 10839414.624
+        },
+        {
+          "end_equity": 10478117.238,
+          "month": "2023-06",
+          "net_usd": -242798.58000000007,
+          "return_pct": -2.2647186501768,
+          "start_equity": 10720915.818
+        },
+        {
+          "end_equity": 10716653.458,
+          "month": "2023-07",
+          "net_usd": 238536.22000000067,
+          "return_pct": 2.276517952432555,
+          "start_equity": 10478117.238
+        },
+        {
+          "end_equity": 10584260.398,
+          "month": "2023-08",
+          "net_usd": -132393.06000000052,
+          "return_pct": -1.2353955506620329,
+          "start_equity": 10716653.458
+        },
+        {
+          "end_equity": 10106772.117999999,
+          "month": "2023-09",
+          "net_usd": -477488.2800000012,
+          "return_pct": -4.51130510819846,
+          "start_equity": 10584260.398
+        },
+        {
+          "end_equity": 10811241.464,
+          "month": "2023-10",
+          "net_usd": 704469.3460000008,
+          "return_pct": 6.970270406565837,
+          "start_equity": 10106772.117999999
+        },
+        {
+          "end_equity": 11104304.704,
+          "month": "2023-11",
+          "net_usd": 293063.2400000002,
+          "return_pct": 2.71072698705197,
+          "start_equity": 10811241.464
+        },
+        {
+          "end_equity": 11222210.938000001,
+          "month": "2023-12",
+          "net_usd": 117906.2340000011,
+          "return_pct": 1.061806543884991,
+          "start_equity": 11104304.704
+        },
+        {
+          "end_equity": 11103369.064,
+          "month": "2024-01",
+          "net_usd": -118841.8740000017,
+          "return_pct": -1.0589880608783298,
+          "start_equity": 11222210.938000001
+        },
+        {
+          "end_equity": 11126032.343999999,
+          "month": "2024-02",
+          "net_usd": 22663.27999999933,
+          "return_pct": 0.20411174184491454,
+          "start_equity": 11103369.064
+        },
+        {
+          "end_equity": 12127271.103999998,
+          "month": "2024-03",
+          "net_usd": 1001238.7599999998,
+          "return_pct": 8.999063898461014,
+          "start_equity": 11126032.343999999
+        },
+        {
+          "end_equity": 12410198.244,
+          "month": "2024-04",
+          "net_usd": 282927.14000000246,
+          "return_pct": 2.332982726070032,
+          "start_equity": 12127271.103999998
+        },
+        {
+          "end_equity": 12596078.724,
+          "month": "2024-05",
+          "net_usd": 185880.47999999858,
+          "return_pct": 1.4978042763327037,
+          "start_equity": 12410198.244
+        },
+        {
+          "end_equity": 12582511.944,
+          "month": "2024-06",
+          "net_usd": -13566.77999999933,
+          "return_pct": -0.10770637670078909,
+          "start_equity": 12596078.724
+        },
+        {
+          "end_equity": 13222068.666,
+          "month": "2024-07",
+          "net_usd": 639556.7219999991,
+          "return_pct": 5.082901767520065,
+          "start_equity": 12582511.944
+        },
+        {
+          "end_equity": 13510562.864,
+          "month": "2024-08",
+          "net_usd": 288494.1980000008,
+          "return_pct": 2.1819142320887552,
+          "start_equity": 13222068.666
+        },
+        {
+          "end_equity": 14196231.044,
+          "month": "2024-09",
+          "net_usd": 685668.1799999997,
+          "return_pct": 5.075052659922985,
+          "start_equity": 13510562.864
+        },
+        {
+          "end_equity": 14776899.624,
+          "month": "2024-10",
+          "net_usd": 580668.5800000001,
+          "return_pct": 4.09030099749903,
+          "start_equity": 14196231.044
+        },
+        {
+          "end_equity": 14274772.824000001,
+          "month": "2024-11",
+          "net_usd": -502126.7999999989,
+          "return_pct": -3.3980524519802935,
+          "start_equity": 14776899.624
+        },
+        {
+          "end_equity": 14140716.404000001,
+          "month": "2024-12",
+          "net_usd": -134056.41999999993,
+          "return_pct": -0.93911420975199,
+          "start_equity": 14274772.824000001
+        },
+        {
+          "end_equity": 15044804.544,
+          "month": "2025-01",
+          "net_usd": 904088.1399999987,
+          "return_pct": 6.3935101600952615,
+          "start_equity": 14140716.404000001
+        },
+        {
+          "end_equity": 15351034.318,
+          "month": "2025-02",
+          "net_usd": 306229.7740000002,
+          "return_pct": 2.035451993439996,
+          "start_equity": 15044804.544
+        },
+        {
+          "end_equity": 16731363.217999998,
+          "month": "2025-03",
+          "net_usd": 1380328.8999999985,
+          "return_pct": 8.991764798424562,
+          "start_equity": 15351034.318
+        },
+        {
+          "end_equity": 17514738.204000004,
+          "month": "2025-04",
+          "net_usd": 783374.9860000052,
+          "return_pct": 4.682075069395619,
+          "start_equity": 16731363.217999998
+        },
+        {
+          "end_equity": 17595878.984,
+          "month": "2025-05",
+          "net_usd": 81140.77999999747,
+          "return_pct": 0.4632714406285876,
+          "start_equity": 17514738.204000004
+        },
+        {
+          "end_equity": 17711534.484,
+          "month": "2025-06",
+          "net_usd": 115655.5,
+          "return_pct": 0.6572874256816963,
+          "start_equity": 17595878.984
+        },
+        {
+          "end_equity": 17626198.918,
+          "month": "2025-07",
+          "net_usd": -85335.56599999964,
+          "return_pct": -0.48180786411865517,
+          "start_equity": 17711534.484
+        },
+        {
+          "end_equity": 18432148.818,
+          "month": "2025-08",
+          "net_usd": 805949.8999999985,
+          "return_pct": 4.572454354733035,
+          "start_equity": 17626198.918
+        },
+        {
+          "end_equity": 20562809.018000003,
+          "month": "2025-09",
+          "net_usd": 2130660.200000003,
+          "return_pct": 11.559478067577755,
+          "start_equity": 18432148.818
+        },
+        {
+          "end_equity": 21300181.704000004,
+          "month": "2025-10",
+          "net_usd": 737372.6860000007,
+          "return_pct": 3.585953093055183,
+          "start_equity": 20562809.018000003
+        },
+        {
+          "end_equity": 22445301.104000002,
+          "month": "2025-11",
+          "net_usd": 1145119.3999999985,
+          "return_pct": 5.376101555908108,
+          "start_equity": 21300181.704000004
+        },
+        {
+          "end_equity": 22947292.756,
+          "month": "2025-12",
+          "net_usd": 501991.65199999884,
+          "return_pct": 2.236511106151018,
+          "start_equity": 22445301.104000002
+        }
+      ],
+      "net_marked_usd": 12947292.756000001,
+      "rule": "95%initial cash, integer source-model units, first observed open, fixed holding; no added final liquidation",
+      "units": 5198
+    },
+    "10000_common_base": {
+      "actual_broker_qualified": false,
+      "capital": 10000.0,
+      "cost": "common_base",
+      "entry_price": 1826.837,
+      "estimated_exit_cost_if_liquidated_usd": 1.1749999999999998,
+      "minute_close_drawdown_pct": -11.592949300705524,
+      "monthly": [
+        {
+          "end_equity": 10500.630000000001,
+          "month": "2023-01",
+          "net_usd": 500.630000000001,
+          "return_pct": 5.006300000000019,
+          "start_equity": 10000.0
+        },
+        {
+          "end_equity": 9991.615000000002,
+          "month": "2023-02",
+          "net_usd": -509.0149999999994,
+          "return_pct": -4.8474710564985095,
+          "start_equity": 10500.630000000001
+        },
+        {
+          "end_equity": 10708.380000000001,
+          "month": "2023-03",
+          "net_usd": 716.7649999999994,
+          "return_pct": 7.173665118201611,
+          "start_equity": 9991.615000000002
+        },
+        {
+          "end_equity": 10809.865000000002,
+          "month": "2023-04",
+          "net_usd": 101.48500000000058,
+          "return_pct": 0.9477157142350201,
+          "start_equity": 10708.380000000001
+        },
+        {
+          "end_equity": 10695.880000000001,
+          "month": "2023-05",
+          "net_usd": -113.98500000000058,
+          "return_pct": -1.0544535015007184,
+          "start_equity": 10809.865000000002
+        },
+        {
+          "end_equity": 10462.330000000002,
+          "month": "2023-06",
+          "net_usd": -233.54999999999927,
+          "return_pct": -2.183551049563004,
+          "start_equity": 10695.880000000001
+        },
+        {
+          "end_equity": 10691.780000000002,
+          "month": "2023-07",
+          "net_usd": 229.45000000000073,
+          "return_pct": 2.1931061245439754,
+          "start_equity": 10462.330000000002
+        },
+        {
+          "end_equity": 10564.430000000002,
+          "month": "2023-08",
+          "net_usd": -127.35000000000036,
+          "return_pct": -1.1911019493480057,
+          "start_equity": 10691.780000000002
+        },
+        {
+          "end_equity": 10105.130000000001,
+          "month": "2023-09",
+          "net_usd": -459.3000000000011,
+          "return_pct": -4.347607963704625,
+          "start_equity": 10564.430000000002
+        },
+        {
+          "end_equity": 10782.765000000001,
+          "month": "2023-10",
+          "net_usd": 677.6350000000002,
+          "return_pct": 6.705851384395856,
+          "start_equity": 10105.130000000001
+        },
+        {
+          "end_equity": 11064.665000000003,
+          "month": "2023-11",
+          "net_usd": 281.90000000000146,
+          "return_pct": 2.6143572636517787,
+          "start_equity": 10782.765000000001
+        },
+        {
+          "end_equity": 11178.080000000002,
+          "month": "2023-12",
+          "net_usd": 113.41499999999905,
+          "return_pct": 1.0250197362504876,
+          "start_equity": 11064.665000000003
+        },
+        {
+          "end_equity": 11063.765000000001,
+          "month": "2024-01",
+          "net_usd": -114.31500000000051,
+          "return_pct": -1.0226711564061186,
+          "start_equity": 11178.080000000002
+        },
+        {
+          "end_equity": 11085.565,
+          "month": "2024-02",
+          "net_usd": 21.799999999999272,
+          "return_pct": 0.19703961535697534,
+          "start_equity": 11063.765000000001
+        },
+        {
+          "end_equity": 12048.665,
+          "month": "2024-03",
+          "net_usd": 963.1000000000004,
+          "return_pct": 8.687874727179,
+          "start_equity": 11085.565
+        },
+        {
+          "end_equity": 12320.815000000002,
+          "month": "2024-04",
+          "net_usd": 272.15000000000146,
+          "return_pct": 2.258756468040257,
+          "start_equity": 12048.665
+        },
+        {
+          "end_equity": 12499.615,
+          "month": "2024-05",
+          "net_usd": 178.79999999999745,
+          "return_pct": 1.4512027004706773,
+          "start_equity": 12320.815000000002
+        },
+        {
+          "end_equity": 12486.565000000002,
+          "month": "2024-06",
+          "net_usd": -13.049999999997453,
+          "return_pct": -0.10440321561902,
+          "start_equity": 12499.615
+        },
+        {
+          "end_equity": 13101.76,
+          "month": "2024-07",
+          "net_usd": 615.1949999999979,
+          "return_pct": 4.926855384166884,
+          "start_equity": 12486.565000000002
+        },
+        {
+          "end_equity": 13379.265000000001,
+          "month": "2024-08",
+          "net_usd": 277.505000000001,
+          "return_pct": 2.1180742129301766,
+          "start_equity": 13101.76
+        },
+        {
+          "end_equity": 14038.815,
+          "month": "2024-09",
+          "net_usd": 659.5499999999993,
+          "return_pct": 4.9296429960838495,
+          "start_equity": 13379.265000000001
+        },
+        {
+          "end_equity": 14597.365000000002,
+          "month": "2024-10",
+          "net_usd": 558.5500000000011,
+          "return_pct": 3.978612154943284,
+          "start_equity": 14038.815
+        },
+        {
+          "end_equity": 14114.365000000002,
+          "month": "2024-11",
+          "net_usd": -483.0,
+          "return_pct": -3.308816351444255,
+          "start_equity": 14597.365000000002
+        },
+        {
+          "end_equity": 13985.415000000003,
+          "month": "2024-12",
+          "net_usd": -128.9499999999989,
+          "return_pct": -0.913608228212881,
+          "start_equity": 14114.365000000002
+        },
+        {
+          "end_equity": 14855.065,
+          "month": "2025-01",
+          "net_usd": 869.6499999999978,
+          "return_pct": 6.218263812693414,
+          "start_equity": 13985.415000000003
+        },
+        {
+          "end_equity": 15149.630000000001,
+          "month": "2025-02",
+          "net_usd": 294.5650000000005,
+          "return_pct": 1.9829263621532478,
+          "start_equity": 14855.065
+        },
+        {
+          "end_equity": 16477.379999999997,
+          "month": "2025-03",
+          "net_usd": 1327.7499999999964,
+          "return_pct": 8.764240446796357,
+          "start_equity": 15149.630000000001
+        },
+        {
+          "end_equity": 17230.915,
+          "month": "2025-04",
+          "net_usd": 753.5350000000035,
+          "return_pct": 4.573148158263041,
+          "start_equity": 16477.379999999997
+        },
+        {
+          "end_equity": 17308.964999999997,
+          "month": "2025-05",
+          "net_usd": 78.04999999999563,
+          "return_pct": 0.4529649179976447,
+          "start_equity": 17230.915
+        },
+        {
+          "end_equity": 17420.214999999997,
+          "month": "2025-06",
+          "net_usd": 111.25,
+          "return_pct": 0.6427305156605279,
+          "start_equity": 17308.964999999997
+        },
+        {
+          "end_equity": 17338.129999999997,
+          "month": "2025-07",
+          "net_usd": -82.08499999999913,
+          "return_pct": -0.4712054357537965,
+          "start_equity": 17420.214999999997
+        },
+        {
+          "end_equity": 18113.38,
+          "month": "2025-08",
+          "net_usd": 775.2500000000036,
+          "return_pct": 4.471358791288349,
+          "start_equity": 17338.129999999997
+        },
+        {
+          "end_equity": 20162.88,
+          "month": "2025-09",
+          "net_usd": 2049.5,
+          "return_pct": 11.31484018995903,
+          "start_equity": 18113.38
+        },
+        {
+          "end_equity": 20872.165,
+          "month": "2025-10",
+          "net_usd": 709.2849999999999,
+          "return_pct": 3.5177762303797877,
+          "start_equity": 20162.88
+        },
+        {
+          "end_equity": 21973.665,
+          "month": "2025-11",
+          "net_usd": 1101.5,
+          "return_pct": 5.277363416780201,
+          "start_equity": 20872.165
+        },
+        {
+          "end_equity": 22456.535,
+          "month": "2025-12",
+          "net_usd": 482.869999999999,
+          "return_pct": 2.197494136731404,
+          "start_equity": 21973.665
+        }
+      ],
+      "net_marked_usd": 12456.535,
+      "rule": "95%initial cash, integer source-model units, first observed open, fixed holding; no added final liquidation",
+      "units": 5
+    },
+    "10000_common_stress": {
+      "actual_broker_qualified": false,
+      "capital": 10000.0,
+      "cost": "common_stress",
+      "entry_price": 1826.837,
+      "estimated_exit_cost_if_liquidated_usd": 3.5999999999999996,
+      "minute_close_drawdown_pct": -11.595455475417538,
+      "monthly": [
+        {
+          "end_equity": 10498.205,
+          "month": "2023-01",
+          "net_usd": 498.2049999999999,
+          "return_pct": 4.9820500000000045,
+          "start_equity": 10000.0
+        },
+        {
+          "end_equity": 9989.19,
+          "month": "2023-02",
+          "net_usd": -509.0149999999994,
+          "return_pct": -4.848590782900497,
+          "start_equity": 10498.205
+        },
+        {
+          "end_equity": 10705.955,
+          "month": "2023-03",
+          "net_usd": 716.7649999999994,
+          "return_pct": 7.175406614550317,
+          "start_equity": 9989.19
+        },
+        {
+          "end_equity": 10807.44,
+          "month": "2023-04",
+          "net_usd": 101.48500000000058,
+          "return_pct": 0.9479303808020978,
+          "start_equity": 10705.955
+        },
+        {
+          "end_equity": 10693.455,
+          "month": "2023-05",
+          "net_usd": -113.98500000000058,
+          "return_pct": -1.054690102373923,
+          "start_equity": 10807.44
+        },
+        {
+          "end_equity": 10459.905,
+          "month": "2023-06",
+          "net_usd": -233.54999999999927,
+          "return_pct": -2.184046222666103,
+          "start_equity": 10693.455
+        },
+        {
+          "end_equity": 10689.355000000001,
+          "month": "2023-07",
+          "net_usd": 229.45000000000073,
+          "return_pct": 2.1936145691571873,
+          "start_equity": 10459.905
+        },
+        {
+          "end_equity": 10562.005000000001,
+          "month": "2023-08",
+          "net_usd": -127.35000000000036,
+          "return_pct": -1.1913721641764186,
+          "start_equity": 10689.355000000001
+        },
+        {
+          "end_equity": 10102.705,
+          "month": "2023-09",
+          "net_usd": -459.3000000000011,
+          "return_pct": -4.348606159531276,
+          "start_equity": 10562.005000000001
+        },
+        {
+          "end_equity": 10780.34,
+          "month": "2023-10",
+          "net_usd": 677.6350000000002,
+          "return_pct": 6.707461021577887,
+          "start_equity": 10102.705
+        },
+        {
+          "end_equity": 11062.240000000002,
+          "month": "2023-11",
+          "net_usd": 281.90000000000146,
+          "return_pct": 2.614945354228171,
+          "start_equity": 10780.34
+        },
+        {
+          "end_equity": 11175.655,
+          "month": "2023-12",
+          "net_usd": 113.41499999999905,
+          "return_pct": 1.0252444351234402,
+          "start_equity": 11062.240000000002
+        },
+        {
+          "end_equity": 11061.34,
+          "month": "2024-01",
+          "net_usd": -114.31500000000051,
+          "return_pct": -1.0228930653281676,
+          "start_equity": 11175.655
+        },
+        {
+          "end_equity": 11083.14,
+          "month": "2024-02",
+          "net_usd": 21.799999999999272,
+          "return_pct": 0.1970828127514368,
+          "start_equity": 11061.34
+        },
+        {
+          "end_equity": 12046.24,
+          "month": "2024-03",
+          "net_usd": 963.1000000000004,
+          "return_pct": 8.689775641199148,
+          "start_equity": 11083.14
+        },
+        {
+          "end_equity": 12318.390000000001,
+          "month": "2024-04",
+          "net_usd": 272.15000000000146,
+          "return_pct": 2.2592111729469178,
+          "start_equity": 12046.24
+        },
+        {
+          "end_equity": 12497.189999999999,
+          "month": "2024-05",
+          "net_usd": 178.79999999999745,
+          "return_pct": 1.4514883844398252,
+          "start_equity": 12318.390000000001
+        },
+        {
+          "end_equity": 12484.140000000001,
+          "month": "2024-06",
+          "net_usd": -13.049999999997453,
+          "return_pct": -0.1044234743970196,
+          "start_equity": 12497.189999999999
+        },
+        {
+          "end_equity": 13099.335,
+          "month": "2024-07",
+          "net_usd": 615.1949999999979,
+          "return_pct": 4.927812408383736,
+          "start_equity": 12484.140000000001
+        },
+        {
+          "end_equity": 13376.84,
+          "month": "2024-08",
+          "net_usd": 277.505000000001,
+          "return_pct": 2.118466319091783,
+          "start_equity": 13099.335
+        },
+        {
+          "end_equity": 14036.39,
+          "month": "2024-09",
+          "net_usd": 659.5499999999993,
+          "return_pct": 4.9305366588820565,
+          "start_equity": 13376.84
+        },
+        {
+          "end_equity": 14594.94,
+          "month": "2024-10",
+          "net_usd": 558.5500000000011,
+          "return_pct": 3.979299520745716,
+          "start_equity": 14036.39
+        },
+        {
+          "end_equity": 14111.94,
+          "month": "2024-11",
+          "net_usd": -483.0,
+          "return_pct": -3.3093661227795335,
+          "start_equity": 14594.94
+        },
+        {
+          "end_equity": 13982.990000000002,
+          "month": "2024-12",
+          "net_usd": -128.9499999999989,
+          "return_pct": -0.9137652229246895,
+          "start_equity": 14111.94
+        },
+        {
+          "end_equity": 14852.64,
+          "month": "2025-01",
+          "net_usd": 869.6499999999978,
+          "return_pct": 6.219342215077006,
+          "start_equity": 13982.990000000002
+        },
+        {
+          "end_equity": 15147.205,
+          "month": "2025-02",
+          "net_usd": 294.5650000000005,
+          "return_pct": 1.9832501158043359,
+          "start_equity": 14852.64
+        },
+        {
+          "end_equity": 16474.954999999998,
+          "month": "2025-03",
+          "net_usd": 1327.7499999999982,
+          "return_pct": 8.765643562624238,
+          "start_equity": 15147.205
+        },
+        {
+          "end_equity": 17228.49,
+          "month": "2025-04",
+          "net_usd": 753.5350000000035,
+          "return_pct": 4.5738212942008305,
+          "start_equity": 16474.954999999998
+        },
+        {
+          "end_equity": 17306.539999999997,
+          "month": "2025-05",
+          "net_usd": 78.04999999999563,
+          "return_pct": 0.45302867517695855,
+          "start_equity": 17228.49
+        },
+        {
+          "end_equity": 17417.789999999997,
+          "month": "2025-06",
+          "net_usd": 111.25,
+          "return_pct": 0.6428205753431948,
+          "start_equity": 17306.539999999997
+        },
+        {
+          "end_equity": 17335.704999999998,
+          "month": "2025-07",
+          "net_usd": -82.08499999999913,
+          "return_pct": -0.47127103955209027,
+          "start_equity": 17417.789999999997
+        },
+        {
+          "end_equity": 18110.955,
+          "month": "2025-08",
+          "net_usd": 775.2500000000036,
+          "return_pct": 4.471984265999018,
+          "start_equity": 17335.704999999998
+        },
+        {
+          "end_equity": 20160.455,
+          "month": "2025-09",
+          "net_usd": 2049.5,
+          "return_pct": 11.316355211528052,
+          "start_equity": 18110.955
+        },
+        {
+          "end_equity": 20869.74,
+          "month": "2025-10",
+          "net_usd": 709.2849999999999,
+          "return_pct": 3.5181993660361233,
+          "start_equity": 20160.455
+        },
+        {
+          "end_equity": 21971.24,
+          "month": "2025-11",
+          "net_usd": 1101.5,
+          "return_pct": 5.2779766302790465,
+          "start_equity": 20869.74
+        },
+        {
+          "end_equity": 22454.11,
+          "month": "2025-12",
+          "net_usd": 482.869999999999,
+          "return_pct": 2.1977366775839613,
+          "start_equity": 21971.24
+        }
+      ],
+      "net_marked_usd": 12454.11,
+      "rule": "95%initial cash, integer source-model units, first observed open, fixed holding; no added final liquidation",
+      "units": 5
+    }
+  }
+}

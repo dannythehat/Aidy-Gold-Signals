@@ -1,0 +1,21 @@
+{
+  "ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40820854888",
+  "commit": "8f90c09a5aa71484bdb1984f6cf17a098a3a61db",
+  "failure": "Windows PYTHONPATH used Linux colon separator. ModuleNotFoundError aidy before import preparation/native price replay. No strategy verdict.",
+  "members_sha256": {
+    "bootstrap/OracleMathProbe.mq5.compile.log": "15c95de41d2f3d68797fef71a88dc43b63b11ace89b1d2471c28b48e919d14d9",
+    "bootstrap/OracleOfflineSymbolProbe.mq5.compile.log": "b9871281bd131496fd237788532908c67b7d24e50c88c6cc014ba358112e107f",
+    "bootstrap/compile/GoldBreakoutEA.mq5.log": "f51a9cdedbc8d0301245998a633e050268a648c40461b9a1c31ea58904f6034b",
+    "bootstrap/compile/native_metaeditor_report.json": "de7b43db3767e4ef1ffd8b966d8a93c8af7068cf01868a5aac7003c4e315d391",
+    "bootstrap/custom_symbol_result.txt": "1a8e4df5a45c8faad3f1cbdc3926732a810022564193e3e49015231e8c71c845",
+    "bootstrap/offline_probe_report.json": "ab7934fded8a29f68d01866c92bc6ff18b02c7ed3ba7a7130e4c022f37147f21",
+    "bootstrap/runtime-1-20261029.log": "b8e62b830b21afd6ef805775be073c10d553a9a819080e4a0ba07ff88ba61b11",
+    "bootstrap/runtime-2-metaeditor.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bootstrap/runtime-3-OracleMathProbe.log": "15c95de41d2f3d68797fef71a88dc43b63b11ace89b1d2471c28b48e919d14d9",
+    "bootstrap/runtime-4-20261029.log": "09eb423d1ccae177130943247e477517185615f6f600af7458d68b470f8c5c36",
+    "bootstrap/runtime-5-OracleOfflineSymbolProbe.log": "b9871281bd131496fd237788532908c67b7d24e50c88c6cc014ba358112e107f",
+    "bootstrap/runtime-6-20261029.log": "b14b1699a552bdd45f78aaef8ba5de5e0a556227b4d32cd60b74a8a4102856fc",
+    "bootstrap/runtime-7-20261029.log": "7690035a8e98d8ad53ba58791e09594451d6e7f047b1cad70c5d46b8f98181bf"
+  },
+  "zip_sha256": "13af013c89b27d331e7a6049a6bb134bd5a526f4847058165679dfaa45762908"
+}

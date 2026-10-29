@@ -1,0 +1,1836 @@
+{
+  "gaps": [
+    "GAP-APEX-ENTRY-SIZING-LOOKAHEAD",
+    "GAP-SOURCE-MARKET-CALENDAR",
+    "GAP-NATIVE-BROKER-PARITY",
+    "GAP-FINANCING-MARGIN",
+    "GAP-INTRABAR-DD"
+  ],
+  "manifest": {
+    "broker_parity": false,
+    "calendar_market_completeness_verified": false,
+    "exclusion": "Only occupied hours with all 60 M1 present admitted; gaps are not repaired",
+    "first_utc": "2024-01-01T23:00:00+00:00",
+    "h1_gap_count": 272,
+    "identity": "BIGQUERY_HISTDATA_M1_BID_2024",
+    "last_utc": "2024-12-31T20:00:00+00:00",
+    "receipts": [
+      {
+        "calendar_month_utc": "2024-01",
+        "complete_h1": 499,
+        "monthly_source_sha256": "2db0a9b7f740fe5258feaae209d696663fb0f912d09707dddce167e3f9590c1f",
+        "observed_native_m1_rows": 30028,
+        "partial_hour_excluded": 2,
+        "query_estimated_bytes_scanned": 17025990,
+        "query_job_id": "4c14515d-77d7-47a1-b7a2-97652c041963",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-02",
+        "complete_h1": 471,
+        "monthly_source_sha256": "9049bef76c6f56c3dd38f94017ff8b8f0e2cd336c94a467f9ca8f5ffe2ac9d15",
+        "observed_native_m1_rows": 28808,
+        "partial_hour_excluded": 10,
+        "query_estimated_bytes_scanned": 16335280,
+        "query_job_id": "8aa30d20-1ba0-4e4b-bfd1-7fba161ccf8d",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-03",
+        "complete_h1": 451,
+        "monthly_source_sha256": "67c37ddc9c2789c73841905dec9dc1187d0db544a5970ced4036ae99bfa7fe30",
+        "observed_native_m1_rows": 27589,
+        "partial_hour_excluded": 9,
+        "query_estimated_bytes_scanned": 15642792,
+        "query_job_id": "7a45825d-5d7d-44f9-b416-e1c1d864dd93",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-04",
+        "complete_h1": 504,
+        "monthly_source_sha256": "3373c0f34ef9a296753211cdff963a3939921646d1074df359ef977f3ab59fbc",
+        "observed_native_m1_rows": 30299,
+        "partial_hour_excluded": 1,
+        "query_estimated_bytes_scanned": 17178202,
+        "query_job_id": "6fae5bc3-36ee-4785-84bc-8bdae902466e",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-05",
+        "complete_h1": 520,
+        "monthly_source_sha256": "0fd84a63a822e5fea538e722263032958a738b5139b7be5593a050e059bee326",
+        "observed_native_m1_rows": 31523,
+        "partial_hour_excluded": 6,
+        "query_estimated_bytes_scanned": 17873328,
+        "query_job_id": "a2e39cb3-ed17-4dd3-ad8d-e716509f4767",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-06",
+        "complete_h1": 456,
+        "monthly_source_sha256": "810fd41bae45e8d3baaf52bd9e746cc01ef1bc44b2aeedaacb06e50f14ac7ac9",
+        "observed_native_m1_rows": 27507,
+        "partial_hour_excluded": 3,
+        "query_estimated_bytes_scanned": 15597042,
+        "query_job_id": "6aae7ecb-80e3-4d80-8a44-8000b1d9f12b",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-07",
+        "complete_h1": 525,
+        "monthly_source_sha256": "52d531c3dffb6a0dfc779c906e3aa2c641fa0501ed2f34ff10518f882a4271a6",
+        "observed_native_m1_rows": 31587,
+        "partial_hour_excluded": 2,
+        "query_estimated_bytes_scanned": 17908959,
+        "query_job_id": "d339cd55-b77e-4109-9442-b7a5adf24594",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-08",
+        "complete_h1": 505,
+        "monthly_source_sha256": "827a11c433b3a8ec611f7063bf30dc420023cc773d74f666cf2023f59fb3bd51",
+        "observed_native_m1_rows": 30300,
+        "partial_hour_excluded": 0,
+        "query_estimated_bytes_scanned": 17178641,
+        "query_job_id": "0069256e-0371-4097-b7c4-412b7c16e060",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-09",
+        "complete_h1": 477,
+        "monthly_source_sha256": "9583ab09058312be8c3fd376424cb94585c7ff25a6db6b15404b3eaa918316cb",
+        "observed_native_m1_rows": 28885,
+        "partial_hour_excluded": 5,
+        "query_estimated_bytes_scanned": 16378390,
+        "query_job_id": "a304c08f-c70b-4874-bce6-2d7ca3546988",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-10",
+        "complete_h1": 524,
+        "monthly_source_sha256": "c68018532a0067d42595c828f799992530994e34d31c95b2be6bf421b1ade97f",
+        "observed_native_m1_rows": 31731,
+        "partial_hour_excluded": 6,
+        "query_estimated_bytes_scanned": 17991678,
+        "query_job_id": "b8626386-2710-47cd-bedb-b23e4d398f28",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-11",
+        "complete_h1": 474,
+        "monthly_source_sha256": "a4dc54f9db78d500d83d715f469dc1c921ab4ff9031a059a4f2905ce3833593f",
+        "observed_native_m1_rows": 28572,
+        "partial_hour_excluded": 3,
+        "query_estimated_bytes_scanned": 16199763,
+        "query_job_id": "90276896-4c93-4683-800d-4ad48d86d9ee",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      },
+      {
+        "calendar_month_utc": "2024-12",
+        "complete_h1": 472,
+        "monthly_source_sha256": "53b66cbd33a2d53d10915f1f753a7dd83f5188571bdf5a8c6e0589cff4d37d37",
+        "observed_native_m1_rows": 28763,
+        "partial_hour_excluded": 8,
+        "query_estimated_bytes_scanned": 16311535,
+        "query_job_id": "32f093d7-9ca9-442e-8a67-67928a6a1399",
+        "source_archive_sha256": [
+          "6d47f5cb269e0c4f35c63c7532713aae7dcf98901f605458b00dd6a69e7105de"
+        ]
+      }
+    ],
+    "rows": 5878,
+    "rows_sha256": "0632c3c08112e8ebe726dd194ac118a9ae3c51152be717b857c6e7e2862aa42f",
+    "schema": "oracle.gold.year_snapshot.v1",
+    "sealed_oos": false,
+    "sha256": "5e8a5274f1964c33ac4635c1bb587781a97af8110a32610593ca81ac66834405",
+    "source_months_verified": 12
+  },
+  "models": {
+    "S005/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 116,
+      "engine_params": {
+        "sl_atr": 2.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 1101.301110870797,
+      "long_trades": 68,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -11.415479262441497,
+      "method": "donchian",
+      "monthly": [
+        {
+          "ending_equity": 9909.977733504973,
+          "month": "2024-01",
+          "net_change_usd": -90.022266495027,
+          "return_pct": -0.9002226649502676,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9134.273830982396,
+          "month": "2024-02",
+          "net_change_usd": -775.7039025225768,
+          "return_pct": -7.827503990245843,
+          "starting_equity": 9909.977733504973
+        },
+        {
+          "ending_equity": 10046.889297234258,
+          "month": "2024-03",
+          "net_change_usd": 912.615466251862,
+          "return_pct": 9.991111314797418,
+          "starting_equity": 9134.273830982396
+        },
+        {
+          "ending_equity": 10424.906752036604,
+          "month": "2024-04",
+          "net_change_usd": 378.01745480234604,
+          "return_pct": 3.7625322984937037,
+          "starting_equity": 10046.889297234258
+        },
+        {
+          "ending_equity": 10450.499190504159,
+          "month": "2024-05",
+          "net_change_usd": 25.59243846755453,
+          "return_pct": 0.24549321232589794,
+          "starting_equity": 10424.906752036604
+        },
+        {
+          "ending_equity": 10013.109122250386,
+          "month": "2024-06",
+          "net_change_usd": -437.3900682537733,
+          "return_pct": -4.185350960566625,
+          "starting_equity": 10450.499190504159
+        },
+        {
+          "ending_equity": 11184.980068207493,
+          "month": "2024-07",
+          "net_change_usd": 1171.8709459571073,
+          "return_pct": 11.703367372208717,
+          "starting_equity": 10013.109122250386
+        },
+        {
+          "ending_equity": 10916.243763175162,
+          "month": "2024-08",
+          "net_change_usd": -268.7363050323311,
+          "return_pct": -2.402653410140576,
+          "starting_equity": 11184.980068207493
+        },
+        {
+          "ending_equity": 10803.407980409947,
+          "month": "2024-09",
+          "net_change_usd": -112.83578276521439,
+          "return_pct": -1.033650266640751,
+          "starting_equity": 10916.243763175162
+        },
+        {
+          "ending_equity": 10821.18136474953,
+          "month": "2024-10",
+          "net_change_usd": 17.773384339581753,
+          "return_pct": 0.1645164597302129,
+          "starting_equity": 10803.407980409947
+        },
+        {
+          "ending_equity": 11290.681520211965,
+          "month": "2024-11",
+          "net_change_usd": 469.50015546243594,
+          "return_pct": 4.338714412382494,
+          "starting_equity": 10821.18136474953
+        },
+        {
+          "ending_equity": 11071.118950788205,
+          "month": "2024-12",
+          "net_change_usd": -219.56256942376058,
+          "return_pct": -1.9446352200326533,
+          "starting_equity": 11290.681520211965
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -30.182160082595146,
+      "net_usd": 1071.1189507882045,
+      "original_python_executed": true,
+      "profit_factor": 1.1813437151395918,
+      "profitable_months": 6,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 48,
+      "signal_params": {
+        "ema_filter": 200,
+        "entry_n": 24,
+        "exit_n": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 37.06896551724138,
+      "worst_month_pct": -7.827503990245843
+    },
+    "S005/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 116,
+      "engine_params": {
+        "sl_atr": 2.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 1068.1495205014207,
+      "long_trades": 68,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -13.332606235908727,
+      "method": "donchian",
+      "monthly": [
+        {
+          "ending_equity": 9857.293126158063,
+          "month": "2024-01",
+          "net_change_usd": -142.7068738419366,
+          "return_pct": -1.427068738419368,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 8938.318355727364,
+          "month": "2024-02",
+          "net_change_usd": -918.9747704306992,
+          "return_pct": -9.322790330664288,
+          "starting_equity": 9857.293126158063
+        },
+        {
+          "ending_equity": 9775.947353735219,
+          "month": "2024-03",
+          "net_change_usd": 837.6289980078545,
+          "return_pct": 9.371214636488423,
+          "starting_equity": 8938.318355727364
+        },
+        {
+          "ending_equity": 10102.934425002351,
+          "month": "2024-04",
+          "net_change_usd": 326.9870712671327,
+          "return_pct": 3.344812113193263,
+          "starting_equity": 9775.947353735219
+        },
+        {
+          "ending_equity": 10045.669738300961,
+          "month": "2024-05",
+          "net_change_usd": -57.26468670139002,
+          "return_pct": -0.5668124160013721,
+          "starting_equity": 10102.934425002351
+        },
+        {
+          "ending_equity": 9535.836106933572,
+          "month": "2024-06",
+          "net_change_usd": -509.8336313673899,
+          "return_pct": -5.075158198995489,
+          "starting_equity": 10045.669738300961
+        },
+        {
+          "ending_equity": 10592.19123982335,
+          "month": "2024-07",
+          "net_change_usd": 1056.3551328897793,
+          "return_pct": 11.077740022416037,
+          "starting_equity": 9535.836106933572
+        },
+        {
+          "ending_equity": 10273.995035584696,
+          "month": "2024-08",
+          "net_change_usd": -318.1962042386549,
+          "return_pct": -3.004064003700535,
+          "starting_equity": 10592.19123982335
+        },
+        {
+          "ending_equity": 10105.156351638747,
+          "month": "2024-09",
+          "net_change_usd": -168.83868394594901,
+          "return_pct": -1.6433596021913965,
+          "starting_equity": 10273.995035584696
+        },
+        {
+          "ending_equity": 10058.252411586844,
+          "month": "2024-10",
+          "net_change_usd": -46.90394005190319,
+          "return_pct": -0.4641584792925757,
+          "starting_equity": 10105.156351638747
+        },
+        {
+          "ending_equity": 10438.61621362309,
+          "month": "2024-11",
+          "net_change_usd": 380.36380203624685,
+          "return_pct": 3.7816092346030006,
+          "starting_equity": 10058.252411586844
+        },
+        {
+          "ending_equity": 10174.385978217884,
+          "month": "2024-12",
+          "net_change_usd": -264.23023540520626,
+          "return_pct": -2.5312764642153263,
+          "starting_equity": 10438.61621362309
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -893.763542283538,
+      "net_usd": 174.38597821788426,
+      "original_python_executed": true,
+      "profit_factor": 1.0281163620668303,
+      "profitable_months": 4,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 48,
+      "signal_params": {
+        "ema_filter": 200,
+        "entry_n": 24,
+        "exit_n": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 35.3448275862069,
+      "worst_month_pct": -9.322790330664288
+    },
+    "S006/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 39,
+      "engine_params": {
+        "sl_atr": 2.0,
+        "trail_atr": 3.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 318.53473015076315,
+      "long_trades": 17,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -16.940647288310508,
+      "method": "ema_trend",
+      "monthly": [
+        {
+          "ending_equity": 9337.890691218738,
+          "month": "2024-01",
+          "net_change_usd": -662.1093087812624,
+          "return_pct": -6.621093087812624,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9375.02157103326,
+          "month": "2024-02",
+          "net_change_usd": 37.130879814521904,
+          "return_pct": 0.39763669379251354,
+          "starting_equity": 9337.890691218738
+        },
+        {
+          "ending_equity": 9100.801544674927,
+          "month": "2024-03",
+          "net_change_usd": -274.2200263583327,
+          "return_pct": -2.925006884310666,
+          "starting_equity": 9375.02157103326
+        },
+        {
+          "ending_equity": 9100.801544674927,
+          "month": "2024-04",
+          "net_change_usd": 0.0,
+          "return_pct": 0.0,
+          "starting_equity": 9100.801544674927
+        },
+        {
+          "ending_equity": 9297.844126398631,
+          "month": "2024-05",
+          "net_change_usd": 197.04258172370464,
+          "return_pct": 2.165112388798307,
+          "starting_equity": 9100.801544674927
+        },
+        {
+          "ending_equity": 8920.245926132204,
+          "month": "2024-06",
+          "net_change_usd": -377.59820026642774,
+          "return_pct": -4.061137131717906,
+          "starting_equity": 9297.844126398631
+        },
+        {
+          "ending_equity": 9000.98283467694,
+          "month": "2024-07",
+          "net_change_usd": 80.73690854473534,
+          "return_pct": 0.9050973393930128,
+          "starting_equity": 8920.245926132204
+        },
+        {
+          "ending_equity": 8961.744687024442,
+          "month": "2024-08",
+          "net_change_usd": -39.23814765249699,
+          "return_pct": -0.4359318129274592,
+          "starting_equity": 9000.98283467694
+        },
+        {
+          "ending_equity": 8902.264950708059,
+          "month": "2024-09",
+          "net_change_usd": -59.47973631638342,
+          "return_pct": -0.6637071060783817,
+          "starting_equity": 8961.744687024442
+        },
+        {
+          "ending_equity": 8722.420606036441,
+          "month": "2024-10",
+          "net_change_usd": -179.84434467161736,
+          "return_pct": -2.020208853223504,
+          "starting_equity": 8902.264950708059
+        },
+        {
+          "ending_equity": 8468.761208987591,
+          "month": "2024-11",
+          "net_change_usd": -253.65939704885022,
+          "return_pct": -2.9081307644497567,
+          "starting_equity": 8722.420606036441
+        },
+        {
+          "ending_equity": 8629.299810890741,
+          "month": "2024-12",
+          "net_change_usd": 160.53860190315027,
+          "return_pct": 1.8956562588253956,
+          "starting_equity": 8468.761208987591
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -1689.234919260024,
+      "net_usd": -1370.7001891092586,
+      "original_python_executed": true,
+      "profit_factor": 0.445923698295735,
+      "profitable_months": 4,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 22,
+      "signal_params": {
+        "adx_min": 20,
+        "fast": 9,
+        "slow": 120
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 25.641025641025642,
+      "worst_month_pct": -6.621093087812624
+    },
+    "S006/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 39,
+      "engine_params": {
+        "sl_atr": 2.0,
+        "trail_atr": 3.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 302.0307725814075,
+      "long_trades": 17,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -19.60317057743861,
+      "method": "ema_trend",
+      "monthly": [
+        {
+          "ending_equity": 9249.494771863536,
+          "month": "2024-01",
+          "net_change_usd": -750.5052281364642,
+          "return_pct": -7.505052281364644,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9253.386514014908,
+          "month": "2024-02",
+          "net_change_usd": 3.891742151372455,
+          "return_pct": 0.042075186238399453,
+          "starting_equity": 9249.494771863536
+        },
+        {
+          "ending_equity": 8950.937658011344,
+          "month": "2024-03",
+          "net_change_usd": -302.4488560035643,
+          "return_pct": -3.2685207253094206,
+          "starting_equity": 9253.386514014908
+        },
+        {
+          "ending_equity": 8950.937658011344,
+          "month": "2024-04",
+          "net_change_usd": 0.0,
+          "return_pct": 0.0,
+          "starting_equity": 8950.937658011344
+        },
+        {
+          "ending_equity": 9138.938533835088,
+          "month": "2024-05",
+          "net_change_usd": 188.00087582374363,
+          "return_pct": 2.1003483993152106,
+          "starting_equity": 8950.937658011344
+        },
+        {
+          "ending_equity": 8725.804835062652,
+          "month": "2024-06",
+          "net_change_usd": -413.1336987724353,
+          "return_pct": -4.520587344393345,
+          "starting_equity": 9138.938533835088
+        },
+        {
+          "ending_equity": 8798.302605965975,
+          "month": "2024-07",
+          "net_change_usd": 72.49777090332282,
+          "return_pct": 0.8308433694506512,
+          "starting_equity": 8725.804835062652
+        },
+        {
+          "ending_equity": 8719.994367305311,
+          "month": "2024-08",
+          "net_change_usd": -78.30823866066385,
+          "return_pct": -0.890038024011186,
+          "starting_equity": 8798.302605965975
+        },
+        {
+          "ending_equity": 8650.878876653034,
+          "month": "2024-09",
+          "net_change_usd": -69.115490652277,
+          "return_pct": -0.7926093497424458,
+          "starting_equity": 8719.994367305311
+        },
+        {
+          "ending_equity": 8461.891305587118,
+          "month": "2024-10",
+          "net_change_usd": -188.9875710659162,
+          "return_pct": -2.1846054459964237,
+          "starting_equity": 8650.878876653034
+        },
+        {
+          "ending_equity": 8195.948465682699,
+          "month": "2024-11",
+          "net_change_usd": -265.9428399044191,
+          "return_pct": -3.1428297800141336,
+          "starting_equity": 8461.891305587118
+        },
+        {
+          "ending_equity": 8330.039704977748,
+          "month": "2024-12",
+          "net_change_usd": 134.09123929504858,
+          "return_pct": 1.6360673795900782,
+          "starting_equity": 8195.948465682699
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -1971.9910676036625,
+      "net_usd": -1669.9602950222525,
+      "original_python_executed": true,
+      "profit_factor": 0.3760642766914293,
+      "profitable_months": 4,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 22,
+      "signal_params": {
+        "adx_min": 20,
+        "fast": 9,
+        "slow": 120
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 23.076923076923077,
+      "worst_month_pct": -7.505052281364644
+    },
+    "S007/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 327,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 2.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 307.1098402257205,
+      "long_trades": 132,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -33.64786384555689,
+      "method": "bollinger_mr",
+      "monthly": [
+        {
+          "ending_equity": 10910.47380215686,
+          "month": "2024-01",
+          "net_change_usd": 910.4738021568592,
+          "return_pct": 9.104738021568593,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 11289.763767079603,
+          "month": "2024-02",
+          "net_change_usd": 379.2899649227438,
+          "return_pct": 3.4763839939541574,
+          "starting_equity": 10910.47380215686
+        },
+        {
+          "ending_equity": 10203.947695312852,
+          "month": "2024-03",
+          "net_change_usd": -1085.8160717667506,
+          "return_pct": -9.617704091674062,
+          "starting_equity": 11289.763767079603
+        },
+        {
+          "ending_equity": 10611.921906438076,
+          "month": "2024-04",
+          "net_change_usd": 407.9742111252235,
+          "return_pct": 3.9981997488347076,
+          "starting_equity": 10203.947695312852
+        },
+        {
+          "ending_equity": 9760.357198662503,
+          "month": "2024-05",
+          "net_change_usd": -851.564707775573,
+          "return_pct": -8.024603981103018,
+          "starting_equity": 10611.921906438076
+        },
+        {
+          "ending_equity": 9589.230868224226,
+          "month": "2024-06",
+          "net_change_usd": -171.12633043827736,
+          "return_pct": -1.7532793826615989,
+          "starting_equity": 9760.357198662503
+        },
+        {
+          "ending_equity": 8913.254073652059,
+          "month": "2024-07",
+          "net_change_usd": -675.9767945721669,
+          "return_pct": -7.049332776126471,
+          "starting_equity": 9589.230868224226
+        },
+        {
+          "ending_equity": 9116.753582254501,
+          "month": "2024-08",
+          "net_change_usd": 203.4995086024428,
+          "return_pct": 2.283111273625593,
+          "starting_equity": 8913.254073652059
+        },
+        {
+          "ending_equity": 9078.719032014727,
+          "month": "2024-09",
+          "net_change_usd": -38.034550239774035,
+          "return_pct": -0.417194014257527,
+          "starting_equity": 9116.753582254501
+        },
+        {
+          "ending_equity": 8716.261090384722,
+          "month": "2024-10",
+          "net_change_usd": -362.45794163000573,
+          "return_pct": -3.992390780591981,
+          "starting_equity": 9078.719032014727
+        },
+        {
+          "ending_equity": 7983.1622691294315,
+          "month": "2024-11",
+          "net_change_usd": -733.0988212552902,
+          "return_pct": -8.410702865062202,
+          "starting_equity": 8716.261090384722
+        },
+        {
+          "ending_equity": 7828.626730975365,
+          "month": "2024-12",
+          "net_change_usd": -154.53553815406667,
+          "return_pct": -1.9357684704925715,
+          "starting_equity": 7983.1622691294315
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -2478.483109250351,
+      "net_usd": -2171.373269024635,
+      "original_python_executed": true,
+      "profit_factor": 0.8590016215247794,
+      "profitable_months": 4,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 195,
+      "signal_params": {
+        "bb_k": 2.0,
+        "bb_n": 20,
+        "rsi_lo": 15,
+        "rsi_n": 2
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 50.45871559633027,
+      "worst_month_pct": -9.617704091674062
+    },
+    "S007/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 327,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 2.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 270.86727440467047,
+      "long_trades": 132,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -47.406463198352625,
+      "method": "bollinger_mr",
+      "monthly": [
+        {
+          "ending_equity": 10717.151152251678,
+          "month": "2024-01",
+          "net_change_usd": 717.1511522516776,
+          "return_pct": 7.1715115225167825,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 10570.83727000971,
+          "month": "2024-02",
+          "net_change_usd": -146.3138822419678,
+          "return_pct": -1.3652311156517327,
+          "starting_equity": 10717.151152251678
+        },
+        {
+          "ending_equity": 9254.191041816202,
+          "month": "2024-03",
+          "net_change_usd": -1316.6462281935073,
+          "return_pct": -12.45545830062994,
+          "starting_equity": 10570.83727000971
+        },
+        {
+          "ending_equity": 9442.95353747696,
+          "month": "2024-04",
+          "net_change_usd": 188.76249566075785,
+          "return_pct": 2.0397514467532796,
+          "starting_equity": 9254.191041816202
+        },
+        {
+          "ending_equity": 8483.382359777841,
+          "month": "2024-05",
+          "net_change_usd": -959.5711776991193,
+          "return_pct": -10.161769555370537,
+          "starting_equity": 9442.95353747696
+        },
+        {
+          "ending_equity": 8119.107584100483,
+          "month": "2024-06",
+          "net_change_usd": -364.27477567735787,
+          "return_pct": -4.29398039872032,
+          "starting_equity": 8483.382359777841
+        },
+        {
+          "ending_equity": 7341.087406772009,
+          "month": "2024-07",
+          "net_change_usd": -778.0201773284743,
+          "return_pct": -9.58258243617881,
+          "starting_equity": 8119.107584100483
+        },
+        {
+          "ending_equity": 7365.723724717221,
+          "month": "2024-08",
+          "net_change_usd": 24.636317945211886,
+          "return_pct": 0.3355949409141301,
+          "starting_equity": 7341.087406772009
+        },
+        {
+          "ending_equity": 7162.509106449288,
+          "month": "2024-09",
+          "net_change_usd": -203.21461826793256,
+          "return_pct": -2.758922624072957,
+          "starting_equity": 7365.723724717221
+        },
+        {
+          "ending_equity": 6737.687395968849,
+          "month": "2024-10",
+          "net_change_usd": -424.8217104804389,
+          "return_pct": -5.9311856245728105,
+          "starting_equity": 7162.509106449288
+        },
+        {
+          "ending_equity": 6074.182045575843,
+          "month": "2024-11",
+          "net_change_usd": -663.5053503930058,
+          "return_pct": -9.847671929540402,
+          "starting_equity": 6737.687395968849
+        },
+        {
+          "ending_equity": 5823.369034176999,
+          "month": "2024-12",
+          "net_change_usd": -250.81301139884454,
+          "return_pct": -4.1291652030996495,
+          "starting_equity": 6074.182045575843
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -4447.498240227659,
+      "net_usd": -4176.630965823001,
+      "original_python_executed": true,
+      "profit_factor": 0.7093000040341878,
+      "profitable_months": 3,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 195,
+      "signal_params": {
+        "bb_k": 2.0,
+        "bb_n": 20,
+        "rsi_lo": 15,
+        "rsi_n": 2
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 49.235474006116206,
+      "worst_month_pct": -12.45545830062994
+    },
+    "S008/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 243,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 1.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 127.28928986850806,
+      "long_trades": 142,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -17.047433599208173,
+      "method": "rsi_pullback",
+      "monthly": [
+        {
+          "ending_equity": 10165.938466075844,
+          "month": "2024-01",
+          "net_change_usd": 165.9384660758442,
+          "return_pct": 1.659384660758434,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9636.341116084048,
+          "month": "2024-02",
+          "net_change_usd": -529.5973499917964,
+          "return_pct": -5.209527401322411,
+          "starting_equity": 10165.938466075844
+        },
+        {
+          "ending_equity": 9541.696203521475,
+          "month": "2024-03",
+          "net_change_usd": -94.64491256257315,
+          "return_pct": -0.9821664823031373,
+          "starting_equity": 9636.341116084048
+        },
+        {
+          "ending_equity": 9674.908416516133,
+          "month": "2024-04",
+          "net_change_usd": 133.21221299465833,
+          "return_pct": 1.3961062074633546,
+          "starting_equity": 9541.696203521475
+        },
+        {
+          "ending_equity": 9138.474452272012,
+          "month": "2024-05",
+          "net_change_usd": -536.433964244121,
+          "return_pct": -5.544589583177539,
+          "starting_equity": 9674.908416516133
+        },
+        {
+          "ending_equity": 8482.663274128688,
+          "month": "2024-06",
+          "net_change_usd": -655.8111781433236,
+          "return_pct": -7.1763748048808695,
+          "starting_equity": 9138.474452272012
+        },
+        {
+          "ending_equity": 8572.279400852112,
+          "month": "2024-07",
+          "net_change_usd": 89.6161267234238,
+          "return_pct": 1.0564621490604775,
+          "starting_equity": 8482.663274128688
+        },
+        {
+          "ending_equity": 8570.639908792444,
+          "month": "2024-08",
+          "net_change_usd": -1.6394920596685552,
+          "return_pct": -0.01912550889913156,
+          "starting_equity": 8572.279400852112
+        },
+        {
+          "ending_equity": 9169.993073161528,
+          "month": "2024-09",
+          "net_change_usd": 599.353164369084,
+          "return_pct": 6.993097023644879,
+          "starting_equity": 8570.639908792444
+        },
+        {
+          "ending_equity": 8922.21049915915,
+          "month": "2024-10",
+          "net_change_usd": -247.78257400237817,
+          "return_pct": -2.7021020847614485,
+          "starting_equity": 9169.993073161528
+        },
+        {
+          "ending_equity": 8654.402484057533,
+          "month": "2024-11",
+          "net_change_usd": -267.80801510161655,
+          "return_pct": -3.0015881728732485,
+          "starting_equity": 8922.21049915915
+        },
+        {
+          "ending_equity": 8760.524227730286,
+          "month": "2024-12",
+          "net_change_usd": 106.12174367275293,
+          "return_pct": 1.226216874801489,
+          "starting_equity": 8654.402484057533
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -1366.7650621382095,
+      "net_usd": -1239.475772269714,
+      "original_python_executed": true,
+      "profit_factor": 0.8098227797946488,
+      "profitable_months": 5,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 101,
+      "signal_params": {
+        "buy_below": 10,
+        "exit_above": 55,
+        "rsi_n": 2,
+        "trend_n": 100
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 62.96296296296296,
+      "worst_month_pct": -7.1763748048808695
+    },
+    "S008/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 243,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 1.5
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 99.43573748795907,
+      "long_trades": 142,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -36.45673375737367,
+      "method": "rsi_pullback",
+      "monthly": [
+        {
+          "ending_equity": 10055.661563629375,
+          "month": "2024-01",
+          "net_change_usd": 55.66156362937545,
+          "return_pct": 0.5566156362937447,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9059.120811550774,
+          "month": "2024-02",
+          "net_change_usd": -996.5407520786011,
+          "return_pct": -9.91024554449027,
+          "starting_equity": 10055.661563629375
+        },
+        {
+          "ending_equity": 8740.729734033253,
+          "month": "2024-03",
+          "net_change_usd": -318.3910775175209,
+          "return_pct": -3.514591362017805,
+          "starting_equity": 9059.120811550774
+        },
+        {
+          "ending_equity": 8712.51541643579,
+          "month": "2024-04",
+          "net_change_usd": -28.214317597463378,
+          "return_pct": -0.32279132813828326,
+          "starting_equity": 8740.729734033253
+        },
+        {
+          "ending_equity": 7990.847811111325,
+          "month": "2024-05",
+          "net_change_usd": -721.6676053244646,
+          "return_pct": -8.283114242335454,
+          "starting_equity": 8712.51541643579
+        },
+        {
+          "ending_equity": 7227.560519994233,
+          "month": "2024-06",
+          "net_change_usd": -763.2872911170925,
+          "return_pct": -9.552018874089141,
+          "starting_equity": 7990.847811111325
+        },
+        {
+          "ending_equity": 7131.50953621103,
+          "month": "2024-07",
+          "net_change_usd": -96.05098378320326,
+          "return_pct": -1.3289544033216916,
+          "starting_equity": 7227.560519994233
+        },
+        {
+          "ending_equity": 6926.222903463342,
+          "month": "2024-08",
+          "net_change_usd": -205.2866327476877,
+          "return_pct": -2.8785859670427683,
+          "starting_equity": 7131.50953621103
+        },
+        {
+          "ending_equity": 7252.707801623,
+          "month": "2024-09",
+          "net_change_usd": 326.48489815965786,
+          "return_pct": 4.713750953588347,
+          "starting_equity": 6926.222903463342
+        },
+        {
+          "ending_equity": 6892.9812792667,
+          "month": "2024-10",
+          "net_change_usd": -359.72652235629994,
+          "return_pct": -4.959892666237032,
+          "starting_equity": 7252.707801623
+        },
+        {
+          "ending_equity": 6566.402408759052,
+          "month": "2024-11",
+          "net_change_usd": -326.5788705076475,
+          "return_pct": -4.73784647420934,
+          "starting_equity": 6892.9812792667
+        },
+        {
+          "ending_equity": 6490.128268255391,
+          "month": "2024-12",
+          "net_change_usd": -76.27414050366133,
+          "return_pct": -1.1615818793243249,
+          "starting_equity": 6566.402408759052
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": -3609.3074692325613,
+      "net_usd": -3509.871731744609,
+      "original_python_executed": true,
+      "profit_factor": 0.47297162641013735,
+      "profitable_months": 2,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "FIRST_SOURCE_GRID_COMBINATION",
+      "short_trades": 101,
+      "signal_params": {
+        "buy_below": 10,
+        "exit_above": 55,
+        "rsi_n": 2,
+        "trend_n": 100
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 53.49794238683128,
+      "worst_month_pct": -9.91024554449027
+    },
+    "S009/base": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 196,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 3.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 337.6780968262541,
+      "long_trades": 110,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -13.149789642886056,
+      "method": "session_breakout",
+      "monthly": [
+        {
+          "ending_equity": 9909.17897668908,
+          "month": "2024-01",
+          "net_change_usd": -90.82102331092028,
+          "return_pct": -0.9082102331092079,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 9058.772958293617,
+          "month": "2024-02",
+          "net_change_usd": -850.4060183954625,
+          "return_pct": -8.582002811696166,
+          "starting_equity": 9909.17897668908
+        },
+        {
+          "ending_equity": 9843.649384242088,
+          "month": "2024-03",
+          "net_change_usd": 784.8764259484706,
+          "return_pct": 8.664268654949447,
+          "starting_equity": 9058.772958293617
+        },
+        {
+          "ending_equity": 9975.480263492795,
+          "month": "2024-04",
+          "net_change_usd": 131.83087925070686,
+          "return_pct": 1.339248017729533,
+          "starting_equity": 9843.649384242088
+        },
+        {
+          "ending_equity": 10661.916625079039,
+          "month": "2024-05",
+          "net_change_usd": 686.436361586244,
+          "return_pct": 6.881236225772414,
+          "starting_equity": 9975.480263492795
+        },
+        {
+          "ending_equity": 11206.642277181536,
+          "month": "2024-06",
+          "net_change_usd": 544.7256521024974,
+          "return_pct": 5.10907814474173,
+          "starting_equity": 10661.916625079039
+        },
+        {
+          "ending_equity": 11840.165895668582,
+          "month": "2024-07",
+          "net_change_usd": 633.5236184870464,
+          "return_pct": 5.653108244357896,
+          "starting_equity": 11206.642277181536
+        },
+        {
+          "ending_equity": 11679.929416938046,
+          "month": "2024-08",
+          "net_change_usd": -160.23647873053596,
+          "return_pct": -1.353329675804238,
+          "starting_equity": 11840.165895668582
+        },
+        {
+          "ending_equity": 11688.596877421625,
+          "month": "2024-09",
+          "net_change_usd": 8.667460483578907,
+          "return_pct": 0.07420815806480352,
+          "starting_equity": 11679.929416938046
+        },
+        {
+          "ending_equity": 11470.944888890688,
+          "month": "2024-10",
+          "net_change_usd": -217.65198853093716,
+          "return_pct": -1.862088245607707,
+          "starting_equity": 11688.596877421625
+        },
+        {
+          "ending_equity": 11939.3257745154,
+          "month": "2024-11",
+          "net_change_usd": 468.3808856247124,
+          "return_pct": 4.083193583105138,
+          "starting_equity": 11470.944888890688
+        },
+        {
+          "ending_equity": 12152.410279987049,
+          "month": "2024-12",
+          "net_change_usd": 213.0845054716483,
+          "return_pct": 1.784728128672719,
+          "starting_equity": 11939.3257745154
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": 1814.7321831607987,
+      "net_usd": 2152.410279987049,
+      "original_python_executed": true,
+      "profit_factor": 1.288290519559225,
+      "profitable_months": 8,
+      "rt_cost_per_oz_model": 0.45,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 86,
+      "signal_params": {
+        "buffer_frac": 0.0,
+        "close_hour": 21,
+        "range_end": 6,
+        "range_start": 0,
+        "trade_end": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 50.0,
+      "worst_month_pct": -8.582002811696166
+    },
+    "S009/stress": {
+      "broker_financing_margin_lot_steps_verified": false,
+      "closed_trades": 196,
+      "engine_params": {
+        "allow_reverse": false,
+        "sl_atr": 3.0
+      },
+      "intrabar_equity_dd_verified": false,
+      "largest_winner_usd": 297.96047877339566,
+      "long_trades": 110,
+      "lookahead": "engine.open_pos uses c[i] for entry-open leverage sizing",
+      "max_h1_close_marked_dd_pct": -15.597939909093284,
+      "method": "session_breakout",
+      "monthly": [
+        {
+          "ending_equity": 9818.164108420391,
+          "month": "2024-01",
+          "net_change_usd": -181.83589157960887,
+          "return_pct": -1.8183589157960922,
+          "starting_equity": 10000.0
+        },
+        {
+          "ending_equity": 8798.781660334895,
+          "month": "2024-02",
+          "net_change_usd": -1019.3824480854964,
+          "return_pct": -10.382617736153332,
+          "starting_equity": 9818.164108420391
+        },
+        {
+          "ending_equity": 9427.241275145438,
+          "month": "2024-03",
+          "net_change_usd": 628.4596148105429,
+          "return_pct": 7.142575404997875,
+          "starting_equity": 8798.781660334895
+        },
+        {
+          "ending_equity": 9475.34086096401,
+          "month": "2024-04",
+          "net_change_usd": 48.09958581857245,
+          "return_pct": 0.5102191024365155,
+          "starting_equity": 9427.241275145438
+        },
+        {
+          "ending_equity": 10019.102377309271,
+          "month": "2024-05",
+          "net_change_usd": 543.761516345261,
+          "return_pct": 5.738701375751232,
+          "starting_equity": 9475.34086096401
+        },
+        {
+          "ending_equity": 10442.01305055559,
+          "month": "2024-06",
+          "net_change_usd": 422.91067324631877,
+          "return_pct": 4.221043535837143,
+          "starting_equity": 10019.102377309271
+        },
+        {
+          "ending_equity": 10898.333852590229,
+          "month": "2024-07",
+          "net_change_usd": 456.3208020346392,
+          "return_pct": 4.370046271972039,
+          "starting_equity": 10442.01305055559
+        },
+        {
+          "ending_equity": 10631.949181991395,
+          "month": "2024-08",
+          "net_change_usd": -266.3846705988344,
+          "return_pct": -2.444269685641187,
+          "starting_equity": 10898.333852590229
+        },
+        {
+          "ending_equity": 10533.877323305767,
+          "month": "2024-09",
+          "net_change_usd": -98.07185868562738,
+          "return_pct": -0.9224259541396496,
+          "starting_equity": 10631.949181991395
+        },
+        {
+          "ending_equity": 10215.358951000584,
+          "month": "2024-10",
+          "net_change_usd": -318.5183723051832,
+          "return_pct": -3.023752437295568,
+          "starting_equity": 10533.877323305767
+        },
+        {
+          "ending_equity": 10549.894161944858,
+          "month": "2024-11",
+          "net_change_usd": 334.5352109442738,
+          "return_pct": 3.274825804447201,
+          "starting_equity": 10215.358951000584
+        },
+        {
+          "ending_equity": 10654.556651224993,
+          "month": "2024-12",
+          "net_change_usd": 104.66248928013556,
+          "return_pct": 0.9920714622680293,
+          "starting_equity": 10549.894161944858
+        }
+      ],
+      "native_mql_parity": false,
+      "net_excluding_largest_winner_usd": 356.5961724516014,
+      "net_usd": 654.5566512249934,
+      "original_python_executed": true,
+      "profit_factor": 1.0856499908141108,
+      "profitable_months": 7,
+      "rt_cost_per_oz_model": 1.48,
+      "selection": "EXISTING_FROZEN_SOURCE_RESEARCH_PRESET",
+      "short_trades": 86,
+      "signal_params": {
+        "buffer_frac": 0.0,
+        "close_hour": 21,
+        "range_end": 6,
+        "range_start": 0,
+        "trade_end": 12
+      },
+      "signals_causal_prefix_checked": true,
+      "source_commit": "3dab20e20a846edae9ac6fcf56d6b090dbba9f98",
+      "status": "BLOCKED_PUBLISHER_LOOKAHEAD_DIAGNOSTIC_ONLY",
+      "warmup_h1_bars": 250,
+      "win_rate_pct": 47.95918367346939,
+      "worst_month_pct": -10.382617736153332
+    },
+    "S010/base": {
+      "bars": 5878,
+      "breakeven": 0,
+      "closed_trades": 77,
+      "costs": {
+        "commission_usd_per_oz_round_trip": 0.07,
+        "label": "Illustrative base",
+        "slippage_usd_per_oz_each_side": 0.05,
+        "spread_usd_per_oz": 0.3
+      },
+      "end_utc": "2024-12-31T20:00:00+00:00",
+      "ending_marked_equity_usd": 21438.1,
+      "gold_buy_hold_1x_pct": 27.173,
+      "initial_usd": 10000.0,
+      "intrabar_dd_financing_margin_verified": false,
+      "largest_closed_winner_usd": 2092.3998,
+      "leverage": 3.28,
+      "losses": 43,
+      "marked_return_pct": 114.381,
+      "max_marked_drawdown_pct": -14.532,
+      "method": "S010_2025_SOURCE_FIXED_MA12_MA34_RSI14_NEXT_OPEN_v1",
+      "monthly": [
+        {
+          "closed_trades": 7,
+          "ending_equity": 10010.08,
+          "month": "2024-01",
+          "net_change_usd": 10.08,
+          "return_pct": 0.101,
+          "starting_equity": 10000.0
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 9395.49,
+          "month": "2024-02",
+          "net_change_usd": -614.6,
+          "return_pct": -6.14,
+          "starting_equity": 10010.08
+        },
+        {
+          "closed_trades": 6,
+          "ending_equity": 11797.59,
+          "month": "2024-03",
+          "net_change_usd": 2402.1,
+          "return_pct": 25.567,
+          "starting_equity": 9395.49
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 11809.66,
+          "month": "2024-04",
+          "net_change_usd": 12.07,
+          "return_pct": 0.102,
+          "starting_equity": 11797.59
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 12780.58,
+          "month": "2024-05",
+          "net_change_usd": 970.92,
+          "return_pct": 8.221,
+          "starting_equity": 11809.66
+        },
+        {
+          "closed_trades": 4,
+          "ending_equity": 12178.71,
+          "month": "2024-06",
+          "net_change_usd": -601.87,
+          "return_pct": -4.709,
+          "starting_equity": 12780.58
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 15325.55,
+          "month": "2024-07",
+          "net_change_usd": 3146.84,
+          "return_pct": 25.839,
+          "starting_equity": 12178.71
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 16655.8,
+          "month": "2024-08",
+          "net_change_usd": 1330.25,
+          "return_pct": 8.68,
+          "starting_equity": 15325.55
+        },
+        {
+          "closed_trades": 4,
+          "ending_equity": 19167.61,
+          "month": "2024-09",
+          "net_change_usd": 2511.82,
+          "return_pct": 15.081,
+          "starting_equity": 16655.8
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 21008.75,
+          "month": "2024-10",
+          "net_change_usd": 1841.14,
+          "return_pct": 9.605,
+          "starting_equity": 19167.61
+        },
+        {
+          "closed_trades": 4,
+          "ending_equity": 21756.59,
+          "month": "2024-11",
+          "net_change_usd": 747.84,
+          "return_pct": 3.56,
+          "starting_equity": 21008.75
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 21438.1,
+          "month": "2024-12",
+          "net_change_usd": -318.5,
+          "return_pct": -1.464,
+          "starting_equity": 21756.59
+        }
+      ],
+      "net_closed_trade_usd": 11198.59,
+      "net_marked_pnl_usd": 11438.1,
+      "open_position": {
+        "entry_utc": "2024-12-31T15:00:00+00:00",
+        "quantity_oz": 26.599359,
+        "unrealised_gross_usd": 249.74,
+        "will_need_future_opposite_crossover": true
+      },
+      "original_execution_parity": false,
+      "original_signal_parity": true,
+      "profit_factor": 2.186,
+      "qualification": "MODELLED_ONLY_NOT_QUALIFIED",
+      "risk_flags": [
+        "No strategy stop-loss",
+        "3.28x leverage",
+        "No leverage margin call or financing model",
+        "HistData BID-only, synthetic ASK costs",
+        "Unverified original publisher tick-level replication"
+      ],
+      "sharpe_approx": 2.432,
+      "signals": {
+        "buy": 85,
+        "sell": 82
+      },
+      "source_commit": "61dd6b2dd8b6550f668b828e023d7d808bfd8fbd",
+      "start_utc": "2024-01-01T23:00:00+00:00",
+      "status": "HISTORICAL_PROMISING",
+      "sum_closed_trade_gross_usd": 11911.91,
+      "sum_paid_execution_cost_usd": 723.56,
+      "win_rate_pct": 44.16,
+      "wins": 34
+    },
+    "S010/stress": {
+      "bars": 5878,
+      "breakeven": 0,
+      "closed_trades": 77,
+      "costs": {
+        "commission_usd_per_oz_round_trip": 0.14,
+        "label": "Illustrative stress",
+        "slippage_usd_per_oz_each_side": 0.25,
+        "spread_usd_per_oz": 0.8
+      },
+      "end_utc": "2024-12-31T20:00:00+00:00",
+      "ending_marked_equity_usd": 19313.18,
+      "gold_buy_hold_1x_pct": 27.173,
+      "initial_usd": 10000.0,
+      "intrabar_dd_financing_margin_verified": false,
+      "largest_closed_winner_usd": 2028.821,
+      "leverage": 3.28,
+      "losses": 44,
+      "marked_return_pct": 93.132,
+      "max_marked_drawdown_pct": -15.624,
+      "method": "S010_2025_SOURCE_FIXED_MA12_MA34_RSI14_NEXT_OPEN_v1",
+      "monthly": [
+        {
+          "closed_trades": 7,
+          "ending_equity": 9889.11,
+          "month": "2024-01",
+          "net_change_usd": -110.89,
+          "return_pct": -1.109,
+          "starting_equity": 10000.0
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 9165.86,
+          "month": "2024-02",
+          "net_change_usd": -723.25,
+          "return_pct": -7.314,
+          "starting_equity": 9889.11
+        },
+        {
+          "closed_trades": 6,
+          "ending_equity": 11410.8,
+          "month": "2024-03",
+          "net_change_usd": 2244.94,
+          "return_pct": 24.492,
+          "starting_equity": 9165.86
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 11326.39,
+          "month": "2024-04",
+          "net_change_usd": -84.42,
+          "return_pct": -0.74,
+          "starting_equity": 11410.8
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 12143.14,
+          "month": "2024-05",
+          "net_change_usd": 816.76,
+          "return_pct": 7.211,
+          "starting_equity": 11326.39
+        },
+        {
+          "closed_trades": 4,
+          "ending_equity": 11507.72,
+          "month": "2024-06",
+          "net_change_usd": -635.42,
+          "return_pct": -5.233,
+          "starting_equity": 12143.14
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 14334.92,
+          "month": "2024-07",
+          "net_change_usd": 2827.2,
+          "return_pct": 24.568,
+          "starting_equity": 11507.72
+        },
+        {
+          "closed_trades": 7,
+          "ending_equity": 15455.8,
+          "month": "2024-08",
+          "net_change_usd": 1120.89,
+          "return_pct": 7.819,
+          "starting_equity": 14334.92
+        },
+        {
+          "closed_trades": 4,
+          "ending_equity": 17700.26,
+          "month": "2024-09",
+          "net_change_usd": 2244.46,
+          "return_pct": 14.522,
+          "starting_equity": 15455.8
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 19218.65,
+          "month": "2024-10",
+          "net_change_usd": 1518.39,
+          "return_pct": 8.578,
+          "starting_equity": 17700.26
+        },
+        {
+          "closed_trades": 4,
+          "ending_equity": 19790.61,
+          "month": "2024-11",
+          "net_change_usd": 571.96,
+          "return_pct": 2.976,
+          "starting_equity": 19218.65
+        },
+        {
+          "closed_trades": 8,
+          "ending_equity": 19313.18,
+          "month": "2024-12",
+          "net_change_usd": -477.43,
+          "return_pct": -2.412,
+          "starting_equity": 19790.61
+        }
+      ],
+      "net_closed_trade_usd": 9114.9,
+      "net_marked_pnl_usd": 9313.18,
+      "open_position": {
+        "entry_utc": "2024-12-31T15:00:00+00:00",
+        "quantity_oz": 23.978384,
+        "unrealised_gross_usd": 225.13,
+        "will_need_future_opposite_crossover": true
+      },
+      "original_execution_parity": false,
+      "original_signal_parity": true,
+      "profit_factor": 1.941,
+      "qualification": "MODELLED_ONLY_NOT_QUALIFIED",
+      "risk_flags": [
+        "No strategy stop-loss",
+        "3.28x leverage",
+        "No leverage margin call or financing model",
+        "HistData BID-only, synthetic ASK costs",
+        "Unverified original publisher tick-level replication"
+      ],
+      "sharpe_approx": 2.121,
+      "signals": {
+        "buy": 85,
+        "sell": 82
+      },
+      "source_commit": "61dd6b2dd8b6550f668b828e023d7d808bfd8fbd",
+      "start_utc": "2024-01-01T23:00:00+00:00",
+      "status": "HISTORICAL_PROMISING",
+      "sum_closed_trade_gross_usd": 11174.87,
+      "sum_paid_execution_cost_usd": 2086.83,
+      "win_rate_pct": 42.86,
+      "wins": 33
+    }
+  },
+  "orders": 0,
+  "portfolio": {
+    "reason": "Five native engines fail causal sizing; shared broker margin/hedging unverified; no sum of independent $10k accounts",
+    "status": "BLOCKED"
+  },
+  "schema": "oracle.gold.batch01.v1",
+  "sealed_oos": false,
+  "sha256": "f008da864ef2289d7bce01461807838228b9c791a271aff90e62a7d83e983c38",
+  "signal_overlap": [
+    {
+      "a": "S005",
+      "any_signal_union": 501,
+      "b": "S006",
+      "independence_proven": false,
+      "joint_signal_hours": 5,
+      "same_hour_same_side": 5,
+      "side_correlation_including_zeros": 0.03650138959223137
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 802,
+      "b": "S007",
+      "independence_proven": false,
+      "joint_signal_hours": 302,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.5525280390923929
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 910,
+      "b": "S008",
+      "independence_proven": false,
+      "joint_signal_hours": 1,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.0039048950172240198
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 629,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 52,
+      "same_hour_same_side": 52,
+      "side_correlation_including_zeros": 0.16198672869525715
+    },
+    {
+      "a": "S005",
+      "any_signal_union": 619,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 11,
+      "same_hour_same_side": 11,
+      "side_correlation_including_zeros": 0.03944749812784487
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 672,
+      "b": "S007",
+      "independence_proven": false,
+      "joint_signal_hours": 12,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.07292833497581853
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 491,
+      "b": "S008",
+      "independence_proven": false,
+      "joint_signal_hours": 0,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": 0.00018390102463054382
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 260,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 1,
+      "same_hour_same_side": 1,
+      "side_correlation_including_zeros": 0.010596324130575428
+    },
+    {
+      "a": "S006",
+      "any_signal_union": 210,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 0,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": 3.011568071016656e-05
+    },
+    {
+      "a": "S007",
+      "any_signal_union": 1005,
+      "b": "S008",
+      "independence_proven": false,
+      "joint_signal_hours": 84,
+      "same_hour_same_side": 84,
+      "side_correlation_including_zeros": 0.1580096813194104
+    },
+    {
+      "a": "S007",
+      "any_signal_union": 812,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 47,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.12452289144564818
+    },
+    {
+      "a": "S007",
+      "any_signal_union": 778,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 30,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.09166337431888005
+    },
+    {
+      "a": "S008",
+      "any_signal_union": 628,
+      "b": "S009",
+      "independence_proven": false,
+      "joint_signal_hours": 38,
+      "same_hour_same_side": 0,
+      "side_correlation_including_zeros": -0.12214888969465364
+    },
+    {
+      "a": "S008",
+      "any_signal_union": 601,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 14,
+      "same_hour_same_side": 1,
+      "side_correlation_including_zeros": -0.04393534124991967
+    },
+    {
+      "a": "S009",
+      "any_signal_union": 379,
+      "b": "S010",
+      "independence_proven": false,
+      "joint_signal_hours": 6,
+      "same_hour_same_side": 5,
+      "side_correlation_including_zeros": 0.020891155966998493
+    }
+  ],
+  "source_month_coverage_only_not_market_calendar_certification": true,
+  "source_original_ids_evaluated": [
+    "S005",
+    "S006",
+    "S007",
+    "S008",
+    "S009",
+    "S010"
+  ],
+  "trial_count_scenarios": 12,
+  "year": 2024
+}

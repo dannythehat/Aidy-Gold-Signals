@@ -1,0 +1,41 @@
+name: Oracle Gold phase03 original public source recovery
+
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/recover_sources.py'
+      - 'scripts/oracle_gold/source_bundle.py'
+      - 'research/gold_oracle/phase03/mql_download_links.json'
+      - '.github/workflows/oracle-gold-phase03-source-recovery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-source-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet cryptography
+      - name: Recheck official original MQL pages and observed source links; no source execution or credentials
+        run: python -m scripts.oracle_gold.recover_sources --only mql --download-links research/gold_oracle/phase03/mql_download_links.json --out /tmp/oracle-original-mql
+      - name: Preserve receipts and encrypt original source for research transport
+        run: |
+          mkdir -p artifacts/oracle_gold/phase03_source
+          cp /tmp/oracle-original-mql/recovery_receipts.json artifacts/oracle_gold/phase03_source/mql_recovery_receipts.json
+          python -m scripts.oracle_gold.source_bundle encrypt --key research/gold_oracle/phase03/source_receipt_public.pem --source /tmp/oracle-original-mql --out artifacts/oracle_gold/phase03_source/encrypted_sources.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-phase03-mql-source-recovery
+          path: artifacts/oracle_gold/phase03_source/
+          retention-days: 90
+          if-no-files-found: error

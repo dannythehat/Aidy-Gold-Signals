@@ -1,0 +1,21 @@
+{
+  "artifact_id": 12874072440,
+  "ci": "https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/40820232846",
+  "commit": "a46923a19a1be2b044081136f646107aa8c405de",
+  "members_sha256": {
+    "OracleMathProbe.mq5.compile.log": "f0289f5c84b7ebef64e78b1cba3dcaa2485f6cc6d1824857ccb71cad1a40e361",
+    "OracleOfflineSymbolProbe.mq5.compile.log": "b83ac9d4c3014df1f5d0aae77f0bbf559bbc749425f0c489be79094a526f116a",
+    "compile/GoldBreakoutEA.mq5.log": "ab0525e0b80c468052f62646ff7a192b133552ca56df6395df54eea42c57b3a5",
+    "compile/native_metaeditor_report.json": "14f8e57d61a4cbb31ac1463a284ba9d4f25adabf836f5667cacfffd9bf00e2a0",
+    "custom_symbol_result.txt": "1a8e4df5a45c8faad3f1cbdc3926732a810022564193e3e49015231e8c71c845",
+    "offline_probe_report.json": "3e5979bffb4c17da0533f8e850cc2a32a0ab178df30e065f7e2da9d44d99a08e",
+    "runtime-1-20261029.log": "e14545fc3ef6c72d50de5d1f02fb5e263ee8f49bcb26832ef4812ac228c07cda",
+    "runtime-2-metaeditor.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "runtime-3-OracleMathProbe.log": "f0289f5c84b7ebef64e78b1cba3dcaa2485f6cc6d1824857ccb71cad1a40e361",
+    "runtime-4-20261029.log": "e711e601f1488968e8e354082d7f451676ea4d0e108b71cc9a78c0449173250e",
+    "runtime-5-OracleOfflineSymbolProbe.log": "b83ac9d4c3014df1f5d0aae77f0bbf559bbc749425f0c489be79094a526f116a",
+    "runtime-6-20261029.log": "ba387bfbafd73b1d02efd5a243279e48fe5d452815dc438cfd9a55420b5f0167",
+    "runtime-7-20261029.log": "2633722092f16d1dc97c76305fd6bd47da9f2e7fc6c635f0ef503613cd6cc0b9"
+  },
+  "zip_sha256": "38229cd89b2ed5c3ee1035dfd33325efb4ef605ed401d2e2941460cc428bd154"
+}

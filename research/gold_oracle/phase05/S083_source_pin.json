@@ -1,0 +1,27 @@
+{
+  "commit": "57a8af6d1d023ee25295ef63eca2f537ac859b5c",
+  "files": {
+    "src/costs.py": "0993148c50af423770d3c3ff9b148ab82967f8cd2df7ef5c2efc5778c0a2ea1a",
+    "src/dataset.py": "3b66154fcbcbade13b9efb1922e578f8c2ca410c230b242376985e3d3860e0c9",
+    "src/engine.py": "cb8d5b766b22729470967e745eaeb32024df7bb9985869d687e850c1ad2ddab5",
+    "src/families.py": "4126d34dbd39fa63baaa12128125b0bb1fce0a0b173a351f8e0f689e00a0640c",
+    "src/fetch_dukascopy.py": "3a22572dc89dc8bbbc2736fd8ee05e0d0038d03b2bfc614a90cf3821f3e59da5",
+    "src/fetch_freeserv.py": "bbdec09f9081a7f43a4153865248188fb6ea755d16cacd056f54ff71a7c49b39",
+    "src/preregister.py": "1390f1b50206e54a557d81cb0ef2202aa490912e4d3080b331d04be886a3a059",
+    "src/regime.py": "9526a500db023f2b4ccc3ccc376da028dfb776666713e66599a0e4e09920acf1",
+    "src/regime_map.py": "c9bc1e9f3b15049774af46f52043bd876864be0a7958979158f3b87ebd51cba7",
+    "src/report.py": "aa3d96fceab718145211a1cfa02c795b89a08fb24e441ad9f093931105e1f1ca",
+    "src/report_insample.py": "c890c5d9d6fb910a8561744e96dbf30c6ac2dfa0e9cfd210bbea59b656196e3a",
+    "src/report_oos.py": "0eeea3276330e56201bc92f6db90ae9caf4de1c65b0720e8e598657a54eed1e3",
+    "src/report_validation.py": "c9bf5487f2a7b3cb1ac9639dd4ffa4f41d5a0180fbe7117fff87d54a390af432",
+    "src/run_backtest.py": "7d0338107a325f1e464d83c23cfe746bf79adf6551a258de4b184fe10d7c40e8",
+    "src/run_dev.py": "0a11a64eea53741e3bc8d1df9521c1dbed29327a2072e71d8fd6bcb7a637ce4c",
+    "src/run_insample.py": "299b3ad6394d2f496a50ddf2a1052f388dcd407061dced39fce339aae7b4deee",
+    "src/run_oos.py": "273792a972e1c20c0bec2e6317a99881d3904a87626068989b336e9d37fbd66a",
+    "src/run_validation.py": "0774ac57bfea1bbc9d5822b8ded9d6d63561d9902719adce714c006bb7be9d24",
+    "src/strategy.py": "a6fb9e5cb6b783f4325feb2eb571dd371850ddec9ae09c6679ae5c88f137c6b3",
+    "src/validate_sources.py": "ec3ff3e57b8a40e47a1484a590a8b777d47141f74b87e6da6c918c7e5c1b34ea",
+    "src/verify_data.py": "b356f9f73d338145621fc1df462c83f690d2424cbc30ad7b449fa10c738ea1c9"
+  },
+  "source_url": "https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest.git"
+}
