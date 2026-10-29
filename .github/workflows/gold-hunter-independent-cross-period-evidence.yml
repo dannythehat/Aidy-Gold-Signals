@@ -1,0 +1,53 @@
+name: Gold Hunter - GPT6 Independent 2025-26 Source Evidence Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/gold_hunter_independent_cross_period_audit.py
+      - tests/test_gold_hunter_independent_cross_period_audit.py
+      - .github/workflows/gold-hunter-independent-cross-period-evidence.yml
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  source-evidence-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Download immutable historical research CI artifacts read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh run download 40665596315 --repo "$GITHUB_REPOSITORY" --name GOLD-HUNTER-OPEN-LAB-2025-GENUINE-SOURCE --dir evidence/pr370_2025
+          gh run download 40665596333 --repo "$GITHUB_REPOSITORY" --name GOLD-HUNTER-2026-ORIGINAL-TICK-SOURCE-REPLAY --dir evidence/pr370_2026
+          gh run download 40671701827 --repo "$GITHUB_REPOSITORY" --name GOLD-HUNTER-TEN-LAB-2025-GENUINE-SOURCE --dir evidence/pr371_2025
+          gh run download 40671702112 --repo "$GITHUB_REPOSITORY" --name GOLD-HUNTER-TEN-2026-ORIGINAL-TICK-REPLAY --dir evidence/pr371_2026
+      - name: Verify original source hashes, full ledgers, alias and 2025/2026 account models
+        env:
+          PYTHONPATH: scripts:src:.
+          AIDY_EVIDENCE_DIR: evidence
+        run: |
+          python -m compileall -q scripts/gold_hunter_independent_cross_period_audit.py tests/test_gold_hunter_independent_cross_period_audit.py
+          python -m unittest discover -s tests -p test_gold_hunter_independent_cross_period_audit.py -v
+          python scripts/gold_hunter_independent_cross_period_audit.py \
+            --pr370-2025 evidence/pr370_2025 \
+            --pr370-2026 evidence/pr370_2026 \
+            --pr371-2025 evidence/pr371_2025 \
+            --pr371-2026 evidence/pr371_2026 \
+            --output artifacts/gold_hunter/independent_2025_2026_source_evidence.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gold-hunter-gpt6-independent-cross-period-evidence
+          path: artifacts/gold_hunter/independent_2025_2026_source_evidence.json
+          retention-days: 90
+          if-no-files-found: error
