@@ -1,0 +1,41 @@
+name: Oracle Gold Phase05 - Independent Financing Sensitivity (Read Only)
+
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths:
+      - 'scripts/oracle_gold/phase05_independent_funding_sensitivity.py'
+      - 'tests/test_oracle_gold_phase05_independent_financing.py'
+      - '.github/workflows/oracle-gold-phase05-gpt6-independent-financing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-financing-uncertainty:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Verify source artifact identity, account reconciliation and no broker operation
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python -m pip install --quiet pytest ruff
+          ruff check scripts/oracle_gold/phase05_independent_funding_sensitivity.py tests/test_oracle_gold_phase05_independent_financing.py
+          python -m pytest -q tests/test_oracle_gold_phase05_independent_financing.py
+      - name: Generate read-only USD-per-ounce-day sensitivity report
+        env:
+          PYTHONPATH: src:.
+        run: |
+          python scripts/oracle_gold/phase05_independent_funding_sensitivity.py --output artifacts/oracle_gold/phase05_gpt6_independent/financing_sensitivity.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oracle-gold-phase05-GPT6-independent-funding-sensitivity
+          path: artifacts/oracle_gold/phase05_gpt6_independent/financing_sensitivity.json
+          retention-days: 90
+          if-no-files-found: error
