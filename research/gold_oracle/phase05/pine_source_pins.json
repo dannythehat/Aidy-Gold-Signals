@@ -1,0 +1,48 @@
+{
+  "S052": {
+    "chart_interval": "60",
+    "chart_symbol": "OANDA:XAUUSD",
+    "mincontract": null,
+    "mintick": 0.001,
+    "native_output_parity": false,
+    "pointvalue": 1,
+    "publication_json_sha256": "ee9836f69eae44dda7829ed19756e074e784db18190a19076f6f4d5059196d15",
+    "publication_version": {
+      "access": 1,
+      "script_id_part": "PUB;0fd249e1b6f34fd2887f79338a758c10",
+      "version_maj": 1
+    },
+    "source": {
+      "bytes": 4085,
+      "endpoint": "https://pine-facade.tradingview.com/pine-facade/get/PUB%3B0fd249e1b6f34fd2887f79338a758c10/1?no_4xx=false",
+      "path": "original.pine",
+      "sha256": "f25fa411c6329757dc72349c8231dae97610764e01bc6c53f9818360231fe3d6",
+      "version": "1.0"
+    },
+    "symbol_info_sha256": "0253de4203e565c6a459598b3e4f68db57d4b83e7811769f72327b8cb1ca1bf6",
+    "timezone": "America/New_York"
+  },
+  "S066": {
+    "chart_interval": "5",
+    "chart_symbol": "FX:XAUUSD",
+    "mincontract": null,
+    "mintick": 0.01,
+    "native_output_parity": false,
+    "pointvalue": 1,
+    "publication_json_sha256": "8746e6f94df712eedf702fc6e79d00ad19954b85b52f73aa6d61796fa9e61613",
+    "publication_version": {
+      "access": 1,
+      "script_id_part": "PUB;f165d9e3e685437da8836b62623c5f07",
+      "version_maj": 1
+    },
+    "source": {
+      "bytes": 2924,
+      "endpoint": "https://pine-facade.tradingview.com/pine-facade/get/PUB%3Bf165d9e3e685437da8836b62623c5f07/1?no_4xx=false",
+      "path": "original.pine",
+      "sha256": "d372e7fc137f1773495ba7be5f83d3e40df6c4ba8ab9734a949cce1e2904d006",
+      "version": "1.0"
+    },
+    "symbol_info_sha256": "f121150b02ba01e4c82f90d0d81d47238e1c70e9d6f1cd00361cce96544844e4",
+    "timezone": "America/New_York"
+  }
+}

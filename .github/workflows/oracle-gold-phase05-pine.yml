@@ -1,0 +1,59 @@
+name: Oracle Gold phase05 original Pine formula accounts
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths: ['scripts/oracle_gold/phase05_pine_accounts.py', 'tests/test_oracle_gold_phase05_pine.py', '.github/workflows/oracle-gold-phase05-pine.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  source-accounts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 backtrader==1.9.78.123 cryptography pytest ruff
+      - name: Check original evidence, native lifecycle defects, sizing and margin fixtures
+        run: |
+          ruff check scripts/oracle_gold/phase05_pine_accounts.py tests/test_oracle_gold_phase05_pine.py
+          python -m pytest -q tests/test_oracle_gold_phase05.py tests/test_oracle_gold_phase05_pine.py --junitxml=artifacts/tests.xml
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2023
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-cached/2023
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2024
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-cached/2024
+      - uses: actions/download-artifact@v4
+        with:
+          name: oracle-minute-2025
+          run-id: 40734084599
+          github-token: ${{ github.token }}
+          path: /tmp/oracle-cached/2025
+      - name: Unwrap authorised research cache only; no BigQuery or R2 requests
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for year in 2023 2024 2025; do
+            python -m scripts.oracle_gold.snapshot_bundle open-ci --source "/tmp/oracle-cached/${year}/snapshot.encrypted.json" --out "/tmp/oracle-minutes/${year}"
+          done
+      - name: Source-default and separate10k comparisons; all costs and losses retained
+        run: python -m scripts.oracle_gold.phase05_pine_accounts --snapshots /tmp/oracle-minutes --sources /tmp/pine-sources --out artifacts/results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-gold-phase05-pine-source-account-evidence
+          path: artifacts/
+          retention-days: 90
+          if-no-files-found: error
