@@ -1,0 +1,60 @@
+name: Oracle Gold phase05 cost-aware native account sensitivity
+on:
+  push:
+    branches: ['codex/83-source-audit-batch01-20261028']
+    paths: ['scripts/oracle_gold/phase05_execution_costs.py', 'tests/test_oracle_gold_phase05_execution_costs.py', '.github/workflows/oracle-gold-phase05-execution-costs.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  cost-aware-native-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: src:.
+      ORACLE_PHASE05_S083_ROOT: /tmp/S083
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 backtrader==1.9.78.123 cryptography pytest ruff
+      - name: Pin original engine and every dependency before import
+        run: |
+          python - <<'PYCODE'
+          import json,subprocess
+          from pathlib import Path
+          from scripts.oracle_gold.phase05_native_accounts import verify_source
+          pin=json.loads(Path('research/gold_oracle/phase05/S083_source_pin.json').read_text())
+          subprocess.run(['git','clone','--quiet',pin['source_url'],'/tmp/S083'],check=True)
+          subprocess.run(['git','-C','/tmp/S083','checkout','--quiet',pin['commit']],check=True)
+          verify_source(Path('/tmp/S083'))
+          PYCODE
+      - name: Actual original gap/timeout regressions and cost-aware cash sizing
+        run: |
+          ruff check scripts/oracle_gold/phase05_execution_costs.py tests/test_oracle_gold_phase05_execution_costs.py
+          python -m pytest -q tests/test_oracle_gold_phase05.py tests/test_oracle_gold_phase05_pine.py tests/test_oracle_gold_phase05_execution_costs.py --junitxml=artifacts/tests.xml
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Unwrap36 authenticated caches; no new archive GET or warehouse SELECT
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for folder in /tmp/encrypted/oracle-bidask-*; do
+            period="${folder##*oracle-bidask-}"
+            python -m scripts.oracle_gold.snapshot_bundle open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Preserve native rules; disclose gap and net-cash cost sensitivity
+        run: python -m scripts.oracle_gold.phase05_execution_costs --quotes /tmp/quotes --source /tmp/S083 --out artifacts/results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oracle-phase05-S083-cost-account-evidence
+          path: artifacts/
+          retention-days: 90
+          if-no-files-found: error
