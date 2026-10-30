@@ -115,7 +115,12 @@ def indicators(h):
     gains = true_wilder(delta.clip(lower=0), 14)
     losses = true_wilder((-delta).clip(lower=0), 14)
     rs = gains / losses.replace(0, np.nan)
-    x["rsi"] = 100-100/(1+rs)
+    rsi = 100 - 100 / (1 + rs)
+    # MT5/Wilder zero-loss semantics: 100 for all-up, 0 for all-down, 50 flat.
+    rsi = rsi.mask((losses == 0) & (gains > 0), 100)
+    rsi = rsi.mask((gains == 0) & (losses > 0), 0)
+    rsi = rsi.mask((gains == 0) & (losses == 0), 50)
+    x["rsi"] = rsi
     x["gauss"] = gauss4(c)
     ema12 = c.ewm(span=12, adjust=False).mean()
     ema26 = c.ewm(span=26, adjust=False).mean()
@@ -267,7 +272,7 @@ def simulate(ind, *, slippage, commission):
 
 
 def run(quote_root, dest):
-    report = {"schema": "aidy.independent_web_discovery.gaussmacd.v1",
+    report = {"schema": "aidy.independent_web_discovery.gaussmacd.v1_1",
               "source_repo": UPSTREAM, "source_blob_sha": SOURCE_BLOB_SHA,
               "source_license": "MIT",
               "source_is_not_original83_assumption": True,
@@ -295,7 +300,10 @@ def run(quote_root, dest):
     (dest/"report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True, allow_nan=False)+"\n")
     print("AIDY_INDEPENDENT_WEB_GAUSSMACD", json.dumps(
-        {yr: {scenario: values["realized_net_usd"]
+        {yr: {scenario: {key: values[key] for key in
+                            ("closed", "wins", "realized_net_usd",
+                             "max_marked_drawdown_pct", "profit_factor",
+                             "open_position_censored", "counts")}
               for scenario, values in item["scenarios"].items()}
          for yr, item in report["years"].items()}, sort_keys=True))
     return report
