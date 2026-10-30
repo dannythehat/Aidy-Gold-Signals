@@ -1,0 +1,51 @@
+name: Trigger Happy Genuine Tick Pilot - Read Only
+
+on:
+  push:
+    branches: ['research/trigger-happy-v0-1-20261030']
+    paths:
+      - 'research/strategy_lab/trigger_happy/**'
+      - 'tests/test_trigger_happy.py'
+      - '.github/workflows/trigger-happy-real-tick-pilot.yml'
+  pull_request:
+    paths:
+      - 'research/strategy_lab/trigger_happy/**'
+      - 'tests/test_trigger_happy.py'
+      - '.github/workflows/trigger-happy-real-tick-pilot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  historical-jan2025-source-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compile and verify safe synthetic mechanics
+        run: |
+          python -m compileall -q research/strategy_lab/trigger_happy/
+          python -m unittest discover -s tests -p test_trigger_happy.py -v
+      - name: Read-only fetch of original 2025-01 tick ZIP from existing R2 bucket
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/202501/HISTDATA_COM_ASCII_XAUUSD_T_202501.zip" --remote --file "/tmp/trigger_happy_202501_original.zip"
+      - name: Run true BID ASK sorted-tick one-month exploratory historical replay
+        run: |
+          PYTHONPATH=src:. python research/strategy_lab/trigger_happy/real_tick_month_pilot.py --archive "/tmp/trigger_happy_202501_original.zip" --period 202501 --out "artifacts/trigger_happy/jan2025"
+          rm -f "/tmp/trigger_happy_202501_original.zip"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trigger-happy-jan2025-real-source-exploratory
+          path: artifacts/trigger_happy/jan2025/
+          retention-days: 30
+          if-no-files-found: warn
