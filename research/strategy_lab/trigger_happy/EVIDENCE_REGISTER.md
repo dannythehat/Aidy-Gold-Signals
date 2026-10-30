@@ -29,7 +29,7 @@ The January 2025 case has **zero qualifying triggers**, not a "zero-loss, succes
 - 2026-09: `dbebbaefb5d8b04cf56e35d60682e21a75b9605f9bffaa2e8b2483aa7ff5f3bf`
 
 ### Normalized derived timestamp-sorted CSV SHA-256
-- 2025-01: `9d8dccbd0975d19bac3ab69694d0d9ce73a62dcf54ca8359d1d21bb3ae9b34` — **UNVERIFIED TRANSCRIPTION**; consult the actual January job rather than trusting this value here.
+- 2025-01: `9d8dccbd0975d19bac3ab69694d0d9ce73c0ce9a57483de45e404037ec954f34` — verified against [run 41009735523](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41009735523).
 - 2026-06: `4227bb631fa8b2ed4a88cd0e5555b9263a1e8b1e822d7461a3b59b34ab30a871`
 - 2026-07: `710484be28735c8813d2394493255b6f851c8bcddb20d5194c4751ebad118148`
 - 2026-08: `2a0535a8ddb023bb9760d33fd27e4582dc61aa10d84101dabcfb5a71cdfd39f1`
