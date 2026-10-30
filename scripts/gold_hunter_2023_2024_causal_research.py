@@ -107,10 +107,10 @@ def build_h1(minutes: pd.DataFrame) -> pd.DataFrame:
 
 
 def source_year(root: Path, year: int) -> tuple[pd.DataFrame, dict]:
-    if year not in YEARS:
-        raise ValueError("Only frozen years 2023/2024 allowed")
+    if year not in YEARS + (2025,):
+        raise ValueError("Only frozen years 2023/2024/2025 allowed")
     # 2024-01 00-04 UTC belongs to fixed-EST 202312 archive.
-    periods = ([f"{year - 1}12"] if year == 2024 else []) + [
+    periods = ([f"{year - 1}12"] if year in (2024, 2025) else []) + [
         f"{year}{m:02d}" for m in range(1, 13)
     ]
     blocks, provenance = [], []
@@ -175,7 +175,7 @@ def run_year(h1: pd.DataFrame, year: int, out: Path) -> dict:
     return results
 
 
-def main(root: Path, dest: Path) -> dict:
+def main(root: Path, dest: Path, *, years: tuple[int, ...] = YEARS) -> dict:
     report = {"schema": "gold_hunter.2023_2024_original_source_causal_v2",
               "research_only": True, "paper_or_live_orders": 0,
               "untouched_oos": False, "source_or_rules_reoptimized": False,
@@ -184,7 +184,7 @@ def main(root: Path, dest: Path) -> dict:
               "unverified": ["financing", "margin", "lot size",
                              "native broker execution", "stop/target order within H1"],
               "years": {}}
-    for year in YEARS:
+    for year in years:
         source, trace = source_year(root, year)
         report["years"][str(year)] = {
             "trace": trace, "results": run_year(source, year, dest)}
@@ -206,9 +206,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--quotes", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--year", type=int, choices=(2023, 2024, 2025))
     args = parser.parse_args()
     try:
-        main(args.quotes, args.out)
+        main(args.quotes, args.out, years=(args.year,) if args.year else YEARS)
     except Exception as exc:
         args.out.mkdir(parents=True, exist_ok=True)
         (args.out / "BLOCKED.json").write_text(json.dumps({
