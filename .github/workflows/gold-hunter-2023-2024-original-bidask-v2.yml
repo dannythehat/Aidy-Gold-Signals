@@ -1,8 +1,8 @@
 name: Gold Hunter 2023-2024 Causal BID ASK Research
 
 on:
-  push:
-    branches: ['gold-hunter-ten-candidate-lab-20261028']
+  pull_request:
+    branches: [main]
     paths:
       - 'src/gold_hunter/open_strategy_lab.py'
       - 'scripts/gold_hunter_2023_2024_causal_research.py'
