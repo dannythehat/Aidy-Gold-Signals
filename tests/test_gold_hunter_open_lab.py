@@ -88,3 +88,47 @@ def test_fail_closed_unknown_strategy_and_invalid_risk():
         replay(df,tape,SYSTEMS,Settings(risk_fraction=.04))
     with pytest.raises(ValueError):
         replay(df,tape[:-2],SYSTEMS,Settings())
+
+
+def test_causal_spread_v2_never_uses_future_hour_high_spread_to_admit_short():
+    """An intrahour future spread must not decide a short at the hour's open."""
+    from gold_hunter.open_strategy_lab import replay_causal_v2
+
+    def case(future_spread):
+        clock = pd.date_range("2024-01-02 10:00:00", periods=3, freq="h", tz="UTC")
+        return pd.DataFrame({
+            "open_time_utc": clock,
+            "open": [100., 100., 99.8],
+            "high": [100.5, 100.5, 100.],
+            "low": [99.5, 99., 99.],
+            "close": [100., 99.8, 99.7],
+            "observed_open_ask": [100.4, 100.4, 100.2],
+            "observed_open_spread": [.4, .4, .4],
+            "observed_max_spread": [.4, future_spread, .4],
+        })
+
+    signal = {
+        "system": "DONCHIAN_TREND",
+        "side": -1,
+        "signal_bar_index": 0,
+        "signal_utc": "2024-01-02T11:00:00+00:00",
+        "stop": 102.,
+        "target": 94.,
+        "source": "synthetic causality regression only",
+    }
+    tape = ((signal,), (), ())
+    settings = Settings(observed_quote_mode=True)
+    before = replay(case(.4), tape, ("DONCHIAN_TREND",), settings)
+    legacy_future = replay(case(3.), tape, ("DONCHIAN_TREND",), settings)
+    assert before["selected_counts"] == {"DONCHIAN_TREND": 1}
+    assert legacy_future["selected_counts"] == {}  # documented v0 lookahead issue
+
+    v2_before = replay_causal_v2(case(.4), tape, ("DONCHIAN_TREND",), settings)
+    v2_future = replay_causal_v2(case(3.), tape, ("DONCHIAN_TREND",), settings)
+    assert v2_before["selected_counts"] == v2_future["selected_counts"]
+    assert v2_before["selected_counts"] == {"DONCHIAN_TREND": 1}
+    assert v2_future["research_model_revision"] == "v2_causal_open_spread_at_entry"
+    assert "research_model_revision" not in before  # preserve original ledger contract
+
+    with pytest.raises(ValueError, match="source-verified observed ASK"):
+        replay_causal_v2(case(.4), tape, ("DONCHIAN_TREND",), Settings())
