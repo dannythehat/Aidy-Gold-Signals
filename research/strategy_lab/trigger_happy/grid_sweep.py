@@ -35,7 +35,10 @@ FEES_PER_LOT_SENSITIVITY = 10.
 
 
 @njit(cache=False)
-def replay(ts, bid, ask, window_us, jump, latency_us=200_000):
+def replay(ts, bid, ask, window_us, jump, latency_us=200_000,
+           stop_distance=4., tp1=2., tp2=4., tp3=8.,
+           timeout_us=300_000_000, spread_ceiling=0.8,
+           direction_multiplier=1):
     """Tick-for-tick contract matching backtest.simulate's frozen logic.
 
     Return per-config float array:
@@ -53,7 +56,7 @@ def replay(ts, bid, ask, window_us, jump, latency_us=200_000):
     entry = 0.
     entry_us = 0
     leg_open = np.zeros(3, dtype=np.bool_)
-    targets = (2., 4., 8.)
+    targets = (tp1, tp2, tp3)
     max_abs_spike = 0.
 
     for i in range(ts.shape[0]):
@@ -71,7 +74,7 @@ def replay(ts, bid, ask, window_us, jump, latency_us=200_000):
                 pending = False
                 out[2] += 1.
             elif age >= latency_us:
-                if spread > SPREAD_CEILING:
+                if spread > spread_ceiling:
                     pending = False
                     out[2] += 1.
                 else:
@@ -91,8 +94,8 @@ def replay(ts, bid, ask, window_us, jump, latency_us=200_000):
 
         if active and not filled_here:
             executable = b if direction == 1 else a
-            expired = now - entry_us >= 300_000_000
-            stop = executable <= entry - 4. if direction == 1 else executable >= entry + 4.
+            expired = now - entry_us >= timeout_us
+            stop = executable <= entry - stop_distance if direction == 1 else executable >= entry + stop_distance
             for k in range(3):
                 if not leg_open[k]:
                     continue
@@ -125,7 +128,7 @@ def replay(ts, bid, ask, window_us, jump, latency_us=200_000):
                 active = False
 
         # Quote event cannot anchor new trigger if spread ineligible.
-        if spread > SPREAD_CEILING:
+        if spread > spread_ceiling:
             start = i + 1
             continue
         cutoff = now - window_us
@@ -143,7 +146,7 @@ def replay(ts, bid, ask, window_us, jump, latency_us=200_000):
                     max_abs_spike = abs(delta)
                 pending = True
                 pending_us = now
-                direction = 1 if delta > 0 else -1
+                direction = (1 if delta > 0 else -1) * direction_multiplier
                 last_signal_us = now
                 start = i + 1
                 continue
