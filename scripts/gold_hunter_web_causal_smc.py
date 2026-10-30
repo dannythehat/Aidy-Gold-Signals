@@ -76,12 +76,13 @@ def make_tape(raw):
     # No accidental matching of same time H4 partial; missing bias zero.
     bias = usable["bias"].fillna(0).to_numpy(dtype=int)
     dates = df["open_time_utc"].dt.strftime("%Y-%m-%d")
-    d = df.groupby(dates, sort=True).agg(
+    df["day_key"] = dates
+    d = df.groupby("day_key", sort=True).agg(
         high=("high","max"), low=("low","min"),
         full=("high","count"))
     prior = d[["high","low"]].shift(1).rename(
         columns={"high":"previous_day_hi","low":"previous_day_lo"})
-    daily = df.join(prior, on=dates)
+    daily = df.join(prior, on="day_key")
     pdh = daily["previous_day_hi"]
     pdl = daily["previous_day_lo"]
     # Original source score weights = 4+4+4, but upstream direction of
