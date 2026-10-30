@@ -1,0 +1,32 @@
+name: Trigger Happy Research Prototype Checks
+
+on:
+  pull_request:
+    paths:
+      - 'research/strategy_lab/trigger_happy/**'
+      - 'tests/test_trigger_happy.py'
+      - '.github/workflows/trigger-happy-research-ci.yml'
+  push:
+    branches:
+      - 'research/trigger-happy-v0-1-20261030'
+    paths:
+      - 'research/strategy_lab/trigger_happy/**'
+      - 'tests/test_trigger_happy.py'
+      - '.github/workflows/trigger-happy-research-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-mechanics-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Compile research-only tick replay
+        run: python -m compileall -q research/strategy_lab/trigger_happy/backtest.py tests/test_trigger_happy.py
+      - name: Run synthetic fixtures (NOT historical performance evidence)
+        run: python -m unittest discover -s tests -p test_trigger_happy.py -v
