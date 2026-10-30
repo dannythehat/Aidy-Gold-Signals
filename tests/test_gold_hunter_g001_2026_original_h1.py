@@ -23,7 +23,7 @@ def test_2026_indicators_use_past_2025_warmup():
     assert d.loc[new.index[0],"sma200"]>0
     assert d.loc[new.index[0],"atr14"]>0
     assert d.loc[new.index[0],"momentum"]==pytest.approx(
-        (d.loc[new.index[0],"close"]-d.loc[d.index[-21],"close"])/d.loc[new.index[0],"atr14"])
+        (d.loc[new.index[0],"close"]-d.iloc[d.index.get_loc(new.index[0])-20]["close"])/d.loc[new.index[0],"atr14"])
 
 def test_future_original_quote_mutation_does_not_change_previous_signals():
     older,new=make_daily()
