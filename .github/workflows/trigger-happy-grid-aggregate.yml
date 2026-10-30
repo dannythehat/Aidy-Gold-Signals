@@ -1,0 +1,39 @@
+name: TH001 Honest Aggregate of 42 Original Quote Cases
+
+on:
+  push:
+    branches: ['research/trigger-happy-v0-1-20261030']
+    paths:
+      - 'research/strategy_lab/trigger_happy/aggregate_grid.py'
+      - '.github/workflows/trigger-happy-grid-aggregate.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  original-month-grid-aggregation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41011320057
+          github-token: ${{ github.token }}
+          pattern: 'th001-42-case-*-original-quote-research'
+          path: artifacts/trigger_happy/grid_collected/
+          merge-multiple: false
+      - name: Require all 42 variants x 4 real quote months; preserve losses
+        run: |
+          python research/strategy_lab/trigger_happy/aggregate_grid.py --root artifacts/trigger_happy/grid_collected/ --out artifacts/trigger_happy/research_summary/TH001_GRID_42_FOUR_MONTHS.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: th001-aggregated-all-42-grid-results-exploratory
+          path: artifacts/trigger_happy/research_summary/
+          retention-days: 90
+          if-no-files-found: warn
