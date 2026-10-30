@@ -1,0 +1,109 @@
+name: TH001 Freeze Selected Fades and Verify Eight Unseen Historical Months
+
+on:
+  push:
+    branches: ['research/trigger-happy-v0-1-20261030']
+    paths:
+      - 'research/strategy_lab/trigger_happy/select_fade_candidates.py'
+      - 'research/strategy_lab/trigger_happy/validate_month.py'
+      - 'research/strategy_lab/trigger_happy/aggregate_validation.py'
+      - '.github/workflows/trigger-happy-history-replication.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  freeze-candidates-from-discovery-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41012028806
+          github-token: ${{ github.token }}
+          name: th001-540-aggregate-original-source-evidence
+          path: artifacts/trigger_happy/discovery_aggregate/
+      - name: Freeze exactly two preselected models without peeking at validation data
+        run: |
+          python research/strategy_lab/trigger_happy/select_fade_candidates.py --input artifacts/trigger_happy/discovery_aggregate/TH001_540_TRIALS_ALL_LOSSES_AND_GAINS.json --out artifacts/trigger_happy/frozen_candidates/selection.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: th001-immutable-fade-selection-for-historical-replication
+          path: artifacts/trigger_happy/frozen_candidates/
+          retention-days: 90
+          if-no-files-found: error
+
+  previously-unexamined-original-tick-month:
+    needs: freeze-candidates-from-discovery-only
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        month: ['202510','202511','202512','202601','202602','202603','202604','202605']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SOURCE_MONTH: ${{ matrix.month }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: python -m pip install --quiet numpy numba
+      - uses: actions/download-artifact@v4
+        with:
+          name: th001-immutable-fade-selection-for-historical-replication
+          path: artifacts/trigger_happy/frozen_candidates/
+      - name: Read original untouched month from private archive
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/th001_replication_${SOURCE_MONTH}.zip"
+      - name: Compare frozen two fading models and original momentum baseline
+        run: |
+          PYTHONPATH=src:. python research/strategy_lab/trigger_happy/validate_month.py --archive "/tmp/th001_replication_${SOURCE_MONTH}.zip" --period "${SOURCE_MONTH}" --candidates artifacts/trigger_happy/frozen_candidates/selection.json --out "artifacts/trigger_happy/replication/${SOURCE_MONTH}/"
+          rm -f "/tmp/th001_replication_${SOURCE_MONTH}.zip"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: th001-replication-${{ matrix.month }}-real-source
+          path: artifacts/trigger_happy/replication/${{ matrix.month }}/
+          retention-days: 90
+          if-no-files-found: warn
+
+  aggregate-all-eight-months:
+    needs: previously-unexamined-original-tick-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: 'th001-replication-*-real-source'
+          path: artifacts/trigger_happy/replication_all/
+          merge-multiple: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: th001-immutable-fade-selection-for-historical-replication
+          path: artifacts/trigger_happy/frozen_candidates/
+      - name: Reconcile every winning and losing old month, no silent exclusions
+        run: |
+          python research/strategy_lab/trigger_happy/aggregate_validation.py --root artifacts/trigger_happy/replication_all/ --selection artifacts/trigger_happy/frozen_candidates/selection.json --out artifacts/trigger_happy/historical_replication/TH001_EIGHT_MONTHS.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: th001-eight-months-historical-replication-and-loss-ledger
+          path: artifacts/trigger_happy/historical_replication/
+          retention-days: 90
+          if-no-files-found: warn

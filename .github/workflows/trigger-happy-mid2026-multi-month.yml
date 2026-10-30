@@ -1,0 +1,50 @@
+name: Trigger Happy Additional 2026 Genuine Tick Months - Read Only
+
+on:
+  push:
+    branches: ['research/trigger-happy-v0-1-20261030']
+    paths:
+      - '.github/workflows/trigger-happy-mid2026-multi-month.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  original-ticks-month-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        month: ['202606', '202607', '202608']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SOURCE_MONTH: ${{ matrix.month }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify prototype code
+        run: |
+          python -m compileall -q research/strategy_lab/trigger_happy/
+          python -m unittest discover -s tests -p test_trigger_happy.py -v
+      - name: Retrieve one immutable original ZIP read-only
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/th001_${SOURCE_MONTH}.zip"
+      - name: Original BID ASK quote replay and source provenance
+        run: |
+          PYTHONPATH=src:. python research/strategy_lab/trigger_happy/real_tick_month_pilot.py --archive "/tmp/th001_${SOURCE_MONTH}.zip" --period "${SOURCE_MONTH}" --out "artifacts/trigger_happy/${SOURCE_MONTH}/"
+          rm -f "/tmp/th001_${SOURCE_MONTH}.zip"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trigger-happy-${{ matrix.month }}-real-tick-exploratory
+          path: artifacts/trigger_happy/${{ matrix.month }}/
+          retention-days: 30
+          if-no-files-found: warn
