@@ -156,7 +156,8 @@ def research(quotes:Path,out:Path):
         }.items():
             yearly[cost_name]={}
             for name,arms in GROUPS.items():
-                r=replay_causal_v2(df,tapes[name],arms,settings)
+                r=replay_causal_v2(df,tapes[name],arms,settings,
+                                   allowed_systems=tuple(GROUPS))
                 if (r["closed_trades"] != len(r["trades"]) or
                     abs(sum(t["pnl_usd"] for t in r["trades"])
                         -r["realized_net_usd"])>.05):
