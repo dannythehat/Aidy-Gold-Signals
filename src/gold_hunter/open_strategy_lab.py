@@ -214,7 +214,8 @@ def signal_tape(raw: pd.DataFrame) -> tuple[pd.DataFrame, tuple[tuple[dict, ...]
 
 
 def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
-           systems: tuple[str,...], settings: Settings) -> dict:
+           systems: tuple[str,...], settings: Settings, *,
+           causal_entry_spread_v2: bool = False) -> dict:
     settings.validate()
     if not systems or len(set(systems))!=len(systems) or any(s not in SYSTEMS for s in systems):
         raise ValueError("Unknown/duplicate systems")
@@ -247,7 +248,9 @@ def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
             entry=(ask_open+settings.slippage_per_side if side==1
                    else bid_open-settings.slippage_per_side)
             risk=side*(entry-p["stop"])
-            profitroom=side*(p["target"]-entry)-(exit_spread if side==-1 else 0)-settings.slippage_per_side-settings.roundtrip_commission_per_oz
+            # V2 must NOT condition entry on the maximum spread of the still-unfinished hour.
+            # Legacy v0 default is retained ONLY to reproduce archived trade ledgers.
+            profitroom=side*(p["target"]-entry)-((op_spread if causal_entry_spread_v2 else exit_spread) if side==-1 else 0)-settings.slippage_per_side-settings.roundtrip_commission_per_oz
             if (risk>0 and profitroom/risk>=2 and balance>0):
                 risk_per_oz=risk+settings.slippage_per_side+settings.roundtrip_commission_per_oz
                 ounces=balance*settings.risk_fraction/risk_per_oz
@@ -337,6 +340,9 @@ def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
                  "2025 BID only with assumed spread","No true intrabar order of events",
                  "No swaps/margin/lot rounding","Portfolio has one position total"],
     }
+    if causal_entry_spread_v2:
+        result["research_model_revision"]="v2_causal_open_spread_at_entry"
+        result["notes"].append("Entry RR evaluated against known opening spread, NOT later hourly maximum spread")
     result["sha256"]=hashlib.sha256(json.dumps(result,sort_keys=True,
                             separators=(",",":"),allow_nan=False).encode()).hexdigest()
     return result
@@ -353,3 +359,16 @@ def run_family_matrix(raw: pd.DataFrame, settings: Settings) -> dict:
         ("ALL_TEN",SYSTEMS),
     ]+[(s,(s,)) for s in SYSTEMS]
     return {name:replay(df,tape,arms,settings) for name,arms in groups}
+
+
+def replay_causal_v2(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
+                     systems: tuple[str,...], settings: Settings) -> dict:
+    """Separate versioned research run: no future hourly spread at admission.
+
+    Replay v0 remains byte-for-byte reproducible at default options; this v2
+    switch MUST be used in new quote-side research. Stop/target chronology is
+    still H1 conservative and requires eventual timestamp-aligned tick parity.
+    """
+    if not settings.observed_quote_mode:
+        raise ValueError("V2 quote replay requires source-verified observed ASK")
+    return replay(df, tape, systems, settings, causal_entry_spread_v2=True)
