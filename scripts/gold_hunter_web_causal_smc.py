@@ -60,14 +60,21 @@ def make_tape(raw):
     h4 = (df.set_index("open_time_utc")
           .resample("4h", label="left", closed="left")
           .agg(close=("close","last"), n=("close","count")))
-    h4["sma20"] = h4["close"].where(h4["n"]==4).rolling(
+    # AIDY H1 bars are only admitted when all 60 M1 minutes exist. Original
+    # MT5 H4 candles often have fewer than four such fully populated hours.
+    # Accept a completed H4 only with >=3 ORIGINAL full H1 observations,
+    # and compute SMA over the last 20 observed valid H4 closes, not twenty
+    # uninterrupted 4h calendar slots across weekend market closures.
+    # No invented candle or forward-filled value enters the moving average.
+    observed_h4 = h4[h4["n"]>=3].copy()
+    observed_h4["sma20"] = observed_h4["close"].rolling(
         20, min_periods=20).mean()
-    h4["bias"] = np.where(
-        h4["n"].eq(4) & h4["sma20"].notna(),
-        np.where(h4["close"]>h4["sma20"], 1,-1), 0)
+    observed_h4["bias"] = np.where(
+        observed_h4["sma20"].notna(),
+        np.where(observed_h4["close"]>observed_h4["sma20"], 1,-1), 0)
     historical_h4 = pd.DataFrame({
-        "complete_utc": h4.index + pd.Timedelta(hours=4),
-        "bias": h4["bias"].to_numpy(dtype=int)
+        "complete_utc": observed_h4.index + pd.Timedelta(hours=4),
+        "bias": observed_h4["bias"].to_numpy(dtype=int)
     }).sort_values("complete_utc")
     usable = pd.merge_asof(
         pd.DataFrame({"complete_utc": closes}).sort_values("complete_utc"),
@@ -92,7 +99,8 @@ def make_tape(raw):
     bull_fvg = l > h.shift(2)  # true completed three-candle imbalance
     bear_fvg = h < l.shift(2)
     events = {name: [] for name in GROUPS}
-    coverage = {"closed_h4_nonzero": int((bias!=0).sum()),
+    coverage = {"admitted_original_observed_h4":len(observed_h4),
+                "closed_h4_nonzero": int((bias!=0).sum()),
                 "sweep_bull": int(bull_sweep.sum()),
                 "sweep_bear": int(bear_sweep.sum()),
                 "fvg_bull": int(bull_fvg.sum()),
