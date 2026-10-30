@@ -271,13 +271,15 @@ def research(root:Path, dest:Path):
                 json.dumps(row,indent=2,sort_keys=True,allow_nan=False)+"\n")
             results[name]={k:row[k] for k in (
                 "realized_net_usd","closed","wins","profit_factor",
-                "realized_only_max_drawdown_pct","open_position_censored","sha256")}
+                "realized_only_max_drawdown_pct","open_position_censored","rejections","sha256")}
         output["years"][str(year)]={"source":proof,"results":results}
     output["sha256"]=digest(output)
     (dest/"report.json").write_text(
         json.dumps(output,indent=2,sort_keys=True,allow_nan=False)+"\n")
     print("AIDY_EXTERNAL_N30_ZSCORE",json.dumps(
-        {y:{mode:rec["realized_net_usd"] for mode,rec in v["results"].items()}
+        {y:{mode:{"net":rec["realized_net_usd"],
+                   "closed":rec["closed"],"rejections":rec["rejections"]}
+            for mode,rec in v["results"].items()}
          for y,v in output["years"].items()},sort_keys=True),flush=True)
     return output
 
