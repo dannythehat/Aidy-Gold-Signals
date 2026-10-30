@@ -1,0 +1,81 @@
+name: Gold Hunter MIT N30 TickRobust M1 Gold Reversion
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/gold_hunter_web_n30_zscore.py'
+      - 'tests/test_gold_hunter_web_n30_zscore.py'
+      - '.github/workflows/gold-hunter-web-n30-zscore-2023-2025.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-original-aidy-three-years:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest
+      - name: Pin original MIT N30 EA text and licence WITHOUT running downloaded software
+        run: |
+          git clone --depth=1 --quiet https://github.com/n30dyn4m1c/gold-pro-scalper /tmp/web-origin
+          test "$(git -C /tmp/web-origin hash-object XAU_Quant_Reversion_TickRobust.mq5)" = 'b72fa09abe789b80be6e9c7028c16409f3b35bb4'
+          grep -q 'MIT License' /tmp/web-origin/LICENSE
+          grep -q 'InpEntryZ         = 2.2' /tmp/web-origin/XAU_Quant_Reversion_TickRobust.mq5
+      - name: Test source interpretation and AIDY accounting without cloud data
+        run: |
+          python -m compileall -q scripts/gold_hunter_web_n30_zscore.py
+          python -m pytest -q tests/test_gold_hunter_web_n30_zscore.py tests/test_gold_hunter_2023_2024_causal_research.py
+      - name: Fetch pinned original AIDY archive decoder code ONLY
+        run: |
+          git fetch --depth=1 origin 1eb0f678c3158b4a76993ec14ffa7e760d101a0c
+          git show 1eb0f678c3158b4a76993ec14ffa7e760d101a0c:scripts/oracle_gold/snapshot_bundle.py > /tmp/aidy_snapshot_bundle.py
+          python -m py_compile /tmp/aidy_snapshot_bundle.py
+      - name: Read-only retrieve existing original authenticated 2023 BID ASK snapshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2023*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Read-only retrieve existing original authenticated 2024 BID ASK snapshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2024*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Read-only retrieve existing original authenticated 2025 BID ASK snapshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2025*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Unwrap existing encrypted quote derivatives in isolated CI (no raw source GET)
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for folder in /tmp/encrypted/oracle-bidask-*; do
+            test -f "$folder/snapshot.encrypted.json" || exit 2
+            period="${folder##*oracle-bidask-}"
+            python /tmp/aidy_snapshot_bundle.py open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Test independently implemented cost-gated M1 mean reversion on 2023-2025 quotes
+        run: python -m scripts.gold_hunter_web_n30_zscore --quotes /tmp/quotes --out artifacts/web_n30_zscore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-mit-n30-zscore-original-m1-2023-2025
+          path: artifacts/web_n30_zscore/
+          retention-days: 90
+          if-no-files-found: warn
