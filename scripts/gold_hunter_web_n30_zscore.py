@@ -97,21 +97,27 @@ def features(df: pd.DataFrame):
     minus = 100 * sm_neg / atr_w
     dx = 100 * (plus-minus).abs() / (plus+minus).replace(0, np.nan)
     adx = wilder_mean(dx, 14).shift(1)
-    # 50 already COMPLETED H1 closes, not the not-yet-closed current hour.
+    # MT5 H1 candles can exist when some M1 minutes have no ticks. Do NOT
+    # demand 50 contiguous *fully populated* 60-minute hours: that creates
+    # fake zero-signal history from sparse authentic minute quotes.
+    # Require at least 30 observed distinct M1 minutes per H1 (research
+    # fidelity gate, NOT MT5 broker native parity); never synthesize M1s.
     hourly = close.resample("1h", closed="left", label="left").last()
     hourly_count = close.resample("1h", closed="left", label="left").count()
-    hourly = hourly.where(hourly_count == 60)
-    hmean = hourly.rolling(50, min_periods=50).mean().shift(1)
-    # An hourly row labelled HH becomes known only at HH+1. Map by
-    # current hour; shifted feature intentionally excludes HH's close.
+    valid = hourly.where(hourly_count >= 30).dropna()
+    history = valid.rolling(50, min_periods=50).mean()
+    # Hour HH is COMPLETE at HH+1 and only then available to entries.
+    history.index = history.index + pd.Timedelta(hours=1)
     hour_index = m.index.floor("h")
-    ht = hmean.reindex(hour_index).to_numpy()
+    ht = history.reindex(hour_index, method="ffill").to_numpy()
     prev_ma = ma.to_numpy()
     prev_sd = sd.to_numpy()
     prev_close = close.shift(1).to_numpy()
     prev_prev_close = close.shift(2).to_numpy()
     z = (prev_close-prev_ma)/np.where(prev_sd > 0, prev_sd, np.nan)
     return {
+        "research_h1_source_hours_at_least_30_m1": len(valid),
+        "research_h1_sma_finite_minutes": int(np.isfinite(ht).sum()),
         "time": m.index,
         "bid_open": m["bid_o"].to_numpy(),
         "bid_hi": m["bid_h"].to_numpy(),
@@ -262,6 +268,8 @@ def research(root:Path, dest:Path):
     for year in YEARS:
         m, proof = year_minutes(root,year)
         x = features(m)
+        if x["research_h1_sma_finite_minutes"] < 10000:
+            raise ValueError("H1 trend context blocked: too few authentic quote hours")
         results={}
         for name,slip,fee in (("base",.05,0.),("stress",.25,.14)):
             row=replay(x,slip=slip,commission=fee)
@@ -272,7 +280,9 @@ def research(root:Path, dest:Path):
             results[name]={k:row[k] for k in (
                 "realized_net_usd","closed","wins","profit_factor",
                 "realized_only_max_drawdown_pct","open_position_censored","rejections","sha256")}
-        output["years"][str(year)]={"source":proof,"results":results}
+        output["years"][str(year)]={"source":proof,"results":results,
+            "observed_h1_trend_hours":x["research_h1_source_hours_at_least_30_m1"],
+            "minutes_with_completed_h1_trend":x["research_h1_sma_finite_minutes"]}
     output["sha256"]=digest(output)
     (dest/"report.json").write_text(
         json.dumps(output,indent=2,sort_keys=True,allow_nan=False)+"\n")
