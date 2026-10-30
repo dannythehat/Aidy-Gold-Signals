@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 jobs:
-  historical-jan2025-source-pilot:
+  historical-sep2026-source-pilot:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -35,17 +35,17 @@ jobs:
         run: |
           python -m compileall -q research/strategy_lab/trigger_happy/
           python -m unittest discover -s tests -p test_trigger_happy.py -v
-      - name: Read-only fetch of original 2025-01 tick ZIP from existing R2 bucket
+      - name: Read-only fetch of original 2026-09 tick ZIP from existing R2 bucket
         run: |
-          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/202501/HISTDATA_COM_ASCII_XAUUSD_T_202501.zip" --remote --file "/tmp/trigger_happy_202501_original.zip"
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/202609/HISTDATA_COM_ASCII_XAUUSD_T_202609.zip" --remote --file "/tmp/trigger_happy_202609_original.zip"
       - name: Run true BID ASK sorted-tick one-month exploratory historical replay
         run: |
-          PYTHONPATH=src:. python research/strategy_lab/trigger_happy/real_tick_month_pilot.py --archive "/tmp/trigger_happy_202501_original.zip" --period 202501 --out "artifacts/trigger_happy/jan2025"
-          rm -f "/tmp/trigger_happy_202501_original.zip"
+          PYTHONPATH=src:. python research/strategy_lab/trigger_happy/real_tick_month_pilot.py --archive "/tmp/trigger_happy_202609_original.zip" --period 202609 --out "artifacts/trigger_happy/sep2026"
+          rm -f "/tmp/trigger_happy_202609_original.zip"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: trigger-happy-jan2025-real-source-exploratory
-          path: artifacts/trigger_happy/jan2025/
+          name: trigger-happy-sep2026-real-source-exploratory
+          path: artifacts/trigger_happy/sep2026/
           retention-days: 30
           if-no-files-found: warn
