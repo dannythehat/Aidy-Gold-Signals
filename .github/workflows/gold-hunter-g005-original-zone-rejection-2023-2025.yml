@@ -75,7 +75,7 @@ jobs:
             python /tmp/aidy_snapshot_bundle.py open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
           done
       - name: Run exact original author 001B zone rejection on genuine M1 BID ASK and separate broker stress
-        run: python -m scripts.gold_hunter_external_vol_regime_daily --quotes /tmp/quotes --out artifacts/g005_original_zone_rejection
+        run: python -m scripts.gold_hunter_g005_original_zone_rejection --quotes /tmp/quotes --author /tmp/g005-original --out artifacts/g005_original_zone_rejection
       - uses: actions/upload-artifact@v4
         if: always()
         with:
