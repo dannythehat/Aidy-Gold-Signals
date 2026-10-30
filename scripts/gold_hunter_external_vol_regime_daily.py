@@ -68,7 +68,7 @@ def source_daily(root:Path):
         "d1_sha256":hashlib.sha256(d[["bid_o","ask_o","high","low","close","m1_count"]].to_csv().encode()).hexdigest()}
 
 def run_year(d:pd.DataFrame,year:int,mode:str,slip:float,fee:float,financing:float):
-    if year not in YEARS or mode not in METHODS: raise ValueError("Unknown scenario")
+    if year not in YEARS+(2026,) or mode not in METHODS: raise ValueError("Unknown scenario")
     q=d.loc[d.index.year==year]
     cash=10000.
     peak=cash
