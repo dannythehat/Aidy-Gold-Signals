@@ -215,9 +215,13 @@ def signal_tape(raw: pd.DataFrame) -> tuple[pd.DataFrame, tuple[tuple[dict, ...]
 
 def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
            systems: tuple[str,...], settings: Settings, *,
-           causal_entry_spread_v2: bool = False) -> dict:
+           causal_entry_spread_v2: bool = False,
+           allowed_systems: tuple[str, ...] | None = None) -> dict:
     settings.validate()
-    if not systems or len(set(systems))!=len(systems) or any(s not in SYSTEMS for s in systems):
+    allowed = SYSTEMS if allowed_systems is None else allowed_systems
+    if (not allowed or len(set(allowed)) != len(allowed)
+            or not systems or len(set(systems)) != len(systems)
+            or any(s not in allowed for s in systems)):
         raise ValueError("Unknown/duplicate systems")
     if len(df)!=len(tape):
         raise ValueError("Source/tape length mismatch")
@@ -296,7 +300,7 @@ def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
         if i < len(df)-1 and not position and not pending:
             available=[x for x in tape[i] if x["system"] in systems]
             if available:
-                available.sort(key=lambda x:SYSTEMS.index(x["system"]))
+                available.sort(key=lambda x:allowed.index(x["system"]))
                 pending=available[0]
                 rejected["competition"]+=len(available)-1
     values=np.array([x["equity"] for x in marks])
@@ -340,6 +344,8 @@ def replay(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
                  "2025 BID only with assumed spread","No true intrabar order of events",
                  "No swaps/margin/lot rounding","Portfolio has one position total"],
     }
+    if allowed_systems is not None:
+        result["research_custom_allowed_systems"] = list(allowed_systems)
     if causal_entry_spread_v2:
         result["research_model_revision"]="v2_causal_open_spread_at_entry"
         result["notes"].append("Entry RR evaluated against known opening spread, NOT later hourly maximum spread")
@@ -362,7 +368,8 @@ def run_family_matrix(raw: pd.DataFrame, settings: Settings) -> dict:
 
 
 def replay_causal_v2(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
-                     systems: tuple[str,...], settings: Settings) -> dict:
+                     systems: tuple[str,...], settings: Settings, *,
+                     allowed_systems: tuple[str,...] | None = None) -> dict:
     """Separate versioned research run: no future hourly spread at admission.
 
     Replay v0 remains byte-for-byte reproducible at default options; this v2
@@ -371,4 +378,5 @@ def replay_causal_v2(df: pd.DataFrame, tape: tuple[tuple[dict,...],...],
     """
     if not settings.observed_quote_mode:
         raise ValueError("V2 quote replay requires source-verified observed ASK")
-    return replay(df, tape, systems, settings, causal_entry_spread_v2=True)
+    return replay(df, tape, systems, settings, causal_entry_spread_v2=True,
+                  allowed_systems=allowed_systems)
