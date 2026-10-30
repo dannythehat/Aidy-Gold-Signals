@@ -48,7 +48,8 @@ def test_causal_execution_and_reconciliation():
     raw=fixture()
     df,tapes,_=make_tape(raw)
     for name,arms in GROUPS.items():
-        x=replay_causal_v2(df,tapes[name],arms,Settings(observed_quote_mode=True))
+        x=replay_causal_v2(df,tapes[name],arms,Settings(observed_quote_mode=True),
+                           allowed_systems=tuple(GROUPS))
         assert x["closed_trades"] == len(x["trades"])
         assert x["research_model_revision"] == "v2_causal_open_spread_at_entry"
         assert sum(t["pnl_usd"] for t in x["trades"]) == pytest.approx(
