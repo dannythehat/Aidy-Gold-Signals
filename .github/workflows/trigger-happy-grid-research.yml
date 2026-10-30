@@ -37,7 +37,7 @@ jobs:
       - name: Verify exact frozen-logic parity before historical testing
         run: |
           python -m compileall -q research/strategy_lab/trigger_happy/
-          python -m unittest discover -s tests -p test_trigger_happy_grid.py -v
+          PYTHONPATH=src:. python -m unittest discover -s tests -p test_trigger_happy_grid.py -v
       - name: Read ORIGINAL genuine bid ask ticks from private R2
         run: |
           npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/th001_${SOURCE_MONTH}.zip"
