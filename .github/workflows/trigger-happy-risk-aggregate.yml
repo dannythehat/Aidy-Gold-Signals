@@ -1,0 +1,39 @@
+name: TH001 Aggregate ALL 540 Risk Trials Across Four Gold Tick Months
+
+on:
+  push:
+    branches: ['research/trigger-happy-v0-1-20261030']
+    paths:
+      - 'research/strategy_lab/trigger_happy/aggregate_risk.py'
+      - '.github/workflows/trigger-happy-risk-aggregate.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  reconcile-all-trials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41011780867
+          github-token: ${{ github.token }}
+          pattern: 'th001-540-risk-*-source-evidence'
+          path: artifacts/trigger_happy/risk_collected/
+          merge-multiple: false
+      - name: All 540 configurations x four original source months
+        run: |
+          python research/strategy_lab/trigger_happy/aggregate_risk.py --root artifacts/trigger_happy/risk_collected --out artifacts/trigger_happy/risk_summary/TH001_540_TRIALS_ALL_LOSSES_AND_GAINS.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: th001-540-aggregate-original-source-evidence
+          path: artifacts/trigger_happy/risk_summary/
+          retention-days: 90
+          if-no-files-found: warn
