@@ -132,6 +132,7 @@ def replay(df:pd.DataFrame,family:str,*,slippage:float,
     closes=[]
     max_open_adverse=0.
     gap_hours=0.
+    blocked_side=0  # stop-out blocks repetitive re-entry until signal resets
     skipped=0
     entries=0
     hourly_equity=[]
@@ -148,13 +149,17 @@ def replay(df:pd.DataFrame,family:str,*,slippage:float,
         if spread<0 or not all(math.isfinite(z) for z in (op,ask,high,low,proxy_spread)):
             raise ValueError("Invalid original quote geometry")
         target=int(df.iloc[i-1][sig]) if i>0 else 0
+        if target!=blocked_side:
+            blocked_side=0
         def close_position(price:float, reason:str):
-            nonlocal cash,current
+            nonlocal cash,current,blocked_side
             if current is None:
                 raise ValueError("No current trade")
             out=price-current.side*slippage
             realized=(out-current.entry)*current.side - commission - current.financing
             cash+=realized
+            if reason=="PROTECTIVE_STOP":
+                blocked_side=current.side
             closes.append({
                 "family":family,"entry_utc":current.at.isoformat(),
                 "exit_utc":now.isoformat(),"side":current.side,"reason":reason,
@@ -175,7 +180,7 @@ def replay(df:pd.DataFrame,family:str,*,slippage:float,
                 gap_hours+=elapsed-1
         if current is not None and target!=current.side:
             close_position(op if current.side==1 else ask, "FORECAST_EXIT")
-        if current is None and target and i>0:
+        if current is None and target and i>0 and target!=blocked_side:
             # Signal comes strictly from previous completed H1 bar.
             atr=float(df.iloc[i-1]["ATR14"])
             if not math.isfinite(atr) or atr<=0:
@@ -231,7 +236,9 @@ def replay(df:pd.DataFrame,family:str,*,slippage:float,
         "max_unrealized_adverse_excursion_usd_approx":round(max_open_adverse,2),
         "profit_factor":round(gp/gl,3) if gl else None,
         "open_censored":bool(current),"source_h1_missing_gaps_extra_hours":gap_hours,
-        "rejected_signal_no_atr":skipped,"slippage_per_side":slippage,
+        "rejected_signal_no_atr":skipped,
+        "protective_stop_locks_same_forecast_until_reset":True,
+        "slippage_per_side":slippage,
         "roundtrip_commission_per_ounce":commission,
         "illustrative_annual_financing_charge_rate":financing_rate,
         "no_actual_broker_quotes_or_swaps":True,
