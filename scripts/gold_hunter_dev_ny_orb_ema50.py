@@ -203,7 +203,7 @@ def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode):
                 rejected["overlap"]+=1
             else:
                 side=s["direction"];entry=(ask if side==1 else bid)+side*slip
-                risk_price=ATR_MULTIPLE*s["atr14"]
+                risk_price=ATR_MULTIPLE*s["atr14_bid"]
                 target=entry+side*R_MULTIPLE*risk_price
                 stop=entry-side*risk_price
                 # Quantize risk budget DOWN to 0.01 standard lot = 1oz.
