@@ -156,7 +156,7 @@ def source_inspired_signals(h1,mode):
 def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode):
     if mode not in MODES:raise ValueError("Unknown mode")
     eligible={item["entry_idx"]:item for item in signals}
-    cash=START;peak=START.;mdd=0.;open_trade=None
+    cash=START;peak=START;mdd=0.;open_trade=None
     ledger=[];max_unreal=0.;rejected={"overlap":0,"lot_min":0,"margin":0}
     count=0
     for i,row in x.iterrows():
