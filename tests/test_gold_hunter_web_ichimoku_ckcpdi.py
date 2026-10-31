@@ -68,7 +68,7 @@ def test_26_bar_chikou_is_past_kijun_not_future():
 
 def test_causal_next_bar_entry_and_new_ck_forced_exit():
     x = signals()
-    r = replay(x, slip=0, commission=0, annual_carry=0)
+    r = replay(x, warmup=1, slip=0, commission=0, annual_carry=0)
     assert r["closed_trades"] == 1
     assert r["trades"][0]["entry_utc"] == x.index[2].isoformat()
     assert r["trades"][0]["exit_utc"] == x.index[4].isoformat()
@@ -79,8 +79,8 @@ def test_causal_next_bar_entry_and_new_ck_forced_exit():
 
 def test_costs_reduce_same_trades_and_cash_ledger_reconciles():
     x = signals()
-    base = replay(x, slip=0, commission=0, annual_carry=0)
-    stress = replay(x, slip=.25, commission=.14, annual_carry=.09)
+    base = replay(x, warmup=1, slip=0, commission=0, annual_carry=0)
+    stress = replay(x, warmup=1, slip=.25, commission=.14, annual_carry=.09)
     assert base["closed_trades"] == stress["closed_trades"] == 1
     assert stress["realized_net_usd"] < base["realized_net_usd"]
     assert stress["marked_net_usd"] == stress["realized_net_usd"]
