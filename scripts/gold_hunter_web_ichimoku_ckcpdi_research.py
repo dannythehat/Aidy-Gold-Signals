@@ -273,6 +273,7 @@ def main(root, outdir):
         scenarios = {}
         for name, slip, fee, carry in [
             ("base_no_funding", .05, 0.0, 0.0),
+            ("stress_no_funding", .25, .14, 0.0),
             ("stress_hypothetical_9pct_carry", .25, .14, .09),
         ]:
             result = replay(x, slip=slip, commission=fee, annual_carry=carry)
