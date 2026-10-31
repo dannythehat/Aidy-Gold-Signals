@@ -1,0 +1,97 @@
+name: Gold Hunter DEV ORB Original 2022 Full Year BID ASK Tick Replay
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/gold_hunter_dev_ny_orb_2022.py'
+      - 'tests/test_gold_hunter_dev_ny_orb_2022.py'
+      - '.github/workflows/gold-hunter-dev-ny-orb-2022.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  year2022-contract-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 pytest
+      - name: No synthetic source, no lookahead, same source-inspired ORB clock versions
+        run: |
+          python -m compileall -q scripts/gold_hunter_dev_ny_orb_2022.py scripts/gold_hunter_dev_ny_orb_ema50.py
+          python -m pytest -q tests/test_gold_hunter_dev_ny_orb_2022.py tests/test_gold_hunter_dev_ny_orb_ema50.py
+
+  derive-original-2022-source-month:
+    needs: year2022-contract-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        month: ['202201','202202','202203','202204','202205','202206',
+                '202207','202208','202209','202210','202211','202212']
+    env:
+      PYTHONPATH: src:.
+      SOURCE_MONTH: ${{ matrix.month }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Reopen read-only actual original 2022 XAUUSD BID/ASK archived tick ZIP
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4 r2 object get "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${SOURCE_MONTH}/HISTDATA_COM_ASCII_XAUUSD_T_${SOURCE_MONTH}.zip" --remote --file "/tmp/orb_source_${SOURCE_MONTH}.zip"
+          test -s "/tmp/orb_source_${SOURCE_MONTH}.zip"
+      - name: Validate unchanged tick source hash and derive real complete H1 BID/ASK
+        run: |
+          python -c 'import os; from pathlib import Path; from aidy.strategy_lab_crossfire_tick_2021 import write_period; m=os.environ["SOURCE_MONTH"]; print(write_period(Path(f"/tmp/orb_source_{m}.zip"),m,Path(f"artifacts/orb_2022/ny-orb-source-{m}")))'
+          rm -f "/tmp/orb_source_${SOURCE_MONTH}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ny-orb-source-${{ matrix.month }}
+          path: artifacts/orb_2022/ny-orb-source-${{ matrix.month }}/
+          retention-days: 90
+          if-no-files-found: error
+
+  replay-year2022-nonoptimized:
+    needs: derive-original-2022-source-month
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5
+      - name: Download 12 independently source-attested monthly real market H1
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ny-orb-source-*
+          path: /tmp/ny-orb-2022
+          merge-multiple: false
+      - name: Run frozen ORB EMA50/ATR1.5/5R fixed and DST corrected on true full-year 2022
+        run: |
+          python -m scripts.gold_hunter_dev_ny_orb_2022 --sources /tmp/ny-orb-2022 --out artifacts/ny_orb_2022_result
+          python -c 'import json; from pathlib import Path; x=json.loads(Path("artifacts/ny_orb_2022_result/report.json").read_text()); assert x["schema"]=="aidy.dev_ny_orb_2022_orig_verified_h1.v1" and len(x["historical_data"]["receipts"])==12 and x["article_literal_rule"]["strict_literal_signals"]==0'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-dev-ny-orb-ema50-2022-original-ticks-original-full-year
+          path: artifacts/ny_orb_2022_result/
+          retention-days: 90
+          if-no-files-found: warn
