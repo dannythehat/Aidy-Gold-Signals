@@ -214,9 +214,33 @@ def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode):
                     open_trade={"at":at,"i":i,"direction":side,"entry":entry,
                                 "stop":stop,"target":target,"oz":float(oz)}
                     count+=1
-                    # H1 entry bar stop/target check happens on next loop;
-                    # if entry-hour stop/target reached, data cannot determine
-                    # whether prior to fill: mark explicitly as gap blocker.
+                    # A market entry occurs at the observed first quote of this
+                    # H1. Its subsequent intrabar extremes can touch SL or TP.
+                    # With no tick path the STOP is charged first whenever both
+                    # levels occur within the same actual complete H1 candle.
+                    entry_stop=(low<=stop if side==1 else high+sp>=stop)
+                    entry_target=(high>=target if side==1 else low+sp<=target)
+                    if entry_stop or entry_target:
+                        if entry_stop:
+                            raw=min(stop,bid) if side==1 else max(stop,ask)
+                            px=raw-side*slip
+                            reason="ENTRY_HOUR_STOP_FIRST"
+                        else:
+                            px=target
+                            reason="ENTRY_HOUR_TARGET"
+                        fee=roundtrip_fee_per_oz*float(oz)
+                        net=(px-entry)*side*float(oz)-fee
+                        cash+=net
+                        ledger.append({"entry_utc":at.isoformat(),
+                           "exit_utc":at.isoformat(),"side":side,"reason":reason,
+                           "oz":float(oz),"entry":round(entry,6),
+                           "exit":round(px,6),"stop":round(stop,6),
+                           "target":round(target,6),
+                           "gross_usd":round((px-entry)*side*float(oz),6),
+                           "fee_usd":round(fee,6),"carry_usd":0.,
+                           "net_usd":round(net,6),
+                           "cash_after_exit":round(cash,6)})
+                        open_trade=None
         if open_trade is None:mark=cash
         else:
             t=open_trade;side=t["direction"]
@@ -242,7 +266,7 @@ def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode):
     gp=sum(max(0.,z["net_usd"]) for z in ledger)
     gl=-sum(min(0.,z["net_usd"]) for z in ledger)
     return {"scenario":mode,"original_author_native_parity":False,
-            "first_bar_unresolved_intrabar_fill_risk":True,
+            "entry_bar_stop_first_if_both_extrema_hit":True,
             "slippage_per_side":slip,"fee_per_oz_roundtrip":roundtrip_fee_per_oz,
             "hypothetical_annual_financing_not_puprime":annual_carry,
             "start_usd":START,"signal_count":len(signals),
