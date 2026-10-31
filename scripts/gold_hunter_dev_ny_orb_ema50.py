@@ -153,8 +153,11 @@ def source_inspired_signals(h1,mode):
                   "source_signals":len(sig)}
 
 
-def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode):
+def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode,
+                   risk_fraction=RISK_FRACTION):
     if mode not in MODES:raise ValueError("Unknown mode")
+    if risk_fraction not in (RISK_FRACTION,.005):
+        raise ValueError("Only pre-registered 2pct or 0.5pct risk permitted")
     eligible={item["entry_idx"]:item for item in signals}
     cash=START;peak=START;mdd=0.;open_trade=None
     ledger=[];max_unreal=0.;rejected={"overlap":0,"lot_min":0,"margin":0}
@@ -207,7 +210,7 @@ def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode):
                 target=entry+side*R_MULTIPLE*risk_price
                 stop=entry-side*risk_price
                 # Quantize risk budget DOWN to 0.01 standard lot = 1oz.
-                oz=math.floor(cash*RISK_FRACTION/risk_price)
+                oz=math.floor(cash*risk_fraction/risk_price)
                 if oz<LOT_OZ:rejected["lot_min"]+=1
                 elif entry*oz/LEVERAGE_ASSUMED>cash:rejected["margin"]+=1
                 else:
@@ -268,6 +271,7 @@ def account_replay(x,signals,*,slip,roundtrip_fee_per_oz,annual_carry,mode):
     return {"scenario":mode,"original_author_native_parity":False,
             "entry_bar_stop_first_if_both_extrema_hit":True,
             "slippage_per_side":slip,"fee_per_oz_roundtrip":roundtrip_fee_per_oz,
+            "risk_fraction":risk_fraction,
             "hypothetical_annual_financing_not_puprime":annual_carry,
             "start_usd":START,"signal_count":len(signals),
             "entries":count,"closed":len(ledger),
