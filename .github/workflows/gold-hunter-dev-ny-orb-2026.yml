@@ -1,0 +1,49 @@
+name: Gold Hunter DEV NY ORB 5R 2026 Authenticated Source Continuation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/gold_hunter_dev_ny_orb_ema50.py'
+      - 'scripts/gold_hunter_dev_ny_orb_2026.py'
+      - '.github/workflows/gold-hunter-dev-ny-orb-2026.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  dev-ny-orb-2026-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 pytest
+      - name: Verify original ORB impossible-published-rule and causal guards
+        run: |
+          python -m compileall -q scripts/gold_hunter_dev_ny_orb_ema50.py scripts/gold_hunter_dev_ny_orb_2026.py
+          python -m pytest -q tests/test_gold_hunter_dev_ny_orb_ema50.py tests/test_gold_hunter_g001_2026_original_h1.py
+      - name: Reuse original 2026 source-verified spot quote evidence only
+        uses: actions/download-artifact@v4
+        with:
+          name: CROSSFIRE-S010-2026-REAL-HOLDOUT-3-VERSIONS
+          run-id: 38851611865
+          github-token: ${{ github.token }}
+          path: /tmp/original_2026
+      - name: Run unchanged ORB 5R two clock interpretations on Jan-Sep2026 original spot H1
+        run: |
+          python -m scripts.gold_hunter_dev_ny_orb_2026 --source /tmp/original_2026 --out artifacts/dev_ny_orb_2026
+          python -c "import json; r=json.load(open('artifacts/dev_ny_orb_2026/report.json')); assert r['schema']=='aidy.dev_ny_orb_2026_original_h1.v1' and r['literal']['strict_literal_signals']==0"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-dev-ny-orb-ema50-real-2026-source-retrospective
+          path: artifacts/dev_ny_orb_2026/
+          retention-days: 90
+          if-no-files-found: warn
