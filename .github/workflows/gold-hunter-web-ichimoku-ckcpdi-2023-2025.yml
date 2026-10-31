@@ -1,0 +1,84 @@
+name: Gold Hunter Outside MIT Ichimoku CKCPDI M30 AIDY 2023-2025
+
+on:
+  push:
+    branches: ['gold-hunter-ten-candidate-lab-20261028']
+    paths:
+      - 'scripts/gold_hunter_web_ichimoku_ckcpdi_research.py'
+      - 'tests/test_gold_hunter_web_ichimoku_ckcpdi.py'
+      - '.github/workflows/gold-hunter-web-ichimoku-ckcpdi-2023-2025.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-pinned-readonly-three-year:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned research dependencies
+        run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest
+      - name: Verify actual original MIT EA and licence hashes (no original orders)
+        run: |
+          git clone --depth=1 --quiet https://github.com/n30dyn4m1c/ichimoku-chikou-kijun-crossover-ea /tmp/ckcpdi-original
+          test "$(git -C /tmp/ckcpdi-original hash-object profitable-gold-m30.mq5)" = '7b9837c47a80928d21b6bee3e7b813d805c3e7e0'
+          test "$(git -C /tmp/ckcpdi-original hash-object LICENSE)" = '7874e8fc5b21f333b241466dbf0f0abc308d553b'
+          grep -q 'IgnoreOppDICrosses=2' /tmp/ckcpdi-original/profitable-gold-m30.mq5
+          grep -q 'Lots=0.10' /tmp/ckcpdi-original/profitable-gold-m30.mq5
+      - name: Eight causal tests and source reader regressions
+        run: |
+          python -m compileall -q scripts/gold_hunter_web_ichimoku_ckcpdi_research.py
+          python -m pytest -q tests/test_gold_hunter_web_ichimoku_ckcpdi.py tests/test_gold_hunter_2023_2024_causal_research.py
+      - name: Fetch pinned original AIDY encrypted archive decoder only
+        run: |
+          git fetch --depth=1 origin 1eb0f678c3158b4a76993ec14ffa7e760d101a0c
+          git show 1eb0f678c3158b4a76993ec14ffa7e760d101a0c:scripts/oracle_gold/snapshot_bundle.py > /tmp/aidy_snapshot_bundle.py
+          python -m py_compile /tmp/aidy_snapshot_bundle.py
+      - name: Read-only retrieve 2023 original encrypted spot BID ASK
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2023*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Read-only retrieve 2024 original encrypted spot BID ASK
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2024*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Read-only retrieve 2025 original encrypted spot BID ASK
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2025*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Decode existing source-attested encrypted quote derivatives
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for folder in /tmp/encrypted/oracle-bidask-*; do
+            test -f "$folder/snapshot.encrypted.json" || exit 2
+            period="${folder##*oracle-bidask-}"
+            python /tmp/aidy_snapshot_bundle.py open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Independent causal source-inspired M30 replay, NO orders
+        run: |
+          python -m scripts.gold_hunter_web_ichimoku_ckcpdi_research --quotes /tmp/quotes --out artifacts/web_ichimoku_ckcpdi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-outside-ichimoku-ckcpdi-original-quotes-2023-2025
+          path: artifacts/web_ichimoku_ckcpdi/
+          retention-days: 90
+          if-no-files-found: warn

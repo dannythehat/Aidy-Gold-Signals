@@ -1,0 +1,72 @@
+name: Gold Hunter 2023-2024 Causal BID ASK Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/gold_hunter/open_strategy_lab.py'
+      - 'scripts/gold_hunter_2023_2024_causal_research.py'
+      - 'tests/test_gold_hunter_2023_2024_causal_research.py'
+      - 'tests/test_gold_hunter_open_lab.py'
+      - '.github/workflows/gold-hunter-2023-2024-original-bidask-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-backed-two-year-aidy-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install read-only research and test dependencies
+        run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest
+      - name: Validate mechanics without market source or credentials
+        run: |
+          python -m compileall -q src/gold_hunter/open_strategy_lab.py scripts/gold_hunter_2023_2024_causal_research.py
+          python -m pytest -q tests/test_gold_hunter_open_lab.py tests/test_gold_hunter_2023_2024_causal_research.py
+      - name: Fetch pinned authenticated PR374 cache decoder code (no new market source requests)
+        run: |
+          git fetch --depth=1 origin 1eb0f678c3158b4a76993ec14ffa7e760d101a0c
+          git show 1eb0f678c3158b4a76993ec14ffa7e760d101a0c:scripts/oracle_gold/snapshot_bundle.py > /tmp/aidy_snapshot_bundle.py
+          python -m py_compile /tmp/aidy_snapshot_bundle.py
+      - name: Download only original authenticated 2023 encrypted monthly derivatives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2023*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Download only original authenticated 2024 encrypted monthly derivatives
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2024*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Decrypt existing source-verified data with CI-only wrapped key
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for folder in /tmp/encrypted/oracle-bidask-2023* /tmp/encrypted/oracle-bidask-2024*; do
+            test -f "$folder/snapshot.encrypted.json" || exit 2
+            period="${folder##*oracle-bidask-}"
+            python /tmp/aidy_snapshot_bundle.py open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Run unchanged strategy rules through versioned causal BID ASK account model
+        run: |
+          python -m scripts.gold_hunter_2023_2024_causal_research --quotes /tmp/quotes --out artifacts/gold_hunter_2023_2024_v2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-2023-2024-causal-source-evidence
+          path: artifacts/gold_hunter_2023_2024_v2/
+          retention-days: 90
+          if-no-files-found: warn
