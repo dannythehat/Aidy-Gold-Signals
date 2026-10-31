@@ -2,7 +2,7 @@ name: Gold Hunter Outside MIT Ichimoku CKCPDI M30 AIDY 2023-2025
 
 on:
   push:
-    branches: ['gold-hunter-ten-candidate-lab-20261028']
+    branches: ['gold-hunter-ichimoku-ckcpdi-20261031']
     paths:
       - 'scripts/gold_hunter_web_ichimoku_ckcpdi_research.py'
       - 'tests/test_gold_hunter_web_ichimoku_ckcpdi.py'
