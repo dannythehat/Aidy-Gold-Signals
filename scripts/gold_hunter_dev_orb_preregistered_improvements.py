@@ -146,6 +146,43 @@ def research(source_2022:Path,source_old:Path,source_2026:Path,out:Path):
                for v,stats in block["variants"].items()}
              for clock,block in x["clocks"].items()}},
              sort_keys=True),flush=True)
+    # Immutable earlier independently verified source model totals. If any
+    # baseline drifts, new filter comparisons are NONCOMPARABLE and fail CI.
+    earlier_frozen={
+      "2023":{"FIXED_UTC_REPAIRED":1733.48,
+              "NEWYORK_LOCAL_DST_REPAIRED":1613.85},
+      "2024":{"FIXED_UTC_REPAIRED":-2342.92,
+              "NEWYORK_LOCAL_DST_REPAIRED":-2417.36},
+      "2025":{"FIXED_UTC_REPAIRED":5549.92,
+              "NEWYORK_LOCAL_DST_REPAIRED":4139.06},
+      "2026_jan_sep":{"FIXED_UTC_REPAIRED":4413.47,
+              "NEWYORK_LOCAL_DST_REPAIRED":4151.33},
+    }
+    for year,clocks in earlier_frozen.items():
+        for clock,baseline in clocks.items():
+            observed=report["periods"][year]["clocks"][clock]["variants"][
+                 "BASE_2PCT"]["net_marked_usd"]
+            if abs(observed-baseline)>.02:
+                raise ValueError(
+                  f"Existing immutable Gold research baseline drift: "
+                  f"{year}/{clock}: {observed} vs {baseline}")
+    # Prespecified economic screening labels, NOT statistical qualification.
+    report["exploratory_screen"]={}
+    for clock in MODES:
+        report["exploratory_screen"][clock]={}
+        for variant in VARIANTS:
+            annual=[report["periods"][period]["clocks"][clock]["variants"][variant]
+                    for period in YEAR_LABELS[:5]]
+            profits=sum(a["net_marked_usd"]>0 for a in annual)
+            severe=max(-a["max_h1_marked_drawdown_pct"] for a in annual)
+            report["exploratory_screen"][clock][variant]={
+               "five_periods_positive":profits,
+               "worst_period_h1_marked_dd_pct":round(severe,3),
+               "five_period_net_sum_independent_annual_accounts_usd":round(
+                  sum(a["net_marked_usd"] for a in annual),2),
+               "risk_gate_provisional":bool(profits>=4 and severe<=20.),
+               "NOT_an_owner_approval_or_untouched_OOS":True}
+    report["earlier_baselines_unchanged_and_verified"]=True
     report["sha256"]=checksum(report)
     out.mkdir(parents=True,exist_ok=True)
     (out/"summary.json").write_text(json.dumps(report,indent=2,
