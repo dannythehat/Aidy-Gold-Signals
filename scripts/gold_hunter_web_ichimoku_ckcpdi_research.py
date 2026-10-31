@@ -140,7 +140,7 @@ def replay(x, *, slip=.25, commission=.14, annual_carry=.09, warmup=88):
     for i in range(max(1, warmup), len(x)):
         row, prev = x.iloc[i-1], x.iloc[i-2] if i >= 2 else x.iloc[0]
         t = x.index[i]  # first quote AFTER bar i-1 has finished
-        if not np.isfinite(row[["ck_delta", "di_delta"]]).all():
+        if not np.isfinite(row[["ck_delta", "di_delta"]].to_numpy(dtype=float)).all():
             continue
         diff, prevdiff = float(row["ck_delta"]), float(prev["ck_delta"])
         di, prevdi = float(row["di_delta"]), float(prev["di_delta"])
