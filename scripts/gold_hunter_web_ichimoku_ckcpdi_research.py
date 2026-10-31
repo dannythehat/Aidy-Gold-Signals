@@ -125,7 +125,7 @@ def carry_usd(entry, ounces, rate, first, last):
     return entry*ounces*rate*(last-first).total_seconds()/(365*86400)
 
 
-def replay(x, *, slip=.25, commission=.14, annual_carry=.09):
+def replay(x, *, slip=.25, commission=.14, annual_carry=.09, warmup=88):
     """Frozen 0.10 lot/10oz research account. No stops, no broker orders."""
     if x.index.has_duplicates or not x.index.is_monotonic_increasing:
         raise ValueError("Unsorted or duplicate bars")
@@ -137,7 +137,7 @@ def replay(x, *, slip=.25, commission=.14, annual_carry=.09):
     trades = []
     signals = 0
     rejected_session = 0
-    for i in range(1, len(x)):
+    for i in range(max(1, warmup), len(x)):
         row, prev = x.iloc[i-1], x.iloc[i-2] if i >= 2 else x.iloc[0]
         t = x.index[i]  # first quote AFTER bar i-1 has finished
         if not np.isfinite(row[["ck_delta", "di_delta"]]).all():
