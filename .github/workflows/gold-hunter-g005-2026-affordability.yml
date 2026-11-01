@@ -1,0 +1,65 @@
+name: Gold Hunter G005 2026 0.01 Lot Four Account Sizes
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/gold_hunter_g005_2026_affordability.py'
+      - 'tests/test_gold_hunter_g005_2026_affordability.py'
+      - '.github/workflows/gold-hunter-g005-2026-affordability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  original-signal-four-broker-account-sizes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 pytest
+      - name: Frozen account-size, 0.01 lot and accounting unit tests
+        run: |
+          python -m compileall -q scripts/gold_hunter_g005_2026_affordability.py
+          python -m pytest -q tests/test_gold_hunter_g005_2026_affordability.py
+      - name: Pin exact same upstream original 001B source engine
+        run: |
+          git clone --depth=1 --quiet https://github.com/anirudhatalmale6-alt/xauusd-strategy-backtest /tmp/g005-original
+          cd /tmp/g005-original
+          test "$(git hash-object src/strategy.py)" = 30f07bb307fa44a428903bc21b0d51dc441d62d5
+          test "$(git hash-object src/dataset.py)" = ae303bc82a36c1d5b644f436fb55f0ce03970b54
+          test "$(git hash-object src/engine.py)" = 7aed5ffd3fcfbd8642d5299bf342335068cf3ba6
+          test "$(git hash-object out/preregistered.json)" = 9d4d379c3e05ee3deb49f0d0255f62e361588c67
+      - name: Retrieve already hash-verified genuine 2026 BID ASK original M1
+        uses: actions/download-artifact@v4
+        with:
+          pattern: g005-source-*
+          run-id: 41047905827
+          github-token: ${{ github.token }}
+          path: /tmp/g005_2026
+          merge-multiple: false
+      - name: Retrieve already executed original 001B 2026 signals and evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: gold-hunter-g005-original-001B-2026-true-bidask-m1
+          run-id: 41047905827
+          github-token: ${{ github.token }}
+          path: /tmp/g005_prior
+      - name: Independent affordability on $10k/$25k/$50k/$100k without source rule changes
+        run: |
+          python -m scripts.gold_hunter_g005_2026_affordability --quotes /tmp/g005_2026 --prior-evidence /tmp/g005_prior --author /tmp/g005-original --out artifacts/g005_2026_standard_lot_accounts
+          python -c "import json; x=json.load(open('artifacts/g005_2026_standard_lot_accounts/report.json')); assert x['schema']=='aidy.g005.2026_standard_lot_affordability_v1' and x['not_modified_source_signals'] and x['results']['10000']['closed_trades']==0"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-g005-2026-same-original-signals-four-account-size-ledgers
+          path: artifacts/g005_2026_standard_lot_accounts/
+          retention-days: 90
+          if-no-files-found: warn

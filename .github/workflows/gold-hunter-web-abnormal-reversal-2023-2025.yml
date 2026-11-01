@@ -1,0 +1,75 @@
+name: Gold Hunter Abnormal Return Reversal 2023-2025
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/gold_hunter_web_abnormal_reversal.py'
+      - 'tests/test_gold_hunter_web_abnormal_reversal.py'
+      - '.github/workflows/gold-hunter-web-abnormal-reversal-2023-2025.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-original-aidy-three-years:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest
+      - name: Test source interpretation and AIDY accounting without cloud data
+        run: |
+          python -m compileall -q scripts/gold_hunter_web_abnormal_reversal.py
+          python -m pytest -q tests/test_gold_hunter_web_abnormal_reversal.py tests/test_gold_hunter_2023_2024_causal_research.py
+      - name: Fetch pinned original AIDY archive decoder code ONLY
+        run: |
+          git fetch --depth=1 origin 1eb0f678c3158b4a76993ec14ffa7e760d101a0c
+          git show 1eb0f678c3158b4a76993ec14ffa7e760d101a0c:scripts/oracle_gold/snapshot_bundle.py > /tmp/aidy_snapshot_bundle.py
+          python -m py_compile /tmp/aidy_snapshot_bundle.py
+      - name: Read-only retrieve existing original authenticated 2023 BID ASK snapshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2023*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Read-only retrieve existing original authenticated 2024 BID ASK snapshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2024*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Read-only retrieve existing original authenticated 2025 BID ASK snapshots
+        uses: actions/download-artifact@v4
+        with:
+          pattern: oracle-bidask-2025*
+          run-id: 40819738674
+          github-token: ${{ github.token }}
+          path: /tmp/encrypted
+      - name: Unwrap existing encrypted quote derivatives in isolated CI (no raw source GET)
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for folder in /tmp/encrypted/oracle-bidask-*; do
+            test -f "$folder/snapshot.encrypted.json" || exit 2
+            period="${folder##*oracle-bidask-}"
+            python /tmp/aidy_snapshot_bundle.py open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Execute preregistered abnormal-day reversal against authentic AIDY quote cache
+        run: python -m scripts.gold_hunter_web_abnormal_reversal --quotes /tmp/quotes --out artifacts/web_abnormal_reversal
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-external-research-abnormal-reversal-2023-2025
+          path: artifacts/web_abnormal_reversal/
+          retention-days: 90
+          if-no-files-found: warn

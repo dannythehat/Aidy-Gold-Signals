@@ -1,0 +1,84 @@
+name: Gold Hunter NY ORB Frozen Improvement Screening 2022-2026
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/gold_hunter_dev_orb_preregistered_improvements.py'
+      - 'tests/test_gold_hunter_dev_orb_preregistered_improvements.py'
+      - '.github/workflows/gold-hunter-dev-orb-prespecified-improvements.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  prespecified-six-variant-multi-year-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest
+      - name: Verify causal, fixed 12 trial experiment with no parameter grid
+        run: |
+          python -m compileall -q scripts/gold_hunter_dev_orb_preregistered_improvements.py scripts/gold_hunter_dev_ny_orb_ema50.py
+          python -m pytest -q tests/test_gold_hunter_dev_orb_preregistered_improvements.py tests/test_gold_hunter_dev_ny_orb_ema50.py tests/test_gold_hunter_dev_ny_orb_2022.py
+      - name: Retrieve immutable prior source artifacts with bounded API-limit retries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          download_source() {
+            local run_id="$1" pattern="$2" destination="$3"
+            local attempt=0
+            while test "$attempt" -lt 9; do
+              attempt=$((attempt+1))
+              rm -rf "$destination"
+              mkdir -p "$destination"
+              if gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --pattern "$pattern" --dir "$destination"; then
+                echo "Source artifact fetched: run $run_id, pattern $pattern"
+                return 0
+              fi
+              echo "Artifact API temporarily unavailable: $pattern attempt $attempt/9" >&2
+              if test "$attempt" -eq 9; then
+                echo "::error::SOURCE_BLOCKED_GITHUB_INSTALLATION_RATE_LIMIT: $run_id $pattern" >&2
+                return 1
+              fi
+              sleep $((attempt*65))
+            done
+          }
+          download_source 41187161371 'ny-orb-source-*' /tmp/ny-orb-2022
+          download_source 40819738674 'oracle-bidask-202*' /tmp/encrypted
+          download_source 38851611865 'CROSSFIRE-S010-2026-REAL-HOLDOUT-3-VERSIONS' /tmp/verified_2026
+          echo "Existing original quote sources recovered, no altered or fake market data"
+      - name: Obtain pinned AIDY original quote decoder code
+        run: |
+          git fetch --depth=1 origin 1eb0f678c3158b4a76993ec14ffa7e760d101a0c
+          git show 1eb0f678c3158b4a76993ec14ffa7e760d101a0c:scripts/oracle_gold/snapshot_bundle.py > /tmp/aidy_snapshot_bundle.py
+          python -m py_compile /tmp/aidy_snapshot_bundle.py
+      - name: Unwrap original encrypted 2023-25 BID ASK quotes
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for folder in /tmp/encrypted/oracle-bidask-*; do
+            test -f "$folder/snapshot.encrypted.json" || exit 2
+            period="${folder##*oracle-bidask-}"
+            python /tmp/aidy_snapshot_bundle.py open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Run same Gold system 2022-2026 with 0.5pct risk and 3 causal structural filters
+        run: |
+          python -m scripts.gold_hunter_dev_orb_preregistered_improvements --source-2022 /tmp/ny-orb-2022 --source-old /tmp/quotes --source-2026 /tmp/verified_2026 --out artifacts/ny_orb_preregistered_improvements
+          python -c 'import json; from pathlib import Path; x=json.loads(Path("artifacts/ny_orb_preregistered_improvements/summary.json").read_text()); assert x["schema"]=="aidy.dev_ny_orb_hypothesis_controls_2022_2026.v1" and x["earlier_baselines_unchanged_and_verified"] and len(x["periods"])==6'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-ny-orb-2022-2026-fixed-hypotheses-complete-evidence
+          path: artifacts/ny_orb_preregistered_improvements/
+          retention-days: 90
+          if-no-files-found: warn
