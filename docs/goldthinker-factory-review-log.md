@@ -59,6 +59,14 @@ Ed25519, the nonce, and `system_id` landed in `b9f1e24`. The ceiling below is `a
 3. `real_evidence_block_reason` now runs on the REAL selection path. A missing extractor receipt is `BLOCKED_EVIDENCE_RECEIPT_MISSING`.
 4. The strategy-lab handoff no longer uses a shared HMAC secret. Review packets are Ed25519 signatures checked with a public key, and `independently_verified` stays false.
 
+## Quant Reviewer round 5 on `524c011` — not pass
+
+This is the last in-code verification round. Real MT5 provenance stays with the later D1 runner work.
+
+- The nonce store is no longer a file in the repo. `GOLDTHINKER_NONCE_REGISTRY_PATH` must name a file outside the repository, created only by `init_nonce_registry`. A missing, unset, unreadable, or in-repo path returns `BLOCKED_ATTESTATION_NONCE_REGISTRY_UNAVAILABLE`. The file is append-only under `fcntl.flock`. A nonce is written only after the other checks pass. Evidence cannot supply a registry. Selection does not write into the repo.
+- A self-supplied equity series, including one hashed into the signed body, stays `RUNNER_SIGNED_SELF_REPORTED`. It cannot become `EQUITY_OBSERVATIONS_CHECKED`.
+- `independent_runner_observed()` is hard-coded `False`. There is no trust-store switch, observation manifest, or environment variable that turns it on. Verification does not return a verified attestation. `research_packaging_allowed` stays false while that function is false. `TODO(D1)` marks the runner work.
+
 ## Follow-ups deliberately left
 
 - No offline AIDY strategy replay. Reconciliation still takes an explicit trade list.

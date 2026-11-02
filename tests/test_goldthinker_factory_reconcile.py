@@ -313,7 +313,7 @@ class ReconcileTests(unittest.TestCase):
         self.assertFalse(research_packaging_allowed(
             status="MATCH", runner_attestation_verified=False, replay_kind="STRATEGY_REPLAY",
         ))
-        self.assertTrue(research_packaging_allowed(
+        self.assertFalse(research_packaging_allowed(
             status="MATCH", runner_attestation_verified=True, replay_kind="STRATEGY_REPLAY",
         ))
         with self.assertRaises(Exception) as raised:
@@ -370,10 +370,8 @@ class ReconcileTests(unittest.TestCase):
             )
             profile = canonical_json(payload["broker_cost_profile"]).encode("utf-8")
             self.assertEqual(sha256(profile).hexdigest(), payload["broker_profile_sha256"])
-            from aidy.goldthinker_factory_attestation import NonceReplayRegistry
             evidence = {
                 "trust": trust,
-                "nonce_registry": NonceReplayRegistry(root / "nonce-registry.json"),
                 "bundle": payload,
                 "attestations": {year: _attack_sign(body, private)},
                 "reports": {year: reports[year][1]},

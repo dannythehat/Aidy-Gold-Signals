@@ -41,7 +41,10 @@ from aidy.goldthinker_factory_contract import (
     digest,
     validate_mt5_bundle,
 )
-from aidy.goldthinker_factory_attestation import NonceReplayRegistry, verify_runner_attestation
+from aidy.goldthinker_factory_attestation import (
+    NONCE_REGISTRY_UNAVAILABLE,
+    verify_runner_attestation,
+)
 from aidy.goldthinker_factory_mt5_extract import (
     _claim_text,
     _drawdown,
@@ -515,6 +518,10 @@ def _real_attestation_block(
         attestations = evidence.get("attestations") or {}
         reports = evidence.get("reports") or {}
         observations = evidence.get("equity_observations") or {}
+    if isinstance(evidence, Mapping) and (
+        "nonce_registry" in evidence or "nonce_registry_path" in evidence
+    ):
+        return NONCE_REGISTRY_UNAVAILABLE
     # Marker check is independent of whether the signature verifies.
     if synthetic_content_block(view, reports, ledgers, _provenance_blobs(evidence)):
         return "BLOCKED_SYNTHETIC_MARKER"
@@ -543,24 +550,11 @@ def _real_attestation_block(
             broker_profile=_year_bytes(evidence, "broker_profiles", year),
             data_source=_year_bytes(evidence, "data_sources", year),
             launch_receipt=_year_bytes(evidence, "launch_receipts", year),
-            nonce_registry=_nonce_registry(evidence),
         )
-        if checked["reason"] in (
-            "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION",
-            "BLOCKED_REAL_MT5_PROVENANCE",
-        ):
-            return checked["reason"]
         if not checked["verified"]:
             return checked["reason"]
-        if checked["equity_dd_status"] != "EQUITY_OBSERVATIONS_CHECKED":
-            return "BLOCKED_EQUITY_DD_UNVERIFIED"
+        return "BLOCKED_EQUITY_DD_UNVERIFIED"
     return None
-
-
-def _nonce_registry(evidence: Mapping[str, Any] | None) -> NonceReplayRegistry:
-    if isinstance(evidence, Mapping) and isinstance(evidence.get("nonce_registry"), NonceReplayRegistry):
-        return evidence["nonce_registry"]
-    return NonceReplayRegistry()
 
 
 def _extractor_receipt_block(

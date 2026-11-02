@@ -20,7 +20,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
-from aidy.goldthinker_factory_attestation import NonceReplayRegistry, verify_runner_attestation
+from aidy.goldthinker_factory_attestation import (
+    independent_runner_observed,
+    verify_runner_attestation,
+)
 from aidy.goldthinker_factory_contract import (
     FactoryContractError,
     digest,
@@ -238,6 +241,7 @@ def research_packaging_allowed(
         status == "MATCH"
         and runner_attestation_verified
         and replay_kind == "STRATEGY_REPLAY"
+        and independent_runner_observed()
     )
 
 
@@ -291,11 +295,6 @@ def runner_attestation_is_verified(
         broker_profile=_at("broker_profiles"),
         data_source=_at("data_sources"),
         launch_receipt=_at("launch_receipts"),
-        nonce_registry=(
-            evidence["nonce_registry"]
-            if isinstance(evidence.get("nonce_registry"), NonceReplayRegistry)
-            else NonceReplayRegistry()
-        ),
     )
     return checked["verified"] is True
 

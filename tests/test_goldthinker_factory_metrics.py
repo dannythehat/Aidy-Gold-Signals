@@ -402,18 +402,14 @@ class MetricsTests(unittest.TestCase):
                 runner_id="unit-test-runner", key_id="unit-test-key",
             )
             attestations[year] = _attack_sign(body, private)
-        from aidy.goldthinker_factory_attestation import NonceReplayRegistry
-        nonce_dir = Path(tempfile.mkdtemp())
-        nonce_registry = NonceReplayRegistry(nonce_dir / "used.json")
         bound = {
             "bundle_v1": bundle,
             "receipt": receipt,
             "reports": evidence["reports"],
-            "nonce_registry": nonce_registry,
         }
         missing_receipt = select_best_completed_year_v2(
             payload, ledgers, approved,
-            evidence={"trust": trust, "reports": evidence["reports"], "nonce_registry": nonce_registry},
+            evidence={"trust": trust, "reports": evidence["reports"]},
         )
         self.assertEqual(missing_receipt["selection_status"], "BLOCKED_EVIDENCE_RECEIPT_MISSING")
         self.assertIsNone(missing_receipt["aidy_year"])
@@ -449,19 +445,31 @@ class MetricsTests(unittest.TestCase):
             inputs[year] = raw_inputs
             sources[year] = data_source
             profiles[year] = profile_bytes
-        self_reported = select_best_completed_year_v2(
-            payload, ledgers, approved,
-            evidence={
-                **bound,
-                "trust": trust,
-                "attestations": coherent,
-                "tester_logs": logs,
-                "launch_receipts": receipts,
-                "inputs": inputs,
-                "data_sources": sources,
-                "broker_profiles": profiles,
-            },
-        )
+        import os
+        from aidy.goldthinker_factory_attestation import NONCE_REGISTRY_ENV, init_nonce_registry
+        nonce_path = Path(tempfile.mkdtemp()) / "registry.jsonl"
+        init_nonce_registry(nonce_path)
+        previous_registry = os.environ.get(NONCE_REGISTRY_ENV)
+        os.environ[NONCE_REGISTRY_ENV] = str(nonce_path)
+        try:
+            self_reported = select_best_completed_year_v2(
+                payload, ledgers, approved,
+                evidence={
+                    **bound,
+                    "trust": trust,
+                    "attestations": coherent,
+                    "tester_logs": logs,
+                    "launch_receipts": receipts,
+                    "inputs": inputs,
+                    "data_sources": sources,
+                    "broker_profiles": profiles,
+                },
+            )
+        finally:
+            if previous_registry is None:
+                os.environ.pop(NONCE_REGISTRY_ENV, None)
+            else:
+                os.environ[NONCE_REGISTRY_ENV] = previous_registry
         self.assertEqual(
             self_reported["selection_status"],
             "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION",

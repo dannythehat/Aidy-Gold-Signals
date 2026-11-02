@@ -12,7 +12,9 @@ self-reported until a runner path is observed here, which it is not.
 """
 from __future__ import annotations
 
+import fcntl
 import json
+import os
 from decimal import Decimal, ROUND_HALF_UP
 from hashlib import sha256
 from pathlib import Path
@@ -38,10 +40,9 @@ BODY_KEYS = (
 )
 HEX64 = set("0123456789abcdef")
 TRUST_PATH = Path(__file__).resolve().parents[2] / "config" / "goldthinker_factory_runner_trust.json"
-NONCE_REGISTRY_SCHEMA = "goldthinker.factory.attestation_nonce_registry.v1"
-NONCE_REGISTRY_PATH = Path(__file__).resolve().parents[2] / "config" / "goldthinker_factory_nonce_registry.json"
-OBSERVATION_SCHEMA = "goldthinker.factory.runner_observation.v1"
-OBSERVATION_PATH = Path(__file__).resolve().parents[2] / "config" / "goldthinker_factory_runner_observation.json"
+REPO_ROOT = TRUST_PATH.parents[1]
+NONCE_REGISTRY_ENV = "GOLDTHINKER_NONCE_REGISTRY_PATH"
+NONCE_REGISTRY_UNAVAILABLE = "BLOCKED_ATTESTATION_NONCE_REGISTRY_UNAVAILABLE"
 LOG_FIELDS = ("ea_sha256", "ini_sha256", "report_sha256", "year", "terminal_build")
 RECEIPT_FIELDS = ("started_utc", "exited_utc", "exit_code", "year", "terminal_build")
 
@@ -80,68 +81,111 @@ def committed_runner_trust() -> dict[str, Any]:
 
 
 def independent_runner_observed() -> bool:
-    """True only when a committed runner and an observation manifest agree.
+    """TODO(D1): a Windows MT5 runner must be observed outside this repository.
 
-    The trust store shipped with this repository is empty, and no observation
-    manifest is shipped. Assigning a boolean cannot turn this on.
+    Real MT5 provenance is later runner work. No trust-store row, observation
+    manifest, environment variable, or caller argument can turn this on.
     """
-    trust = committed_runner_trust()
-    runners = trust.get("runners")
-    if not isinstance(runners, dict) or not runners:
-        return False
-    if not OBSERVATION_PATH.is_file():
-        return False
-    payload = json.loads(OBSERVATION_PATH.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or payload.get("schema") != OBSERVATION_SCHEMA:
-        return False
-    observed = payload.get("observed_runner_ids")
-    if not isinstance(observed, list) or not observed:
-        return False
-    return any(isinstance(item, str) and item in runners for item in observed)
+    return False
 
 
-class NonceReplayRegistry:
-    """File-backed record of (key_id, system_id, nonce) values already accepted."""
+def _path_inside_repo(path: Path) -> bool:
+    resolved = path.resolve()
+    root = REPO_ROOT.resolve()
+    return resolved == root or root in resolved.parents
 
-    def __init__(self, path: Path | None = None) -> None:
-        self.path = NONCE_REGISTRY_PATH if path is None else Path(path)
 
-    def _load(self) -> list[dict[str, str]]:
-        if not self.path.is_file():
-            return []
-        payload = json.loads(self.path.read_text(encoding="utf-8"))
-        if (
-            not isinstance(payload, dict)
-            or payload.get("schema") != NONCE_REGISTRY_SCHEMA
-            or not isinstance(payload.get("used"), list)
-        ):
-            raise FactoryContractError("nonce registry is malformed")
-        used = []
-        for row in payload["used"]:
-            if (
-                not isinstance(row, dict)
-                or set(row) != {"key_id", "system_id", "nonce"}
-                or any(not isinstance(row[key], str) or not row[key] for key in row)
-            ):
-                raise FactoryContractError("nonce registry entry is malformed")
-            used.append({key: row[key] for key in ("key_id", "system_id", "nonce")})
-        return used
+def _registry_path_from_env() -> Path:
+    raw = os.environ.get(NONCE_REGISTRY_ENV)
+    if not isinstance(raw, str) or not raw.strip():
+        raise FactoryContractError(NONCE_REGISTRY_UNAVAILABLE)
+    path = Path(raw).expanduser()
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    if _path_inside_repo(path):
+        raise FactoryContractError(NONCE_REGISTRY_UNAVAILABLE)
+    return path.resolve()
 
-    def contains(self, key_id: str, system_id: str, nonce: str) -> bool:
-        needle = {"key_id": key_id, "system_id": system_id, "nonce": nonce}
-        return needle in self._load()
 
-    def record(self, key_id: str, system_id: str, nonce: str) -> None:
-        used = self._load()
-        entry = {"key_id": key_id, "system_id": system_id, "nonce": nonce}
-        if entry in used:
-            return
-        used.append(entry)
-        payload = {"schema": NONCE_REGISTRY_SCHEMA, "used": used}
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        temporary = self.path.with_suffix(self.path.suffix + ".tmp")
-        temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        temporary.replace(self.path)
+def init_nonce_registry(path: Path) -> Path:
+    """Create an empty append-only registry. Verify never calls this.
+
+    The path must be absolute and outside the repository. An existing file is
+    left unchanged. A missing file is created with O_EXCL and is not treated
+    as an empty store by verification until this step has run.
+    """
+    if not isinstance(path, Path):
+        raise FactoryContractError(NONCE_REGISTRY_UNAVAILABLE)
+    if not path.is_absolute() or _path_inside_repo(path):
+        raise FactoryContractError(NONCE_REGISTRY_UNAVAILABLE)
+    resolved = path.resolve()
+    if _path_inside_repo(resolved):
+        raise FactoryContractError(NONCE_REGISTRY_UNAVAILABLE)
+    if resolved.is_file():
+        return resolved
+    if resolved.exists():
+        raise FactoryContractError(NONCE_REGISTRY_UNAVAILABLE)
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(resolved, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        if resolved.is_file():
+            return resolved
+        raise FactoryContractError(NONCE_REGISTRY_UNAVAILABLE) from None
+    os.close(fd)
+    return resolved
+
+
+def _consume_nonce(key_id: str, system_id: str, nonce: str) -> str | None:
+    """Append one nonce under an exclusive lock. None means it was recorded.
+
+    A missing, unset, or unreadable store returns the unavailable status and
+    does not create the file. A deleted file is not an empty store.
+    """
+    try:
+        path = _registry_path_from_env()
+    except FactoryContractError:
+        return NONCE_REGISTRY_UNAVAILABLE
+    if not path.is_file():
+        return NONCE_REGISTRY_UNAVAILABLE
+    lock_path = Path(str(path) + ".lock")
+    if _path_inside_repo(lock_path):
+        return NONCE_REGISTRY_UNAVAILABLE
+    entry = json.dumps(
+        {"key_id": key_id, "nonce": nonce, "system_id": system_id},
+        sort_keys=True, separators=(",", ":"),
+    )
+    try:
+        with open(lock_path, "a+", encoding="utf-8") as lock_file:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+            try:
+                if not path.is_file():
+                    return NONCE_REGISTRY_UNAVAILABLE
+                with open(path, "r+", encoding="utf-8") as handle:
+                    for line in handle:
+                        text = line.strip()
+                        if not text:
+                            continue
+                        try:
+                            row = json.loads(text)
+                        except json.JSONDecodeError:
+                            return NONCE_REGISTRY_UNAVAILABLE
+                        if (
+                            isinstance(row, dict)
+                            and row.get("key_id") == key_id
+                            and row.get("system_id") == system_id
+                            and row.get("nonce") == nonce
+                        ):
+                            return "BLOCKED_ATTESTATION_NONCE_REPLAY"
+                    handle.seek(0, os.SEEK_END)
+                    handle.write(entry + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            finally:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    except OSError:
+        return NONCE_REGISTRY_UNAVAILABLE
+    return None
 
 
 def attestation_body(document: Mapping[str, Any]) -> dict[str, Any]:
@@ -206,14 +250,14 @@ def verify_runner_attestation(
     broker_profile: bytes | None = None,
     data_source: bytes | None = None,
     launch_receipt: bytes | None = None,
-    nonce_registry: NonceReplayRegistry | None = None,
 ) -> dict[str, Any]:
     """Fail closed. An empty trust store never verifies.
 
     A coherent Ed25519 signature plus a launch receipt and a tester log that
     names the same EA, ini, report, year and build is still self-reported.
-    `verified` stays false until independent_runner_observed() is true, which
-    requires committed runner provenance this repository does not have.
+    The nonce store is only the file named by GOLDTHINKER_NONCE_REGISTRY_PATH,
+    outside this repository. `verified` stays false. RUNNER_ATTESTATION_VERIFIED
+    is not produced.
     """
     if trust is None:
         trust = committed_runner_trust()
@@ -284,14 +328,15 @@ def verify_runner_attestation(
         launch_receipt=launch_receipt,
     ):
         return _result(False, "BLOCKED_REAL_MT5_PROVENANCE", "EQUITY_DD_UNVERIFIED")
-    registry = nonce_registry if nonce_registry is not None else NonceReplayRegistry()
-    if registry.contains(body["key_id"], body["system_id"], body["nonce"]):
-        return _result(False, "BLOCKED_ATTESTATION_NONCE_REPLAY", "EQUITY_DD_UNVERIFIED")
-    registry.record(body["key_id"], body["system_id"], body["nonce"])
     equity_status = _equity_status(body, row, equity_observations)
-    if not independent_runner_observed():
-        return _result(False, "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION", equity_status)
-    return _result(True, "RUNNER_ATTESTATION_VERIFIED", equity_status)
+    # Nonce is consumed only after every other check has passed.
+    replay = _consume_nonce(body["key_id"], body["system_id"], body["nonce"])
+    if replay:
+        return _result(False, replay, equity_status)
+    # TODO(D1): independent_runner_observed() stays False until a Windows MT5
+    # runner is observed outside this repository. Its result cannot verify.
+    independent_runner_observed()
+    return _result(False, "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION", equity_status)
 
 
 def _sha(value: Any) -> bool:
@@ -394,30 +439,21 @@ def _fields_exact(parsed: Mapping[str, str], expected: Mapping[str, str]) -> boo
 
 
 def _equity_status(body: Mapping[str, Any], row: Mapping[str, Any], observations: list[str] | None) -> str:
-    """A signature over the report's own equity figure is not independent.
+    """A runner-supplied equity figure or series is not independent evidence.
 
-    EQUITY_OBSERVATIONS_CHECKED requires a separate series whose hash is in
-    the attestation and whose derived drawdown equals the report field.
-    Copying the report number is RUNNER_SIGNED_SELF_REPORTED.
+    Observations hashed into the signed body stay self-reported. They cannot
+    become EQUITY_OBSERVATIONS_CHECKED.
     """
-    if observations is not None and _sha(body.get("equity_observations_sha256")):
-        digest = sha256(canonical_json(observations).encode("utf-8")).hexdigest()
-        if digest == body["equity_observations_sha256"]:
-            try:
-                derived = equity_drawdown_from_observations(observations)
-            except (FactoryContractError, ArithmeticError):
-                derived = None
-            if derived == row.get("max_equity_drawdown_pct"):
-                return "EQUITY_OBSERVATIONS_CHECKED"
+    del observations
     attested = body.get("attested_equity_drawdown_pct")
     if isinstance(attested, str) and attested == row.get("max_equity_drawdown_pct"):
         return "RUNNER_SIGNED_SELF_REPORTED"
     return "EQUITY_DD_UNVERIFIED"
 
 
-def _result(verified: bool, reason: str, equity_status: str) -> dict[str, Any]:
+def _result(_verified: bool, reason: str, equity_status: str) -> dict[str, Any]:
     return {
-        "verified": verified,
+        "verified": False,
         "reason": reason,
         "equity_dd_status": equity_status,
         "real_mt5_evidence_authenticated": False,
