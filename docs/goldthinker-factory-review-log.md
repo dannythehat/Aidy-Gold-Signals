@@ -42,7 +42,7 @@ No regressions were reported. Three gaps were:
 2. Attestations used HMAC, so the signing secret would have had to live anywhere verification ran.
 3. The signed body omitted `system_id`, a nonce, and `issued_at`, so one attestation could be reused for another system and a nonce could be repeated inside one selection.
 
-Ed25519, the nonce, and `system_id` landed in `b9f1e24`. The ceiling below is the next commit on this branch:
+Ed25519, the nonce, and `system_id` landed in `b9f1e24`. The ceiling below is `a0115e9`:
 
 - Selection scans the bundle document, the ledger text, the archived report bytes, and any supplied tester log, launch receipt, inputs, broker profile, and data source for `SYNTHETIC_FIXTURE` before it trusts a signature. The relabel-and-sign attack is a negative test: `tests/test_goldthinker_factory_metrics.py::test_signed_synthetic_relabel_is_blocked`.
 - Signatures are Ed25519. The trust store holds `runner_id`, `key_id`, and the public key, plus `revoked_key_ids`. A revoked key id is rejected. The private key is generated on the Windows runner only. Procedure: `docs/goldthinker-factory-runner-keys.md`. No private key is committed. Tests use an ephemeral key and sign attacker documents locally.
