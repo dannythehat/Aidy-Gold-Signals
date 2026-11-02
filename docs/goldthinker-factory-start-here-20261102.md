@@ -25,18 +25,30 @@ Read the first two PRs and the original evidence before assigning agent tasks.
    - Node 22 offline validation/tests; preview is noindex and not wired to actual public routes.
    - Missing paper/cent/live P&L remains Not available; independent test profits explicitly hypothetical.
 5. Both PRs include standalone CI workflow tests and preserve existing website and AIDY behavior.
+6. MT5 report and deal-ledger extractor: `scripts/goldthinker_factory/extract_mt5_bundle.py` and `src/aidy/goldthinker_factory_mt5_extract.py`.
+   - Reads an English Strategy Tester `.htm` (UTF-16 or UTF-8) or a simple SpreadsheetML `.xml`. Does not launch MT5.
+   - `report_sha256` is the SHA-256 of the raw file bytes. `ledger_sha256` is the SHA-256 of the canonical deal CSV written beside the bundle.
+   - Net profit, closed trades and equity drawdown are admitted only when they match the ledger. A discrepancy marks that year FAILED and leaves the bundle result fields null. The archive hashes stay on the extraction receipt.
+   - 2026 is always PARTIAL. Times stay on the broker-server clock printed by MT5; they are not converted to UTC.
+7. Ledger metrics v2: `src/aidy/goldthinker_factory_metrics.py`. Schema `goldthinker.factory.mt5_bundle.v2`. v1 validation is unchanged. The v2 validator recomputes profit factor, worst-trade share, average profit versus quoted round-trip cost, and the doubled-cost stress net from the ledger CSV and rejects any difference.
+8. Selected-year reconciliation: `scripts/goldthinker_factory/reconcile_selected_year.py`. It opens only `{system}_{selectedYear}_deals.csv`. Status is MATCH, MISMATCH or INCONCLUSIVE. Dropped trades, shifted prices and changed costs are MISMATCH and set `research_packaging_allowed` false. Final P&L alone cannot pass.
+9. Thresholds and tolerances live in `config/goldthinker_factory_thresholds.json` with `approval_status` UNSET and every number null. Checks report UNSET, not PASS, until Danny approves values.
+
+## What is synthetic
+`tests/fixtures/goldthinker_factory/synthetic/` holds an authored Strategy Tester-shaped HTML file labelled `SYNTHETIC_FIXTURE`. It is not a terminal run. The unit tests also build UTF-16, spaced/comma numbers and SpreadsheetML copies of that book. `tests/fixtures/goldthinker_factory/real_mt5_reports/` is empty apart from its README. `tests/test_goldthinker_factory_real_mt5_reports.py` is skipped until real tester output is dropped there and the skip is removed.
 
 ## Actual blockers for the FIRST true MT5 run
 - The phase05 native MT5 attempt was blocked by a missing tester account: "tester not started because the account is not specified". The first job is to validate a dedicated restricted MT5 installation with a separately approved DEMO tester account. Do not use existing funded accounts, Gina or Super Signals terminals.
 - PR #374 has authenticated 2023–2025 historical research, not a proven real-tick 2021–2026 set for the chosen broker. Confirm genuine data/quote sides, session/calendar, contract sizes, financing, lot steps, margin and tick availability year-by-year.
-- MT5 tester and ledger extraction, original strategy-to-EA parity, AIDY independent replay, signature/authenticity check, data-driven site endpoint, continuous paper/cent P&L and promotion worker are NOT YET BUILT.
-- No automated strategy promotion criteria have been agreed, and best-year replication alone is not out-of-sample proof of edge.
+- No real Strategy Tester report is in this repo. The extractor has not been shown a genuine terminal file. Equity drawdown is admitted only when it equals the balance path, because the deals table has no floating-equity series. `in/out` and `out by` deals are refused (no position id). Non-English labels are refused. A year that is not flat at the end is not admitted.
+- AIDY has no offline strategy replay that turns an arbitrary factory EA plus the selected year into trades. `strategy_lab_deterministic_replay` replays a recorded cash journal, `strategy_lab_order_lifecycle` fills one order on a quote tape, and `strategy_lab_reference_run` is a frozen 55-bar internal fixture. Reconciliation therefore takes an explicit trade list. Without that list the receipt is INCONCLUSIVE and names the missing hook. Even a perfect explicit list stays INCONCLUSIVE while tolerances are UNSET.
+- Signature/authenticity of a real terminal file, original strategy-to-EA parity, a data-driven site endpoint, continuous paper/cent P&L and the promotion worker are NOT YET BUILT. No numeric promotion gate is approved. Best-year replication is not out-of-sample proof of edge.
 
 ## First operating proof requested from GT-00
 1. Inspect existing StrategySpec and 83-candidate register. Choose one complete-rule source and mark its limitations. An internal EA can prove toolchain only, not market profit.
 2. Establish restricted MT5 research terminal and demo account; capture its symbol contract and tester build. Generate annual INI jobs; use real ticks where actually available, not assumed.
 3. Compile actual source MQL5 and run date-scoped jobs. Attach real logs, receipts, trade/deal ledgers, reports and data checks; persist full failed attempts.
-4. Normalize a REAL_MT5_TESTER annual bundle with independently inspectable source. Pre-register overall profitability and risk policy, then compute the best completed profitable year and independently reconcile THAT YEAR ONLY in AIDY. No success claim from comparing final profit numbers alone.
+4. Run `extract_mt5_bundle.py` with `REAL_MT5_TESTER` on those real reports (not the synthetic fixture). Danny must approve `config/goldthinker_factory_thresholds.json` before any gate can PASS. Select the best completed profitable year and reconcile THAT YEAR ONLY. A matching final P&L, or an explicit trade list while tolerances are UNSET, is not a success.
 5. Build one private-staging card from the signed public-safe record using website PR #28. Draft one full-page system profile with source and rights, rule explanation, why under test, historical annual figures, stage clock, paper/cent/live P&L and last broker sync.
 6. Only after this successful end-to-end proof: create the remaining specialist Grok Bots, teach verified skills, enable daily scans/routines, multi-agent handoffs and monitored demo trading. Funded accounts/public site require separate owner approval.
 

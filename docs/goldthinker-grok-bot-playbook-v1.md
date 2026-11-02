@@ -58,14 +58,14 @@ Output: PASS/BLOCKED review and rule-by-rule comparison. No code self-approval b
 ### GT-06 MT5 Test Operator
 Trigger: approved EA build.
 Input: signed job, binary+spec hash, broker profile, six calendar-year ranges and dataset metadata.
-Action: run isolated on the testing server, record tester configuration/build/account, annual data coverage, real-tick modelling where available, execution costs, per-deal ledger, annual report and equity/DD. Never use live terminal/profile or any funded account credential.
-Output: signed manifest and six per-year evidence statuses, including 2026 PARTIAL, all failure logs, actual year net profits and cumulative results. No silent repair of gaps or data.
+Action: run isolated on the testing server, record tester configuration/build/account, annual data coverage, real-tick modelling where available, execution costs, per-deal ledger, annual report and equity/DD. Never use live terminal/profile or any funded account credential. After a real run exists, normalise it with `scripts/goldthinker_factory/extract_mt5_bundle.py`. The extractor hashes the raw report and the canonical ledger CSV, and fails the year on any summary/ledger discrepancy. It does not start the terminal. 2026 stays PARTIAL. Do not treat `tests/fixtures/goldthinker_factory/synthetic/` as a real run. Real reports belong in `tests/fixtures/goldthinker_factory/real_mt5_reports/` once they exist; that test is skipped today.
+Output: signed manifest and six per-year evidence statuses, including 2026 PARTIAL, all failure logs, actual year net profits and cumulative results. No silent repair of gaps or data. v2 ledger metrics (profit factor, worst-trade share, quoted-cost comparison, doubled-cost stress) are recomputed from the ledger. Thresholds in `config/goldthinker_factory_thresholds.json` are UNSET until Danny approves numbers, and UNSET is not a pass.
 
 ### GT-07 AIDY Reconciliation Investigator
 Trigger: independently eligible MT5 report set.
 Input: frozen six-year MT5 report package and exactly the highest net-profit **completed** calendar-year selected by a deterministic rule.
-Action: verify one year only using AIDY's independent price/rule/reconciliation code and available qualified history. Compare signal times, trades, fills, costs and cash P&L, with itemised differences. Do not search alternate years to get a PASS.
-Output: \`MATCH\`, \`MISMATCH\` or \`INCONCLUSIVE\` receipt with numeric tolerances, counts and hashes. Historical confirmation is not evidence of prospective alpha.
+Action: run `scripts/goldthinker_factory/reconcile_selected_year.py` on that year only. Compare signal times, trades, fills, costs and cash P&L, with itemised differences. Do not search alternate years to get a PASS. Do not pass because the two final P&L figures match. A dropped trade, shifted price or changed cost is MISMATCH and blocks research packaging. The current AIDY tree has no offline hook that replays an arbitrary factory strategy into that trade list (`replay_cash_events`, `simulate_order` and `run_internal_reference` are not that hook). Until an adapter exists, omit `--aidy-trades` and keep the INCONCLUSIVE receipt. Tolerances are UNSET, so even an explicit matching list is not MATCH.
+Output: \`MATCH\`, \`MISMATCH\` or \`INCONCLUSIVE\` receipt with numeric tolerances, counts and hashes. Historical confirmation is not evidence of prospective alpha. MATCH still does not authorise paper, cent, live or public performance.
 
 ### GT-08 GoldThinker Editor / Publisher
 Trigger: immutable evidence pack reaches the publication rules.

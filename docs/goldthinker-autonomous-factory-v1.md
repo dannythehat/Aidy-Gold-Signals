@@ -47,6 +47,18 @@ One logical strategy can have many declared versions; trial count and complete l
 - Evaluate overall six-year MT5 profitability **and** annual behaviour, risk, number of trades, cost stress and concentration using explicit pre-registered thresholds. One jackpot year alone is not enough for promotion.
 - AIDY replays **the top completed calendar year only**, as specifically directed by the owner. It does not need to repeat all six years. Select after freezing MT5 annual reports and retain the selection method and year.
 - AIDY parity matching must record expected/actual orders, price/timestamp differences, net cash differences, unexplained residuals and missing data. No pass via simply comparing two final P&L figures.
+
+## Offline gates now in the factory PR
+
+These are research tools. They do not start MT5, do not read broker credentials, and do not authorise paper, cent, live or public performance.
+
+- The extractor turns one English Strategy Tester report per year into a canonical deal CSV and a v1 bundle. Raw-file SHA-256 and ledger-CSV SHA-256 are separate. Summary net profit, closed-trade count and equity drawdown must agree with the ledger or the year is FAILED with null result fields. 2026 stays PARTIAL. Synthetic HTML used to develop this is labelled `SYNTHETIC_FIXTURE` and is not a terminal result.
+- v2 (`goldthinker.factory.mt5_bundle.v2`) adds profit factor overall and per year, worst closed trade as a share of that year's ledger net, average profit per trade versus quoted round-trip spread plus commission, and a doubled-cost stress net (ledger net minus one extra quoted spread and round-turn commission). The validator recomputes every figure from the ledger. v1 validation is unchanged.
+- Reconciliation reads the selection receipt and only that year's ledger. It itemises signal, entry, exit, price, cost and cash differences. MATCH requires an approved tolerance file. The shipped file is UNSET, so identical trades are INCONCLUSIVE. A dropped trade, a shifted price or a changed cost is MISMATCH and blocks research packaging even when the two final P&L figures match.
+- There is still no adapter from an arbitrary strategy into that trade list. The receipt says so. Real tester files are not in the tree; the real-report test is skipped.
+
+Promotion rules below are unchanged and still have no approved numbers.
+
 - Forward PAPER and funded CENT gates use minimum independent observation periods and trades and credible risk thresholds to be agreed with owner; do not invent accepted numeric thresholds. Never promote on a single profitable day.
 - Separately approved account creation (KYC, terms, email, identity and funding), paid services, publishing to public domain, cent-to-live and raising capital/risk are **owner approvals**. Bots may prepare applications and verify demo-creation capabilities but cannot impersonate identity, bypass KYC or make speculative claims.
 - Production rollback and circuit breakers for stale market data, out-of-range P&L, disconnected account, changed EA, order duplication, runaway risk and pricing discrepancies are deterministic and non-discretionary.

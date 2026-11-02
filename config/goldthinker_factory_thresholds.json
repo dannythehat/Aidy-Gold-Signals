@@ -1,0 +1,20 @@
+{
+  "schema": "goldthinker.factory.thresholds.v1",
+  "approval_status": "UNSET",
+  "approved_by": null,
+  "note": "All gates stay UNSET until Danny sets approval_status to APPROVED and replaces nulls with exact decimal strings. Evaluators must not treat UNSET as a pass.",
+  "tolerances": {
+    "signal_time_seconds": null,
+    "entry_time_seconds": null,
+    "exit_time_seconds": null,
+    "price_abs": null,
+    "cost_usd": null,
+    "cash_pnl_usd": null
+  },
+  "metric_thresholds": {
+    "profit_factor_overall_min": null,
+    "worst_trade_share_of_net_min": null,
+    "average_profit_vs_round_trip_cost_min_usd": null,
+    "doubled_cost_stress_net_min_usd": null
+  }
+}
