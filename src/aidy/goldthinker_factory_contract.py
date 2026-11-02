@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 from typing import Any
@@ -118,8 +118,12 @@ def validate_mt5_bundle(payload: Any) -> dict:
         # Positive/negative test values are allowed, but absent results must stay null.
         complete = row["coverage"] == "VERIFIED" and row["test_status"] == "COMPLETED"
         if yr == 2026 and as_of.year == 2026 and complete:
-            raise FactoryContractError("2026 is partial as of a 2026-11 research date")
-        if complete:
+            raise FactoryContractError("2026 cannot be a completed calendar year in 2026")
+        reportable_partial = (
+            yr == 2026 and as_of.year == 2026
+            and row["coverage"] == "VERIFIED" and row["test_status"] == "PARTIAL"
+        )
+        if complete or reportable_partial:
             _money(row["net_profit_usd"], "net_profit_usd")
             _money(row["max_equity_drawdown_pct"], "drawdown", nonnegative=True)
             if Decimal(row["max_equity_drawdown_pct"]) > 100:
