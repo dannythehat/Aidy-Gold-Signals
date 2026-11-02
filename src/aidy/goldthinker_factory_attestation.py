@@ -2,9 +2,13 @@
 
 The committed trust store lists no runners and no keys. Verification then
 fails closed. A fixture provenance class is rejected even if the bundle's
-source_kind says REAL_MT5_TESTER. A valid signature binds bytes the runner
-claims to have produced. It is not an independent authentication that a
-terminal session occurred.
+source_kind says REAL_MT5_TESTER.
+
+This module does not mint a RUNNER attestation. That document is produced
+only by the Windows MT5 runner, together with a launch/exit receipt and the
+tester journal. A signature that matches public keys in a trust store is
+self-reported until a runner path is observed here, which it is not.
+`verified` therefore stays false. Revoked key ids are rejected.
 """
 from __future__ import annotations
 
@@ -25,20 +29,33 @@ BODY_KEYS = (
     "schema", "provenance_class", "runner_id", "key_id", "system_id",
     "nonce", "issued_at", "year",
     "report_sha256", "ledger_sha256", "ea_sha256", "ini_sha256",
+    "inputs_sha256", "broker_profile_sha256", "data_source_sha256",
     "strategy_source_sha256", "data_manifest_sha256", "terminal_build",
-    "tester_log_sha256", "process_started_utc", "process_exited_utc",
+    "tester_log_sha256", "launch_receipt_sha256",
+    "process_started_utc", "process_exited_utc",
     "process_exit_code", "attested_equity_drawdown_pct",
     "equity_observations_sha256",
 )
+# No Windows MT5 runner is attached to this process. Do not flip this to
+# true from a fixture, a CLI document, or a self-reported signature.
+INDEPENDENT_RUNNER_OBSERVED = False
 HEX64 = set("0123456789abcdef")
 TRUST_PATH = Path(__file__).resolve().parents[2] / "config" / "goldthinker_factory_runner_trust.json"
 
 
 def load_runner_trust(payload: Any) -> dict[str, Any]:
-    if not isinstance(payload, dict) or set(payload) != {"schema", "trusted_runners"}:
+    expected = {"schema", "trusted_runners", "revoked_key_ids"}
+    if not isinstance(payload, dict) or set(payload) != expected:
         raise FactoryContractError("runner trust: missing or unexpected keys")
     if payload["schema"] != TRUST_SCHEMA or not isinstance(payload["trusted_runners"], list):
         raise FactoryContractError("runner trust schema is invalid")
+    revoked = payload["revoked_key_ids"]
+    if (
+        not isinstance(revoked, list)
+        or any(not isinstance(item, str) or not item for item in revoked)
+        or len(set(revoked)) != len(revoked)
+    ):
+        raise FactoryContractError("runner trust revoked_key_ids is invalid")
     runners = {}
     for row in payload["trusted_runners"]:
         if not isinstance(row, dict) or set(row) != {"runner_id", "key_id", "ed25519_public_key_hex"}:
@@ -52,7 +69,7 @@ def load_runner_trust(payload: Any) -> dict[str, Any]:
         ):
             raise FactoryContractError("runner trust holds an Ed25519 public key only")
         runners.setdefault(row["runner_id"], {})[row["key_id"]] = bytes.fromhex(key_hex)
-    return {"schema": TRUST_SCHEMA, "runners": runners}
+    return {"schema": TRUST_SCHEMA, "runners": runners, "revoked_key_ids": set(revoked)}
 
 
 def committed_runner_trust() -> dict[str, Any]:
@@ -70,7 +87,16 @@ def attestation_body(document: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def sign_attestation(body: Mapping[str, Any], private_key: Ed25519PrivateKey) -> dict[str, Any]:
-    """Sign with an ephemeral or runner-local private key. Never persist that key here."""
+    """Sign a FIXTURE document only.
+
+    A RUNNER attestation is not minted from a fixture, a unit test, or a CLI
+    document. The Windows runner signs that class itself. Calling this with
+    provenance_class RUNNER raises.
+    """
+    if isinstance(body, Mapping) and body.get("provenance_class") == "RUNNER":
+        raise FactoryContractError(
+            "RUNNER attestations are not minted from fixtures or CLI documents"
+        )
     if not isinstance(private_key, Ed25519PrivateKey):
         raise FactoryContractError("Ed25519 private key required")
     clean = {key_name: body[key_name] for key_name in BODY_KEYS}
@@ -107,11 +133,24 @@ def verify_runner_attestation(
     bundle: Mapping[str, Any],
     year: int,
     equity_observations: list[str] | None = None,
+    tester_log: bytes | None = None,
+    inputs: bytes | None = None,
+    broker_profile: bytes | None = None,
+    data_source: bytes | None = None,
+    launch_receipt: bytes | None = None,
 ) -> dict[str, Any]:
-    """Fail closed. An empty trust store never verifies."""
+    """Fail closed. An empty trust store never verifies.
+
+    A coherent Ed25519 signature plus a launch receipt and a tester log that
+    names the same EA, ini, report, year and build is still self-reported.
+    `verified` stays false while INDEPENDENT_RUNNER_OBSERVED is false.
+    """
     if trust is None:
         trust = committed_runner_trust()
     runners = trust.get("runners") if isinstance(trust, Mapping) else None
+    revoked = trust.get("revoked_key_ids") if isinstance(trust, Mapping) else set()
+    if not isinstance(revoked, (set, frozenset, list, tuple)):
+        revoked = set()
     if not runners:
         return _result(False, "BLOCKED_RUNNER_TRUST_UNCONFIGURED", "EQUITY_DD_UNVERIFIED")
     if document is None:
@@ -122,6 +161,8 @@ def verify_runner_attestation(
         return _result(False, "BLOCKED_ATTESTATION_MALFORMED", "EQUITY_DD_UNVERIFIED")
     if body["provenance_class"] != "RUNNER":
         return _result(False, "BLOCKED_FIXTURE_PROVENANCE", "EQUITY_DD_UNVERIFIED")
+    if body.get("key_id") in revoked:
+        return _result(False, "BLOCKED_ATTESTATION_KEY_REVOKED", "EQUITY_DD_UNVERIFIED")
     keys = runners.get(body["runner_id"])
     public_bytes = None if not isinstance(keys, dict) else keys.get(body.get("key_id"))
     if public_bytes is None:
@@ -147,7 +188,10 @@ def verify_runner_attestation(
         return _result(False, "BLOCKED_ATTESTATION_HASH_MISMATCH", "EQUITY_DD_UNVERIFIED")
     if sha256(ledger.encode("utf-8")).hexdigest() != body["ledger_sha256"]:
         return _result(False, "BLOCKED_ATTESTATION_HASH_MISMATCH", "EQUITY_DD_UNVERIFIED")
-    row = next(item for item in bundle["results"] if item["year"] == year)
+    try:
+        row = next(item for item in bundle["results"] if item["year"] == year)
+    except (KeyError, StopIteration, TypeError):
+        return _result(False, "BLOCKED_ATTESTATION_HASH_MISMATCH", "EQUITY_DD_UNVERIFIED")
     if (
         body["report_sha256"] != row["report_sha256"]
         or body["ledger_sha256"] != row["ledger_sha256"]
@@ -155,17 +199,103 @@ def verify_runner_attestation(
         or body["ini_sha256"] != bundle["test_config_sha256"]
         or body["strategy_source_sha256"] != bundle["strategy_version_sha256"]
         or body["data_manifest_sha256"] != bundle["data_manifest_sha256"]
+        or body["broker_profile_sha256"] != bundle["broker_profile_sha256"]
         or body["terminal_build"] != bundle["tester_build"]
         or body["process_exit_code"] != 0
         or not _sha(body["tester_log_sha256"])
     ):
         return _result(False, "BLOCKED_ATTESTATION_HASH_MISMATCH", "EQUITY_DD_UNVERIFIED")
+    if not _provenance_coherent(
+        body,
+        tester_log=tester_log,
+        inputs=inputs,
+        broker_profile=broker_profile,
+        data_source=data_source,
+        launch_receipt=launch_receipt,
+    ):
+        return _result(False, "BLOCKED_REAL_MT5_PROVENANCE", "EQUITY_DD_UNVERIFIED")
     equity_status = _equity_status(body, row, equity_observations)
+    if not INDEPENDENT_RUNNER_OBSERVED:
+        return _result(False, "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION", equity_status)
     return _result(True, "RUNNER_ATTESTATION_VERIFIED", equity_status)
 
 
 def _sha(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(ch in HEX64 for ch in value)
+
+
+def _digest_matches(raw: bytes | None, expected: Any) -> bool:
+    return (
+        isinstance(raw, (bytes, bytearray))
+        and _sha(expected)
+        and sha256(bytes(raw)).hexdigest() == expected
+    )
+
+
+def _decoded(raw: bytes) -> str | None:
+    try:
+        if raw.startswith(b"\xff\xfe") or raw.startswith(b"\xfe\xff"):
+            return raw.decode("utf-16")
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def _provenance_coherent(
+    body: Mapping[str, Any],
+    *,
+    tester_log: bytes | None,
+    inputs: bytes | None,
+    broker_profile: bytes | None,
+    data_source: bytes | None,
+    launch_receipt: bytes | None,
+) -> bool:
+    """The log and the launch receipt must name the same run as the signature."""
+    started = body.get("process_started_utc")
+    exited = body.get("process_exited_utc")
+    build = body.get("terminal_build")
+    if (
+        not isinstance(started, str) or not started.endswith("Z")
+        or not isinstance(exited, str) or not exited.endswith("Z")
+        or not isinstance(build, str) or not build
+        or started >= exited
+        or not _sha(body.get("inputs_sha256"))
+        or not _sha(body.get("data_source_sha256"))
+        or not _sha(body.get("launch_receipt_sha256"))
+        or not _sha(body.get("broker_profile_sha256"))
+    ):
+        return False
+    if not _digest_matches(tester_log, body["tester_log_sha256"]):
+        return False
+    if not _digest_matches(inputs, body["inputs_sha256"]):
+        return False
+    if not _digest_matches(broker_profile, body["broker_profile_sha256"]):
+        return False
+    if not _digest_matches(data_source, body["data_source_sha256"]):
+        return False
+    if not _digest_matches(launch_receipt, body["launch_receipt_sha256"]):
+        return False
+    log_text = _decoded(bytes(tester_log))
+    receipt_text = _decoded(bytes(launch_receipt))
+    if log_text is None or receipt_text is None:
+        return False
+    log_tokens = (
+        f"ea_sha256={body['ea_sha256']}",
+        f"ini_sha256={body['ini_sha256']}",
+        f"report_sha256={body['report_sha256']}",
+        f"year={body['year']}",
+        f"terminal_build={build}",
+    )
+    receipt_tokens = (
+        f"started_utc={started}",
+        f"exited_utc={exited}",
+        f"exit_code={body['process_exit_code']}",
+        f"year={body['year']}",
+        f"terminal_build={build}",
+    )
+    return all(token in log_text for token in log_tokens) and all(
+        token in receipt_text for token in receipt_tokens
+    )
 
 
 def _equity_status(body: Mapping[str, Any], row: Mapping[str, Any], observations: list[str] | None) -> str:

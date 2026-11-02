@@ -1119,11 +1119,13 @@ def synthetic_content_block(
     bundle: Mapping[str, Any],
     reports: Mapping[int, bytes] | None,
     ledgers: Mapping[int, str],
+    extra_bytes: Mapping[Any, bytes] | None = None,
 ) -> str | None:
     """Reject synthetic bytes even when a signature claims the run is real.
 
-    Looks at the bundle document and the archived report and ledger bytes.
-    Claimed source_kind is not enough.
+    Looks at the bundle document, the archived report and ledger bytes, and
+    any tester log, launch receipt, inputs, broker profile, or data source
+    the caller supplies. Claimed source_kind is not enough.
     """
     if SYNTHETIC_MARKER in canonical_json(bundle):
         return "BLOCKED_SYNTHETIC_MARKER"
@@ -1131,6 +1133,9 @@ def synthetic_content_block(
         if isinstance(text, str) and SYNTHETIC_MARKER in text:
             return "BLOCKED_SYNTHETIC_MARKER"
     for raw in (reports or {}).values():
+        if isinstance(raw, (bytes, bytearray)) and _marker_in_bytes(bytes(raw)):
+            return "BLOCKED_SYNTHETIC_MARKER"
+    for raw in (extra_bytes or {}).values():
         if isinstance(raw, (bytes, bytearray)) and _marker_in_bytes(bytes(raw)):
             return "BLOCKED_SYNTHETIC_MARKER"
     return None

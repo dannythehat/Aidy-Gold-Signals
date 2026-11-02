@@ -30,6 +30,85 @@ from tests.test_goldthinker_factory_extract import AS_OF_TEXT, EXTRAS, _end
 
 ROOT = Path(__file__).resolve().parents[1]
 THRESHOLDS = ROOT / "config/goldthinker_factory_thresholds.json"
+
+
+def _load_trust(public_hex, *, runner_id, key_id, revoked=()):
+    from aidy.goldthinker_factory_attestation import load_runner_trust
+    return load_runner_trust({
+        "schema": "goldthinker.factory.runner_trust.v1",
+        "trusted_runners": [{
+            "runner_id": runner_id,
+            "key_id": key_id,
+            "ed25519_public_key_hex": public_hex,
+        }],
+        "revoked_key_ids": list(revoked),
+    })
+
+
+def _attack_sign(body, private):
+    """Simulate an attacker signature. This is not a factory mint path."""
+    from aidy.goldthinker_factory_contract import canonical_json
+    signed = {key: body[key] for key in body}
+    signed["signature_hex"] = private.sign(canonical_json(signed).encode("utf-8")).hex()
+    return signed
+
+
+def _runner_body(bundle, row, *, nonce, runner_id, key_id):
+    from hashlib import sha256
+    return {
+        "schema": "goldthinker.factory.mt5_runner_attestation.v1",
+        "provenance_class": "RUNNER",
+        "runner_id": runner_id,
+        "key_id": key_id,
+        "system_id": bundle["system_id"],
+        "nonce": nonce,
+        "issued_at": "2026-11-02T00:00:00Z",
+        "year": row["year"],
+        "report_sha256": row["report_sha256"],
+        "ledger_sha256": row["ledger_sha256"],
+        "ea_sha256": bundle["ea_sha256"],
+        "ini_sha256": bundle["test_config_sha256"],
+        "inputs_sha256": sha256(b"inputs-not-a-terminal").hexdigest(),
+        "broker_profile_sha256": bundle["broker_profile_sha256"],
+        "data_source_sha256": sha256(b"data-source-not-a-terminal").hexdigest(),
+        "strategy_source_sha256": bundle["strategy_version_sha256"],
+        "data_manifest_sha256": bundle["data_manifest_sha256"],
+        "terminal_build": bundle["tester_build"],
+        "tester_log_sha256": "ab" * 32,
+        "launch_receipt_sha256": "cd" * 32,
+        "process_started_utc": "2026-11-02T00:00:00Z",
+        "process_exited_utc": "2026-11-02T00:10:00Z",
+        "process_exit_code": 0,
+        "attested_equity_drawdown_pct": row["max_equity_drawdown_pct"],
+        "equity_observations_sha256": None,
+    }
+
+
+def _coherent_material(body):
+    from hashlib import sha256
+    from aidy.goldthinker_factory_contract import canonical_json
+    updated = dict(body)
+    log = (
+        f"ea_sha256={updated['ea_sha256']}\n"
+        f"ini_sha256={updated['ini_sha256']}\n"
+        f"report_sha256={updated['report_sha256']}\n"
+        f"year={updated['year']}\n"
+        f"terminal_build={updated['terminal_build']}\n"
+    ).encode()
+    receipt = (
+        f"started_utc={updated['process_started_utc']}\n"
+        f"exited_utc={updated['process_exited_utc']}\n"
+        f"exit_code={updated['process_exit_code']}\n"
+        f"year={updated['year']}\n"
+        f"terminal_build={updated['terminal_build']}\n"
+    ).encode()
+    inputs = b"inputs-not-a-terminal"
+    data_source = b"data-source-not-a-terminal"
+    updated["tester_log_sha256"] = sha256(log).hexdigest()
+    updated["launch_receipt_sha256"] = sha256(receipt).hexdigest()
+    updated["inputs_sha256"] = sha256(inputs).hexdigest()
+    updated["data_source_sha256"] = sha256(data_source).hexdigest()
+    return updated, log, receipt, inputs, data_source, canonical_json
 COSTS = {
     "schema": "goldthinker.factory.broker_costs.v1",
     "symbol": "XAUUSD",
@@ -211,7 +290,6 @@ class MetricsTests(unittest.TestCase):
 
     def test_signed_synthetic_relabel_is_blocked(self):
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from aidy.goldthinker_factory_attestation import load_runner_trust, sign_attestation
         approved = json.loads(THRESHOLDS.read_text(encoding="utf-8"))
         approved["approval_status"] = "APPROVED"
         approved["approved_by"] = "Danny"
@@ -246,41 +324,18 @@ class MetricsTests(unittest.TestCase):
         payload = attach_v2(bundle, ledgers, COSTS, approved)
         private = Ed25519PrivateKey.generate()
         public = private.public_key().public_bytes_raw().hex()
-        trust = load_runner_trust({
-            "schema": "goldthinker.factory.runner_trust.v1",
-            "trusted_runners": [{
-                "runner_id": "reviewer-runner",
-                "key_id": "reviewer-key",
-                "ed25519_public_key_hex": public,
-            }],
-        })
+        trust = _load_trust(public, runner_id="reviewer-runner", key_id="reviewer-key")
         attestations = {}
         for row in payload["results"]:
             if row["test_status"] != "COMPLETED":
                 continue
-            attestations[row["year"]] = sign_attestation({
-                "schema": "goldthinker.factory.mt5_runner_attestation.v1",
-                "provenance_class": "RUNNER",
-                "runner_id": "reviewer-runner",
-                "key_id": "reviewer-key",
-                "system_id": payload["system_id"],
-                "nonce": f"attack-{row['year']}",
-                "issued_at": "2026-11-02T01:00:00Z",
-                "year": row["year"],
-                "report_sha256": row["report_sha256"],
-                "ledger_sha256": row["ledger_sha256"],
-                "ea_sha256": payload["ea_sha256"],
-                "ini_sha256": payload["test_config_sha256"],
-                "strategy_source_sha256": payload["strategy_version_sha256"],
-                "data_manifest_sha256": payload["data_manifest_sha256"],
-                "terminal_build": payload["tester_build"],
-                "tester_log_sha256": "cd" * 32,
-                "process_started_utc": "2026-11-02T00:00:00Z",
-                "process_exited_utc": "2026-11-02T00:05:00Z",
-                "process_exit_code": 0,
-                "attested_equity_drawdown_pct": row["max_equity_drawdown_pct"],
-                "equity_observations_sha256": None,
-            }, private)
+            attestations[row["year"]] = _attack_sign(
+                _runner_body(
+                    payload, row, nonce=f"attack-{row['year']}",
+                    runner_id="reviewer-runner", key_id="reviewer-key",
+                ),
+                private,
+            )
         attacked = select_best_completed_year_v2(
             payload, ledgers, approved,
             evidence={"trust": trust, "attestations": attestations, "reports": raw_reports},
@@ -332,50 +387,75 @@ class MetricsTests(unittest.TestCase):
         self.assertNotEqual(unsigned["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         self.assertFalse(unsigned["real_mt5_evidence_authenticated"])
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from aidy.goldthinker_factory_attestation import load_runner_trust, sign_attestation
+        from aidy.goldthinker_factory_attestation import sign_attestation
+        from aidy.goldthinker_factory_contract import canonical_json
         private = Ed25519PrivateKey.generate()
         public = private.public_key().public_bytes_raw().hex()
-        trust = load_runner_trust({
-            "schema": "goldthinker.factory.runner_trust.v1",
-            "trusted_runners": [{
-                "runner_id": "unit-test-runner",
-                "key_id": "unit-test-key",
-                "ed25519_public_key_hex": public,
-            }],
-        })
+        trust = _load_trust(public, runner_id="unit-test-runner", key_id="unit-test-key")
+        with self.assertRaises(FactoryContractError) as minted:
+            sign_attestation({"provenance_class": "RUNNER"}, private)
+        self.assertIn("not minted", str(minted.exception))
         attestations = {}
-        for year, row in ((item["year"], item) for item in bundle["results"] if item["test_status"] == "COMPLETED"):
-            body = {
-                "schema": "goldthinker.factory.mt5_runner_attestation.v1",
-                "provenance_class": "RUNNER",
-                "runner_id": "unit-test-runner",
-                "key_id": "unit-test-key",
-                "system_id": bundle["system_id"],
-                "nonce": f"nonce-{year}",
-                "issued_at": "2026-11-02T00:00:00Z",
-                "year": year,
-                "report_sha256": row["report_sha256"],
-                "ledger_sha256": row["ledger_sha256"],
-                "ea_sha256": bundle["ea_sha256"],
-                "ini_sha256": bundle["test_config_sha256"],
-                "strategy_source_sha256": bundle["strategy_version_sha256"],
-                "data_manifest_sha256": bundle["data_manifest_sha256"],
-                "terminal_build": bundle["tester_build"],
-                "tester_log_sha256": "ab" * 32,
-                "process_started_utc": "2026-11-02T00:00:00Z",
-                "process_exited_utc": "2026-11-02T00:10:00Z",
-                "process_exit_code": 0,
-                "attested_equity_drawdown_pct": row["max_equity_drawdown_pct"],
-                "equity_observations_sha256": None,
-            }
-            attestations[year] = sign_attestation(body, private)
+        for year, row in ((item["year"], item) for item in payload["results"] if item["test_status"] == "COMPLETED"):
+            body = _runner_body(
+                payload, row, nonce=f"nonce-{year}",
+                runner_id="unit-test-runner", key_id="unit-test-key",
+            )
+            attestations[year] = _attack_sign(body, private)
         signed = select_best_completed_year_v2(
             payload, ledgers, approved,
             evidence={"trust": trust, "attestations": attestations, "reports": evidence["reports"]},
         )
-        self.assertEqual(signed["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
-        self.assertEqual(signed["aidy_year"], 2024)
+        self.assertEqual(signed["selection_status"], "BLOCKED_REAL_MT5_PROVENANCE")
+        self.assertIsNone(signed["aidy_year"])
+        self.assertNotEqual(signed["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         self.assertFalse(signed["real_mt5_evidence_authenticated"])
+        profile_bytes = canonical_json(payload["broker_cost_profile"]).encode("utf-8")
+        coherent = {}
+        logs, receipts, inputs, sources, profiles = {}, {}, {}, {}, {}
+        for year, row in ((item["year"], item) for item in payload["results"] if item["test_status"] == "COMPLETED"):
+            body, log, receipt, raw_inputs, data_source, _canonical = _coherent_material(
+                _runner_body(
+                    payload, row, nonce=f"coherent-{year}",
+                    runner_id="unit-test-runner", key_id="unit-test-key",
+                )
+            )
+            coherent[year] = _attack_sign(body, private)
+            logs[year] = log
+            receipts[year] = receipt
+            inputs[year] = raw_inputs
+            sources[year] = data_source
+            profiles[year] = profile_bytes
+        self_reported = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={
+                "trust": trust,
+                "attestations": coherent,
+                "reports": evidence["reports"],
+                "tester_logs": logs,
+                "launch_receipts": receipts,
+                "inputs": inputs,
+                "data_sources": sources,
+                "broker_profiles": profiles,
+            },
+        )
+        self.assertEqual(
+            self_reported["selection_status"],
+            "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION",
+        )
+        self.assertIsNone(self_reported["aidy_year"])
+        self.assertNotEqual(self_reported["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        self.assertFalse(self_reported["real_mt5_evidence_authenticated"])
+        revoked_trust = _load_trust(
+            public, runner_id="unit-test-runner", key_id="unit-test-key", revoked=["unit-test-key"],
+        )
+        revoked = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={"trust": revoked_trust, "attestations": coherent, "reports": evidence["reports"]},
+        )
+        self.assertEqual(revoked["selection_status"], "BLOCKED_ATTESTATION_KEY_REVOKED")
+        self.assertIsNone(revoked["aidy_year"])
+        self.assertNotEqual(revoked["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         fixture = dict(attestations[2021])
         fixture["provenance_class"] = "FIXTURE"
         fixture = sign_attestation({k: fixture[k] for k in fixture if k != "signature_hex"}, private)
@@ -391,7 +471,7 @@ class MetricsTests(unittest.TestCase):
         self.assertNotEqual(refused_fixture["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         reused = dict(attestations[2022])
         reused["nonce"] = attestations[2021]["nonce"]
-        reused = sign_attestation({k: reused[k] for k in reused if k != "signature_hex"}, private)
+        reused = _attack_sign({k: reused[k] for k in reused if k != "signature_hex"}, private)
         collided = select_best_completed_year_v2(
             payload, ledgers, approved,
             evidence={

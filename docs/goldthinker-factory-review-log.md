@@ -42,19 +42,20 @@ No regressions were reported. Three gaps were:
 2. Attestations used HMAC, so the signing secret would have had to live anywhere verification ran.
 3. The signed body omitted `system_id`, a nonce, and `issued_at`, so one attestation could be reused for another system and a nonce could be repeated inside one selection.
 
-Fix in the commit that adds this section:
+Ed25519, the nonce, and `system_id` landed in `b9f1e24`. The ceiling below is the next commit on this branch:
 
-- Selection scans the bundle document, the ledger text, and the archived report bytes for `SYNTHETIC_FIXTURE` before it trusts a signature, and again inside the attestation gate. The relabel-and-sign attack is a negative test.
-- Signatures are Ed25519. The trust store holds `runner_id`, `key_id`, and the public key. The private key is generated on the Windows runner only. Procedure: `docs/goldthinker-factory-runner-keys.md`. No private key is committed. Tests use an ephemeral key.
+- Selection scans the bundle document, the ledger text, the archived report bytes, and any supplied tester log, launch receipt, inputs, broker profile, and data source for `SYNTHETIC_FIXTURE` before it trusts a signature. The relabel-and-sign attack is a negative test: `tests/test_goldthinker_factory_metrics.py::test_signed_synthetic_relabel_is_blocked`.
+- Signatures are Ed25519. The trust store holds `runner_id`, `key_id`, and the public key, plus `revoked_key_ids`. A revoked key id is rejected. The private key is generated on the Windows runner only. Procedure: `docs/goldthinker-factory-runner-keys.md`. No private key is committed. Tests use an ephemeral key and sign attacker documents locally.
+- `sign_attestation` refuses `provenance_class` `RUNNER`. No factory path mints a runner attestation from a fixture or a CLI document.
+- A runner document has to carry a launch/exit receipt and the SHA-256 of the tester journal, EA, ini, inputs, report, broker profile, and data source, plus the terminal build, timestamps, and year. The verifier requires the journal to name the same EA, ini, report, year, and build.
 - A signature for a different `system_id` is rejected. A repeated nonce inside the selection is rejected.
+- Nothing here observes a Windows runner. `verified` stays false. The best selection status is `RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION` or `BLOCKED_REAL_MT5_PROVENANCE`. `SELECTED_PENDING_INDEPENDENT_EVIDENCE` is not returned. `test_real_selection_requires_a_matching_extractor_receipt` is a negative test: an authored report plus a valid test signature does not qualify.
+- Reconciliation calls `verify_runner_attestation` for `runner_attestation_verified`. That flag stays false, so packaging stays closed. See `tests/test_goldthinker_factory_reconcile.py::test_packaging_calls_runner_verifier_and_stays_closed`.
 
 ## Follow-ups deliberately left
-
-- `research_packaging_allowed` in `src/aidy/goldthinker_factory_reconcile.py` still passes `runner_attestation_verified=False` (see the TODO there). Packaging therefore stays closed until a verified attestation is threaded into reconciliation. Safe; not a pass.
-
 
 - No offline AIDY strategy replay. Reconciliation still takes an explicit trade list.
 - `in/out`, `out by`, and a position still open at year end stay fail-closed.
 - DST rules other than `NONE` and `EU_LAST_SUNDAY_MAR_OCT` are refused.
 - Committed fixtures remain synthetic. The real-report test stays skipped until a genuine Strategy Tester file is archived.
-- Reconciliation does not yet receive the verified runner attestation, so packaging stays closed on purpose.
+- A real Windows runner launch is not attached, so a self-reported signature cannot become independent evidence.

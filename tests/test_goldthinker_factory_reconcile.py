@@ -320,6 +320,79 @@ class ReconcileTests(unittest.TestCase):
             S040SmokeReplay().replay(selection={"aidy_year": 2023}, data_manifest={})
         self.assertIn("AIDY_REPLAY_UNAVAILABLE", str(raised.exception))
 
+    def test_packaging_calls_runner_verifier_and_stays_closed(self):
+        from hashlib import sha256
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from aidy.goldthinker_factory_contract import canonical_json
+        from aidy.goldthinker_factory_metrics import attach_v2
+        from aidy.goldthinker_factory_reconcile import runner_attestation_is_verified
+        from tests.test_goldthinker_factory_metrics import (
+            COSTS,
+            _attack_sign,
+            _coherent_material,
+            _load_trust,
+            _runner_body,
+        )
+        approved = json.loads((ROOT / "config/goldthinker_factory_thresholds.json").read_text())
+        approved["approval_status"] = "APPROVED"
+        approved["approved_by"] = "Danny"
+        approved["tolerances"] = {key: "0" for key in approved["tolerances"]}
+        for key in approved["metric_thresholds"]:
+            approved["metric_thresholds"][key] = "0"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selection, manifest, document = _world(root)
+            reports = {}
+            for year, extra in EXTRAS.items():
+                raw = synthetic_report_html(year, end=_end(year), extra_last_profit=extra).encode()
+                reports[year] = (f"synthetic/synthetic_GT_TEST01_{year}_real_ticks.htm", raw)
+            bundle, _receipt = build_annual_bundle(
+                system_id="GT_TEST01", family_id="S016", source_kind="SYNTHETIC_FIXTURE",
+                strategy_version_sha256="a" * 64, ea_sha256="d" * 64,
+                broker_profile_sha256="e" * 64, test_config_sha256="f" * 64,
+                data_manifest_sha256="1" * 64, tester_build="FIXTURE_NOT_MT5",
+                as_of_utc=AS_OF_TEXT, reports=reports, ledger_dir=root / "ledgers-2",
+            )
+            ledgers = {
+                row["year"]: (root / "ledgers-2" / f"GT_TEST01_{row['year']}_deals.csv").read_text(encoding="utf-8")
+                for row in bundle["results"] if row["ledger_sha256"] is not None
+            }
+            payload = attach_v2(bundle, ledgers, COSTS, approved)
+            private = Ed25519PrivateKey.generate()
+            trust = _load_trust(
+                private.public_key().public_bytes_raw().hex(),
+                runner_id="unit-test-runner", key_id="unit-test-key",
+            )
+            year = selection["aidy_year"]
+            row = next(item for item in payload["results"] if item["year"] == year)
+            body, log, receipt_bytes, inputs, data_source, _canonical = _coherent_material(
+                _runner_body(payload, row, nonce=f"reconcile-{year}", runner_id="unit-test-runner", key_id="unit-test-key")
+            )
+            profile = canonical_json(payload["broker_cost_profile"]).encode("utf-8")
+            self.assertEqual(sha256(profile).hexdigest(), payload["broker_profile_sha256"])
+            evidence = {
+                "trust": trust,
+                "bundle": payload,
+                "attestations": {year: _attack_sign(body, private)},
+                "reports": {year: reports[year][1]},
+                "tester_logs": {year: log},
+                "launch_receipts": {year: receipt_bytes},
+                "inputs": {year: inputs},
+                "data_sources": {year: data_source},
+                "broker_profiles": {year: profile},
+            }
+            ledger = (root / "ledgers" / f"GT_TEST01_{year}_deals.csv").read_text(encoding="utf-8")
+            verified = runner_attestation_is_verified(selection, ledger, evidence)
+            self.assertFalse(verified)
+            matched = reconcile_selected_year(
+                selection=selection, ledger_dir=root / "ledgers", data_manifest=manifest,
+                replay=ExplicitTradeListReplay(document), thresholds=approved,
+                server_clock=UTC_CLOCK, runner_evidence=evidence,
+            )
+        self.assertEqual(matched["status"], "MATCH")
+        self.assertFalse(matched["research_packaging_allowed"])
+        self.assertFalse(verified)
+
 
 if __name__ == "__main__":
     unittest.main()

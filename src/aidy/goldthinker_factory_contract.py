@@ -162,8 +162,8 @@ def select_best_completed_year(payload: Any) -> dict:
         candidates, key=lambda r: (Decimal(r["net_profit_usd"]), -r["year"])
     ) if candidates else None
     # A profitable year is NOT sufficient for qualification. v1 never emits
-    # SELECTED_PENDING_INDEPENDENT_EVIDENCE: that status requires v2 metric
-    # gates, and UNSET gates must block it. See select_best_completed_year_v2.
+    # SELECTED_PENDING_INDEPENDENT_EVIDENCE. v2 does not either until a
+    # Windows runner is observed. See select_best_completed_year_v2.
     profitable = top is not None and Decimal(top["net_profit_usd"]) > 0
     selected = top if profitable else None
     fixture = root["source_kind"] == "SYNTHETIC_FIXTURE"

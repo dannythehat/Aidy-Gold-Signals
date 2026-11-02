@@ -20,6 +20,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
+from aidy.goldthinker_factory_attestation import verify_runner_attestation
 from aidy.goldthinker_factory_contract import (
     FactoryContractError,
     digest,
@@ -240,6 +241,60 @@ def research_packaging_allowed(
     )
 
 
+def runner_attestation_is_verified(
+    selection: Mapping[str, Any] | None,
+    ledger: str | None,
+    evidence: Mapping[str, Any] | None,
+) -> bool:
+    """Call the runner verifier. Self-reported signatures stay unverified.
+
+    With no evidence this still asks the verifier, which loads the empty
+    committed trust store and returns verified false.
+    """
+    if not isinstance(evidence, Mapping) or not isinstance(selection, Mapping):
+        checked = verify_runner_attestation(
+            None, trust=None, report=None, ledger=None, bundle={}, year=0,
+        )
+        return checked["verified"] is True
+    year = selection.get("aidy_year")
+    bundle = evidence.get("bundle")
+    if not isinstance(year, int) or not isinstance(bundle, Mapping):
+        checked = verify_runner_attestation(
+            None, trust=evidence.get("trust"), report=None, ledger=ledger,
+            bundle=bundle if isinstance(bundle, Mapping) else {}, year=year if isinstance(year, int) else 0,
+        )
+        return checked["verified"] is True
+
+    def _at(name: str) -> bytes | None:
+        group = evidence.get(name)
+        if not isinstance(group, Mapping):
+            return None
+        raw = group.get(year)
+        return raw if isinstance(raw, (bytes, bytearray)) else None
+
+    attestations = evidence.get("attestations")
+    reports = evidence.get("reports")
+    observations = evidence.get("equity_observations")
+    document = attestations.get(year) if isinstance(attestations, Mapping) else None
+    report = reports.get(year) if isinstance(reports, Mapping) else None
+    observed = observations.get(year) if isinstance(observations, Mapping) else None
+    checked = verify_runner_attestation(
+        document,
+        trust=evidence.get("trust"),
+        report=report if isinstance(report, (bytes, bytearray)) else None,
+        ledger=ledger,
+        bundle=bundle,
+        year=year,
+        equity_observations=observed if isinstance(observed, list) else None,
+        tester_log=_at("tester_logs"),
+        inputs=_at("inputs"),
+        broker_profile=_at("broker_profiles"),
+        data_source=_at("data_sources"),
+        launch_receipt=_at("launch_receipts"),
+    )
+    return checked["verified"] is True
+
+
 def _base(
     *,
     status: str,
@@ -251,6 +306,7 @@ def _base(
     manifest_sha: str | None,
     ledger_sha: str | None,
     replay_kind: str,
+    runner_verified: bool,
 ) -> dict[str, Any]:
     approval = None if thresholds is None else thresholds["approval_status"]
     tolerances = None if thresholds is None else thresholds["tolerances"]
@@ -260,9 +316,7 @@ def _base(
         "reasons": sorted(set(reasons)),
         "research_packaging_allowed": research_packaging_allowed(
             status=status,
-            # TODO: pass a verified runner attestation through once selection
-            # hands one to reconciliation. Until then packaging stays closed.
-            runner_attestation_verified=False,
+            runner_attestation_verified=runner_verified,
             replay_kind=replay_kind,
         ),
         "system_id": None if selection is None else selection.get("system_id"),
@@ -406,9 +460,13 @@ def reconcile_selected_year(
     replay: AidySelectedYearReplay,
     thresholds: Mapping[str, Any],
     server_clock: Mapping[str, Any] | None = None,
+    runner_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compare one selected year. Never lists or opens a different year's ledger."""
     config = normalise_thresholds(dict(thresholds))
+    runner_verified = runner_attestation_is_verified(
+        selection if isinstance(selection, Mapping) else None, None, runner_evidence,
+    )
     try:
         clock = qualify_server_clock(server_clock)
     except FactoryContractError as exc:
@@ -420,7 +478,7 @@ def reconcile_selected_year(
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=[str(exc)], selection=selection if isinstance(selection, Mapping) else None,
             adapter=adapter, notes="broker server clock is required before reconciliation",
-            thresholds=config, manifest_sha=None, ledger_sha=None, replay_kind=replay_kind,
+            thresholds=config, manifest_sha=None, ledger_sha=None, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     adapter = getattr(replay, "adapter_id", "custom")
     replay_kind = {
@@ -431,21 +489,21 @@ def reconcile_selected_year(
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["MALFORMED_SELECTION"], selection=None,
             adapter=adapter, notes="", thresholds=config, manifest_sha=None,
-            ledger_sha=None, replay_kind=replay_kind,
+            ledger_sha=None, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     body = {key: selection[key] for key in selection if key != "selection_sha256"}
     if digest(body) != selection["selection_sha256"]:
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["TAMPERED_SELECTION"], selection=selection,
             adapter=adapter, notes="", thresholds=config, manifest_sha=None,
-            ledger_sha=None, replay_kind=replay_kind,
+            ledger_sha=None, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     if selection["aidy_year"] is None:
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["NO_SELECTED_YEAR"], selection=selection,
             adapter=adapter, notes="no completed profitable year was selected",
             thresholds=config, manifest_sha=digest(dict(data_manifest)) if isinstance(data_manifest, dict) else None,
-            ledger_sha=None, replay_kind=replay_kind,
+            ledger_sha=None, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     year = selection["aidy_year"]
     try:
@@ -457,7 +515,7 @@ def reconcile_selected_year(
             status="INCONCLUSIVE", reasons=[code], selection=selection, adapter=adapter,
             notes=reason, thresholds=config,
             manifest_sha=digest(dict(data_manifest)) if isinstance(data_manifest, dict) else None,
-            ledger_sha=None, replay_kind=replay_kind,
+            ledger_sha=None, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     manifest_sha = digest(dict(data_manifest))
     # The only ledger path consulted. A sibling year file is not discovered.
@@ -467,16 +525,17 @@ def reconcile_selected_year(
             status="INCONCLUSIVE", reasons=["LEDGER_MISSING"], selection=selection,
             adapter=adapter, notes=f"selected-year ledger {ledger_path.name} is absent",
             thresholds=config, manifest_sha=manifest_sha, ledger_sha=None,
-            replay_kind=replay_kind,
+            replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     csv_text = ledger_path.read_text(encoding="utf-8")
     ledger_sha = hashlib.sha256(csv_text.encode("utf-8")).hexdigest()
+    runner_verified = runner_attestation_is_verified(selection, csv_text, runner_evidence)
     if ledger_sha != selection["aidy_expected_ledger_sha256"]:
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["LEDGER_HASH_MISMATCH"], selection=selection,
             adapter=adapter, notes="ledger bytes are not the selected year's expected ledger",
             thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
-            replay_kind=replay_kind,
+            replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     try:
         deals = parse_ledger_csv(csv_text)
@@ -485,13 +544,13 @@ def reconcile_selected_year(
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["LEDGER_NOT_PAIRABLE"], selection=selection,
             adapter=adapter, notes=str(exc), thresholds=config, manifest_sha=manifest_sha,
-            ledger_sha=ledger_sha, replay_kind=replay_kind,
+            ledger_sha=ledger_sha, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     if residual != 0:
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["LEDGER_NOT_PAIRABLE"], selection=selection,
             adapter=adapter, notes="selected ledger is not flat", thresholds=config,
-            manifest_sha=manifest_sha, ledger_sha=ledger_sha, replay_kind=replay_kind,
+            manifest_sha=manifest_sha, ledger_sha=ledger_sha, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     mt5_net = sum((trade.net_pnl for trade in mt5_trades), Decimal(0))
     if Decimal(selection["aidy_expected_net_usd"]) != mt5_net:
@@ -499,7 +558,7 @@ def reconcile_selected_year(
             status="INCONCLUSIVE", reasons=["LEDGER_NET_MISMATCH"], selection=selection,
             adapter=adapter, notes="selected net does not equal the ledger's closed-trade net",
             thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
-            replay_kind=replay_kind,
+            replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     try:
         produced = replay.replay(selection=selection, data_manifest=data_manifest)
@@ -507,20 +566,20 @@ def reconcile_selected_year(
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["AIDY_REPLAY_UNAVAILABLE"], selection=selection,
             adapter=adapter, notes=str(exc), thresholds=config, manifest_sha=manifest_sha,
-            ledger_sha=ledger_sha, replay_kind=replay_kind,
+            ledger_sha=ledger_sha, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     except FactoryContractError as exc:
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["MALFORMED_AIDY_TRADES"], selection=selection,
             adapter=adapter, notes=str(exc), thresholds=config, manifest_sha=manifest_sha,
-            ledger_sha=ledger_sha, replay_kind=replay_kind,
+            ledger_sha=ledger_sha, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     if produced.year != year:
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["AIDY_REPLAY_WRONG_YEAR"], selection=selection,
             adapter=produced.adapter, notes="adapter returned a year other than the selection",
             thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
-            replay_kind=replay_kind,
+            replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     outside = [
         trade.trade_id for trade in produced.trades
@@ -535,11 +594,12 @@ def reconcile_selected_year(
             adapter=produced.adapter,
             notes="AIDY timestamps are UTC; the selected year is the broker-server calendar year",
             thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
-            replay_kind=replay_kind,
+            replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     return _compare(
         selection=selection, config=config, adapter=produced.adapter, notes=produced.notes,
         manifest_sha=manifest_sha, ledger_sha=ledger_sha, replay_kind=replay_kind,
+        runner_verified=runner_verified,
         mt5_trades=mt5_trades, aidy_trades=list(produced.trades), mt5_net=mt5_net,
         server_clock=clock,
     )
@@ -560,6 +620,7 @@ def _compare(
     manifest_sha: str,
     ledger_sha: str,
     replay_kind: str,
+    runner_verified: bool,
     mt5_trades: list[Any],
     aidy_trades: list[AidyTrade],
     mt5_net: Decimal,
@@ -580,7 +641,7 @@ def _compare(
             status="INCONCLUSIVE", reasons=[str(exc)], selection=selection,
             adapter=adapter, notes="broker clock could not convert the selected ledger",
             thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
-            replay_kind=replay_kind,
+            replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     unused = set(range(len(mt5_trades)))
     pairs: list[tuple[Any, AidyTrade]] = []
@@ -614,7 +675,7 @@ def _compare(
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["AMBIGUOUS_MATCH"], selection=selection,
             adapter=adapter, notes=notes, thresholds=config, manifest_sha=manifest_sha,
-            ledger_sha=ledger_sha, replay_kind=replay_kind,
+            ledger_sha=ledger_sha, replay_kind=replay_kind, runner_verified=runner_verified,
         ))
     differences = []
     explained = Decimal(0)
@@ -669,7 +730,7 @@ def _compare(
     )
     body = _base(
         status=status, reasons=reasons, selection=selection, adapter=adapter, notes=notes,
-        thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha, replay_kind=replay_kind,
+        thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha, replay_kind=replay_kind, runner_verified=runner_verified,
     )
     body.update({
         "mt5_trade_count": len(mt5_trades),

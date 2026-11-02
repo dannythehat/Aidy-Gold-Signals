@@ -476,6 +476,30 @@ def year_passes_metric_gates(row: Mapping[str, Any], limits: Mapping[str, Any]) 
     return True
 
 
+def _year_bytes(evidence: Mapping[str, Any] | None, name: str, year: int) -> bytes | None:
+    if not isinstance(evidence, Mapping):
+        return None
+    group = evidence.get(name)
+    if not isinstance(group, Mapping):
+        return None
+    raw = group.get(year)
+    return raw if isinstance(raw, (bytes, bytearray)) else None
+
+
+def _provenance_blobs(evidence: Mapping[str, Any] | None) -> dict[str, bytes]:
+    blobs: dict[str, bytes] = {}
+    if not isinstance(evidence, Mapping):
+        return blobs
+    for name in ("tester_logs", "inputs", "broker_profiles", "data_sources", "launch_receipts"):
+        group = evidence.get(name)
+        if not isinstance(group, Mapping):
+            continue
+        for key, raw in group.items():
+            if isinstance(raw, (bytes, bytearray)):
+                blobs[f"{name}:{key}"] = bytes(raw)
+    return blobs
+
+
 def _real_attestation_block(
     view: Mapping[str, Any],
     ledgers: Mapping[int, str],
@@ -491,7 +515,7 @@ def _real_attestation_block(
         reports = evidence.get("reports") or {}
         observations = evidence.get("equity_observations") or {}
     # Marker check is independent of whether the signature verifies.
-    if synthetic_content_block(view, reports, ledgers):
+    if synthetic_content_block(view, reports, ledgers, _provenance_blobs(evidence)):
         return "BLOCKED_SYNTHETIC_MARKER"
     seen_nonces: set[str] = set()
     for document in attestations.values():
@@ -513,7 +537,17 @@ def _real_attestation_block(
             bundle=view,
             year=year,
             equity_observations=observations.get(year),
+            tester_log=_year_bytes(evidence, "tester_logs", year),
+            inputs=_year_bytes(evidence, "inputs", year),
+            broker_profile=_year_bytes(evidence, "broker_profiles", year),
+            data_source=_year_bytes(evidence, "data_sources", year),
+            launch_receipt=_year_bytes(evidence, "launch_receipts", year),
         )
+        if checked["reason"] in (
+            "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION",
+            "BLOCKED_REAL_MT5_PROVENANCE",
+        ):
+            return checked["reason"]
         if not checked["verified"]:
             return checked["reason"]
         if checked["equity_dd_status"] == "EQUITY_DD_UNVERIFIED":
@@ -541,6 +575,11 @@ def select_best_completed_year_v2(
     even if source_kind says otherwise. Synthetic bundles stay
     RESEARCH_FIXTURE_ONLY. Equity drawdown copied from a report summary does
     not advance selection while it is EQUITY_DD_UNVERIFIED.
+
+    No path returns SELECTED_PENDING_INDEPENDENT_EVIDENCE. Until a Windows
+    runner is observed, the best real status is
+    RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION. Missing launch/log
+    coherence is BLOCKED_REAL_MT5_PROVENANCE.
     """
     root = validate_mt5_bundle_v2(payload, ledgers, thresholds)
     view = v1_view(root)
@@ -548,7 +587,7 @@ def select_best_completed_year_v2(
         evidence = None
     elif root["source_kind"] == "REAL_MT5_TESTER":
         archived = evidence.get("reports") if isinstance(evidence, Mapping) else {}
-        if synthetic_content_block(view, archived or {}, ledgers):
+        if synthetic_content_block(view, archived or {}, ledgers, _provenance_blobs(evidence)):
             return _selection_outcome(root, view, "BLOCKED_SYNTHETIC_MARKER", None)
         block = _real_attestation_block(view, ledgers, evidence)
         if block:
@@ -585,7 +624,8 @@ def select_best_completed_year_v2(
         elif root["source_kind"] == "SYNTHETIC_FIXTURE":
             status = "RESEARCH_FIXTURE_ONLY"
         else:
-            status = "SELECTED_PENDING_INDEPENDENT_EVIDENCE"
+            status = "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION"
+            handoff = None
     return _selection_outcome(root, view, status, handoff)
 
 
