@@ -25,6 +25,15 @@ Fix in the commit that adds this round-2 section:
 - `REAL_MT5_TESTER` selection requires the extractor receipt and the archived report and ledger bytes. The receipt binds `source_kind`, the v1 bundle digest, and each report and ledger SHA-256. Missing receipt, hash mismatch, and a `SYNTHETIC_FIXTURE` marker each return their own blocked status. The relabel test is now a negative test. A positive path exists only when that receipt matches the files. A matching receipt is still not authentication that a terminal wrote the file, and `real_mt5_evidence_authenticated` stays false.
 - Equity relative percent must be at least the ledger balance relative percent, within half of the report's last displayed digit. Otherwise the year is FAILED and its bundle result fields stay null.
 
+## Round 3 — ChatGPT review of PR #376, after `488625e`
+
+The receipt-only binding is not treated as proof of a real terminal run.
+
+- Provenance is a runner-signed attestation (`goldthinker.factory.mt5_runner_attestation.v1`) over the report bytes, deal ledger, EA, ini, strategy source, data manifest, runner id, terminal build, tester-log hash and process start/exit. The committed trust store has no runners and no keys, so verification fails closed. Fixture provenance is rejected whatever `source_kind` says. Synthetic bundles stay `RESEARCH_FIXTURE_ONLY` and cannot open packaging.
+- The equity-versus-balance inequality is removed. Reported equity is kept. Without tester-attested equity or a hashed equity series, the year is `EQUITY_DD_UNVERIFIED` and selection does not advance. `conservative_drawdown_pct` is a separate max of the two figures.
+- `research_packaging_allowed` requires MATCH, a verified runner attestation, and a strategy replay. Caller-supplied trades do not qualify.
+- The S040 replay adapter is a stub that returns unavailable. See `docs/goldthinker-aidy-replay-adapter-design.md`.
+
 ## Follow-ups deliberately left
 
 - No offline AIDY strategy replay. Reconciliation still takes an explicit trade list.

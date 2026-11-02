@@ -179,6 +179,8 @@ class MetricsTests(unittest.TestCase):
         year = next(item for item in payload["metrics"]["years"] if item["year"] == 2023)
         self.assertEqual(year["equity_drawdown_relative_pct"], "1.0500")
         self.assertEqual(year["balance_drawdown_relative_pct"], "1.0500")
+        self.assertEqual(year["equity_dd_status"], "EQUITY_DD_UNVERIFIED")
+        self.assertEqual(year["conservative_drawdown_pct"], "1.0500")
         approved = json.loads(THRESHOLDS.read_text(encoding="utf-8"))
         approved["approval_status"] = "APPROVED"
         approved["approved_by"] = "Danny"
@@ -196,7 +198,7 @@ class MetricsTests(unittest.TestCase):
         relabelled = copy.deepcopy(gated)
         relabelled["source_kind"] = "REAL_MT5_TESTER"
         refused = select_best_completed_year_v2(relabelled, ledgers, approved)
-        self.assertEqual(refused["selection_status"], "BLOCKED_EVIDENCE_RECEIPT_MISSING")
+        self.assertEqual(refused["selection_status"], "BLOCKED_RUNNER_TRUST_UNCONFIGURED")
         self.assertIsNone(refused["aidy_year"])
         self.assertNotEqual(refused["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         self.assertFalse(refused["real_mt5_evidence_authenticated"])
@@ -245,25 +247,58 @@ class MetricsTests(unittest.TestCase):
             "receipt": receipt,
             "reports": {year: raw for year, (_name, raw) in reports.items()},
         }
-        selected = select_best_completed_year_v2(payload, ledgers, approved, evidence=evidence)
-        self.assertEqual(selected["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
-        self.assertEqual(selected["aidy_year"], 2024)
-        self.assertFalse(selected["real_mt5_evidence_authenticated"])
-        tampered = dict(evidence["reports"])
-        tampered[2024] = evidence["reports"][2024].replace(b"AUTHORED", b"ALTERED!")
-        mismatched = select_best_completed_year_v2(
+        unsigned = select_best_completed_year_v2(payload, ledgers, approved, evidence=evidence)
+        self.assertEqual(unsigned["selection_status"], "BLOCKED_RUNNER_TRUST_UNCONFIGURED")
+        self.assertNotEqual(unsigned["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        self.assertFalse(unsigned["real_mt5_evidence_authenticated"])
+        from aidy.goldthinker_factory_attestation import load_runner_trust, sign_attestation
+        key = bytes.fromhex("11" * 32)
+        trust = load_runner_trust({
+            "schema": "goldthinker.factory.runner_trust.v1",
+            "trusted_runners": [{"runner_id": "unit-test-runner", "hmac_sha256_key_hex": "11" * 32}],
+        })
+        attestations = {}
+        for year, row in ((item["year"], item) for item in bundle["results"] if item["test_status"] == "COMPLETED"):
+            body = {
+                "schema": "goldthinker.factory.mt5_runner_attestation.v1",
+                "provenance_class": "RUNNER",
+                "runner_id": "unit-test-runner",
+                "year": year,
+                "report_sha256": row["report_sha256"],
+                "ledger_sha256": row["ledger_sha256"],
+                "ea_sha256": bundle["ea_sha256"],
+                "ini_sha256": bundle["test_config_sha256"],
+                "strategy_source_sha256": bundle["strategy_version_sha256"],
+                "data_manifest_sha256": bundle["data_manifest_sha256"],
+                "terminal_build": bundle["tester_build"],
+                "tester_log_sha256": "ab" * 32,
+                "process_started_utc": "2026-11-02T00:00:00Z",
+                "process_exited_utc": "2026-11-02T00:10:00Z",
+                "process_exit_code": 0,
+                "attested_equity_drawdown_pct": row["max_equity_drawdown_pct"],
+                "equity_observations_sha256": None,
+            }
+            attestations[year] = sign_attestation(body, key)
+        signed = select_best_completed_year_v2(
             payload, ledgers, approved,
-            evidence={"bundle_v1": bundle, "receipt": receipt, "reports": tampered},
+            evidence={"trust": trust, "attestations": attestations, "reports": evidence["reports"]},
         )
-        self.assertEqual(mismatched["selection_status"], "BLOCKED_EVIDENCE_HASH_MISMATCH")
-        marked = dict(evidence["reports"])
-        marked[2024] = evidence["reports"][2024] + b" SYNTHETIC_FIXTURE"
-        synthetic = select_best_completed_year_v2(
+        self.assertEqual(signed["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        self.assertEqual(signed["aidy_year"], 2024)
+        self.assertFalse(signed["real_mt5_evidence_authenticated"])
+        fixture = dict(attestations[2021])
+        fixture["provenance_class"] = "FIXTURE"
+        fixture = sign_attestation({k: fixture[k] for k in fixture if k != "signature_hex"}, key)
+        refused_fixture = select_best_completed_year_v2(
             payload, ledgers, approved,
-            evidence={"bundle_v1": bundle, "receipt": receipt, "reports": marked},
+            evidence={
+                "trust": trust,
+                "attestations": {**attestations, 2021: fixture},
+                "reports": evidence["reports"],
+            },
         )
-        self.assertEqual(synthetic["selection_status"], "BLOCKED_SYNTHETIC_MARKER")
-        self.assertIsNone(synthetic["aidy_year"])
+        self.assertEqual(refused_fixture["selection_status"], "BLOCKED_FIXTURE_PROVENANCE")
+        self.assertNotEqual(refused_fixture["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
 
 
 if __name__ == "__main__":

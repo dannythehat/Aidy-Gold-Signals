@@ -222,7 +222,7 @@ class ReconcileTests(unittest.TestCase):
         self.assertIn(MISSING_HOOK, unavailable["replay_notes"])
         self.assertFalse(unavailable["research_packaging_allowed"])
         self.assertEqual(matched["status"], "MATCH")
-        self.assertTrue(matched["research_packaging_allowed"])
+        self.assertFalse(matched["research_packaging_allowed"])
         self.assertFalse(matched["historical_edge_verified"])
         self.assertFalse(matched["live_authorised"])
         self.assertFalse(matched["public_performance_publication_authorised"])
@@ -303,6 +303,22 @@ class ReconcileTests(unittest.TestCase):
         self.assertTrue(aidy_time_in_broker_year(new_year_utc, 2023, plus_two))
         self.assertFalse(aidy_time_in_broker_year(new_year_utc, 2023, UTC_CLOCK))
         self.assertFalse(aidy_time_in_broker_year(datetime(2023, 12, 31, 23, 0, 0), 2023, plus_two))
+
+    def test_packaging_requires_real_replay_and_s040_is_unavailable(self):
+        from aidy.goldthinker_factory_reconcile import research_packaging_allowed
+        from aidy.goldthinker_factory_replay import S040SmokeReplay
+        self.assertFalse(research_packaging_allowed(
+            status="MATCH", runner_attestation_verified=True, replay_kind="EXPLICIT_INTERFACE",
+        ))
+        self.assertFalse(research_packaging_allowed(
+            status="MATCH", runner_attestation_verified=False, replay_kind="STRATEGY_REPLAY",
+        ))
+        self.assertTrue(research_packaging_allowed(
+            status="MATCH", runner_attestation_verified=True, replay_kind="STRATEGY_REPLAY",
+        ))
+        with self.assertRaises(Exception) as raised:
+            S040SmokeReplay().replay(selection={"aidy_year": 2023}, data_manifest={})
+        self.assertIn("AIDY_REPLAY_UNAVAILABLE", str(raised.exception))
 
 
 if __name__ == "__main__":

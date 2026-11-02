@@ -282,9 +282,9 @@ class ExtractTests(unittest.TestCase):
             "Equity Drawdown Maximal:": "0.00 (0.00%)",
             "Equity Drawdown Relative:": "0.00% (0.00)",
         }).encode()
-        rejected = analyse_report(too_small, year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
-        self.assertFalse(rejected["admitted"])
-        self.assertIn("equity drawdown is below the ledger balance drawdown", rejected["discrepancies"])
+        kept = analyse_report(too_small, year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
+        self.assertTrue(kept["admitted"], kept.get("discrepancies") or kept.get("parse_error"))
+        self.assertEqual(kept["claims"]["max_equity_drawdown_pct"], "0.0000")
 
     def test_committed_utf16_and_realistic_layout_are_synthetic(self):
         raw = UTF16_FIXTURE.read_bytes()

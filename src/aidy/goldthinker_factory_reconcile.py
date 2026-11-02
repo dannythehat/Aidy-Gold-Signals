@@ -229,6 +229,17 @@ def _receipt(body: dict[str, Any]) -> dict[str, Any]:
     return body
 
 
+def research_packaging_allowed(
+    *, status: str, runner_attestation_verified: bool, replay_kind: str,
+) -> bool:
+    """Caller-supplied trades and synthetic receipts never open packaging."""
+    return (
+        status == "MATCH"
+        and runner_attestation_verified
+        and replay_kind == "STRATEGY_REPLAY"
+    )
+
+
 def _base(
     *,
     status: str,
@@ -247,7 +258,11 @@ def _base(
         "schema": RECONCILE_SCHEMA,
         "status": status,
         "reasons": sorted(set(reasons)),
-        "research_packaging_allowed": status == "MATCH",
+        "research_packaging_allowed": research_packaging_allowed(
+            status=status,
+            runner_attestation_verified=False,
+            replay_kind=replay_kind,
+        ),
         "system_id": None if selection is None else selection.get("system_id"),
         "source_kind": None if selection is None else selection.get("source_kind"),
         "aidy_year": None if selection is None else selection.get("aidy_year"),

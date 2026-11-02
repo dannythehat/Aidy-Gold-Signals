@@ -41,12 +41,12 @@ from aidy.goldthinker_factory_contract import (
     digest,
     validate_mt5_bundle,
 )
+from aidy.goldthinker_factory_attestation import verify_runner_attestation
 from aidy.goldthinker_factory_mt5_extract import (
     _claim_text,
     _drawdown,
     closed_trades_from_deals,
     parse_ledger_csv,
-    real_evidence_block_reason,
 )
 
 V2_SCHEMA = "goldthinker.factory.mt5_bundle.v2"
@@ -78,6 +78,7 @@ YEAR_METRIC_KEYS = frozenset({
     "average_profit_per_trade_usd", "average_round_trip_quoted_cost_usd",
     "average_profit_vs_round_trip_cost_usd", "doubled_cost_stress_net_usd",
     "equity_drawdown_relative_pct", "balance_drawdown_relative_pct",
+    "equity_dd_status", "conservative_drawdown_pct",
     "closed_trades",
 })
 METRIC_KEYS = frozenset({
@@ -194,6 +195,8 @@ def _empty_year(year: int) -> dict[str, Any]:
         "doubled_cost_stress_net_usd": None,
         "equity_drawdown_relative_pct": None,
         "balance_drawdown_relative_pct": None,
+        "equity_dd_status": "EQUITY_DD_UNVERIFIED",
+        "conservative_drawdown_pct": None,
         "closed_trades": None,
     }
 
@@ -349,6 +352,8 @@ def compute_v2_metrics(
             "doubled_cost_stress_net_usd": detail["doubled_cost_stress_net_usd"],
             "equity_drawdown_relative_pct": detail["equity_drawdown_relative_pct"],
             "balance_drawdown_relative_pct": detail["balance_drawdown_relative_pct"],
+            "equity_dd_status": detail["equity_dd_status"],
+            "conservative_drawdown_pct": detail["conservative_drawdown_pct"],
             "closed_trades": detail["closed_trades"],
         })
     approval = thresholds["approval_status"]
@@ -404,6 +409,12 @@ def _require_ledger(year: int, row: Mapping[str, Any], csv_text: str, costs: Map
     detail["balance_drawdown_relative_pct"] = format(
         stats["relative_pct"].quantize(FOUR, rounding=ROUND_HALF_UP), "f"
     )
+    # Reported equity is never replaced. The conservative figure is separate.
+    detail["conservative_drawdown_pct"] = _q(max(
+        Decimal(detail["equity_drawdown_relative_pct"]),
+        Decimal(detail["balance_drawdown_relative_pct"]),
+    ))
+    detail["equity_dd_status"] = "EQUITY_DD_UNVERIFIED"
     return detail
 
 
@@ -464,6 +475,40 @@ def year_passes_metric_gates(row: Mapping[str, Any], limits: Mapping[str, Any]) 
     return True
 
 
+def _real_attestation_block(
+    view: Mapping[str, Any],
+    ledgers: Mapping[int, str],
+    evidence: Mapping[str, Any] | None,
+) -> str | None:
+    trust = None
+    attestations: Mapping[int, Any] = {}
+    reports: Mapping[int, bytes] = {}
+    observations: Mapping[int, list[str]] = {}
+    if isinstance(evidence, Mapping):
+        trust = evidence.get("trust")
+        attestations = evidence.get("attestations") or {}
+        reports = evidence.get("reports") or {}
+        observations = evidence.get("equity_observations") or {}
+    for year in COMPLETE_YEARS:
+        row = next(item for item in view["results"] if item["year"] == year)
+        if row["test_status"] != "COMPLETED":
+            continue
+        checked = verify_runner_attestation(
+            attestations.get(year),
+            trust=trust,
+            report=reports.get(year),
+            ledger=ledgers.get(year),
+            bundle=view,
+            year=year,
+            equity_observations=observations.get(year),
+        )
+        if not checked["verified"]:
+            return checked["reason"]
+        if checked["equity_dd_status"] == "EQUITY_DD_UNVERIFIED":
+            return "BLOCKED_EQUITY_DD_UNVERIFIED"
+    return None
+
+
 def select_best_completed_year_v2(
     payload: Mapping[str, Any],
     ledgers: Mapping[int, str],
@@ -478,30 +523,19 @@ def select_best_completed_year_v2(
     a losing year's undefined worst-trade share, blocks with
     BLOCKED_METRIC_CHECKS. Among passing profitable years, the highest net wins.
 
-    REAL_MT5_TESTER additionally requires the extractor receipt and the archived
-    report and ledger bytes. A missing receipt, a hash mismatch, or a
-    SYNTHETIC_FIXTURE marker blocks with its own status. Metric validation alone
-    does not authenticate source_kind, and a matching receipt is still not
-    proof that a terminal wrote the file.
+    REAL_MT5_TESTER requires a runner-signed attestation for every completed
+    year, checked against the configured runner trust. The committed trust
+    store is empty, so that path fails closed. Fixture provenance is rejected
+    even if source_kind says otherwise. Synthetic bundles stay
+    RESEARCH_FIXTURE_ONLY. Equity drawdown copied from a report summary does
+    not advance selection while it is EQUITY_DD_UNVERIFIED.
     """
     root = validate_mt5_bundle_v2(payload, ledgers, thresholds)
     view = v1_view(root)
-    if root["source_kind"] == "REAL_MT5_TESTER":
-        block = real_evidence_block_reason(
-            evidence.get("bundle_v1") if isinstance(evidence, Mapping) else None,
-            evidence.get("receipt") if isinstance(evidence, Mapping) else None,
-            evidence.get("reports") if isinstance(evidence, Mapping) else None,
-            ledgers,
-        )
-        if isinstance(evidence, Mapping) and evidence.get("bundle_v1") is not None:
-            extracted = evidence["bundle_v1"]
-            if (
-                not isinstance(extracted, dict)
-                or extracted.get("results") != view["results"]
-                or extracted.get("source_kind") != view["source_kind"]
-                or extracted.get("system_id") != view["system_id"]
-            ):
-                block = block or "BLOCKED_EVIDENCE_HASH_MISMATCH"
+    if root["source_kind"] == "SYNTHETIC_FIXTURE":
+        evidence = None
+    elif root["source_kind"] == "REAL_MT5_TESTER":
+        block = _real_attestation_block(view, ledgers, evidence)
         if block:
             return _selection_outcome(root, view, block, None)
     checks = root["metrics"]["threshold_checks"]

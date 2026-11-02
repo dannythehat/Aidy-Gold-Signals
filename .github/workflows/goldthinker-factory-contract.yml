@@ -8,6 +8,7 @@ on:
       - "tests/goldthinker_factory_synthetic_reports.py"
       - "tests/fixtures/goldthinker_factory/**"
       - "config/goldthinker_factory_thresholds.json"
+      - "config/goldthinker_factory_runner_trust.json"
       - ".github/workflows/goldthinker-factory-contract.yml"
   workflow_dispatch:
 permissions:
@@ -24,6 +25,6 @@ jobs:
         with:
           python-version: "3.13"
       - name: Python syntax check
-        run: python -m compileall -q src/aidy/goldthinker_factory_contract.py src/aidy/goldthinker_factory_mt5_extract.py src/aidy/goldthinker_factory_metrics.py src/aidy/goldthinker_factory_reconcile.py scripts/goldthinker_factory tests/test_goldthinker_factory_contract.py tests/test_goldthinker_factory_mt5_generator.py tests/test_goldthinker_factory_extract.py tests/test_goldthinker_factory_metrics.py tests/test_goldthinker_factory_reconcile.py tests/test_goldthinker_factory_real_mt5_reports.py tests/goldthinker_factory_synthetic_reports.py
+        run: python -m compileall -q src/aidy/goldthinker_factory_contract.py src/aidy/goldthinker_factory_mt5_extract.py src/aidy/goldthinker_factory_metrics.py src/aidy/goldthinker_factory_reconcile.py src/aidy/goldthinker_factory_attestation.py src/aidy/goldthinker_factory_replay.py scripts/goldthinker_factory tests/test_goldthinker_factory_contract.py tests/test_goldthinker_factory_mt5_generator.py tests/test_goldthinker_factory_extract.py tests/test_goldthinker_factory_metrics.py tests/test_goldthinker_factory_reconcile.py tests/test_goldthinker_factory_real_mt5_reports.py tests/goldthinker_factory_synthetic_reports.py
       - name: Run independent offline acceptance tests (zero broker/API credentials)
         run: python -m unittest discover -s tests -p "test_goldthinker_factory_*.py" -v

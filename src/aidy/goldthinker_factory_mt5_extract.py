@@ -13,9 +13,11 @@ year.
 Times in the ledger are the broker-server clock printed by MT5. Reconciliation
 converts them to UTC only when an explicit server clock is supplied.
 2026 is always PARTIAL. Equity drawdown is taken from the report's equity
-figures and must be at least the ledger balance drawdown, within half a unit
-of the report's displayed percent. Balance drawdown is recomputed from the
-ledger and cross-checked against the report's balance-drawdown lines.
+figures. It is not required to be at least the balance-path drawdown,
+because MT5 computes the two curves separately. Balance drawdown is
+recomputed from the ledger and cross-checked against the report's
+balance-drawdown lines. Advancement stays blocked while equity drawdown
+is EQUITY_DD_UNVERIFIED.
 A REAL_MT5_TESTER label is not self-authenticating. Selection accepts it
 only when the extractor receipt binds the bundle digest, source_kind and
 the archived report and ledger hashes, and those files contain no
@@ -665,14 +667,6 @@ def _drawdown(balances: list[Decimal], deposit: Decimal) -> dict[str, Decimal]:
     }
 
 
-def _half_display_unit(shown: Decimal) -> Decimal:
-    """Half of the last displayed digit. 1.05 allows 0.005; 0.00 allows 0.005."""
-    exponent = shown.as_tuple().exponent
-    if not isinstance(exponent, int) or exponent > 0:
-        exponent = 0
-    return Decimal(1).scaleb(exponent - 1)
-
-
 def _claim_text(value: Decimal, places: int = 4) -> str:
     quantum = Decimal(1).scaleb(-places)
     if value != value.quantize(quantum):
@@ -919,9 +913,6 @@ def analyse_report(raw: bytes, *, year: int, as_of: datetime, source_kind: str) 
                 issues.append("balance drawdown relative percent disagrees with the ledger balance path")
         if equity_abs < 0 or equity_max_money < 0 or equity_rel_money < 0:
             issues.append("equity drawdown money is negative")
-        allowance = _half_display_unit(equity_rel_pct)
-        if equity_rel_pct + allowance < stats["relative_pct"]:
-            issues.append("equity drawdown is below the ledger balance drawdown")
     claims = None
     if not issues and stats is not None:
         try:
