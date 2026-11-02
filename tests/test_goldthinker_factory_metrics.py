@@ -198,7 +198,7 @@ class MetricsTests(unittest.TestCase):
         relabelled = copy.deepcopy(gated)
         relabelled["source_kind"] = "REAL_MT5_TESTER"
         refused = select_best_completed_year_v2(relabelled, ledgers, approved)
-        self.assertEqual(refused["selection_status"], "BLOCKED_RUNNER_TRUST_UNCONFIGURED")
+        self.assertEqual(refused["selection_status"], "BLOCKED_SYNTHETIC_MARKER")
         self.assertIsNone(refused["aidy_year"])
         self.assertNotEqual(refused["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         self.assertFalse(refused["real_mt5_evidence_authenticated"])
@@ -208,6 +208,86 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(blocked["selection_status"], "BLOCKED_METRIC_CHECKS")
         self.assertIsNone(blocked["aidy_year"])
         self.assertNotEqual(blocked["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+
+    def test_signed_synthetic_relabel_is_blocked(self):
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from aidy.goldthinker_factory_attestation import load_runner_trust, sign_attestation
+        approved = json.loads(THRESHOLDS.read_text(encoding="utf-8"))
+        approved["approval_status"] = "APPROVED"
+        approved["approved_by"] = "Danny"
+        approved["tolerances"] = {key: "0" for key in approved["tolerances"]}
+        approved["metric_thresholds"] = {
+            "profit_factor_overall_min": "1",
+            "worst_trade_share_of_net_min": "-10",
+            "average_profit_vs_round_trip_cost_min_usd": "0",
+            "doubled_cost_stress_net_min_usd": "0",
+        }
+        raw_reports = {}
+        named = {}
+        for year, extra in EXTRAS.items():
+            html = synthetic_report_html(year, end=_end(year), extra_last_profit=extra)
+            self.assertIn("SYNTHETIC_FIXTURE", html)
+            raw = html.encode("utf-8")
+            raw_reports[year] = raw
+            named[year] = (f"synthetic/synthetic_GT_TEST01_{year}_real_ticks.htm", raw)
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle, _receipt = build_annual_bundle(
+                system_id="GT_TEST01", family_id="S016", source_kind="SYNTHETIC_FIXTURE",
+                strategy_version_sha256="a" * 64, ea_sha256="d" * 64,
+                broker_profile_sha256="e" * 64, test_config_sha256="f" * 64,
+                data_manifest_sha256="1" * 64, tester_build="FIXTURE_NOT_MT5",
+                as_of_utc=AS_OF_TEXT, reports=named, ledger_dir=Path(tmp) / "ledgers",
+            )
+            ledgers = {
+                row["year"]: (Path(tmp) / "ledgers" / f"GT_TEST01_{row['year']}_deals.csv").read_text(encoding="utf-8")
+                for row in bundle["results"] if row["ledger_sha256"] is not None
+            }
+        bundle["source_kind"] = "REAL_MT5_TESTER"
+        payload = attach_v2(bundle, ledgers, COSTS, approved)
+        private = Ed25519PrivateKey.generate()
+        public = private.public_key().public_bytes_raw().hex()
+        trust = load_runner_trust({
+            "schema": "goldthinker.factory.runner_trust.v1",
+            "trusted_runners": [{
+                "runner_id": "reviewer-runner",
+                "key_id": "reviewer-key",
+                "ed25519_public_key_hex": public,
+            }],
+        })
+        attestations = {}
+        for row in payload["results"]:
+            if row["test_status"] != "COMPLETED":
+                continue
+            attestations[row["year"]] = sign_attestation({
+                "schema": "goldthinker.factory.mt5_runner_attestation.v1",
+                "provenance_class": "RUNNER",
+                "runner_id": "reviewer-runner",
+                "key_id": "reviewer-key",
+                "system_id": payload["system_id"],
+                "nonce": f"attack-{row['year']}",
+                "issued_at": "2026-11-02T01:00:00Z",
+                "year": row["year"],
+                "report_sha256": row["report_sha256"],
+                "ledger_sha256": row["ledger_sha256"],
+                "ea_sha256": payload["ea_sha256"],
+                "ini_sha256": payload["test_config_sha256"],
+                "strategy_source_sha256": payload["strategy_version_sha256"],
+                "data_manifest_sha256": payload["data_manifest_sha256"],
+                "terminal_build": payload["tester_build"],
+                "tester_log_sha256": "cd" * 32,
+                "process_started_utc": "2026-11-02T00:00:00Z",
+                "process_exited_utc": "2026-11-02T00:05:00Z",
+                "process_exit_code": 0,
+                "attested_equity_drawdown_pct": row["max_equity_drawdown_pct"],
+                "equity_observations_sha256": None,
+            }, private)
+        attacked = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={"trust": trust, "attestations": attestations, "reports": raw_reports},
+        )
+        self.assertEqual(attacked["selection_status"], "BLOCKED_SYNTHETIC_MARKER")
+        self.assertIsNone(attacked["aidy_year"])
+        self.assertNotEqual(attacked["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
 
     def test_real_selection_requires_a_matching_extractor_receipt(self):
         approved = json.loads(THRESHOLDS.read_text(encoding="utf-8"))
@@ -251,11 +331,17 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(unsigned["selection_status"], "BLOCKED_RUNNER_TRUST_UNCONFIGURED")
         self.assertNotEqual(unsigned["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         self.assertFalse(unsigned["real_mt5_evidence_authenticated"])
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
         from aidy.goldthinker_factory_attestation import load_runner_trust, sign_attestation
-        key = bytes.fromhex("11" * 32)
+        private = Ed25519PrivateKey.generate()
+        public = private.public_key().public_bytes_raw().hex()
         trust = load_runner_trust({
             "schema": "goldthinker.factory.runner_trust.v1",
-            "trusted_runners": [{"runner_id": "unit-test-runner", "hmac_sha256_key_hex": "11" * 32}],
+            "trusted_runners": [{
+                "runner_id": "unit-test-runner",
+                "key_id": "unit-test-key",
+                "ed25519_public_key_hex": public,
+            }],
         })
         attestations = {}
         for year, row in ((item["year"], item) for item in bundle["results"] if item["test_status"] == "COMPLETED"):
@@ -263,6 +349,10 @@ class MetricsTests(unittest.TestCase):
                 "schema": "goldthinker.factory.mt5_runner_attestation.v1",
                 "provenance_class": "RUNNER",
                 "runner_id": "unit-test-runner",
+                "key_id": "unit-test-key",
+                "system_id": bundle["system_id"],
+                "nonce": f"nonce-{year}",
+                "issued_at": "2026-11-02T00:00:00Z",
                 "year": year,
                 "report_sha256": row["report_sha256"],
                 "ledger_sha256": row["ledger_sha256"],
@@ -278,7 +368,7 @@ class MetricsTests(unittest.TestCase):
                 "attested_equity_drawdown_pct": row["max_equity_drawdown_pct"],
                 "equity_observations_sha256": None,
             }
-            attestations[year] = sign_attestation(body, key)
+            attestations[year] = sign_attestation(body, private)
         signed = select_best_completed_year_v2(
             payload, ledgers, approved,
             evidence={"trust": trust, "attestations": attestations, "reports": evidence["reports"]},
@@ -288,7 +378,7 @@ class MetricsTests(unittest.TestCase):
         self.assertFalse(signed["real_mt5_evidence_authenticated"])
         fixture = dict(attestations[2021])
         fixture["provenance_class"] = "FIXTURE"
-        fixture = sign_attestation({k: fixture[k] for k in fixture if k != "signature_hex"}, key)
+        fixture = sign_attestation({k: fixture[k] for k in fixture if k != "signature_hex"}, private)
         refused_fixture = select_best_completed_year_v2(
             payload, ledgers, approved,
             evidence={
@@ -299,6 +389,26 @@ class MetricsTests(unittest.TestCase):
         )
         self.assertEqual(refused_fixture["selection_status"], "BLOCKED_FIXTURE_PROVENANCE")
         self.assertNotEqual(refused_fixture["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        reused = dict(attestations[2022])
+        reused["nonce"] = attestations[2021]["nonce"]
+        reused = sign_attestation({k: reused[k] for k in reused if k != "signature_hex"}, private)
+        collided = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={
+                "trust": trust,
+                "attestations": {**attestations, 2022: reused},
+                "reports": evidence["reports"],
+            },
+        )
+        self.assertEqual(collided["selection_status"], "BLOCKED_ATTESTATION_NONCE_REUSED")
+        other = copy.deepcopy(payload)
+        other["system_id"] = "GT_OTHER01"
+        foreign = select_best_completed_year_v2(
+            other, ledgers, approved,
+            evidence={"trust": trust, "attestations": attestations, "reports": evidence["reports"]},
+        )
+        self.assertEqual(foreign["selection_status"], "BLOCKED_ATTESTATION_SYSTEM_ID")
+        self.assertIsNone(foreign["aidy_year"])
 
 
 if __name__ == "__main__":

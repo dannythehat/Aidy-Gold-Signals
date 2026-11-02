@@ -260,6 +260,8 @@ def _base(
         "reasons": sorted(set(reasons)),
         "research_packaging_allowed": research_packaging_allowed(
             status=status,
+            # TODO: pass a verified runner attestation through once selection
+            # hands one to reconciliation. Until then packaging stays closed.
             runner_attestation_verified=False,
             replay_kind=replay_kind,
         ),

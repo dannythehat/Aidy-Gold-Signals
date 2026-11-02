@@ -34,9 +34,27 @@ The receipt-only binding is not treated as proof of a real terminal run.
 - `research_packaging_allowed` requires MATCH, a verified runner attestation, and a strategy replay. Caller-supplied trades do not qualify.
 - The S040 replay adapter is a stub that returns unavailable. See `docs/goldthinker-aidy-replay-adapter-design.md`.
 
+## Quant Reviewer on `a3068f8` — not pass
+
+No regressions were reported. Three gaps were:
+
+1. The synthetic-marker check lived only in `real_evidence_block_reason`, which selection never calls. `verify_runner_attestation` did not look at the archived bytes. Relabelling a synthetic bundle to `REAL_MT5_TESTER` and signing it with a key placed in a populated trust store reached `SELECTED_PENDING_INDEPENDENT_EVIDENCE` for 2024.
+2. Attestations used HMAC, so the signing secret would have had to live anywhere verification ran.
+3. The signed body omitted `system_id`, a nonce, and `issued_at`, so one attestation could be reused for another system and a nonce could be repeated inside one selection.
+
+Fix in the commit that adds this section:
+
+- Selection scans the bundle document, the ledger text, and the archived report bytes for `SYNTHETIC_FIXTURE` before it trusts a signature, and again inside the attestation gate. The relabel-and-sign attack is a negative test.
+- Signatures are Ed25519. The trust store holds `runner_id`, `key_id`, and the public key. The private key is generated on the Windows runner only. Procedure: `docs/goldthinker-factory-runner-keys.md`. No private key is committed. Tests use an ephemeral key.
+- A signature for a different `system_id` is rejected. A repeated nonce inside the selection is rejected.
+
 ## Follow-ups deliberately left
+
+- `research_packaging_allowed` in `src/aidy/goldthinker_factory_reconcile.py` still passes `runner_attestation_verified=False` (see the TODO there). Packaging therefore stays closed until a verified attestation is threaded into reconciliation. Safe; not a pass.
+
 
 - No offline AIDY strategy replay. Reconciliation still takes an explicit trade list.
 - `in/out`, `out by`, and a position still open at year end stay fail-closed.
 - DST rules other than `NONE` and `EU_LAST_SUNDAY_MAR_OCT` are refused.
 - Committed fixtures remain synthetic. The real-report test stays skipped until a genuine Strategy Tester file is archived.
+- Reconciliation does not yet receive the verified runner attestation, so packaging stays closed on purpose.

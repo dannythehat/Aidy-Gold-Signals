@@ -47,6 +47,7 @@ from aidy.goldthinker_factory_mt5_extract import (
     _drawdown,
     closed_trades_from_deals,
     parse_ledger_csv,
+    synthetic_content_block,
 )
 
 V2_SCHEMA = "goldthinker.factory.mt5_bundle.v2"
@@ -489,6 +490,17 @@ def _real_attestation_block(
         attestations = evidence.get("attestations") or {}
         reports = evidence.get("reports") or {}
         observations = evidence.get("equity_observations") or {}
+    # Marker check is independent of whether the signature verifies.
+    if synthetic_content_block(view, reports, ledgers):
+        return "BLOCKED_SYNTHETIC_MARKER"
+    seen_nonces: set[str] = set()
+    for document in attestations.values():
+        if not isinstance(document, dict):
+            continue
+        nonce = document.get("nonce")
+        if not isinstance(nonce, str) or nonce in seen_nonces:
+            return "BLOCKED_ATTESTATION_NONCE_REUSED"
+        seen_nonces.add(nonce)
     for year in COMPLETE_YEARS:
         row = next(item for item in view["results"] if item["year"] == year)
         if row["test_status"] != "COMPLETED":
@@ -535,6 +547,9 @@ def select_best_completed_year_v2(
     if root["source_kind"] == "SYNTHETIC_FIXTURE":
         evidence = None
     elif root["source_kind"] == "REAL_MT5_TESTER":
+        archived = evidence.get("reports") if isinstance(evidence, Mapping) else {}
+        if synthetic_content_block(view, archived or {}, ledgers):
+            return _selection_outcome(root, view, "BLOCKED_SYNTHETIC_MARKER", None)
         block = _real_attestation_block(view, ledgers, evidence)
         if block:
             return _selection_outcome(root, view, block, None)

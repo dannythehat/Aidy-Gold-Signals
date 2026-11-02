@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Install Ed25519 library
+        run: python -m pip install --quiet cryptography
       - name: Python syntax check
         run: python -m compileall -q src/aidy/goldthinker_factory_contract.py src/aidy/goldthinker_factory_mt5_extract.py src/aidy/goldthinker_factory_metrics.py src/aidy/goldthinker_factory_reconcile.py src/aidy/goldthinker_factory_attestation.py src/aidy/goldthinker_factory_replay.py scripts/goldthinker_factory tests/test_goldthinker_factory_contract.py tests/test_goldthinker_factory_mt5_generator.py tests/test_goldthinker_factory_extract.py tests/test_goldthinker_factory_metrics.py tests/test_goldthinker_factory_reconcile.py tests/test_goldthinker_factory_real_mt5_reports.py tests/goldthinker_factory_synthetic_reports.py
       - name: Run independent offline acceptance tests (zero broker/API credentials)
