@@ -129,6 +129,18 @@ def state_fights(previous: pd.DataFrame, level: float, tol: float,
     return (direction == 1 and side <= 0) or (direction == -1 and side > 0)
 
 
+def cooldown_active(last_level: float | None, last_direction: int,
+                    last_signal_at: pd.Timestamp | None,
+                    level: float, direction: int,
+                    signal_at: pd.Timestamp) -> bool:
+    """Original track B rejects a repeated same-level/same-direction signal <3 M5 bars."""
+    return (last_level is not None and last_signal_at is not None
+            and abs(last_level-level) <= 1e-8
+            and direction == last_direction
+            and pd.Timedelta(0) <= signal_at-last_signal_at
+            < pd.Timedelta(minutes=15))
+
+
 def first_exit(future: pd.DataFrame, direction: int, stop: float,
                target: float) -> tuple[int, str, float]:
     """First observed M1 barrier. Stop wins simultaneous minute ambiguity."""
@@ -164,6 +176,7 @@ def screen_year(m1: pd.DataFrame, year: int) -> dict:
     counts = Counter()
     ledger, signals = [], []
     last_exit = pd.Timestamp(f"{year}-01-01", tz="UTC")
+    last_level, last_direction, last_signal_at = None, 0, None
     equity, peak, worst = START_CASH, START_CASH, 0.0
     for i in range(WARMUP, len(b)-1):
         bar, nxt = b[i], b[i+1]
@@ -189,6 +202,10 @@ def screen_year(m1: pd.DataFrame, year: int) -> dict:
             if not rejects(bar, atr, direction, level):
                 continue
             counts["rejection_shape"] += 1
+            if cooldown_active(last_level, last_direction, last_signal_at,
+                               level, direction, at):
+                counts["cooldown"] += 1
+                continue
             pos = (float(bar["bid_c"])%GRID)/GRID
             if (direction == 1 and pos > .5) or (direction == -1 and pos < .5):
                 counts["premium_discount"] += 1
@@ -257,6 +274,7 @@ def screen_year(m1: pd.DataFrame, year: int) -> dict:
                 "equity_after_usd": equity,
             })
             last_exit = exit_at
+            last_level, last_direction, last_signal_at = level, direction, at
             counts["fills_modelled"] += 1
             break
     if not ledger:
