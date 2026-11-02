@@ -33,20 +33,24 @@ def _percent(value: Decimal, *, decimal_comma: bool) -> str:
     return text.replace(".", ",") if decimal_comma else text
 
 
-def economics(year: int, extra_last_profit: Decimal = Decimal("0.00")) -> list[dict]:
+def economics(
+    year: int,
+    extra_last_profit: Decimal = Decimal("0.00"),
+    trade_fee: Decimal = Decimal("0.00"),
+) -> list[dict]:
     """Flat XAUUSD book. extra_last_profit changes only the last closing profit."""
     specs = [
-        ("balance", "", None, None, None, Decimal("0.00"), Decimal("0.00"), DEPOSIT, f"{year}-01-02T00:00:00"),
-        ("buy", "in", Decimal("0.10"), Decimal("1900.00"), 10, Decimal("-5.00"), Decimal("0.00"), Decimal("0.00"), f"{year}-02-01T10:00:00"),
-        ("sell", "out", Decimal("0.10"), Decimal("1891.00"), 11, Decimal("-5.00"), Decimal("0.00"), Decimal("-90.00"), f"{year}-02-01T14:00:00"),
-        ("buy", "in", Decimal("0.10"), Decimal("1900.00"), 12, Decimal("-5.00"), Decimal("0.00"), Decimal("0.00"), f"{year}-03-01T10:00:00"),
-        ("sell", "out", Decimal("0.10"), Decimal("1926.00"), 13, Decimal("-5.00"), Decimal("0.00"), Decimal("260.00") + extra_last_profit, f"{year}-03-01T16:00:00"),
+        ("balance", "", None, None, None, Decimal("0.00"), Decimal("0.00"), Decimal("0.00"), DEPOSIT, f"{year}-01-02T00:00:00"),
+        ("buy", "in", Decimal("0.10"), Decimal("1900.00"), 10, Decimal("-5.00"), trade_fee, Decimal("0.00"), Decimal("0.00"), f"{year}-02-01T10:00:00"),
+        ("sell", "out", Decimal("0.10"), Decimal("1891.00"), 11, Decimal("-5.00"), trade_fee, Decimal("0.00"), Decimal("-90.00"), f"{year}-02-01T14:00:00"),
+        ("buy", "in", Decimal("0.10"), Decimal("1900.00"), 12, Decimal("-5.00"), trade_fee, Decimal("0.00"), Decimal("0.00"), f"{year}-03-01T10:00:00"),
+        ("sell", "out", Decimal("0.10"), Decimal("1926.00"), 13, Decimal("-5.00"), trade_fee, Decimal("0.00"), Decimal("260.00") + extra_last_profit, f"{year}-03-01T16:00:00"),
     ]
     running = Decimal("0.00")
     deals = []
     for index, spec in enumerate(specs, start=1):
-        kind, direction, volume, price, order, commission, swap, profit, stamp = spec
-        running += profit + commission + swap
+        kind, direction, volume, price, order, commission, fee, swap, profit, stamp = spec
+        running += profit + commission + fee + swap
         deals.append({
             "time": stamp,
             "deal": index,
@@ -57,6 +61,7 @@ def economics(year: int, extra_last_profit: Decimal = Decimal("0.00")) -> list[d
             "volume": volume,
             "price": price,
             "commission": commission,
+            "fee": fee,
             "swap": swap,
             "profit": profit,
             "balance": running,
@@ -79,8 +84,10 @@ def report_rows(
     nbsp: bool = False,
     label_overrides: dict[str, str] | None = None,
     profit_override: str | None = None,
+    include_fee: bool = False,
+    trade_fee: Decimal = Decimal("0.00"),
 ) -> list[list[str]]:
-    deals = economics(year, extra_last_profit)
+    deals = economics(year, extra_last_profit, trade_fee=trade_fee if include_fee else Decimal("0.00"))
     trades, residual = closed_trades_from_deals(deals)
     if residual != 0:
         raise RuntimeError("synthetic book must be flat")
@@ -136,7 +143,11 @@ def report_rows(
         ["Open Time", "Order", "Symbol", "Type", "Volume", "Price", "S / L", "T / P", "Time", "State", "Comment"],
         [_broker(deals[1]["time"]), "10", "XAUUSD", "buy", "0.10", "1900.00", "", "", _broker(deals[1]["time"]), "filled", "SYNTHETIC_FIXTURE"],
         ["Deals"],
-        ["Time", "Deal", "Symbol", "Type", "Direction", "Volume", "Price", "Order", "Commission", "Swap", "Profit", "Balance", "Comment"],
+        (
+            ["Time", "Deal", "Symbol", "Type", "Direction", "Volume", "Price", "Order", "Commission", "Fee", "Swap", "Profit", "Balance", "Comment"]
+            if include_fee else
+            ["Time", "Deal", "Symbol", "Type", "Direction", "Volume", "Price", "Order", "Commission", "Swap", "Profit", "Balance", "Comment"]
+        ),
     ]
     for deal in deals:
         profit = money(deal["profit"])
@@ -145,20 +156,28 @@ def report_rows(
         volume = "" if deal["volume"] is None else _amount(deal["volume"], **flags)
         price = "" if deal["price"] is None else _amount(deal["price"], **flags)
         order = "" if deal["order"] is None else str(deal["order"])
+        money_cells = [money(deal["commission"])]
+        if include_fee:
+            money_cells.append(money(deal["fee"]))
+        money_cells.extend([money(deal["swap"]), profit, money(deal["balance"]), deal["comment"]])
         rows.append([
             _broker(deal["time"]), str(deal["deal"]), deal["symbol"], deal["type"],
             deal["direction"], volume, price, order,
-            money(deal["commission"]), money(deal["swap"]), profit, money(deal["balance"]),
-            deal["comment"],
+            *money_cells,
         ])
-    rows.append([
+    footer = [
         "",
         money(sum((deal["commission"] for deal in deals), Decimal(0))),
+    ]
+    if include_fee:
+        footer.append(money(sum((deal["fee"] for deal in deals), Decimal(0))))
+    footer.extend([
         money(sum((deal["swap"] for deal in deals), Decimal(0))),
         money(sum((deal["profit"] for deal in deals), Decimal(0)) + (Decimal(0) if profit_override is None else Decimal(0))),
         money(deals[-1]["balance"]),
         "",
     ])
+    rows.append(footer)
     if profit_override is not None:
         # Keep the authored footer profit in sync with the overridden cell only
         # when the override is a real decimal; ambiguous text is left for the parser to refuse.
@@ -168,8 +187,37 @@ def report_rows(
             pass
         else:
             base = sum((deal["profit"] for deal in deals if deal["deal"] != 5), Decimal(0))
-            rows[-1][3] = money(base + overridden)
+            rows[-1][4 if include_fee else 3] = money(base + overridden)
     return rows
+
+
+def rows_to_realistic_html(rows: list[list[str]]) -> str:
+    """Closer to the Strategy Tester chrome MT5 writes, still labelled synthetic."""
+    body = [
+        "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">",
+        "<html>",
+        "<head>",
+        "<title>Strategy Tester Report</title>",
+        "<meta name=\"generator\" content=\"MetaQuotes Software Corp.\">",
+        "<style type=\"text/css\">",
+        "<!--",
+        "td { font: 8pt Tahoma,Arial; }",
+        "//-->",
+        "</style>",
+        "</head>",
+        "<body>",
+        "<div align=\"center\">",
+        "<table cellspacing=\"1\" cellpadding=\"3\" border=\"0\">",
+        "<tr align=\"center\"><td colspan=\"14\"><div style=\"font: 14pt Tahoma\"><b>Strategy Tester Report</b></div></td></tr>",
+        "<tr align=\"center\"><td colspan=\"14\"><b>SYNTHETIC_FIXTURE SyntheticBroker-MT5 (Build 0000)</b></td></tr>",
+    ]
+    for row in rows:
+        body.append("<tr bgcolor=\"#FFFFFF\" align=\"right\">")
+        for cell in row:
+            body.append(f"<td nowrap><b>{escape(cell)}</b></td>")
+        body.append("</tr>")
+    body.extend(["</table>", "</div>", "</body>", "</html>", ""])
+    return "\n".join(body)
 
 
 def rows_to_html(rows: list[list[str]]) -> str:

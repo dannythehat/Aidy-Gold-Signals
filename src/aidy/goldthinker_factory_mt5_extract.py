@@ -10,9 +10,11 @@ archive). Those archive hashes are recorded on the extraction receipt even
 when the year is not admissible. The bundle carries them only for an admitted
 year.
 
-Times are the broker-server clock printed by MT5, with no UTC conversion.
-2026 is always PARTIAL. Equity drawdown is admitted only when it matches the
-balance path, because the deals table has no floating-equity series.
+Times in the ledger are the broker-server clock printed by MT5. Reconciliation
+converts them to UTC only when an explicit server clock is supplied.
+2026 is always PARTIAL. Equity drawdown is taken from the report's equity
+figures. Balance drawdown is recomputed from the ledger and cross-checked
+against the report's balance-drawdown figures. The two are not required to match.
 """
 from __future__ import annotations
 
@@ -36,13 +38,17 @@ from aidy.goldthinker_factory_contract import (
     validate_mt5_bundle,
 )
 
-DEAL_HEADER = (
+DEAL_HEADER_NO_FEE = (
     "time", "deal", "symbol", "type", "direction", "volume", "price",
     "order", "commission", "swap", "profit", "balance", "comment",
 )
+DEAL_HEADER_WITH_FEE = (
+    "time", "deal", "symbol", "type", "direction", "volume", "price",
+    "order", "commission", "fee", "swap", "profit", "balance", "comment",
+)
 LEDGER_COLUMNS = (
     "time", "deal", "order", "symbol", "type", "direction", "volume",
-    "price", "commission", "swap", "profit", "balance", "comment",
+    "price", "commission", "fee", "swap", "profit", "balance", "comment",
 )
 CASHFLOW_TYPES = frozenset({"balance", "credit", "charge", "correction", "bonus"})
 TRADE_TYPES = frozenset({"buy", "sell"})
@@ -60,6 +66,9 @@ _LABELS = (
     "Equity Drawdown Absolute:",
     "Equity Drawdown Maximal:",
     "Equity Drawdown Relative:",
+    "Balance Drawdown Absolute:",
+    "Balance Drawdown Maximal:",
+    "Balance Drawdown Relative:",
     "Period:",
     "Symbol:",
     "Currency:",
@@ -338,10 +347,25 @@ def _optional_decimal(raw: str, label: str) -> Decimal | None:
     return parse_decimal(raw, label)
 
 
+def _header_for_width(width: int) -> tuple[str, ...] | None:
+    if width == len(DEAL_HEADER_WITH_FEE):
+        return DEAL_HEADER_WITH_FEE
+    if width == len(DEAL_HEADER_NO_FEE):
+        return DEAL_HEADER_NO_FEE
+    return None
+
+
+def _fee_of(deal: dict[str, Any]) -> Decimal:
+    return deal.get("fee", Decimal(0))
+
+
 def _deal_from_cells(cells: list[str]) -> dict[str, Any]:
-    if len(cells) != 13:
-        raise FactoryContractError("deal row does not have the 13 MT5 columns")
-    mapped = dict(zip(DEAL_HEADER, cells, strict=True))
+    header = _header_for_width(len(cells))
+    if header is None:
+        raise FactoryContractError("deal row does not have the 13 or 14 MT5 columns")
+    mapped = dict(zip(header, cells, strict=True))
+    if "fee" not in mapped:
+        mapped["fee"] = "0.00"
     kind = mapped["type"].strip().lower()
     direction = mapped["direction"].strip().lower()
     if kind not in CASHFLOW_TYPES | TRADE_TYPES:
@@ -377,6 +401,7 @@ def _deal_from_cells(cells: list[str]) -> dict[str, Any]:
         "volume": _optional_decimal(mapped["volume"], "volume"),
         "price": _optional_decimal(mapped["price"], "price"),
         "commission": parse_decimal(mapped["commission"], "commission"),
+        "fee": parse_decimal(mapped["fee"], "fee"),
         "swap": parse_decimal(mapped["swap"], "swap"),
         "profit": parse_decimal(mapped["profit"], "profit"),
         "balance": parse_decimal(mapped["balance"], "balance"),
@@ -405,6 +430,7 @@ def canonical_ledger_csv(deals: list[dict[str, Any]]) -> str:
             _decimal_text(deal["volume"]),
             _decimal_text(deal["price"]),
             _decimal_text(deal["commission"]),
+            _decimal_text(deal["fee"]),
             _decimal_text(deal["swap"]),
             _decimal_text(deal["profit"]),
             _decimal_text(deal["balance"]),
@@ -438,6 +464,7 @@ def parse_ledger_csv(text: str) -> list[dict[str, Any]]:
             "volume": None if raw["volume"] == "" else Decimal(raw["volume"]),
             "price": None if raw["price"] == "" else Decimal(raw["price"]),
             "commission": Decimal(raw["commission"]),
+            "fee": Decimal(raw["fee"]),
             "swap": Decimal(raw["swap"]),
             "profit": Decimal(raw["profit"]),
             "balance": Decimal(raw["balance"]),
@@ -460,6 +487,7 @@ class ClosedTrade:
     exit_price: Decimal
     volume: Decimal
     commission: Decimal
+    fee: Decimal
     swap: Decimal
     profit: Decimal
     net_pnl: Decimal
@@ -475,6 +503,7 @@ class _Lot:
     price: Decimal
     volume: Decimal
     commission_left: Decimal
+    fee_left: Decimal
     swap_left: Decimal
 
 
@@ -490,8 +519,8 @@ def closed_trades_from_deals(deals: list[dict[str, Any]]) -> tuple[list[ClosedTr
         if deal["type"] in CASHFLOW_TYPES:
             if deal["direction"] or deal["symbol"] or deal["volume"] is not None or deal["price"] is not None or deal["order"] is not None:
                 raise FactoryContractError("cashflow deal carries trade fields")
-            if deal["commission"] != 0 or deal["swap"] != 0:
-                raise FactoryContractError("cashflow deal has commission or swap")
+            if deal["commission"] != 0 or deal["swap"] != 0 or _fee_of(deal) != 0:
+                raise FactoryContractError("cashflow deal has commission, fee or swap")
             continue
         if deal["direction"] not in ("in", "out"):
             raise FactoryContractError(
@@ -504,7 +533,7 @@ def closed_trades_from_deals(deals: list[dict[str, Any]]) -> tuple[list[ClosedTr
         if deal["direction"] == "in":
             open_lots.append(_Lot(
                 deal["time"], deal["deal"], deal["type"], deal["price"], deal["volume"],
-                deal["commission"], deal["swap"],
+                deal["commission"], _fee_of(deal), deal["swap"],
             ))
             continue
         remaining = deal["volume"]
@@ -514,7 +543,7 @@ def closed_trades_from_deals(deals: list[dict[str, Any]]) -> tuple[list[ClosedTr
             raise FactoryContractError("close side does not reduce the open net position")
         if len({lot.side for lot in open_lots}) != 1:
             raise FactoryContractError("mixed open sides are ambiguous")
-        pieces: list[tuple[_Lot, Decimal, Decimal, Decimal]] = []
+        pieces: list[tuple[_Lot, Decimal, Decimal, Decimal, Decimal]] = []
         while remaining > 0:
             if not open_lots:
                 raise FactoryContractError("close volume exceeds the open position")
@@ -522,15 +551,18 @@ def closed_trades_from_deals(deals: list[dict[str, Any]]) -> tuple[list[ClosedTr
             take = lot.volume if lot.volume <= remaining else remaining
             if take == lot.volume:
                 commission = lot.commission_left
+                fee = lot.fee_left
                 swap = lot.swap_left
             else:
                 commission = (lot.commission_left * take) / lot.volume
+                fee = (lot.fee_left * take) / lot.volume
                 swap = (lot.swap_left * take) / lot.volume
             lot.commission_left -= commission
+            lot.fee_left -= fee
             lot.swap_left -= swap
             lot.volume -= take
             remaining -= take
-            pieces.append((lot, take, commission, swap))
+            pieces.append((lot, take, commission, fee, swap))
             if lot.volume == 0:
                 open_lots.pop(0)
         if len({piece[0].price for piece in pieces}) != 1 or len({piece[0].time for piece in pieces}) != 1:
@@ -538,10 +570,12 @@ def closed_trades_from_deals(deals: list[dict[str, Any]]) -> tuple[list[ClosedTr
         entry = pieces[0][0]
         volume = sum((piece[1] for piece in pieces), Decimal(0))
         entry_commission = sum((piece[2] for piece in pieces), Decimal(0))
-        entry_swap = sum((piece[3] for piece in pieces), Decimal(0))
+        entry_fee = sum((piece[3] for piece in pieces), Decimal(0))
+        entry_swap = sum((piece[4] for piece in pieces), Decimal(0))
         close_fraction = volume / deal["volume"]
         profit = deal["profit"] * close_fraction
         commission = entry_commission + deal["commission"] * close_fraction
+        fee = entry_fee + _fee_of(deal) * close_fraction
         swap = entry_swap + deal["swap"] * close_fraction
         trades.append(ClosedTrade(
             trade_id=f"mt5-{deal['deal']}",
@@ -553,9 +587,10 @@ def closed_trades_from_deals(deals: list[dict[str, Any]]) -> tuple[list[ClosedTr
             exit_price=deal["price"],
             volume=volume,
             commission=commission,
+            fee=fee,
             swap=swap,
             profit=profit,
-            net_pnl=profit + commission + swap,
+            net_pnl=profit + commission + fee + swap,
             entry_deal=entry.deal,
             exit_deal=deal["deal"],
         ))
@@ -633,31 +668,47 @@ def _claim_text(value: Decimal, places: int = 4) -> str:
 def parse_mt5_report(raw: bytes) -> dict[str, Any]:
     text = decode_mt5_report_text(raw)
     rows = _rows_from_text(text)
-    headers = [index for index, row in enumerate(rows) if tuple(cell.lower() for cell in row) == DEAL_HEADER]
+    headers = [
+        index for index, row in enumerate(rows)
+        if tuple(cell.lower() for cell in row) in (DEAL_HEADER_NO_FEE, DEAL_HEADER_WITH_FEE)
+    ]
     if len(headers) != 1:
         raise FactoryContractError("report must contain exactly one Deals header")
     header_at = headers[0]
+    header = tuple(cell.lower() for cell in rows[header_at])
+    has_fee = header == DEAL_HEADER_WITH_FEE
+    width = len(header)
     deals: list[dict[str, Any]] = []
     footer = None
     end = header_at + 1
-    while end < len(rows) and len(rows[end]) == 13:
+    while end < len(rows) and len(rows[end]) == width:
         deals.append(_deal_from_cells(rows[end]))
         end += 1
-    if end < len(rows) and len(rows[end]) == 6:
+    footer_width = 7 if has_fee else 6
+    if end < len(rows) and len(rows[end]) == footer_width:
         candidate = rows[end]
         try:
-            footer = {
-                "commission": parse_decimal(candidate[1], "footer commission"),
-                "swap": parse_decimal(candidate[2], "footer swap"),
-                "profit": parse_decimal(candidate[3], "footer profit"),
-                "balance": parse_decimal(candidate[4], "footer balance"),
-            }
+            if has_fee:
+                footer = {
+                    "commission": parse_decimal(candidate[1], "footer commission"),
+                    "fee": parse_decimal(candidate[2], "footer fee"),
+                    "swap": parse_decimal(candidate[3], "footer swap"),
+                    "profit": parse_decimal(candidate[4], "footer profit"),
+                    "balance": parse_decimal(candidate[5], "footer balance"),
+                }
+            else:
+                footer = {
+                    "commission": parse_decimal(candidate[1], "footer commission"),
+                    "swap": parse_decimal(candidate[2], "footer swap"),
+                    "profit": parse_decimal(candidate[3], "footer profit"),
+                    "balance": parse_decimal(candidate[4], "footer balance"),
+                }
         except FactoryContractError:
             footer = None
         else:
             end += 1
     for row in rows[end:]:
-        if len(row) == 13 or (row and _TIME.fullmatch(row[0])):
+        if len(row) == width or (row and _TIME.fullmatch(row[0])):
             raise FactoryContractError("deals table ended before a later deal-like row")
     if not deals:
         raise FactoryContractError("deals table is empty")
@@ -669,9 +720,9 @@ def parse_mt5_report(raw: bytes) -> dict[str, Any]:
             raise FactoryContractError("deal ids must be unique and increasing")
         seen.add(deal["deal"])
         previous = deal["deal"]
-        running += deal["profit"] + deal["commission"] + deal["swap"]
+        running += deal["profit"] + deal["commission"] + deal["fee"] + deal["swap"]
         if running != deal["balance"]:
-            raise FactoryContractError("balance column does not chain from deal profit, commission and swap")
+            raise FactoryContractError("balance column does not chain from deal profit, commission, fee and swap")
     labels = _label_map(rows, header_at)
     missing = [name for name in _LABELS if name not in labels]
     if missing:
@@ -760,7 +811,7 @@ def analyse_report(raw: bytes, *, year: int, as_of: datetime, source_kind: str) 
     if reported_trades != reported_trades.to_integral_value() or reported_trades < 0:
         issues.append("total trades is not a nonnegative integer")
     ledger_net = sum(
-        (deal["profit"] + deal["commission"] + deal["swap"]
+        (deal["profit"] + deal["commission"] + deal["fee"] + deal["swap"]
          for deal in deals if deal["type"] not in CASHFLOW_TYPES),
         Decimal(0),
     )
@@ -814,6 +865,8 @@ def analyse_report(raw: bytes, *, year: int, as_of: datetime, source_kind: str) 
             issues.append("deals footer commission disagrees")
         if footer["swap"] != sum((deal["swap"] for deal in deals), Decimal(0)):
             issues.append("deals footer swap disagrees")
+        if "fee" in footer and footer["fee"] != sum((deal["fee"] for deal in deals), Decimal(0)):
+            issues.append("deals footer fee disagrees")
         if footer["profit"] != sum((deal["profit"] for deal in deals), Decimal(0)):
             issues.append("deals footer profit disagrees")
         if footer["balance"] != deals[-1]["balance"]:
@@ -827,19 +880,13 @@ def analyse_report(raw: bytes, *, year: int, as_of: datetime, source_kind: str) 
             issues.append(str(exc))
             stats = None
     if stats is not None:
-        if not _agrees(stats["absolute"], equity_abs):
-            issues.append("equity drawdown absolute disagrees with the balance path")
-        if not _agrees(stats["maximal_money"], equity_max_money) or not _agrees(stats["maximal_pct"], equity_max_pct):
-            issues.append("equity drawdown maximal disagrees with the balance path")
-        if not _agrees(stats["relative_money"], equity_rel_money) or not _agrees(stats["relative_pct"], equity_rel_pct):
-            issues.append("equity drawdown relative disagrees with the balance path")
+        # Balance drawdown is the ledger path. Equity drawdown is whatever the
+        # report printed and is not required to equal the balance path.
         for prefix, money_key, pct_key in (
             ("Balance Drawdown Absolute:", "absolute", None),
             ("Balance Drawdown Maximal:", "maximal_money", "maximal_pct"),
             ("Balance Drawdown Relative:", "relative_money", "relative_pct"),
         ):
-            if prefix not in labels:
-                continue
             try:
                 if pct_key is None:
                     shown_money = parse_decimal(labels[prefix], prefix)
@@ -850,30 +897,24 @@ def analyse_report(raw: bytes, *, year: int, as_of: datetime, source_kind: str) 
                 issues.append(str(exc))
                 continue
             if not _agrees(stats[money_key], shown_money):
-                issues.append("balance drawdown disagrees with the balance path")
+                issues.append("balance drawdown disagrees with the ledger balance path")
             if shown_pct is not None and pct_key == "maximal_pct" and not _agrees(stats["maximal_pct"], shown_pct):
-                issues.append("balance drawdown maximal percent disagrees with the balance path")
+                issues.append("balance drawdown maximal percent disagrees with the ledger balance path")
             if shown_pct is not None and pct_key == "relative_pct" and not _agrees(stats["relative_pct"], shown_pct):
-                issues.append("balance drawdown relative percent disagrees with the balance path")
-        if (
-            "Balance Drawdown Maximal:" in labels
-            and (
-                not _agrees(stats["maximal_money"], equity_max_money)
-                or not _agrees(stats["maximal_pct"], equity_max_pct)
-            )
-        ):
-            issues.append("equity drawdown differs from balance drawdown; deals have no floating equity")
+                issues.append("balance drawdown relative percent disagrees with the ledger balance path")
+        if equity_abs < 0 or equity_max_money < 0 or equity_rel_money < 0:
+            issues.append("equity drawdown money is negative")
     claims = None
     if not issues and stats is not None:
         try:
-            percent = stats["relative_pct"].quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-            if not _agrees(percent, equity_rel_pct) or not _agrees(stats["relative_pct"], equity_rel_pct):
-                issues.append("drawdown percent does not fit the report display and 4 decimal places")
+            equity_percent = equity_rel_pct.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
+            if not _agrees(equity_percent, equity_rel_pct):
+                issues.append("equity drawdown percent does not fit 4 decimal places")
             else:
                 claims = {
                     "net_profit_usd": _claim_text(ledger_net),
                     "closed_trades": len(trades),
-                    "max_equity_drawdown_pct": format(percent, "f"),
+                    "max_equity_drawdown_pct": format(equity_percent, "f"),
                     "trades": trades,
                 }
         except FactoryContractError as exc:

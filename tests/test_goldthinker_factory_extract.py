@@ -14,18 +14,26 @@ from aidy.goldthinker_factory_contract import (
     select_best_completed_year,
     validate_mt5_bundle,
 )
+from aidy.goldthinker_factory_metrics import attach_v2, load_thresholds
 from aidy.goldthinker_factory_mt5_extract import (
     analyse_report,
     build_annual_bundle,
     closed_trades_from_deals,
     parse_decimal,
 )
-from tests.goldthinker_factory_synthetic_reports import synthetic_report_html, synthetic_report_xml
+from tests.goldthinker_factory_synthetic_reports import (
+    report_rows,
+    rows_to_realistic_html,
+    synthetic_report_html,
+    synthetic_report_xml,
+)
 
 AS_OF = datetime.fromisoformat("2026-11-02T06:00:00+00:00")
 AS_OF_TEXT = "2026-11-02T06:00:00Z"
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / "tests/fixtures/goldthinker_factory/synthetic/synthetic_GT_TEST01_2023_real_ticks.htm"
+UTF16_FIXTURE = ROOT / "tests/fixtures/goldthinker_factory/synthetic/synthetic_GT_TEST01_2023_real_ticks_utf16.htm"
+LAYOUT_FIXTURE = ROOT / "tests/fixtures/goldthinker_factory/synthetic/synthetic_GT_TEST01_2023_real_ticks_layout.htm"
 EXTRAS = {
     2021: Decimal("-140.00"),
     2022: Decimal("-140.00"),
@@ -90,7 +98,7 @@ class ExtractTests(unittest.TestCase):
             analysed["ledger_sha256"],
             hashlib.sha256(analysed["ledger_csv"].encode("utf-8")).hexdigest(),
         )
-        self.assertIn("time,deal,order,symbol,type,direction,volume,price,commission,swap,profit,balance,comment\n", analysed["ledger_csv"])
+        self.assertIn("time,deal,order,symbol,type,direction,volume,price,commission,fee,swap,profit,balance,comment\n", analysed["ledger_csv"])
 
     def test_utf16_keeps_ledger_hash_and_changes_report_hash(self):
         text = synthetic_report_html(2023, end="2024.01.01")
@@ -252,6 +260,37 @@ class ExtractTests(unittest.TestCase):
             text = path.read_text(encoding="utf-8")
             for token in ("Password", "Login=", "terminal64", "AccountNumber", "MetaApi"):
                 self.assertNotIn(token, text, path.name)
+
+    def test_fee_column_is_in_net_and_equity_need_not_equal_balance(self):
+        fee_raw = synthetic_report_html(
+            2023, end="2024.01.01", include_fee=True, trade_fee=Decimal("-1.00"),
+        ).encode()
+        with_fee = analyse_report(fee_raw, year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
+        self.assertTrue(with_fee["admitted"], with_fee.get("discrepancies") or with_fee.get("parse_error"))
+        self.assertEqual(with_fee["claims"]["net_profit_usd"], "146.00")
+        self.assertIn(",-1.00,", with_fee["ledger_csv"])
+        floating = synthetic_report_html(2023, end="2024.01.01", label_overrides={
+            "Equity Drawdown Absolute:": "250.00",
+            "Equity Drawdown Maximal:": "250.00 (2.50%)",
+            "Equity Drawdown Relative:": "2.50% (250.00)",
+        }).encode()
+        diverged = analyse_report(floating, year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
+        self.assertTrue(diverged["admitted"], diverged.get("discrepancies") or diverged.get("parse_error"))
+        self.assertEqual(diverged["claims"]["max_equity_drawdown_pct"], "2.5000")
+
+    def test_committed_utf16_and_realistic_layout_are_synthetic(self):
+        raw = UTF16_FIXTURE.read_bytes()
+        self.assertTrue(raw.startswith(b"\xff\xfe"))
+        self.assertIn("SYNTHETIC_FIXTURE", raw.decode("utf-16"))
+        utf16 = analyse_report(raw, year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
+        self.assertTrue(utf16["admitted"], utf16.get("discrepancies") or utf16.get("parse_error"))
+        layout = LAYOUT_FIXTURE.read_text(encoding="utf-8")
+        self.assertIn("SYNTHETIC_FIXTURE", layout)
+        self.assertIn("font: 8pt Tahoma", layout)
+        self.assertEqual(layout, rows_to_realistic_html(report_rows(2023, end="2024.01.01")))
+        parsed = analyse_report(layout.encode(), year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
+        self.assertTrue(parsed["admitted"], parsed.get("discrepancies") or parsed.get("parse_error"))
+        self.assertEqual(parsed["claims"]["net_profit_usd"], "150.00")
 
 
 if __name__ == "__main__":

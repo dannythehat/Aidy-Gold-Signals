@@ -15,6 +15,7 @@ from aidy.goldthinker_factory_reconcile import (
     MISSING_HOOK,
     ExplicitTradeListReplay,
     UnavailableAidyStrategyReplay,
+    reconciliation_status,
     reconcile_selected_year,
 )
 from scripts.goldthinker_factory.reconcile_selected_year import run as reconcile_run
@@ -22,6 +23,12 @@ from tests.goldthinker_factory_synthetic_reports import synthetic_report_html
 from tests.test_goldthinker_factory_extract import AS_OF_TEXT, EXTRAS, _end
 
 ROOT = Path(__file__).resolve().parents[1]
+UTC_CLOCK = {
+    "schema": "goldthinker.factory.server_clock.v1",
+    "gmt_offset": "UTC+00:00",
+    "dst_offset": None,
+    "dst_rule": "NONE",
+}
 
 
 def _world(root: Path):
@@ -63,6 +70,7 @@ def _world(root: Path):
             "entry_price": format(trade.entry_price, "f"),
             "exit_price": format(trade.exit_price, "f"),
             "commission": format(trade.commission, "f"),
+            "fee": format(trade.fee, "f"),
             "swap": format(trade.swap, "f"),
             "profit": format(trade.profit, "f"),
             "net_pnl": format(trade.net_pnl, "f"),
@@ -81,6 +89,7 @@ def _reconcile(root, selection, manifest, document, thresholds=None):
         data_manifest=manifest,
         replay=ExplicitTradeListReplay(document),
         thresholds=config,
+        server_clock=UTC_CLOCK,
     )
 
 
@@ -144,6 +153,7 @@ class ReconcileTests(unittest.TestCase):
                 selection=selection, ledger_dir=decoy_dir, data_manifest=manifest,
                 replay=ExplicitTradeListReplay(document),
                 thresholds=load_thresholds((ROOT / "config/goldthinker_factory_thresholds.json").read_text()),
+                server_clock=UTC_CLOCK,
             )
             wrong_year = copy.deepcopy(document)
             wrong_year["year"] = 2023
@@ -154,6 +164,7 @@ class ReconcileTests(unittest.TestCase):
                 selection=selection, ledger_dir=root / "ledgers", data_manifest=manifest_other,
                 replay=ExplicitTradeListReplay(document),
                 thresholds=load_thresholds((ROOT / "config/goldthinker_factory_thresholds.json").read_text()),
+                server_clock=UTC_CLOCK,
             )
         self.assertEqual(missing["status"], "INCONCLUSIVE")
         self.assertIn("LEDGER_MISSING", missing["reasons"])
@@ -172,6 +183,7 @@ class ReconcileTests(unittest.TestCase):
                 selection=selection, ledger_dir=root / "ledgers", data_manifest=manifest,
                 replay=UnavailableAidyStrategyReplay(),
                 thresholds=load_thresholds((ROOT / "config/goldthinker_factory_thresholds.json").read_text()),
+                server_clock=UTC_CLOCK,
             )
             approved = json.loads((ROOT / "config/goldthinker_factory_thresholds.json").read_text())
             approved["approval_status"] = "APPROVED"
@@ -202,6 +214,7 @@ class ReconcileTests(unittest.TestCase):
                 thresholds_path=ROOT / "config/goldthinker_factory_thresholds.json",
                 output_path=output,
                 aidy_trades_path=None,
+                server_clock_path=None,
             )
             self.assertEqual(json.loads(output.read_text(encoding="utf-8")), cli_receipt)
         self.assertEqual(unavailable["status"], "INCONCLUSIVE")
@@ -216,6 +229,69 @@ class ReconcileTests(unittest.TestCase):
         self.assertEqual(outside["status"], "MISMATCH")
         self.assertFalse(outside["research_packaging_allowed"])
         self.assertEqual(cli_receipt["status"], "INCONCLUSIVE")
+
+    def test_itemised_mismatch_stays_mismatch_when_residual_is_nonzero(self):
+        status, reasons = reconciliation_status(
+            residual=Decimal("1.00"), unmatched=False, field_difference=True, approved=False,
+        )
+        self.assertEqual(status, "MISMATCH")
+        self.assertIn("FIELD_DIFFERENCE", reasons)
+        self.assertIn("UNEXPLAINED_RESIDUAL", reasons)
+        alone, alone_reasons = reconciliation_status(
+            residual=Decimal("1.00"), unmatched=False, field_difference=False, approved=True,
+        )
+        self.assertEqual(alone, "INCONCLUSIVE")
+        self.assertEqual(alone_reasons, ["UNEXPLAINED_RESIDUAL"])
+
+    def test_missing_clock_blocks_and_dst_offset_is_applied(self):
+        from datetime import datetime, timedelta
+        from aidy.goldthinker_factory_reconcile import broker_server_to_utc
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            selection, manifest, document = _world(root)
+            blocked = reconcile_selected_year(
+                selection=selection, ledger_dir=root / "ledgers", data_manifest=manifest,
+                replay=ExplicitTradeListReplay(document),
+                thresholds=load_thresholds((ROOT / "config/goldthinker_factory_thresholds.json").read_text()),
+                server_clock=None,
+            )
+            shifted = copy.deepcopy(document)
+            for trade in shifted["trades"]:
+                for key in ("signal_time", "entry_time", "exit_time"):
+                    stamp = datetime.strptime(trade[key], "%Y-%m-%dT%H:%M:%S") - timedelta(hours=2)
+                    trade[key] = stamp.strftime("%Y-%m-%dT%H:%M:%S")
+            clock = {
+                "schema": "goldthinker.factory.server_clock.v1",
+                "gmt_offset": "UTC+02:00",
+                "dst_offset": None,
+                "dst_rule": "NONE",
+            }
+            receipt = reconcile_selected_year(
+                selection=selection, ledger_dir=root / "ledgers", data_manifest=manifest,
+                replay=ExplicitTradeListReplay(shifted),
+                thresholds=load_thresholds((ROOT / "config/goldthinker_factory_thresholds.json").read_text()),
+                server_clock=clock,
+            )
+        self.assertEqual(blocked["status"], "INCONCLUSIVE")
+        self.assertIn("BROKER_CLOCK_MISSING", blocked["reasons"])
+        self.assertNotEqual(blocked["status"], "MATCH")
+        self.assertEqual(receipt["status"], "INCONCLUSIVE")
+        self.assertEqual(receipt["reasons"], ["TOLERANCES_UNSET"])
+        self.assertEqual(receipt["matched_count"], 2)
+        summer = broker_server_to_utc(datetime(2023, 7, 15, 12, 0, 0), {
+            "schema": "goldthinker.factory.server_clock.v1",
+            "gmt_offset": "UTC+02:00",
+            "dst_offset": "UTC+03:00",
+            "dst_rule": "EU_LAST_SUNDAY_MAR_OCT",
+        })
+        winter = broker_server_to_utc(datetime(2023, 1, 15, 12, 0, 0), {
+            "schema": "goldthinker.factory.server_clock.v1",
+            "gmt_offset": "UTC+02:00",
+            "dst_offset": "UTC+03:00",
+            "dst_rule": "EU_LAST_SUNDAY_MAR_OCT",
+        })
+        self.assertEqual(summer, datetime(2023, 7, 15, 9, 0, 0))
+        self.assertEqual(winter, datetime(2023, 1, 15, 10, 0, 0))
 
 
 if __name__ == "__main__":

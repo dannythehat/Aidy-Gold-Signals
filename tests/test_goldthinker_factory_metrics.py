@@ -14,10 +14,14 @@ from aidy.goldthinker_factory_contract import (
     validate_mt5_bundle,
 )
 from aidy.goldthinker_factory_metrics import (
+    _gate,
     attach_v2,
     load_thresholds,
+    metrics_from_deals,
+    select_best_completed_year_v2,
     validate_mt5_bundle_v2,
     v1_view,
+    year_passes_metric_gates,
 )
 from aidy.goldthinker_factory_mt5_extract import build_annual_bundle
 from tests.goldthinker_factory_synthetic_reports import synthetic_report_html
@@ -116,6 +120,90 @@ class MetricsTests(unittest.TestCase):
         unset = attach_v2(bundle, ledgers, COSTS, shipped)
         self.assertTrue(all(check["status"] == "UNSET" for check in unset["metrics"]["threshold_checks"]))
         self.assertNotIn("99", THRESHOLDS.read_text(encoding="utf-8"))
+
+    def test_losing_year_share_cannot_pass_and_unset_blocks_v2_selection(self):
+        from aidy.goldthinker_factory_mt5_extract import closed_trades_from_deals
+        running = Decimal("0")
+        deals = []
+
+        def add(**kwargs):
+            nonlocal running
+            running += kwargs["profit"] + kwargs["commission"] + kwargs["fee"] + kwargs["swap"]
+            deals.append({**kwargs, "balance": running, "comment": "SYNTHETIC_FIXTURE"})
+
+        add(time="2023-01-02T00:00:00", deal=1, order=None, symbol="", type="balance",
+            direction="", volume=None, price=None, commission=Decimal("0"), fee=Decimal("0"),
+            swap=Decimal("0"), profit=Decimal("10000"))
+        add(time="2023-02-01T10:00:00", deal=2, order=10, symbol="XAUUSD", type="buy",
+            direction="in", volume=Decimal("0.10"), price=Decimal("1900"), commission=Decimal("0"),
+            fee=Decimal("0"), swap=Decimal("0"), profit=Decimal("0"))
+        add(time="2023-02-01T14:00:00", deal=3, order=11, symbol="XAUUSD", type="sell",
+            direction="out", volume=Decimal("0.10"), price=Decimal("1890"), commission=Decimal("0"),
+            fee=Decimal("0"), swap=Decimal("0"), profit=Decimal("-100"))
+        add(time="2023-03-01T10:00:00", deal=4, order=12, symbol="XAUUSD", type="buy",
+            direction="in", volume=Decimal("0.10"), price=Decimal("1900"), commission=Decimal("0"),
+            fee=Decimal("0"), swap=Decimal("0"), profit=Decimal("0"))
+        add(time="2023-03-01T16:00:00", deal=5, order=13, symbol="XAUUSD", type="sell",
+            direction="out", volume=Decimal("0.10"), price=Decimal("1905"), commission=Decimal("0"),
+            fee=Decimal("0"), swap=Decimal("0"), profit=Decimal("50"))
+        detail = metrics_from_deals(deals, COSTS)
+        self.assertEqual(detail["year_net"], Decimal("-50"))
+        self.assertFalse(detail["worst_trade_share_defined"])
+        self.assertIsNone(detail["worst_trade_share_of_net"])
+        self.assertEqual(_gate(None, "-1", "APPROVED", signed=True), "FAIL")
+        self.assertNotEqual(_gate(None, "-100", "UNSET", signed=True), "PASS")
+        row = {
+            "profit_factor": "0.5000",
+            "worst_trade_share_defined": False,
+            "worst_trade_share_of_net": None,
+            "average_profit_vs_round_trip_cost_usd": "-25.0000",
+            "doubled_cost_stress_net_usd": "-56.0000",
+        }
+        self.assertFalse(year_passes_metric_gates(row, {
+            "profit_factor_overall_min": "0",
+            "worst_trade_share_of_net_min": "-100",
+            "average_profit_vs_round_trip_cost_min_usd": "-1000",
+            "doubled_cost_stress_net_min_usd": "-1000",
+        }))
+        trades, _residual = closed_trades_from_deals(deals)
+        self.assertEqual(trades[0].net_pnl, Decimal("-100"))
+        config = load_thresholds(THRESHOLDS.read_text(encoding="utf-8"))
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle, ledgers = _bundle_and_ledgers(Path(tmp))
+            payload = attach_v2(bundle, ledgers, COSTS, config)
+            selected = select_best_completed_year_v2(payload, ledgers, config)
+        self.assertEqual(selected["selection_status"], "BLOCKED_THRESHOLDS_UNSET")
+        self.assertIsNone(selected["aidy_year"])
+        self.assertNotEqual(selected["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        year = next(item for item in payload["metrics"]["years"] if item["year"] == 2023)
+        self.assertEqual(year["equity_drawdown_relative_pct"], "1.0500")
+        self.assertEqual(year["balance_drawdown_relative_pct"], "1.0500")
+        approved = json.loads(THRESHOLDS.read_text(encoding="utf-8"))
+        approved["approval_status"] = "APPROVED"
+        approved["approved_by"] = "Danny"
+        approved["tolerances"] = {key: "0" for key in approved["tolerances"]}
+        approved["metric_thresholds"] = {
+            "profit_factor_overall_min": "1",
+            "worst_trade_share_of_net_min": "-10",
+            "average_profit_vs_round_trip_cost_min_usd": "0",
+            "doubled_cost_stress_net_min_usd": "0",
+        }
+        gated = attach_v2(bundle, ledgers, COSTS, approved)
+        chosen = select_best_completed_year_v2(gated, ledgers, approved)
+        self.assertEqual(chosen["selection_status"], "RESEARCH_FIXTURE_ONLY")
+        self.assertEqual(chosen["aidy_year"], 2024)
+        real = copy.deepcopy(gated)
+        real["source_kind"] = "REAL_MT5_TESTER"
+        evidence = select_best_completed_year_v2(real, ledgers, approved)
+        self.assertEqual(evidence["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        self.assertEqual(evidence["aidy_year"], 2024)
+        approved["metric_thresholds"]["worst_trade_share_of_net_min"] = "0"
+        blocked_bundle = attach_v2(bundle, ledgers, COSTS, approved)
+        blocked_bundle["source_kind"] = "REAL_MT5_TESTER"
+        blocked = select_best_completed_year_v2(blocked_bundle, ledgers, approved)
+        self.assertEqual(blocked["selection_status"], "BLOCKED_METRIC_CHECKS")
+        self.assertIsNone(blocked["aidy_year"])
+        self.assertNotEqual(blocked["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
 
 
 if __name__ == "__main__":

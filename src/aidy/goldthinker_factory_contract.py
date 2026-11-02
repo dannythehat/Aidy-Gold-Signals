@@ -161,9 +161,24 @@ def select_best_completed_year(payload: Any) -> dict:
     top = max(
         candidates, key=lambda r: (Decimal(r["net_profit_usd"]), -r["year"])
     ) if candidates else None
-    # A profitable year is NOT sufficient for qualification. Six-year policy is separate.
+    # A profitable year is NOT sufficient for qualification. v1 never emits
+    # SELECTED_PENDING_INDEPENDENT_EVIDENCE: that status requires v2 metric
+    # gates, and UNSET gates must block it. See select_best_completed_year_v2.
     profitable = top is not None and Decimal(top["net_profit_usd"]) > 0
     selected = top if profitable else None
+    fixture = root["source_kind"] == "SYNTHETIC_FIXTURE"
+    if fixture:
+        status = "RESEARCH_FIXTURE_ONLY"
+        handoff = selected
+    elif selected is not None:
+        status = "BLOCKED_V2_METRIC_GATES_REQUIRED"
+        handoff = None
+    elif not completed:
+        status = "BLOCKED_INCOMPLETE_YEARS"
+        handoff = None
+    else:
+        status = "NO_PROFITABLE_COMPLETED_YEAR"
+        handoff = None
     outcome = {
         "schema": SELECTION_SCHEMA,
         "system_id": root["system_id"],
@@ -171,15 +186,10 @@ def select_best_completed_year(payload: Any) -> dict:
         "source_kind": root["source_kind"],
         "mt5_bundle_sha256": digest(root),
         "selection_policy": "highest_positive_net_usd_2021_2025_completed_only_v1",
-        "selection_status": (
-            "RESEARCH_FIXTURE_ONLY" if root["source_kind"] == "SYNTHETIC_FIXTURE"
-            else "SELECTED_PENDING_INDEPENDENT_EVIDENCE" if selected is not None
-            else "BLOCKED_INCOMPLETE_YEARS" if not completed
-            else "NO_PROFITABLE_COMPLETED_YEAR"
-        ),
-        "aidy_year": selected["year"] if selected else None,
-        "aidy_expected_net_usd": selected["net_profit_usd"] if selected else None,
-        "aidy_expected_ledger_sha256": selected["ledger_sha256"] if selected else None,
+        "selection_status": status,
+        "aidy_year": handoff["year"] if handoff else None,
+        "aidy_expected_net_usd": handoff["net_profit_usd"] if handoff else None,
+        "aidy_expected_ledger_sha256": handoff["ledger_sha256"] if handoff else None,
         "historical_edge_verified": False,
         "real_mt5_evidence_authenticated": False,
         "paper_authorised": False,

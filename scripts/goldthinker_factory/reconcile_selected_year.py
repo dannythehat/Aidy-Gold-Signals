@@ -30,10 +30,12 @@ def run(
     thresholds_path: Path,
     output_path: Path,
     aidy_trades_path: Path | None,
+    server_clock_path: Path | None,
 ) -> dict:
     selection = json.loads(selection_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     thresholds = load_thresholds(thresholds_path.read_text(encoding="utf-8"))
+    clock = None if server_clock_path is None else json.loads(server_clock_path.read_text(encoding="utf-8"))
     if aidy_trades_path is None:
         replay = UnavailableAidyStrategyReplay()
     else:
@@ -44,6 +46,7 @@ def run(
         data_manifest=manifest,
         replay=replay,
         thresholds=thresholds,
+        server_clock=clock,
     )
     atomic_write(output_path, canonical_json(receipt) + "\n")
     return receipt
@@ -57,6 +60,8 @@ def main() -> int:
     parser.add_argument("--thresholds", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--aidy-trades", type=Path, default=None)
+    parser.add_argument("--server-clock", type=Path, default=None,
+                        help="JSON gmt_offset and dst_rule; required before a comparison")
     args = parser.parse_args()
     try:
         receipt = run(
@@ -66,6 +71,7 @@ def main() -> int:
             thresholds_path=args.thresholds,
             output_path=args.output,
             aidy_trades_path=args.aidy_trades,
+            server_clock_path=args.server_clock,
         )
     except (OSError, FactoryContractError, json.JSONDecodeError) as exc:
         print(f"BLOCKED: {exc}", file=sys.stderr)

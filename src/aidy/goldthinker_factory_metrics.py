@@ -1,4 +1,14 @@
-"""Ledger-computed v2 metrics. The deal ledger is the only source of truth.
+"""Ledger-computed v2 metrics. The deal ledger is the source of truth for
+balance, profit and costs. Equity drawdown is the report figure, not the
+balance path.
+
+Worst-trade share is worst closed-trade net divided by yearly net, and only
+when that net is strictly positive. The ratio is negative when the worst
+trade lost money. A losing or zero-net year leaves the share undefined, so
+an approved worst-share gate FAILs and can never PASS. UNSET stays UNSET,
+which is not a pass. Dividing two negatives (net -50, worst trade -100)
+would have produced +2 and could have cleared a minimum; that definition
+is rejected.
 
 v1 validation is unchanged. A v2 bundle adds a broker cost profile and a
 metrics object. Validation recomputes every metric from the canonical ledger
@@ -26,6 +36,7 @@ from aidy.goldthinker_factory_contract import (
     COMPLETE_YEARS,
     ROOT_KEYS,
     SCHEMA,
+    SELECTION_SCHEMA,
     FactoryContractError,
     digest,
     validate_mt5_bundle,
@@ -65,6 +76,7 @@ YEAR_METRIC_KEYS = frozenset({
     "worst_trade_share_of_net", "worst_trade_share_defined",
     "average_profit_per_trade_usd", "average_round_trip_quoted_cost_usd",
     "average_profit_vs_round_trip_cost_usd", "doubled_cost_stress_net_usd",
+    "equity_drawdown_relative_pct", "balance_drawdown_relative_pct",
     "closed_trades",
 })
 METRIC_KEYS = frozenset({
@@ -179,12 +191,26 @@ def _empty_year(year: int) -> dict[str, Any]:
         "average_round_trip_quoted_cost_usd": None,
         "average_profit_vs_round_trip_cost_usd": None,
         "doubled_cost_stress_net_usd": None,
+        "equity_drawdown_relative_pct": None,
+        "balance_drawdown_relative_pct": None,
         "closed_trades": None,
     }
 
 
-def _quoted_cost(trade_volume: Decimal, spread: Decimal, contract: Decimal, commission: Decimal) -> Decimal:
-    return (spread * contract + commission) * trade_volume
+def _quoted_cost(
+    trade_volume: Decimal, spread: Decimal, contract: Decimal,
+    commission: Decimal, fee_charge: Decimal,
+) -> Decimal:
+    """Quoted spread and round-turn commission, plus realized fee charges.
+
+    A negative deal fee is a charge and is added as a cost. A zero or positive
+    fee (a rebate) is not added again. Net P&L already includes the signed fee.
+    """
+    return (spread * contract + commission) * trade_volume + fee_charge
+
+
+def _fee_charge(fee: Decimal) -> Decimal:
+    return -fee if fee < 0 else Decimal(0)
 
 
 def metrics_from_deals(
@@ -219,9 +245,11 @@ def metrics_from_deals(
             "losses": losses,
         }
     worst = min(trades, key=lambda trade: (trade.net_pnl, trade.exit_time, trade.trade_id))
-    share_defined = year_net != 0
+    # Positive net only. A non-positive year must not produce a positive ratio.
+    share_defined = year_net > 0
     quoted = [
-        _quoted_cost(trade.volume, spread, contract, commission) for trade in trades
+        _quoted_cost(trade.volume, spread, contract, commission, _fee_charge(trade.fee))
+        for trade in trades
     ]
     quoted_sum = sum(quoted, Decimal(0))
     average_profit = year_net / Decimal(count)
@@ -318,6 +346,8 @@ def compute_v2_metrics(
             "average_round_trip_quoted_cost_usd": detail["average_round_trip_quoted_cost_usd"],
             "average_profit_vs_round_trip_cost_usd": detail["average_profit_vs_round_trip_cost_usd"],
             "doubled_cost_stress_net_usd": detail["doubled_cost_stress_net_usd"],
+            "equity_drawdown_relative_pct": detail["equity_drawdown_relative_pct"],
+            "balance_drawdown_relative_pct": detail["balance_drawdown_relative_pct"],
             "closed_trades": detail["closed_trades"],
         })
     approval = thresholds["approval_status"]
@@ -367,9 +397,12 @@ def _require_ledger(year: int, row: Mapping[str, Any], csv_text: str, costs: Map
         raise FactoryContractError(f"{year} net profit does not match the ledger")
     deposit = deals[0]["balance"]
     stats = _drawdown([deal["balance"] for deal in deals], deposit)
-    percent = format(stats["relative_pct"].quantize(FOUR, rounding=ROUND_HALF_UP), "f")
-    if percent != row["max_equity_drawdown_pct"]:
-        raise FactoryContractError(f"{year} drawdown percent does not match the ledger balance path")
+    # Equity percent is the report figure carried on the v1 row. Balance
+    # percent is recomputed here and is allowed to differ.
+    detail["equity_drawdown_relative_pct"] = row["max_equity_drawdown_pct"]
+    detail["balance_drawdown_relative_pct"] = format(
+        stats["relative_pct"].quantize(FOUR, rounding=ROUND_HALF_UP), "f"
+    )
     return detail
 
 
@@ -404,6 +437,99 @@ def validate_mt5_bundle_v2(
         if thresholds["approval_status"] != "APPROVED" and check["status"] != "UNSET":
             raise FactoryContractError("UNSET thresholds cannot produce PASS or FAIL")
     return payload
+
+
+def year_passes_metric_gates(row: Mapping[str, Any], limits: Mapping[str, Any]) -> bool:
+    """True only when this year clears every approved v2 gate.
+
+    A missing worst-trade share (losing or zero-net year, or no trades) cannot
+    pass. Comparison is actual >= limit.
+    """
+    if row.get("profit_factor") is None:
+        return False
+    if row.get("worst_trade_share_defined") is not True or row.get("worst_trade_share_of_net") is None:
+        return False
+    if row.get("average_profit_vs_round_trip_cost_usd") is None or row.get("doubled_cost_stress_net_usd") is None:
+        return False
+    checks = (
+        ("profit_factor", "profit_factor_overall_min", False),
+        ("worst_trade_share_of_net", "worst_trade_share_of_net_min", True),
+        ("average_profit_vs_round_trip_cost_usd", "average_profit_vs_round_trip_cost_min_usd", True),
+        ("doubled_cost_stress_net_usd", "doubled_cost_stress_net_min_usd", True),
+    )
+    for field, gate, signed in checks:
+        if _gate(row[field], limits[gate], "APPROVED", signed=signed) != "PASS":
+            return False
+    return True
+
+
+def select_best_completed_year_v2(
+    payload: Mapping[str, Any],
+    ledgers: Mapping[int, str],
+    thresholds: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Select a completed year only when every v2 gate PASS.
+
+    Any UNSET check blocks selection with BLOCKED_THRESHOLDS_UNSET and does
+    not return SELECTED_PENDING_INDEPENDENT_EVIDENCE. A failing check, including
+    a losing year's undefined worst-trade share, blocks with
+    BLOCKED_METRIC_CHECKS. Among passing profitable years, the highest net wins.
+    """
+    root = validate_mt5_bundle_v2(payload, ledgers, thresholds)
+    view = v1_view(root)
+    checks = root["metrics"]["threshold_checks"]
+    limits = normalise_thresholds(dict(thresholds))["metric_thresholds"]
+    years = {row["year"]: row for row in view["results"]}
+    metric_years = {row["year"]: row for row in root["metrics"]["years"]}
+    completed = all(
+        years[year]["coverage"] == "VERIFIED" and years[year]["test_status"] == "COMPLETED"
+        for year in COMPLETE_YEARS
+    )
+    if any(check["status"] == "UNSET" for check in checks):
+        status = "BLOCKED_THRESHOLDS_UNSET"
+        handoff = None
+    elif not completed:
+        status = "BLOCKED_INCOMPLETE_YEARS"
+        handoff = None
+    elif any(check["status"] != "PASS" for check in checks):
+        status = "BLOCKED_METRIC_CHECKS"
+        handoff = None
+    else:
+        passing = []
+        for year in COMPLETE_YEARS:
+            row = years[year]
+            if Decimal(row["net_profit_usd"]) <= 0:
+                continue
+            if not year_passes_metric_gates(metric_years[year], limits):
+                continue
+            passing.append(row)
+        handoff = max(passing, key=lambda row: (Decimal(row["net_profit_usd"]), -row["year"])) if passing else None
+        if handoff is None:
+            status = "BLOCKED_METRIC_CHECKS"
+        elif root["source_kind"] == "SYNTHETIC_FIXTURE":
+            status = "RESEARCH_FIXTURE_ONLY"
+        else:
+            status = "SELECTED_PENDING_INDEPENDENT_EVIDENCE"
+    outcome = {
+        "schema": SELECTION_SCHEMA,
+        "system_id": root["system_id"],
+        "family_id": root["family_id"],
+        "source_kind": root["source_kind"],
+        "mt5_bundle_sha256": digest(view),
+        "selection_policy": "highest_positive_net_among_v2_gate_passing_years_v2",
+        "selection_status": status,
+        "aidy_year": handoff["year"] if handoff else None,
+        "aidy_expected_net_usd": handoff["net_profit_usd"] if handoff else None,
+        "aidy_expected_ledger_sha256": handoff["ledger_sha256"] if handoff else None,
+        "historical_edge_verified": False,
+        "real_mt5_evidence_authenticated": False,
+        "paper_authorised": False,
+        "cent_authorised": False,
+        "live_authorised": False,
+        "public_performance_publication_authorised": False,
+    }
+    outcome["selection_sha256"] = digest(outcome)
+    return outcome
 
 
 def attach_v2(

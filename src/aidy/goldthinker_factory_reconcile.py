@@ -15,7 +15,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Mapping, Protocol
@@ -72,6 +72,7 @@ class AidyTrade:
     entry_price: Decimal
     exit_price: Decimal
     commission: Decimal
+    fee: Decimal
     swap: Decimal
     profit: Decimal
     net_pnl: Decimal
@@ -157,7 +158,7 @@ def _aidy_trades(document: Mapping[str, Any], year: int) -> list[AidyTrade]:
     for raw in document["trades"]:
         if not isinstance(raw, dict) or set(raw) != {
             "trade_id", "signal_time", "entry_time", "exit_time", "side",
-            "volume", "entry_price", "exit_price", "commission", "swap",
+            "volume", "entry_price", "exit_price", "commission", "fee", "swap",
             "profit", "net_pnl",
         }:
             raise FactoryContractError("AIDY trade: missing or unexpected keys")
@@ -176,16 +177,17 @@ def _aidy_trades(document: Mapping[str, Any], year: int) -> list[AidyTrade]:
             raise FactoryContractError("AIDY trade exits before it enters")
         profit = _decimal(raw["profit"], "profit")
         commission = _decimal(raw["commission"], "commission")
+        fee = _decimal(raw["fee"], "fee")
         swap = _decimal(raw["swap"], "swap")
         net = _decimal(raw["net_pnl"], "net_pnl")
-        if profit + commission + swap != net:
-            raise FactoryContractError("AIDY trade net is not profit plus commission plus swap")
+        if profit + commission + fee + swap != net:
+            raise FactoryContractError("AIDY trade net is not profit plus commission, fee and swap")
         trades.append(AidyTrade(
             trade_id, signal, entry, exit_at, raw["side"],
             _decimal(raw["volume"], "volume", positive=True),
             _decimal(raw["entry_price"], "entry_price", positive=True),
             _decimal(raw["exit_price"], "exit_price", positive=True),
-            commission, swap, profit, net,
+            commission, fee, swap, profit, net,
         ))
     return trades
 
@@ -283,6 +285,91 @@ def _base(
     }
 
 
+_OFFSET = re.compile(r"^UTC([+-])(\d{2}):(\d{2})$")
+
+
+def qualify_server_clock(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Explicit broker GMT offset. Missing or unknown DST rules fail closed."""
+    if not isinstance(payload, Mapping) or set(payload) != {
+        "schema", "gmt_offset", "dst_offset", "dst_rule",
+    }:
+        raise FactoryContractError("BROKER_CLOCK_MISSING")
+    if payload["schema"] != "goldthinker.factory.server_clock.v1":
+        raise FactoryContractError("BROKER_CLOCK_MISSING")
+    if payload["dst_rule"] not in ("NONE", "EU_LAST_SUNDAY_MAR_OCT"):
+        raise FactoryContractError("BROKER_CLOCK_DST_UNKNOWN")
+    _offset(payload["gmt_offset"], "gmt_offset")
+    if payload["dst_rule"] == "NONE":
+        if payload["dst_offset"] is not None:
+            raise FactoryContractError("BROKER_CLOCK_DST_UNKNOWN")
+    else:
+        _offset(payload["dst_offset"], "dst_offset")
+    return dict(payload)
+
+
+def _offset(value: Any, label: str) -> timedelta:
+    if not isinstance(value, str):
+        raise FactoryContractError(f"{label} is not an explicit UTC offset")
+    match = _OFFSET.fullmatch(value)
+    if match is None:
+        raise FactoryContractError(f"{label} must look like UTC+02:00")
+    hours, minutes = int(match.group(2)), int(match.group(3))
+    if hours > 14 or minutes >= 60 or (hours == 14 and minutes):
+        raise FactoryContractError(f"{label} is outside a real GMT offset")
+    delta = timedelta(hours=hours, minutes=minutes)
+    return -delta if match.group(1) == "-" else delta
+
+
+def _last_sunday(year: int, month: int) -> datetime:
+    if month == 12:
+        last = datetime(year, 12, 31)
+    else:
+        last = datetime(year, month + 1, 1) - timedelta(days=1)
+    return last - timedelta(days=(last.weekday() + 1) % 7)
+
+
+def _eu_dst(at_utc: datetime) -> bool:
+    start = _last_sunday(at_utc.year, 3).replace(hour=1)
+    end = _last_sunday(at_utc.year, 10).replace(hour=1)
+    return start <= at_utc.replace(tzinfo=None) < end
+
+
+def broker_server_to_utc(local: datetime, clock: Mapping[str, Any]) -> datetime:
+    """Convert one naive broker-server timestamp to naive UTC. Ambiguity fails."""
+    if clock["dst_rule"] == "NONE":
+        return local - _offset(clock["gmt_offset"], "gmt_offset")
+    standard = _offset(clock["gmt_offset"], "gmt_offset")
+    daylight = _offset(clock["dst_offset"], "dst_offset")
+    found = []
+    for delta, during in ((daylight, True), (standard, False)):
+        candidate = local - delta
+        if _eu_dst(candidate) == during:
+            found.append(candidate)
+    if len(found) != 1:
+        raise FactoryContractError("BROKER_CLOCK_AMBIGUOUS")
+    return found[0]
+
+
+def reconciliation_status(
+    *, residual: Decimal, unmatched: bool, field_difference: bool, approved: bool,
+) -> tuple[str, list[str]]:
+    """Itemised mismatches are MISMATCH even when the residual is also nonzero."""
+    reasons: list[str] = []
+    if unmatched or field_difference:
+        if unmatched:
+            reasons.append("UNMATCHED_TRADE")
+        if field_difference:
+            reasons.append("FIELD_DIFFERENCE")
+        if residual != 0:
+            reasons.append("UNEXPLAINED_RESIDUAL")
+        return "MISMATCH", reasons
+    if residual != 0:
+        return "INCONCLUSIVE", ["UNEXPLAINED_RESIDUAL"]
+    if not approved:
+        return "INCONCLUSIVE", ["TOLERANCES_UNSET"]
+    return "MATCH", ["WITHIN_APPROVED_TOLERANCES"]
+
+
 def reconcile_selected_year(
     *,
     selection: Mapping[str, Any],
@@ -290,9 +377,23 @@ def reconcile_selected_year(
     data_manifest: Mapping[str, Any],
     replay: AidySelectedYearReplay,
     thresholds: Mapping[str, Any],
+    server_clock: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compare one selected year. Never lists or opens a different year's ledger."""
     config = normalise_thresholds(dict(thresholds))
+    try:
+        clock = qualify_server_clock(server_clock)
+    except FactoryContractError as exc:
+        adapter = getattr(replay, "adapter_id", "custom")
+        replay_kind = {
+            "unavailable_aidy_strategy_replay": "NOT_AVAILABLE",
+            "explicit_trade_list": "EXPLICIT_INTERFACE",
+        }.get(adapter, "CUSTOM")
+        return _receipt(_base(
+            status="INCONCLUSIVE", reasons=[str(exc)], selection=selection if isinstance(selection, Mapping) else None,
+            adapter=adapter, notes="broker server clock is required before reconciliation",
+            thresholds=config, manifest_sha=None, ledger_sha=None, replay_kind=replay_kind,
+        ))
     adapter = getattr(replay, "adapter_id", "custom")
     replay_kind = {
         "unavailable_aidy_strategy_replay": "NOT_AVAILABLE",
@@ -397,6 +498,7 @@ def reconcile_selected_year(
         selection=selection, config=config, adapter=produced.adapter, notes=produced.notes,
         manifest_sha=manifest_sha, ledger_sha=ledger_sha, replay_kind=replay_kind,
         mt5_trades=mt5_trades, aidy_trades=list(produced.trades), mt5_net=mt5_net,
+        server_clock=clock,
     )
 
 
@@ -418,9 +520,25 @@ def _compare(
     mt5_trades: list[Any],
     aidy_trades: list[AidyTrade],
     mt5_net: Decimal,
+    server_clock: Mapping[str, Any],
 ) -> dict[str, Any]:
     approved = config["approval_status"] == "APPROVED"
     entry_limit = _limit(config, "entry_time_seconds")
+    try:
+        mt5_utc = {
+            trade.trade_id: (
+                broker_server_to_utc(_stamp(trade.entry_time, "mt5 entry"), server_clock),
+                broker_server_to_utc(_stamp(trade.exit_time, "mt5 exit"), server_clock),
+            )
+            for trade in mt5_trades
+        }
+    except FactoryContractError as exc:
+        return _receipt(_base(
+            status="INCONCLUSIVE", reasons=[str(exc)], selection=selection,
+            adapter=adapter, notes="broker clock could not convert the selected ledger",
+            thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
+            replay_kind=replay_kind,
+        ))
     unused = set(range(len(mt5_trades)))
     pairs: list[tuple[Any, AidyTrade]] = []
     unmatched_aidy: list[AidyTrade] = []
@@ -431,8 +549,9 @@ def _compare(
             mt5 = mt5_trades[index]
             if mt5.side != aidy.side or mt5.volume != aidy.volume:
                 continue
-            entry_delta = abs(int((aidy.entry_time - _stamp(mt5.entry_time, "mt5 entry")).total_seconds()))
-            exit_delta = abs(int((aidy.exit_time - _stamp(mt5.exit_time, "mt5 exit")).total_seconds()))
+            mt5_entry, mt5_exit = mt5_utc[mt5.trade_id]
+            entry_delta = abs(int((aidy.entry_time - mt5_entry).total_seconds()))
+            exit_delta = abs(int((aidy.exit_time - mt5_exit).total_seconds()))
             if approved:
                 if entry_delta <= int(entry_limit or 0):
                     candidates.append((entry_delta, mt5.trade_id, index))
@@ -458,8 +577,7 @@ def _compare(
     explained = Decimal(0)
     field_difference = False
     for mt5, aidy in pairs:
-        mt5_entry = _stamp(mt5.entry_time, "mt5 entry")
-        mt5_exit = _stamp(mt5.exit_time, "mt5 exit")
+        mt5_entry, mt5_exit = mt5_utc[mt5.trade_id]
         item = {
             "mt5_trade_id": mt5.trade_id,
             "aidy_trade_id": aidy.trade_id,
@@ -468,7 +586,9 @@ def _compare(
             "exit_time_seconds": _seconds(aidy.exit_time, mt5_exit),
             "entry_price": _text(aidy.entry_price - mt5.entry_price),
             "exit_price": _text(aidy.exit_price - mt5.exit_price),
-            "cost_usd": _text((aidy.commission + aidy.swap) - (mt5.commission + mt5.swap)),
+            "cost_usd": _text(
+                (aidy.commission + aidy.fee + aidy.swap) - (mt5.commission + mt5.fee + mt5.swap)
+            ),
             "cash_pnl_usd": _text(aidy.net_pnl - mt5.net_pnl),
         }
         differences.append(item)
@@ -498,22 +618,12 @@ def _compare(
         explained -= trade.net_pnl
     aidy_net = sum((trade.net_pnl for trade in aidy_trades), Decimal(0))
     residual = (mt5_net - aidy_net) - explained
-    reasons = []
-    if residual != 0:
-        status = "INCONCLUSIVE"
-        reasons.append("UNEXPLAINED_RESIDUAL")
-    elif unmatched_mt5 or unmatched_aidy or field_difference:
-        status = "MISMATCH"
-        if unmatched_mt5 or unmatched_aidy:
-            reasons.append("UNMATCHED_TRADE")
-        if field_difference:
-            reasons.append("FIELD_DIFFERENCE")
-    elif not approved:
-        status = "INCONCLUSIVE"
-        reasons.append("TOLERANCES_UNSET")
-    else:
-        status = "MATCH"
-        reasons.append("WITHIN_APPROVED_TOLERANCES")
+    status, reasons = reconciliation_status(
+        residual=residual,
+        unmatched=bool(unmatched_mt5 or unmatched_aidy),
+        field_difference=field_difference,
+        approved=approved,
+    )
     body = _base(
         status=status, reasons=reasons, selection=selection, adapter=adapter, notes=notes,
         thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha, replay_kind=replay_kind,

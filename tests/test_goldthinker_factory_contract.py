@@ -87,7 +87,9 @@ class FactoryContractTests(unittest.TestCase):
         p = bundle()
         p["source_kind"] = "REAL_MT5_TESTER"
         result = select_best_completed_year(p)
-        self.assertEqual(result["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        self.assertEqual(result["selection_status"], "BLOCKED_V2_METRIC_GATES_REQUIRED")
+        self.assertIsNone(result["aidy_year"])
+        self.assertNotEqual(result["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
         self.assertFalse(result["real_mt5_evidence_authenticated"])
 
     def test_missing_2021_to_2026_row(self):
