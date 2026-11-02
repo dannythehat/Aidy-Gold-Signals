@@ -171,8 +171,6 @@ def _aidy_trades(document: Mapping[str, Any], year: int) -> list[AidyTrade]:
         signal = _stamp(raw["signal_time"], "signal_time")
         entry = _stamp(raw["entry_time"], "entry_time")
         exit_at = _stamp(raw["exit_time"], "exit_time")
-        if signal.year != year or entry.year != year or exit_at.year != year:
-            raise FactoryContractError("AIDY trade timestamp is outside the selected year")
         if exit_at < entry:
             raise FactoryContractError("AIDY trade exits before it enters")
         profit = _decimal(raw["profit"], "profit")
@@ -350,6 +348,19 @@ def broker_server_to_utc(local: datetime, clock: Mapping[str, Any]) -> datetime:
     return found[0]
 
 
+def utc_to_broker(at_utc: datetime, clock: Mapping[str, Any]) -> datetime:
+    """Inverse of broker_server_to_utc. The selected year is this clock."""
+    if clock["dst_rule"] == "NONE":
+        return at_utc + _offset(clock["gmt_offset"], "gmt_offset")
+    if _eu_dst(at_utc):
+        return at_utc + _offset(clock["dst_offset"], "dst_offset")
+    return at_utc + _offset(clock["gmt_offset"], "gmt_offset")
+
+
+def aidy_time_in_broker_year(stamp_utc: datetime, year: int, clock: Mapping[str, Any]) -> bool:
+    return utc_to_broker(stamp_utc, clock).year == year
+
+
 def reconciliation_status(
     *, residual: Decimal, unmatched: bool, field_difference: bool, approved: bool,
 ) -> tuple[str, list[str]]:
@@ -491,6 +502,21 @@ def reconcile_selected_year(
         return _receipt(_base(
             status="INCONCLUSIVE", reasons=["AIDY_REPLAY_WRONG_YEAR"], selection=selection,
             adapter=produced.adapter, notes="adapter returned a year other than the selection",
+            thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
+            replay_kind=replay_kind,
+        ))
+    outside = [
+        trade.trade_id for trade in produced.trades
+        if any(
+            not aidy_time_in_broker_year(stamp, year, clock)
+            for stamp in (trade.signal_time, trade.entry_time, trade.exit_time)
+        )
+    ]
+    if outside:
+        return _receipt(_base(
+            status="INCONCLUSIVE", reasons=["AIDY_TRADE_OUTSIDE_BROKER_YEAR"], selection=selection,
+            adapter=produced.adapter,
+            notes="AIDY timestamps are UTC; the selected year is the broker-server calendar year",
             thresholds=config, manifest_sha=manifest_sha, ledger_sha=ledger_sha,
             replay_kind=replay_kind,
         ))

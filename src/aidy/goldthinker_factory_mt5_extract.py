@@ -13,8 +13,14 @@ year.
 Times in the ledger are the broker-server clock printed by MT5. Reconciliation
 converts them to UTC only when an explicit server clock is supplied.
 2026 is always PARTIAL. Equity drawdown is taken from the report's equity
-figures. Balance drawdown is recomputed from the ledger and cross-checked
-against the report's balance-drawdown figures. The two are not required to match.
+figures and must be at least the ledger balance drawdown, within half a unit
+of the report's displayed percent. Balance drawdown is recomputed from the
+ledger and cross-checked against the report's balance-drawdown lines.
+A REAL_MT5_TESTER label is not self-authenticating. Selection accepts it
+only when the extractor receipt binds the bundle digest, source_kind and
+the archived report and ledger hashes, and those files contain no
+SYNTHETIC_FIXTURE marker. That binding is still not proof a terminal wrote
+the file.
 """
 from __future__ import annotations
 
@@ -27,7 +33,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from hashlib import sha256
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 from xml.etree import ElementTree
 
 from aidy.goldthinker_factory_contract import (
@@ -35,6 +41,7 @@ from aidy.goldthinker_factory_contract import (
     IDENTIFIER,
     FactoryContractError,
     canonical_json,
+    digest,
     validate_mt5_bundle,
 )
 
@@ -658,6 +665,14 @@ def _drawdown(balances: list[Decimal], deposit: Decimal) -> dict[str, Decimal]:
     }
 
 
+def _half_display_unit(shown: Decimal) -> Decimal:
+    """Half of the last displayed digit. 1.05 allows 0.005; 0.00 allows 0.005."""
+    exponent = shown.as_tuple().exponent
+    if not isinstance(exponent, int) or exponent > 0:
+        exponent = 0
+    return Decimal(1).scaleb(exponent - 1)
+
+
 def _claim_text(value: Decimal, places: int = 4) -> str:
     quantum = Decimal(1).scaleb(-places)
     if value != value.quantize(quantum):
@@ -904,6 +919,9 @@ def analyse_report(raw: bytes, *, year: int, as_of: datetime, source_kind: str) 
                 issues.append("balance drawdown relative percent disagrees with the ledger balance path")
         if equity_abs < 0 or equity_max_money < 0 or equity_rel_money < 0:
             issues.append("equity drawdown money is negative")
+        allowance = _half_display_unit(equity_rel_pct)
+        if equity_rel_pct + allowance < stats["relative_pct"]:
+            issues.append("equity drawdown is below the ledger balance drawdown")
     claims = None
     if not issues and stats is not None:
         try:
@@ -1082,15 +1100,85 @@ def build_annual_bundle(
         "source_kind": source_kind,
         "system_id": system_id,
         "as_of_utc": as_of_utc,
+        "bundle_sha256": digest(bundle),
         "execution_performed": False,
         "broker_credentials_used": False,
         "tick_coverage_verified": False,
         "equity_series_in_deals": False,
+        "real_mt5_evidence_authenticated": False,
         "time_basis": "BROKER_SERVER_CLOCK_NOT_UTC",
         "years": receipt_years,
     }
-    receipt["receipt_sha256"] = sha256(canonical_json(receipt).encode("utf-8")).hexdigest()
+    receipt["receipt_sha256"] = digest(receipt)
     return bundle, receipt
+
+
+def _marker_in_bytes(raw: bytes) -> bool:
+    if SYNTHETIC_MARKER.encode("utf-8") in raw:
+        return True
+    if SYNTHETIC_MARKER.encode("utf-16-le") in raw or SYNTHETIC_MARKER.encode("utf-16-be") in raw:
+        return True
+    try:
+        return SYNTHETIC_MARKER in decode_mt5_report_text(raw)
+    except FactoryContractError:
+        return False
+
+
+def real_evidence_block_reason(
+    bundle_v1: Mapping[str, Any],
+    receipt: Mapping[str, Any] | None,
+    reports: Mapping[int, bytes] | None,
+    ledgers: Mapping[int, str],
+) -> str | None:
+    """Return a block status, or None when the extractor binding holds.
+
+    A matching receipt only shows these bytes were hashed together. It does
+    not authenticate that MetaTrader wrote them.
+    """
+    if not isinstance(receipt, Mapping) or not isinstance(reports, Mapping):
+        return "BLOCKED_EVIDENCE_RECEIPT_MISSING"
+    if "receipt_sha256" not in receipt or receipt.get("schema") != "goldthinker.factory.mt5_extraction.v1":
+        return "BLOCKED_EVIDENCE_RECEIPT_MISSING"
+    body = {key: receipt[key] for key in receipt if key != "receipt_sha256"}
+    if digest(body) != receipt.get("receipt_sha256"):
+        return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+    if receipt.get("source_kind") != "REAL_MT5_TESTER" or bundle_v1.get("source_kind") != "REAL_MT5_TESTER":
+        return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+    if not isinstance(bundle_v1, Mapping) or "results" not in bundle_v1:
+        return "BLOCKED_EVIDENCE_RECEIPT_MISSING"
+    if receipt.get("bundle_sha256") != digest(dict(bundle_v1)):
+        return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+    if receipt.get("system_id") != bundle_v1.get("system_id"):
+        return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+    by_receipt = {}
+    for row in receipt.get("years") or []:
+        if not isinstance(row, dict) or "year" not in row:
+            return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+        by_receipt[row["year"]] = row
+    for row in bundle_v1["results"]:
+        year = row["year"]
+        recorded = by_receipt.get(year)
+        if recorded is None:
+            return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+        if recorded.get("archive_report_sha256") is None and row["report_sha256"] is None:
+            continue
+        raw = reports.get(year)
+        ledger = ledgers.get(year)
+        if isinstance(raw, (bytes, bytearray)) and _marker_in_bytes(bytes(raw)):
+            return "BLOCKED_SYNTHETIC_MARKER"
+        if isinstance(ledger, str) and SYNTHETIC_MARKER in ledger:
+            return "BLOCKED_SYNTHETIC_MARKER"
+        if not isinstance(raw, (bytes, bytearray)) or not isinstance(ledger, str):
+            return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+        report_hash = sha256(bytes(raw)).hexdigest()
+        ledger_hash = sha256(ledger.encode("utf-8")).hexdigest()
+        if report_hash != recorded.get("archive_report_sha256") or ledger_hash != recorded.get("archive_ledger_sha256"):
+            return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+        if row["report_sha256"] not in (None, report_hash) or row["ledger_sha256"] not in (None, ledger_hash):
+            return "BLOCKED_EVIDENCE_HASH_MISMATCH"
+        if _marker_in_bytes(bytes(raw)) or SYNTHETIC_MARKER in ledger:
+            return "BLOCKED_SYNTHETIC_MARKER"
+    return None
 
 
 def atomic_write(path: Path, text: str) -> None:

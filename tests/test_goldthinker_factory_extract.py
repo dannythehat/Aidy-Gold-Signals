@@ -277,6 +277,14 @@ class ExtractTests(unittest.TestCase):
         diverged = analyse_report(floating, year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
         self.assertTrue(diverged["admitted"], diverged.get("discrepancies") or diverged.get("parse_error"))
         self.assertEqual(diverged["claims"]["max_equity_drawdown_pct"], "2.5000")
+        too_small = synthetic_report_html(2023, end="2024.01.01", label_overrides={
+            "Equity Drawdown Absolute:": "0.00",
+            "Equity Drawdown Maximal:": "0.00 (0.00%)",
+            "Equity Drawdown Relative:": "0.00% (0.00)",
+        }).encode()
+        rejected = analyse_report(too_small, year=2023, as_of=AS_OF, source_kind="SYNTHETIC_FIXTURE")
+        self.assertFalse(rejected["admitted"])
+        self.assertIn("equity drawdown is below the ledger balance drawdown", rejected["discrepancies"])
 
     def test_committed_utf16_and_realistic_layout_are_synthetic(self):
         raw = UTF16_FIXTURE.read_bytes()

@@ -46,6 +46,7 @@ from aidy.goldthinker_factory_mt5_extract import (
     _drawdown,
     closed_trades_from_deals,
     parse_ledger_csv,
+    real_evidence_block_reason,
 )
 
 V2_SCHEMA = "goldthinker.factory.mt5_bundle.v2"
@@ -467,6 +468,8 @@ def select_best_completed_year_v2(
     payload: Mapping[str, Any],
     ledgers: Mapping[int, str],
     thresholds: Mapping[str, Any],
+    *,
+    evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Select a completed year only when every v2 gate PASS.
 
@@ -474,9 +477,33 @@ def select_best_completed_year_v2(
     not return SELECTED_PENDING_INDEPENDENT_EVIDENCE. A failing check, including
     a losing year's undefined worst-trade share, blocks with
     BLOCKED_METRIC_CHECKS. Among passing profitable years, the highest net wins.
+
+    REAL_MT5_TESTER additionally requires the extractor receipt and the archived
+    report and ledger bytes. A missing receipt, a hash mismatch, or a
+    SYNTHETIC_FIXTURE marker blocks with its own status. Metric validation alone
+    does not authenticate source_kind, and a matching receipt is still not
+    proof that a terminal wrote the file.
     """
     root = validate_mt5_bundle_v2(payload, ledgers, thresholds)
     view = v1_view(root)
+    if root["source_kind"] == "REAL_MT5_TESTER":
+        block = real_evidence_block_reason(
+            evidence.get("bundle_v1") if isinstance(evidence, Mapping) else None,
+            evidence.get("receipt") if isinstance(evidence, Mapping) else None,
+            evidence.get("reports") if isinstance(evidence, Mapping) else None,
+            ledgers,
+        )
+        if isinstance(evidence, Mapping) and evidence.get("bundle_v1") is not None:
+            extracted = evidence["bundle_v1"]
+            if (
+                not isinstance(extracted, dict)
+                or extracted.get("results") != view["results"]
+                or extracted.get("source_kind") != view["source_kind"]
+                or extracted.get("system_id") != view["system_id"]
+            ):
+                block = block or "BLOCKED_EVIDENCE_HASH_MISMATCH"
+        if block:
+            return _selection_outcome(root, view, block, None)
     checks = root["metrics"]["threshold_checks"]
     limits = normalise_thresholds(dict(thresholds))["metric_thresholds"]
     years = {row["year"]: row for row in view["results"]}
@@ -510,6 +537,10 @@ def select_best_completed_year_v2(
             status = "RESEARCH_FIXTURE_ONLY"
         else:
             status = "SELECTED_PENDING_INDEPENDENT_EVIDENCE"
+    return _selection_outcome(root, view, status, handoff)
+
+
+def _selection_outcome(root: Mapping[str, Any], view: Mapping[str, Any], status: str, handoff: Mapping[str, Any] | None) -> dict[str, Any]:
     outcome = {
         "schema": SELECTION_SCHEMA,
         "system_id": root["system_id"],

@@ -292,6 +292,17 @@ class ReconcileTests(unittest.TestCase):
         })
         self.assertEqual(summer, datetime(2023, 7, 15, 9, 0, 0))
         self.assertEqual(winter, datetime(2023, 1, 15, 10, 0, 0))
+        from aidy.goldthinker_factory_reconcile import aidy_time_in_broker_year
+        plus_two = {
+            "schema": "goldthinker.factory.server_clock.v1",
+            "gmt_offset": "UTC+02:00",
+            "dst_offset": None,
+            "dst_rule": "NONE",
+        }
+        new_year_utc = datetime(2022, 12, 31, 23, 0, 0)
+        self.assertTrue(aidy_time_in_broker_year(new_year_utc, 2023, plus_two))
+        self.assertFalse(aidy_time_in_broker_year(new_year_utc, 2023, UTC_CLOCK))
+        self.assertFalse(aidy_time_in_broker_year(datetime(2023, 12, 31, 23, 0, 0), 2023, plus_two))
 
 
 if __name__ == "__main__":

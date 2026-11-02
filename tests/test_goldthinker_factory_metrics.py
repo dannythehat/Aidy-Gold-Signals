@@ -13,6 +13,7 @@ from aidy.goldthinker_factory_contract import (
     select_best_completed_year,
     validate_mt5_bundle,
 )
+from aidy.goldthinker_factory_mt5_extract import build_annual_bundle
 from aidy.goldthinker_factory_metrics import (
     _gate,
     attach_v2,
@@ -192,18 +193,77 @@ class MetricsTests(unittest.TestCase):
         chosen = select_best_completed_year_v2(gated, ledgers, approved)
         self.assertEqual(chosen["selection_status"], "RESEARCH_FIXTURE_ONLY")
         self.assertEqual(chosen["aidy_year"], 2024)
-        real = copy.deepcopy(gated)
-        real["source_kind"] = "REAL_MT5_TESTER"
-        evidence = select_best_completed_year_v2(real, ledgers, approved)
-        self.assertEqual(evidence["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
-        self.assertEqual(evidence["aidy_year"], 2024)
+        relabelled = copy.deepcopy(gated)
+        relabelled["source_kind"] = "REAL_MT5_TESTER"
+        refused = select_best_completed_year_v2(relabelled, ledgers, approved)
+        self.assertEqual(refused["selection_status"], "BLOCKED_EVIDENCE_RECEIPT_MISSING")
+        self.assertIsNone(refused["aidy_year"])
+        self.assertNotEqual(refused["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        self.assertFalse(refused["real_mt5_evidence_authenticated"])
         approved["metric_thresholds"]["worst_trade_share_of_net_min"] = "0"
         blocked_bundle = attach_v2(bundle, ledgers, COSTS, approved)
-        blocked_bundle["source_kind"] = "REAL_MT5_TESTER"
         blocked = select_best_completed_year_v2(blocked_bundle, ledgers, approved)
         self.assertEqual(blocked["selection_status"], "BLOCKED_METRIC_CHECKS")
         self.assertIsNone(blocked["aidy_year"])
         self.assertNotEqual(blocked["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+
+    def test_real_selection_requires_a_matching_extractor_receipt(self):
+        approved = json.loads(THRESHOLDS.read_text(encoding="utf-8"))
+        approved["approval_status"] = "APPROVED"
+        approved["approved_by"] = "Danny"
+        approved["tolerances"] = {key: "0" for key in approved["tolerances"]}
+        approved["metric_thresholds"] = {
+            "profit_factor_overall_min": "1",
+            "worst_trade_share_of_net_min": "-10",
+            "average_profit_vs_round_trip_cost_min_usd": "0",
+            "doubled_cost_stress_net_min_usd": "0",
+        }
+        reports = {}
+        for year, extra in EXTRAS.items():
+            html = synthetic_report_html(year, end=_end(year), extra_last_profit=extra)
+            self.assertIn("SYNTHETIC_FIXTURE", html)
+            reports[year] = (
+                f"GT_TEST01_{year}_real_ticks.htm",
+                html.replace("SYNTHETIC_FIXTURE", "AUTHORED_NOT_A_TERMINAL").encode("utf-8"),
+            )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            bundle, receipt = build_annual_bundle(
+                system_id="GT_TEST01", family_id="S016", source_kind="REAL_MT5_TESTER",
+                strategy_version_sha256="a" * 64, ea_sha256="d" * 64,
+                broker_profile_sha256="e" * 64, test_config_sha256="f" * 64,
+                data_manifest_sha256="1" * 64, tester_build="AUTHORED_NOT_A_TERMINAL",
+                as_of_utc=AS_OF_TEXT, reports=reports, ledger_dir=root / "ledgers",
+            )
+            ledgers = {
+                row["year"]: (root / "ledgers" / f"GT_TEST01_{row['year']}_deals.csv").read_text(encoding="utf-8")
+                for row in bundle["results"] if row["ledger_sha256"] is not None
+            }
+        payload = attach_v2(bundle, ledgers, COSTS, approved)
+        evidence = {
+            "bundle_v1": bundle,
+            "receipt": receipt,
+            "reports": {year: raw for year, (_name, raw) in reports.items()},
+        }
+        selected = select_best_completed_year_v2(payload, ledgers, approved, evidence=evidence)
+        self.assertEqual(selected["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
+        self.assertEqual(selected["aidy_year"], 2024)
+        self.assertFalse(selected["real_mt5_evidence_authenticated"])
+        tampered = dict(evidence["reports"])
+        tampered[2024] = evidence["reports"][2024].replace(b"AUTHORED", b"ALTERED!")
+        mismatched = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={"bundle_v1": bundle, "receipt": receipt, "reports": tampered},
+        )
+        self.assertEqual(mismatched["selection_status"], "BLOCKED_EVIDENCE_HASH_MISMATCH")
+        marked = dict(evidence["reports"])
+        marked[2024] = evidence["reports"][2024] + b" SYNTHETIC_FIXTURE"
+        synthetic = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={"bundle_v1": bundle, "receipt": receipt, "reports": marked},
+        )
+        self.assertEqual(synthetic["selection_status"], "BLOCKED_SYNTHETIC_MARKER")
+        self.assertIsNone(synthetic["aidy_year"])
 
 
 if __name__ == "__main__":
