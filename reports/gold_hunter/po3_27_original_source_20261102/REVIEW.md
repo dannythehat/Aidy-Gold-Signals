@@ -1,6 +1,6 @@
 # 2 November 2026 — AIDY independent PO3 27-grid source screen (negative)
 
-**Successful actual CI:** [run 41400604586](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400258358), **8 regression tests passed**, original authenticated AIDY BID/ASK M1 historical replay for 2023, 2024, 2025. Immutable [source-receipt, signal and trade artifact 13120893613](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400604586/artifacts/13120918846). [Draft PR #378](https://github.com/dannythehat/Aidy-Gold-Signals/pull/378) targets existing Gold Hunter PR #371's research branch, NOT main. Original PR #371, PR #374, ORB, G001, G005, Super Signals, brokers and production are unchanged.
+**Successful actual CI:** [run 41400604586](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400604586), **8 regression tests passed**, original authenticated AIDY BID/ASK M1 historical replay for 2023, 2024, 2025. Immutable [source-receipt, signal and trade artifact 13120918846](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400604586/artifacts/13120918846). [Draft PR #378](https://github.com/dannythehat/Aidy-Gold-Signals/pull/378) targets existing Gold Hunter PR #371's research branch, NOT main. Original PR #371, PR #374, ORB, G001, G005, Super Signals, brokers and production are unchanged.
 
 ## Original source, identity and rights
 
