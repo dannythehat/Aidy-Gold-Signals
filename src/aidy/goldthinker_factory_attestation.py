@@ -36,11 +36,14 @@ BODY_KEYS = (
     "process_exit_code", "attested_equity_drawdown_pct",
     "equity_observations_sha256",
 )
-# No Windows MT5 runner is attached to this process. Do not flip this to
-# true from a fixture, a CLI document, or a self-reported signature.
-INDEPENDENT_RUNNER_OBSERVED = False
 HEX64 = set("0123456789abcdef")
 TRUST_PATH = Path(__file__).resolve().parents[2] / "config" / "goldthinker_factory_runner_trust.json"
+NONCE_REGISTRY_SCHEMA = "goldthinker.factory.attestation_nonce_registry.v1"
+NONCE_REGISTRY_PATH = Path(__file__).resolve().parents[2] / "config" / "goldthinker_factory_nonce_registry.json"
+OBSERVATION_SCHEMA = "goldthinker.factory.runner_observation.v1"
+OBSERVATION_PATH = Path(__file__).resolve().parents[2] / "config" / "goldthinker_factory_runner_observation.json"
+LOG_FIELDS = ("ea_sha256", "ini_sha256", "report_sha256", "year", "terminal_build")
+RECEIPT_FIELDS = ("started_utc", "exited_utc", "exit_code", "year", "terminal_build")
 
 
 def load_runner_trust(payload: Any) -> dict[str, Any]:
@@ -74,6 +77,71 @@ def load_runner_trust(payload: Any) -> dict[str, Any]:
 
 def committed_runner_trust() -> dict[str, Any]:
     return load_runner_trust(json.loads(TRUST_PATH.read_text(encoding="utf-8")))
+
+
+def independent_runner_observed() -> bool:
+    """True only when a committed runner and an observation manifest agree.
+
+    The trust store shipped with this repository is empty, and no observation
+    manifest is shipped. Assigning a boolean cannot turn this on.
+    """
+    trust = committed_runner_trust()
+    runners = trust.get("runners")
+    if not isinstance(runners, dict) or not runners:
+        return False
+    if not OBSERVATION_PATH.is_file():
+        return False
+    payload = json.loads(OBSERVATION_PATH.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict) or payload.get("schema") != OBSERVATION_SCHEMA:
+        return False
+    observed = payload.get("observed_runner_ids")
+    if not isinstance(observed, list) or not observed:
+        return False
+    return any(isinstance(item, str) and item in runners for item in observed)
+
+
+class NonceReplayRegistry:
+    """File-backed record of (key_id, system_id, nonce) values already accepted."""
+
+    def __init__(self, path: Path | None = None) -> None:
+        self.path = NONCE_REGISTRY_PATH if path is None else Path(path)
+
+    def _load(self) -> list[dict[str, str]]:
+        if not self.path.is_file():
+            return []
+        payload = json.loads(self.path.read_text(encoding="utf-8"))
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema") != NONCE_REGISTRY_SCHEMA
+            or not isinstance(payload.get("used"), list)
+        ):
+            raise FactoryContractError("nonce registry is malformed")
+        used = []
+        for row in payload["used"]:
+            if (
+                not isinstance(row, dict)
+                or set(row) != {"key_id", "system_id", "nonce"}
+                or any(not isinstance(row[key], str) or not row[key] for key in row)
+            ):
+                raise FactoryContractError("nonce registry entry is malformed")
+            used.append({key: row[key] for key in ("key_id", "system_id", "nonce")})
+        return used
+
+    def contains(self, key_id: str, system_id: str, nonce: str) -> bool:
+        needle = {"key_id": key_id, "system_id": system_id, "nonce": nonce}
+        return needle in self._load()
+
+    def record(self, key_id: str, system_id: str, nonce: str) -> None:
+        used = self._load()
+        entry = {"key_id": key_id, "system_id": system_id, "nonce": nonce}
+        if entry in used:
+            return
+        used.append(entry)
+        payload = {"schema": NONCE_REGISTRY_SCHEMA, "used": used}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_suffix(self.path.suffix + ".tmp")
+        temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        temporary.replace(self.path)
 
 
 def attestation_body(document: Mapping[str, Any]) -> dict[str, Any]:
@@ -138,12 +206,14 @@ def verify_runner_attestation(
     broker_profile: bytes | None = None,
     data_source: bytes | None = None,
     launch_receipt: bytes | None = None,
+    nonce_registry: NonceReplayRegistry | None = None,
 ) -> dict[str, Any]:
     """Fail closed. An empty trust store never verifies.
 
     A coherent Ed25519 signature plus a launch receipt and a tester log that
     names the same EA, ini, report, year and build is still self-reported.
-    `verified` stays false while INDEPENDENT_RUNNER_OBSERVED is false.
+    `verified` stays false until independent_runner_observed() is true, which
+    requires committed runner provenance this repository does not have.
     """
     if trust is None:
         trust = committed_runner_trust()
@@ -214,8 +284,12 @@ def verify_runner_attestation(
         launch_receipt=launch_receipt,
     ):
         return _result(False, "BLOCKED_REAL_MT5_PROVENANCE", "EQUITY_DD_UNVERIFIED")
+    registry = nonce_registry if nonce_registry is not None else NonceReplayRegistry()
+    if registry.contains(body["key_id"], body["system_id"], body["nonce"]):
+        return _result(False, "BLOCKED_ATTESTATION_NONCE_REPLAY", "EQUITY_DD_UNVERIFIED")
+    registry.record(body["key_id"], body["system_id"], body["nonce"])
     equity_status = _equity_status(body, row, equity_observations)
-    if not INDEPENDENT_RUNNER_OBSERVED:
+    if not independent_runner_observed():
         return _result(False, "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION", equity_status)
     return _result(True, "RUNNER_ATTESTATION_VERIFIED", equity_status)
 
@@ -279,35 +353,65 @@ def _provenance_coherent(
     receipt_text = _decoded(bytes(launch_receipt))
     if log_text is None or receipt_text is None:
         return False
-    log_tokens = (
-        f"ea_sha256={body['ea_sha256']}",
-        f"ini_sha256={body['ini_sha256']}",
-        f"report_sha256={body['report_sha256']}",
-        f"year={body['year']}",
-        f"terminal_build={build}",
-    )
-    receipt_tokens = (
-        f"started_utc={started}",
-        f"exited_utc={exited}",
-        f"exit_code={body['process_exit_code']}",
-        f"year={body['year']}",
-        f"terminal_build={build}",
-    )
-    return all(token in log_text for token in log_tokens) and all(
-        token in receipt_text for token in receipt_tokens
-    )
+    log_fields = _parse_exact_fields(log_text)
+    receipt_fields = _parse_exact_fields(receipt_text)
+    if log_fields is None or receipt_fields is None:
+        return False
+    expected_log = {
+        "ea_sha256": body["ea_sha256"],
+        "ini_sha256": body["ini_sha256"],
+        "report_sha256": body["report_sha256"],
+        "year": str(body["year"]),
+        "terminal_build": build,
+    }
+    expected_receipt = {
+        "started_utc": started,
+        "exited_utc": exited,
+        "exit_code": str(body["process_exit_code"]),
+        "year": str(body["year"]),
+        "terminal_build": build,
+    }
+    return _fields_exact(log_fields, expected_log) and _fields_exact(receipt_fields, expected_receipt)
+
+
+def _parse_exact_fields(text: str) -> dict[str, str] | None:
+    """Parse key=value lines. A value is the text after the first equals, untrimmed."""
+    found: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        if not raw_line.strip():
+            continue
+        if "=" not in raw_line:
+            return None
+        key, value = raw_line.split("=", 1)
+        if not key or key != key.strip() or any(ch.isspace() for ch in key) or key in found:
+            return None
+        found[key] = value
+    return found
+
+
+def _fields_exact(parsed: Mapping[str, str], expected: Mapping[str, str]) -> bool:
+    return all(parsed.get(key) == value for key, value in expected.items())
 
 
 def _equity_status(body: Mapping[str, Any], row: Mapping[str, Any], observations: list[str] | None) -> str:
-    attested = body.get("attested_equity_drawdown_pct")
-    if isinstance(attested, str) and attested == row.get("max_equity_drawdown_pct"):
-        return "TESTER_ATTESTED"
-    if observations is not None and body.get("equity_observations_sha256"):
+    """A signature over the report's own equity figure is not independent.
+
+    EQUITY_OBSERVATIONS_CHECKED requires a separate series whose hash is in
+    the attestation and whose derived drawdown equals the report field.
+    Copying the report number is RUNNER_SIGNED_SELF_REPORTED.
+    """
+    if observations is not None and _sha(body.get("equity_observations_sha256")):
         digest = sha256(canonical_json(observations).encode("utf-8")).hexdigest()
         if digest == body["equity_observations_sha256"]:
-            derived = equity_drawdown_from_observations(observations)
+            try:
+                derived = equity_drawdown_from_observations(observations)
+            except (FactoryContractError, ArithmeticError):
+                derived = None
             if derived == row.get("max_equity_drawdown_pct"):
                 return "EQUITY_OBSERVATIONS_CHECKED"
+    attested = body.get("attested_equity_drawdown_pct")
+    if isinstance(attested, str) and attested == row.get("max_equity_drawdown_pct"):
+        return "RUNNER_SIGNED_SELF_REPORTED"
     return "EQUITY_DD_UNVERIFIED"
 
 

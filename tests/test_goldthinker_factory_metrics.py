@@ -402,9 +402,32 @@ class MetricsTests(unittest.TestCase):
                 runner_id="unit-test-runner", key_id="unit-test-key",
             )
             attestations[year] = _attack_sign(body, private)
+        from aidy.goldthinker_factory_attestation import NonceReplayRegistry
+        nonce_dir = Path(tempfile.mkdtemp())
+        nonce_registry = NonceReplayRegistry(nonce_dir / "used.json")
+        bound = {
+            "bundle_v1": bundle,
+            "receipt": receipt,
+            "reports": evidence["reports"],
+            "nonce_registry": nonce_registry,
+        }
+        missing_receipt = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={"trust": trust, "reports": evidence["reports"], "nonce_registry": nonce_registry},
+        )
+        self.assertEqual(missing_receipt["selection_status"], "BLOCKED_EVIDENCE_RECEIPT_MISSING")
+        self.assertIsNone(missing_receipt["aidy_year"])
+        tampered_receipt = copy.deepcopy(receipt)
+        tampered_receipt["system_id"] = "GT_TAMPER"
+        tampered = select_best_completed_year_v2(
+            payload, ledgers, approved,
+            evidence={**bound, "receipt": tampered_receipt},
+        )
+        self.assertEqual(tampered["selection_status"], "BLOCKED_EVIDENCE_HASH_MISMATCH")
+        self.assertIsNone(tampered["aidy_year"])
         signed = select_best_completed_year_v2(
             payload, ledgers, approved,
-            evidence={"trust": trust, "attestations": attestations, "reports": evidence["reports"]},
+            evidence={**bound, "trust": trust, "attestations": attestations},
         )
         self.assertEqual(signed["selection_status"], "BLOCKED_REAL_MT5_PROVENANCE")
         self.assertIsNone(signed["aidy_year"])
@@ -429,9 +452,9 @@ class MetricsTests(unittest.TestCase):
         self_reported = select_best_completed_year_v2(
             payload, ledgers, approved,
             evidence={
+                **bound,
                 "trust": trust,
                 "attestations": coherent,
-                "reports": evidence["reports"],
                 "tester_logs": logs,
                 "launch_receipts": receipts,
                 "inputs": inputs,
@@ -451,7 +474,7 @@ class MetricsTests(unittest.TestCase):
         )
         revoked = select_best_completed_year_v2(
             payload, ledgers, approved,
-            evidence={"trust": revoked_trust, "attestations": coherent, "reports": evidence["reports"]},
+            evidence={**bound, "trust": revoked_trust, "attestations": coherent},
         )
         self.assertEqual(revoked["selection_status"], "BLOCKED_ATTESTATION_KEY_REVOKED")
         self.assertIsNone(revoked["aidy_year"])
@@ -461,11 +484,7 @@ class MetricsTests(unittest.TestCase):
         fixture = sign_attestation({k: fixture[k] for k in fixture if k != "signature_hex"}, private)
         refused_fixture = select_best_completed_year_v2(
             payload, ledgers, approved,
-            evidence={
-                "trust": trust,
-                "attestations": {**attestations, 2021: fixture},
-                "reports": evidence["reports"],
-            },
+            evidence={**bound, "trust": trust, "attestations": {**attestations, 2021: fixture}},
         )
         self.assertEqual(refused_fixture["selection_status"], "BLOCKED_FIXTURE_PROVENANCE")
         self.assertNotEqual(refused_fixture["selection_status"], "SELECTED_PENDING_INDEPENDENT_EVIDENCE")
@@ -474,20 +493,16 @@ class MetricsTests(unittest.TestCase):
         reused = _attack_sign({k: reused[k] for k in reused if k != "signature_hex"}, private)
         collided = select_best_completed_year_v2(
             payload, ledgers, approved,
-            evidence={
-                "trust": trust,
-                "attestations": {**attestations, 2022: reused},
-                "reports": evidence["reports"],
-            },
+            evidence={**bound, "trust": trust, "attestations": {**attestations, 2022: reused}},
         )
         self.assertEqual(collided["selection_status"], "BLOCKED_ATTESTATION_NONCE_REUSED")
         other = copy.deepcopy(payload)
         other["system_id"] = "GT_OTHER01"
         foreign = select_best_completed_year_v2(
             other, ledgers, approved,
-            evidence={"trust": trust, "attestations": attestations, "reports": evidence["reports"]},
+            evidence={**bound, "trust": trust, "attestations": attestations},
         )
-        self.assertEqual(foreign["selection_status"], "BLOCKED_ATTESTATION_SYSTEM_ID")
+        self.assertEqual(foreign["selection_status"], "BLOCKED_EVIDENCE_HASH_MISMATCH")
         self.assertIsNone(foreign["aidy_year"])
 
 

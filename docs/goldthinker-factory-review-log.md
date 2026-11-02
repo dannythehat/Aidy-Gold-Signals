@@ -52,6 +52,13 @@ Ed25519, the nonce, and `system_id` landed in `b9f1e24`. The ceiling below is `a
 - Nothing here observes a Windows runner. `verified` stays false. The best selection status is `RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION` or `BLOCKED_REAL_MT5_PROVENANCE`. `SELECTED_PENDING_INDEPENDENT_EVIDENCE` is not returned. `test_real_selection_requires_a_matching_extractor_receipt` is a negative test: an authored report plus a valid test signature does not qualify.
 - Reconciliation calls `verify_runner_attestation` for `runner_attestation_verified`. That flag stays false, so packaging stays closed. See `tests/test_goldthinker_factory_reconcile.py::test_packaging_calls_runner_verifier_and_stays_closed`.
 
+## Quant Reviewer round 4 on `f21b49e` — not pass
+
+1. A runner signature over the report's own equity-drawdown figure was labelled `TESTER_ATTESTED`. That figure is the report repeating itself. The status is now `RUNNER_SIGNED_SELF_REPORTED` unless a separate equity series hashes to the attestation and derives the same percent (`EQUITY_OBSERVATIONS_CHECKED`).
+2. Accepted `(key_id, system_id, nonce)` values are stored in `config/goldthinker_factory_nonce_registry.json`. A later verifier instance rejects a repeat as `BLOCKED_ATTESTATION_NONCE_REPLAY`. `independent_runner_observed()` is true only when the committed trust store and an observation manifest both name a runner. Neither is configured, so `verified` stays false. Journal and launch-receipt checks parse `key=value` lines and require the EA, ini, report, year and build fields to match exactly.
+3. `real_evidence_block_reason` now runs on the REAL selection path. A missing extractor receipt is `BLOCKED_EVIDENCE_RECEIPT_MISSING`.
+4. The strategy-lab handoff no longer uses a shared HMAC secret. Review packets are Ed25519 signatures checked with a public key, and `independently_verified` stays false.
+
 ## Follow-ups deliberately left
 
 - No offline AIDY strategy replay. Reconciliation still takes an explicit trade list.

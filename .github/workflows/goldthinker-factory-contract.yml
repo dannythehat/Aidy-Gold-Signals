@@ -9,6 +9,7 @@ on:
       - "tests/fixtures/goldthinker_factory/**"
       - "config/goldthinker_factory_thresholds.json"
       - "config/goldthinker_factory_runner_trust.json"
+      - "config/goldthinker_factory_nonce_registry.json"
       - ".github/workflows/goldthinker-factory-contract.yml"
   workflow_dispatch:
 permissions:

@@ -41,12 +41,13 @@ from aidy.goldthinker_factory_contract import (
     digest,
     validate_mt5_bundle,
 )
-from aidy.goldthinker_factory_attestation import verify_runner_attestation
+from aidy.goldthinker_factory_attestation import NonceReplayRegistry, verify_runner_attestation
 from aidy.goldthinker_factory_mt5_extract import (
     _claim_text,
     _drawdown,
     closed_trades_from_deals,
     parse_ledger_csv,
+    real_evidence_block_reason,
     synthetic_content_block,
 )
 
@@ -542,6 +543,7 @@ def _real_attestation_block(
             broker_profile=_year_bytes(evidence, "broker_profiles", year),
             data_source=_year_bytes(evidence, "data_sources", year),
             launch_receipt=_year_bytes(evidence, "launch_receipts", year),
+            nonce_registry=_nonce_registry(evidence),
         )
         if checked["reason"] in (
             "RUNNER_SIGNED_SELF_REPORTED_PENDING_VERIFICATION",
@@ -550,8 +552,37 @@ def _real_attestation_block(
             return checked["reason"]
         if not checked["verified"]:
             return checked["reason"]
-        if checked["equity_dd_status"] == "EQUITY_DD_UNVERIFIED":
+        if checked["equity_dd_status"] != "EQUITY_OBSERVATIONS_CHECKED":
             return "BLOCKED_EQUITY_DD_UNVERIFIED"
+    return None
+
+
+def _nonce_registry(evidence: Mapping[str, Any] | None) -> NonceReplayRegistry:
+    if isinstance(evidence, Mapping) and isinstance(evidence.get("nonce_registry"), NonceReplayRegistry):
+        return evidence["nonce_registry"]
+    return NonceReplayRegistry()
+
+
+def _extractor_receipt_block(
+    view: Mapping[str, Any],
+    evidence: Mapping[str, Any] | None,
+    ledgers: Mapping[int, str],
+) -> str | None:
+    """Bind REAL selection to the extractor receipt and the archived bytes."""
+    if not isinstance(evidence, Mapping) or not isinstance(evidence.get("bundle_v1"), Mapping):
+        return "BLOCKED_EVIDENCE_RECEIPT_MISSING"
+    bundle_v1 = evidence["bundle_v1"]
+    reports = evidence.get("reports") if isinstance(evidence.get("reports"), Mapping) else {}
+    reason = real_evidence_block_reason(bundle_v1, evidence.get("receipt"), reports, ledgers)
+    if reason:
+        return reason
+    if (
+        view.get("system_id") != bundle_v1.get("system_id")
+        or view.get("source_kind") != bundle_v1.get("source_kind")
+        or view.get("results") != bundle_v1.get("results")
+        or view.get("ea_sha256") != bundle_v1.get("ea_sha256")
+    ):
+        return "BLOCKED_EVIDENCE_HASH_MISMATCH"
     return None
 
 
@@ -589,6 +620,9 @@ def select_best_completed_year_v2(
         archived = evidence.get("reports") if isinstance(evidence, Mapping) else {}
         if synthetic_content_block(view, archived or {}, ledgers, _provenance_blobs(evidence)):
             return _selection_outcome(root, view, "BLOCKED_SYNTHETIC_MARKER", None)
+        receipt_block = _extractor_receipt_block(view, evidence if isinstance(evidence, Mapping) else None, ledgers)
+        if receipt_block:
+            return _selection_outcome(root, view, receipt_block, None)
         block = _real_attestation_block(view, ledgers, evidence)
         if block:
             return _selection_outcome(root, view, block, None)

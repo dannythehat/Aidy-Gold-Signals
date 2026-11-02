@@ -5,6 +5,7 @@ from copy import deepcopy
 from dataclasses import replace
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from test_strategy_lab_evidence_rating import example, full
 
 from aidy.strategy_lab_goldthinker_handoff import (
@@ -16,8 +17,9 @@ from aidy.strategy_lab_goldthinker_handoff import (
     prepare_private_handoff,
 )
 
-KEY = b"test-only-fixed-32-byte-key-never-use-in-production"
-OTHER_KEY = b"separately-generated-test-only-secret-key-000000000"
+PRIVATE = Ed25519PrivateKey.generate()
+PUBLIC = PRIVATE.public_key()
+OTHER_PUBLIC = Ed25519PrivateKey.generate().public_key()
 HASH = tuple(f"{i:064x}" for i in range(1, 8))
 
 
@@ -38,11 +40,11 @@ def qualified(test_fixture: bool = True) -> ResearchEvidence:
 
 
 def sign(candidate: ResearchEvidence) -> dict:
-    return issue_internal_receipt(candidate, KEY)
+    return issue_internal_receipt(candidate, PRIVATE)
 
 
 def test_frozen_goldthinker_handoff_has_no_automatic_paper_or_live_authority():
-    p = prepare_private_handoff([], KEY)
+    p = prepare_private_handoff([], PUBLIC)
     check_handoff(p)
     assert p["candidate_count"] == 0
     assert p["production_status"] == "NO_DEPLOYMENT"
@@ -54,21 +56,21 @@ def test_frozen_goldthinker_handoff_has_no_automatic_paper_or_live_authority():
 
 def test_perfect_hypothetical_policy_fixture_cannot_leave_research_as_real_handoff():
     receipt = sign(qualified())
-    result = evaluate_receipt(receipt, KEY)
+    result = evaluate_receipt(receipt, PUBLIC)
     assert result["research_rating"]["score_out_of_100"] == 100
     assert result["is_test_fixture"] is True
     assert not result["eligible_for_separate_human_review"]
     assert "TEST_FIXTURE_NOT_RELEASEABLE" in result["blockers"]
-    assert prepare_private_handoff([receipt], KEY)["candidate_count"] == 0
+    assert prepare_private_handoff([receipt], PUBLIC)["candidate_count"] == 0
 
 
 def test_positive_branch_is_only_owner_claude_review_even_for_fake_qualified_inputs():
     # A hypothetical signed source contract checks POLICY MATH ONLY.
     # A real production issuer does not yet exist; this cannot attest market alpha.
     receipt = sign(qualified(test_fixture=False))
-    row = evaluate_receipt(receipt, KEY)
+    row = evaluate_receipt(receipt, PUBLIC)
     assert row["eligible_for_separate_human_review"] is True
-    packet = prepare_private_handoff([receipt], KEY)
+    packet = prepare_private_handoff([receipt], PUBLIC)
     check_handoff(packet)
     assert packet["candidate_count"] == 1
     review = packet["candidates"][0]
@@ -90,17 +92,17 @@ def test_positive_branch_is_only_owner_claude_review_even_for_fake_qualified_inp
 def test_cross_stage_sha_mismatch_cannot_be_signed(field):
     candidate = qualified()
     with pytest.raises(ValueError, match="mismatch"):
-        issue_internal_receipt(replace(candidate, **{field:"a"*64}), KEY)
+        issue_internal_receipt(replace(candidate, **{field:"a"*64}), PRIVATE)
 
 
 @pytest.mark.parametrize("field", [
-    "internal_attestation_hmac_sha256", "evidence_sha256",
+    "ed25519_signature_hex", "evidence_sha256",
 ])
 def test_invalid_receipt_hashes_rejected(field):
     r = sign(qualified(test_fixture=False))
     r[field] = "f"*64
     with pytest.raises(ValueError, match="untrusted"):
-        evaluate_receipt(r, KEY)
+        evaluate_receipt(r, PUBLIC)
 
 
 def test_source_rating_and_stronger_paper_assertions_fail_even_with_changed_hash():
@@ -108,13 +110,13 @@ def test_source_rating_and_stronger_paper_assertions_fail_even_with_changed_hash
     r["evidence"]["rating"]["score_out_of_100"] = 0
     r["evidence_sha256"] = digest(r["evidence"])
     with pytest.raises(ValueError, match="untrusted"):
-        evaluate_receipt(r, KEY)
+        evaluate_receipt(r, PUBLIC)
 
 
 def test_unapproved_external_key_cannot_forge_internal_issuer():
     r = sign(qualified(test_fixture=False))
     with pytest.raises(ValueError, match="untrusted"):
-        evaluate_receipt(r, OTHER_KEY)
+        evaluate_receipt(r, OTHER_PUBLIC)
 
 
 def test_copying_external_claimed_qualification_flags_unsupported():
@@ -126,7 +128,7 @@ def test_copying_external_claimed_qualification_flags_unsupported():
         fair_benchmark_independently_verified=False,
     )
     r = sign(replace(orig, evidence_basis=source))
-    result = evaluate_receipt(r, KEY)
+    result = evaluate_receipt(r, PUBLIC)
     assert result["research_rating"]["score_out_of_100"] is None
     assert not result["eligible_for_separate_human_review"]
     assert "NO_INDEPENDENT_QUALIFIED_GREEN_EVIDENCE" in result["blockers"]
@@ -137,14 +139,14 @@ def test_nonpositive_edge_cannot_be_transferred_even_when_nine_factors_perfect()
 
     candidate = qualified(test_fixture=False)
     basis = replace(candidate.evidence_basis, observed_benchmark_edge_usd=Decimal(0))
-    result = evaluate_receipt(sign(replace(candidate, evidence_basis=basis)), KEY)
+    result = evaluate_receipt(sign(replace(candidate, evidence_basis=basis)), PUBLIC)
     assert result["research_rating"]["governance"] == "RED_REJECT"
     assert not result["eligible_for_separate_human_review"]
 
 
 def test_unverified_review_rights_block_goldthinker_handoff():
     candidate = replace(qualified(False), rights_review_status="REVIEW_REQUIRED")
-    outcome = evaluate_receipt(sign(candidate), KEY)
+    outcome = evaluate_receipt(sign(candidate), PUBLIC)
     assert not outcome["eligible_for_separate_human_review"]
     assert "STRATEGY_REVIEW_RIGHTS_NOT_VERIFIED" in outcome["blockers"]
 
@@ -154,7 +156,7 @@ def test_green_score_below_80_does_not_get_owner_claude_queue():
     factors = list(candidate.factor_findings)
     factors[0] = replace(factors[0], awarded_points=0)
     outcome = evaluate_receipt(
-        sign(replace(candidate, factor_findings=tuple(factors))), KEY
+        sign(replace(candidate, factor_findings=tuple(factors))), PUBLIC
     )
     assert outcome["research_rating"]["governance"] != "GREEN_HIGH_PRIORITY"
     assert not outcome["eligible_for_separate_human_review"]
@@ -163,25 +165,26 @@ def test_green_score_below_80_does_not_get_owner_claude_queue():
 def test_old_or_duplicate_strategy_cannot_increase_reviewer_jobs():
     ticket = sign(qualified(test_fixture=False))
     with pytest.raises(ValueError, match="duplicate"):
-        prepare_private_handoff([ticket, ticket], KEY)
+        prepare_private_handoff([ticket, ticket], PUBLIC)
 
 
 def test_unverified_public_green_claim_cannot_be_accepted():
     fake = {
         "issuer": "USER_UPLOAD",
         "evidence_sha256": "f"*64,
-        "internal_attestation_hmac_sha256": "f"*64,
+        "ed25519_signature_hex": "f"*128,
+        "independently_verified": False,
         "evidence": {"rating": {"governance": "GREEN_HIGH_PRIORITY"}},
     }
     with pytest.raises(ValueError, match="issuer"):
-        evaluate_receipt(fake, KEY)
+        evaluate_receipt(fake, PUBLIC)
 
 
 def test_foreign_field_is_not_ignored_in_signed_receipt():
     ticket = sign(qualified(False))
     ticket["unexpected_live_deployment"] = True
     with pytest.raises(ValueError, match="missing authenticated"):
-        evaluate_receipt(ticket, KEY)
+        evaluate_receipt(ticket, PUBLIC)
 
 
 def test_scoring_policy_cannot_be_overwritten_by_signed_wrapper():
@@ -191,11 +194,11 @@ def test_scoring_policy_cannot_be_overwritten_by_signed_wrapper():
     altered["evidence_sha256"] = digest(altered["evidence"])
     # Recomputing the inner SHA is not adequate without independent issuer.
     with pytest.raises(ValueError, match="untrusted"):
-        evaluate_receipt(altered, KEY)
+        evaluate_receipt(altered, PUBLIC)
 
 
 def test_handoff_packet_rejects_tampered_customer_join_and_paper_figure():
-    p = prepare_private_handoff([sign(qualified(False))], KEY)
+    p = prepare_private_handoff([sign(qualified(False))], PUBLIC)
     for field, value in (
         ("customer_join_enabled", True),
         ("forward_paper_pnl_usd", "9999999.00"),
@@ -217,14 +220,30 @@ def test_fifty_user_submissions_without_receipts_denied():
         for i in range(50)
     ]
     with pytest.raises(ValueError, match="missing authenticated"):
-        prepare_private_handoff(bad, KEY)
+        prepare_private_handoff(bad, PUBLIC)
 
 
 def test_key_short_or_missing_will_not_fail_open():
-    with pytest.raises(ValueError, match="server-side"):
+    with pytest.raises(ValueError, match="Ed25519 public key"):
         prepare_private_handoff([], b"key")
+
+
+def test_ed25519_handoff_stays_independently_unverified():
+    receipt = sign(qualified(test_fixture=False))
+    result = evaluate_receipt(receipt, PUBLIC)
+    assert result["independently_verified"] is False
+    assert result["source_receipt_authenticated"] is False
+    assert result["signature_scheme"] == "ed25519"
+    assert receipt["independently_verified"] is False
+
+
+def test_shared_secret_hmac_receipt_is_rejected():
+    receipt = sign(qualified(test_fixture=False))
+    receipt["internal_attestation_hmac_sha256"] = "ab" * 32
+    with pytest.raises(ValueError, match="HMAC"):
+        evaluate_receipt(receipt, PUBLIC)
 
 
 def test_oversized_handoff_input_refused():
     with pytest.raises(ValueError, match="bounded"):
-        prepare_private_handoff([{}]*101, KEY)
+        prepare_private_handoff([{}]*101, PUBLIC)
