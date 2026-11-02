@@ -8,11 +8,13 @@ deployment remains a wholly separate future owner-controlled process.
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
 import re
 from dataclasses import dataclass
 from decimal import Decimal
+
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from aidy.strategy_lab_evidence_rating import (
     EvidenceBasis,
@@ -41,9 +43,14 @@ def digest(obj: object) -> str:
     return hashlib.sha256(canonical(obj)).hexdigest()
 
 
-def _secret(key: bytes) -> None:
-    if not isinstance(key, bytes) or len(key) < 32:
-        raise ValueError("trusted server-side receipt signing key is required")
+def _private_key(key: object) -> None:
+    if not isinstance(key, Ed25519PrivateKey):
+        raise ValueError("Ed25519 private key required; shared-secret HMAC is not accepted")  # noqa: TRY004
+
+
+def _public_key(key: object) -> None:
+    if not isinstance(key, Ed25519PublicKey):
+        raise ValueError("Ed25519 public key required; shared-secret HMAC is not accepted")  # noqa: TRY004
 
 
 def _sha(value: object) -> bool:
@@ -110,40 +117,45 @@ class ResearchEvidence:
         }
 
 
-def issue_internal_receipt(evidence: ResearchEvidence, server_key: bytes) -> dict:
-    """Only the privately operated independently qualified AIDY issuer calls this.
+def issue_internal_receipt(evidence: ResearchEvidence, private_key: Ed25519PrivateKey) -> dict:
+    """Sign a review packet. This is not independent verification of the research.
 
-    This is a packet integrity mechanism, not an independent source validator.
-    Day34 has NO live issuer adapter for customer trading claims.
+    The private key stays with the issuer. Verification uses the public key only.
+    There is no shared HMAC secret.
     """
-    _secret(server_key)
+    _private_key(private_key)
     data = evidence.content()
     body = {"issuer": ISSUER, "evidence": data,
             "evidence_sha256": digest(data)}
     return {
         **body,
-        "internal_attestation_hmac_sha256":
-            hmac.new(server_key, canonical(body), hashlib.sha256).hexdigest(),
+        "ed25519_signature_hex": private_key.sign(canonical(body)).hex(),
+        "independently_verified": False,
     }
 
 
-def evaluate_receipt(receipt: dict, server_key: bytes) -> dict:
-    _secret(server_key)
+def evaluate_receipt(receipt: dict, public_key: Ed25519PublicKey) -> dict:
+    _public_key(public_key)
+    if isinstance(receipt, dict) and "internal_attestation_hmac_sha256" in receipt:
+        raise ValueError("shared-secret HMAC receipts are not accepted")
     if not isinstance(receipt, dict) or set(receipt) != {
-        "issuer", "evidence", "evidence_sha256", "internal_attestation_hmac_sha256",
+        "issuer", "evidence", "evidence_sha256", "ed25519_signature_hex",
+        "independently_verified",
     }:
         raise ValueError("missing authenticated internal source receipt")
     if receipt["issuer"] != ISSUER or not _sha(receipt["evidence_sha256"]):
         raise ValueError("unknown evidence issuer")
-    mac = receipt["internal_attestation_hmac_sha256"]
-    if not _sha(mac):
-        raise ValueError("invalid internal attestation format")
+    if receipt["independently_verified"] is not False:
+        raise ValueError("handoff cannot claim independent verification")
+    signature = receipt["ed25519_signature_hex"]
+    if not isinstance(signature, str):
+        raise ValueError("invalid internal attestation format")  # noqa: TRY004
     body = {k: receipt[k] for k in ("issuer", "evidence", "evidence_sha256")}
-    if (digest(receipt["evidence"]) != receipt["evidence_sha256"]
-            or not hmac.compare_digest(
-                hmac.new(server_key, canonical(body), hashlib.sha256).hexdigest(),
-                mac,
-            )):
+    try:
+        public_key.verify(bytes.fromhex(signature), canonical(body))
+    except (InvalidSignature, ValueError):
+        raise ValueError("untrusted or modified evidence receipt")
+    if digest(receipt["evidence"]) != receipt["evidence_sha256"]:
         raise ValueError("untrusted or modified evidence receipt")
     original = receipt["evidence"]
     if not isinstance(original, dict):
@@ -207,20 +219,22 @@ def evaluate_receipt(receipt: dict, server_key: bytes) -> dict:
         "research_rating": rating,
         "eligible_for_separate_human_review": not blocked,
         "blockers": blocked,
-        "source_receipt_authenticated": True,
+        "source_receipt_authenticated": False,
+        "independently_verified": False,
+        "signature_scheme": "ed25519",
         "is_test_fixture": original["is_test_fixture"],
     }
 
 
-def prepare_private_handoff(receipts: list[dict], server_key: bytes) -> dict:
+def prepare_private_handoff(receipts: list[dict], public_key: Ed25519PublicKey) -> dict:
     """Queue human review only; NO account, trading or customer side effects."""
-    _secret(server_key)
+    _public_key(public_key)
     if not isinstance(receipts, list) or len(receipts) > 100:
         raise ValueError("bounded internal research handoff input required")
     seen: set[str] = set()
     entries = []
     for receipt in receipts:
-        finding = evaluate_receipt(receipt, server_key)
+        finding = evaluate_receipt(receipt, public_key)
         ident = finding["strategy_id"]
         if ident in seen:
             raise ValueError("duplicate strategy cannot bypass independent review")

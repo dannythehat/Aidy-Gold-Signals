@@ -1,0 +1,55 @@
+{
+  "schema": "goldthinker.factory.s040_source_recovery.v1",
+  "status": "FALLBACK_PIN_NOT_APPROVED",
+  "approved": false,
+  "built": false,
+  "strategy_spec_committed": false,
+  "original_bytes_committed": false,
+  "pr_374_modified": false,
+  "register": {
+    "path": "reports/gold_oracle/phase05/review/83_strategy_register.json",
+    "ref": "codex/83-source-audit-batch01-20261028",
+    "row_id": "S040",
+    "values_present_as_recorded": true,
+    "source_sha256": "a904aa1a7db85fd006a3989671025ce022fc304584da3fbda7116621770dc105",
+    "ex5_sha256": "963d53fbd317d078682d50b69ff549c0b77ce2819cc9ea6b374c67afd63a1b50",
+    "log_sha256": "dffdd5e13c4b2501140a09ecbb986a4a2257a83f9af42dd360fa9577a7bf1a68",
+    "source_url": "https://www.mql5.com/en/code/download/77691/GoldBreakoutEA.mq5",
+    "status": "NATIVE_COMPILED"
+  },
+  "recovery": {
+    "artifact_run_id": 40821870250,
+    "artifact_name": "oracle-phase05-native-S040-entry-parity",
+    "artifact_id": 12875495178,
+    "artifact_expired": false,
+    "artifact_contains_mq5": false,
+    "artifact_log_sha256": "747aace9bc9b8994d0d51435995b4ec6d4a8b493827bf47543c58fd3f0678240",
+    "artifact_report_ex5_sha256": "a65c0a98f64d7e578b4eaaee53fcd71a8e33ab3000a06147cfc91fb4ce684090",
+    "artifact_report_source_sha256": "a904aa1a7db85fd006a3989671025ce022fc304584da3fbda7116621770dc105",
+    "bytes_source": "https://www.mql5.com/en/code/download/77691/GoldBreakoutEA.mq5",
+    "page": "https://www.mql5.com/en/code/77691",
+    "computed_source_sha256": "a904aa1a7db85fd006a3989671025ce022fc304584da3fbda7116621770dc105",
+    "source_sha256_match": true,
+    "byte_length": 18508
+  },
+  "licence": {
+    "clearly_allows_committing_original_bytes": false,
+    "clearly_allows_committed_derivative_spec": false,
+    "header_copyright": "Ali Rajput",
+    "header_has_licence_grant": false,
+    "outcome": "LICENCE_CHECK_FAILED"
+  },
+  "fallback_pin": {
+    "label": "FALLBACK_NOT_APPROVED",
+    "id": "S016",
+    "title": "Gold Donchian commodity system",
+    "repo": "waihin26/Systematic-Commodity-Trading",
+    "commit": "dad1684dd421ccaf134f73b9315a951a02938bd3",
+    "path": "strategies/gold_donchian_channel_strategy.py",
+    "github_blob_sha": "3e7b05b26b69b4cea4b0e671849add774e41bd70",
+    "html_url": "https://github.com/waihin26/Systematic-Commodity-Trading/blob/dad1684dd421ccaf134f73b9315a951a02938bd3/strategies/gold_donchian_channel_strategy.py",
+    "approved": false,
+    "built": false,
+    "reason": "S040 source bytes were recovered and the source SHA-256 matches the register, but the file header and the MQL5 terms linked from the Code Base page do not clearly allow committing the original bytes or a line-by-line derivative spec. S016 is only a pin. It is not approved and it was not built."
+  }
+}

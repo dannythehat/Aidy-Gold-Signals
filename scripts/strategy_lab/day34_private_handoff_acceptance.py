@@ -7,8 +7,9 @@ and export an owner/Claude handoff packet containing ZERO invented winners.
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
+
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from aidy.strategy_lab_goldthinker_handoff import check_handoff, prepare_private_handoff
 from scripts.strategy_lab.day33_owner_dashboard_acceptance import (
@@ -24,7 +25,7 @@ OUT = ROOT / "artifacts/strategy_lab/day34"
 SUMMARY = ROOT / "artifacts/strategy_lab/day34_handoff_acceptance.json"
 
 
-def audit_sources(day33: dict, dashboard: dict, owner_key: bytes) -> dict:
+def audit_sources(day33: dict, dashboard: dict, owner_public_key) -> dict:
     if (day33.get("status") != "PASS"
             or day33.get("original_drive_candidate_count") != 83
             or day33.get("independently_replayed_synthetic_queue_results") != 100
@@ -51,7 +52,7 @@ def audit_sources(day33: dict, dashboard: dict, owner_key: bytes) -> dict:
             "blockers": source["blockers"],
         })
     # Crucial: no 83-source mining, optimisation, execution or strategy backtest.
-    packet = prepare_private_handoff([], owner_key)
+    packet = prepare_private_handoff([], owner_public_key)
     check_handoff(packet)
     if packet["candidate_count"] or not packet["no_broker_or_customer_side_effects"]:
         raise ValueError("unqualified candidate escaped into GoldThinker")
@@ -77,8 +78,8 @@ def main() -> int:
         snapshot = json.loads((DAY33_OUT/"owner_dashboard_data.json").read_text(
             encoding="utf-8"
         ))
-        key = os.urandom(32)
-        checked = audit_sources(day33, snapshot, key)
+        public_key = Ed25519PrivateKey.generate().public_key()
+        checked = audit_sources(day33, snapshot, public_key)
         OUT.mkdir(parents=True, exist_ok=True)
         (OUT/"handoff_for_separate_owner_and_claude_review.json").write_text(
             json.dumps(checked["packet"], indent=2, sort_keys=True)+"\n",
