@@ -1,0 +1,86 @@
+name: Gold Hunter - PO3 27-grid Original Source M1 Screen (Research Only)
+
+on:
+  push:
+    branches: ['gold-hunter-po3-source-screen-20261102']
+    paths:
+      - 'scripts/gold_hunter_po3_27_original_source_screen.py'
+      - 'tests/test_gold_hunter_po3_27_original_source_screen.py'
+      - '.github/workflows/gold-hunter-po3-27-original-source-screen.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  po3-source-screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 115
+    env:
+      PYTHONPATH: src:.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install pinned local research requirements
+        run: python -m pip install --quiet pandas==2.2.3 numpy==2.3.5 cryptography pytest
+      - name: Test pinned original-source interpretation and fail-closed quote requirements
+        run: |
+          python -m compileall -q scripts/gold_hunter_po3_27_original_source_screen.py
+          python -m pytest -q tests/test_gold_hunter_po3_27_original_source_screen.py
+      - name: Retrieve existing original authenticated BID ASK M1 quote artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            mkdir -p /tmp/encrypted
+            if gh run download 40819738674 --repo "$GITHUB_REPOSITORY" --pattern 'oracle-bidask-202*' --dir /tmp/encrypted; then
+              echo "Original AIDY BIDASK M1 source retrieved"
+              exit 0
+            fi
+            echo "Source API quota unavailable, attempt $attempt of 5" >&2
+            if test "$attempt" -eq 5; then
+              echo "::error::SOURCE_BLOCKED_GITHUB_ARTIFACT_API" >&2
+              exit 1
+            fi
+            sleep $((attempt*60))
+          done
+      - name: Obtain pinned AIDY original snapshot decoder
+        run: |
+          git fetch --depth=1 origin 1eb0f678c3158b4a76993ec14ffa7e760d101a0c
+          git show 1eb0f678c3158b4a76993ec14ffa7e760d101a0c:scripts/oracle_gold/snapshot_bundle.py > /tmp/aidy_snapshot_bundle.py
+          python -m py_compile /tmp/aidy_snapshot_bundle.py
+      - name: Decrypt immutable original 2023-25 quote derivatives
+        env:
+          AIDY_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.AIDY_GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          for folder in /tmp/encrypted/oracle-bidask-*; do
+            test -f "$folder/snapshot.encrypted.json"
+            period="${folder##*oracle-bidask-}"
+            python /tmp/aidy_snapshot_bundle.py open-ci --source "$folder/snapshot.encrypted.json" --out "/tmp/quotes/$period"
+          done
+      - name: Source-backed PO3 27 M5 research replay 2023 2024 2025
+        run: |
+          python -m scripts.gold_hunter_po3_27_original_source_screen --quotes /tmp/quotes --out artifacts/po3_27_source_screen
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('artifacts/po3_27_source_screen/summary.json')
+          r=json.loads(p.read_text())
+          assert r['schema']=='aidy.po3_27_m5_original_rule_subset.v1'
+          assert set(r['years'])=={'2023','2024','2025'}
+          assert all(len(y['source_receipts'])>=12 for y in r['years'].values())
+          assert r['broker_orders']==0 and r['paper_or_live_approval'] is False
+          print('PO3 SOURCE SCREEN FINISHED',[(y,z['trades'],z['net_usd']) for y,z in r['years'].items()])
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gold-hunter-po3-27-m5-source-screen-2023-2025
+          path: artifacts/po3_27_source_screen/
+          retention-days: 90
+          if-no-files-found: warn
