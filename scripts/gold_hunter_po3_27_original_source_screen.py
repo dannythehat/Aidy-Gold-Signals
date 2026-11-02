@@ -227,10 +227,24 @@ def screen_year(m1: pd.DataFrame, year: int) -> dict:
             if minute_start >= len(m1) or minute_time.iloc[minute_start] != entry_at:
                 counts["missing_entry_minute"] += 1
                 break
-            j, reason, exit_px = first_exit(m1.iloc[minute_start:],
-                                             direction, stop, target)
+            # Original EA forcibly flattens on Friday at 20 BROKER time.
+            # Use 20 UTC proxy, not an asserted match to XM/PU Prime clocks.
+            days_to_friday = (4-entry_at.dayofweek) % 7
+            cutoff = entry_at.normalize() + pd.Timedelta(
+                days=days_to_friday, hours=20)
+            if cutoff <= entry_at:
+                cutoff += pd.Timedelta(days=7)
+            cutoff_idx = int(minute_time.searchsorted(cutoff))
+            future = m1.iloc[minute_start:cutoff_idx]
+            j, reason, exit_px = first_exit(future, direction, stop, target)
             exit_row = m1.iloc[minute_start+j]
             exit_at = exit_row.open_time_utc
+            if reason == "OPEN_MARK_YEAR_END" and cutoff_idx < len(m1):
+                exit_row = m1.iloc[cutoff_idx]
+                exit_at = exit_row.open_time_utc
+                exit_px = (float(exit_row.bid_o)-SLIP if direction == 1
+                           else float(exit_row.ask_o)+SLIP)
+                reason = "FRIDAY_FLATTEN_20UTC_PROXY"
             hours = max(0.0, (exit_at-entry_at).total_seconds()/3600)
             carry = entry*OZ*CARRY*hours/(365*24)
             net = direction*(exit_px-entry)*OZ-COMMISSION*OZ-carry
