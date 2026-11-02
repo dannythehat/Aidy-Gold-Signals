@@ -7,6 +7,12 @@ on:
       - 'scripts/gold_hunter_po3_27_original_source_screen.py'
       - 'tests/test_gold_hunter_po3_27_original_source_screen.py'
       - '.github/workflows/gold-hunter-po3-27-original-source-screen.yml'
+  pull_request:
+    branches: ['gold-hunter-ten-candidate-lab-20261028']
+    paths:
+      - 'scripts/gold_hunter_po3_27_original_source_screen.py'
+      - 'tests/test_gold_hunter_po3_27_original_source_screen.py'
+      - '.github/workflows/gold-hunter-po3-27-original-source-screen.yml'
   workflow_dispatch:
 
 permissions:
