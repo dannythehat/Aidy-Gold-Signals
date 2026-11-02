@@ -2,7 +2,12 @@
 from __future__ import annotations
 
 import copy
+import json
+import tempfile
 import unittest
+from pathlib import Path
+
+from scripts.goldthinker_factory.prepare_handoff import run
 
 from aidy.goldthinker_factory_contract import (
     FactoryContractError,
@@ -145,6 +150,29 @@ class FactoryContractTests(unittest.TestCase):
         p["results"][0]["max_equity_drawdown_pct"] = "101.00"
         with self.assertRaises(FactoryContractError):
             validate_mt5_bundle(p)
+
+    def test_partial_2026_can_report_ytd_but_never_be_selected(self):
+        p = bundle()
+        partial = p["results"][-1]
+        partial.update({
+            "coverage": "VERIFIED", "test_status": "PARTIAL",
+            "net_profit_usd": "999999.00", "closed_trades": 30,
+            "max_equity_drawdown_pct": "5.00",
+            "report_sha256": "2" * 64, "ledger_sha256": "3" * 64,
+        })
+        self.assertEqual(select_best_completed_year(p)["aidy_year"], 2023)
+
+    def test_cli_produces_atomic_selection_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "bundle.json"
+            target = Path(tmp) / "receipt.json"
+            source.write_text(json.dumps(bundle()), encoding="utf-8")
+            result = run(source, target)
+            self.assertEqual(json.loads(target.read_text()), result)
+            source.write_text('{"invalid": true}', encoding="utf-8")
+            with self.assertRaises(FactoryContractError):
+                run(source, target)
+            self.assertEqual(json.loads(target.read_text()), result)
 
 
 if __name__ == "__main__":
