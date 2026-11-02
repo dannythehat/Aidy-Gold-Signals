@@ -1,6 +1,6 @@
 # 2 November 2026 — AIDY independent PO3 27-grid source screen (negative)
 
-**Successful actual CI:** [run 41400258358](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400258358), **7 regression tests passed**, original authenticated AIDY BID/ASK M1 historical replay for 2023, 2024, 2025. Immutable [source-receipt, signal and trade artifact 13120893613](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400258358/artifacts/13120893613). [Draft PR #378](https://github.com/dannythehat/Aidy-Gold-Signals/pull/378) targets existing Gold Hunter PR #371's research branch, NOT main. Original PR #371, PR #374, ORB, G001, G005, Super Signals, brokers and production are unchanged.
+**Successful actual CI:** [run 41400604586](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400258358), **8 regression tests passed**, original authenticated AIDY BID/ASK M1 historical replay for 2023, 2024, 2025. Immutable [source-receipt, signal and trade artifact 13120893613](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400604586/artifacts/13120918846). [Draft PR #378](https://github.com/dannythehat/Aidy-Gold-Signals/pull/378) targets existing Gold Hunter PR #371's research branch, NOT main. Original PR #371, PR #374, ORB, G001, G005, Super Signals, brokers and production are unchanged.
 
 ## Original source, identity and rights
 
@@ -10,18 +10,20 @@
 - Existing original R2 authenticated spot XAUUSD BIDASK M1 derivatives from CI run 40819738674, decrypted with pinned AIDY snapshot decoder commit **1eb0f678c3158b4a76993ec14ffa7e760d101a0c**. Every original monthly manifest, ZIP identity, original M1 CSV SHA and chronology validated by existing source reader. Complete M5 bars require five actual M1 minutes. Original receipts and hashes in artifact summary.
 - [Research script](https://github.com/dannythehat/Aidy-Gold-Signals/blob/gold-hunter-po3-source-screen-20261102/scripts/gold_hunter_po3_27_original_source_screen.py), [7 tests](https://github.com/dannythehat/Aidy-Gold-Signals/blob/gold-hunter-po3-source-screen-20261102/tests/test_gold_hunter_po3_27_original_source_screen.py), [isolated CI workflow](https://github.com/dannythehat/Aidy-Gold-Signals/blob/gold-hunter-po3-source-screen-20261102/.github/workflows/gold-hunter-po3-27-original-source-screen.yml). No earlier strategy retuned.
 
+**Source-parity correction:** initial CI [41400258358](https://github.com/dannythehat/Aidy-Gold-Signals/actions/runs/41400258358) omitted the original 27-track 3-M5-bar same-level/direction cooldown, so its 7-test trade counts and P&L are **SUPERSEDED, NOT FINAL EVIDENCE**. The unchanged original rule was restored, a dedicated eighth regression test added, and the complete authenticated source replay rerun in corrected successful CI **41400604586**. The frozen entry thresholds and costs were NOT retuned. Preserve both run records but count only corrected evidence.
+
 ## Frozen annual 1-oz modelled results, NOT broker P&L
 
 | Source year | Original M1 minutes | Signal tape | Modelled fills | Stressed net USD | PF | Closed-event equity DD | Remove largest winner |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2023 | 308,753 | 435 | 272 | **−229.14** | 0.6313 | −2.637% | −255.18 |
-| 2024 | 355,593 | 422 | 324 | **−124.93** | 0.8634 | −1.829% | −150.82 |
+| 2023 | 308,753 | 388 | 262 | **−265.29** | 0.5620 | −2.865% | −291.07 |
+| 2024 | 355,593 | 373 | 317 | **−154.96** | 0.8269 | −2.002% | −180.84 |
 | 2025 | 353,952 | 30 | 28 | **−30.70** | 0.6943 | −0.650% | −55.52 |
 
 - Separate hypothetical $10,000 annual resets, **1 physical ounce** per position for comparison, NOT original 0.1 XM micro lot or real standard-lot sizing. Full intratrade marked DD and native stop/gap parity are NOT measured. Displayed DD is **closed-event equity only**, an incomplete risk measure.
 - Assumed costs: actual observed source BID/ASK, extra $0.25/oz entry and stop/Friday exit slippage, $0.14/oz roundtrip fee, hypothetical 9% annual notional holding debit; conservative stop-first if stop and target touch within the same M1 minute. Not verified PU Prime terms. 08–21 UTC and Friday 20 UTC are **proxies for unverified broker-server time**; point assumed $0.01. ATR seed is an approximation to MT5 Wilder, not proven identical. True tick order, 9-grid interaction and real margin are absent.
-- Exit breakdown: 2023 243 stop / 14 target / 15 Friday flat; 2024 282 / 28 / 14; 2025 24 / 3 / 1. The collapse to 28 modelled fills in 2025, including 37,893 spread-screened M5 observations, demands caution about broker point/spread conventions and regime comparability. It is NOT evidence the original full EA would trade only 28 times.
-- Fees plus carry do not fully explain the negative results. Before those charges, with slippage still included: 2023 −$168.06, 2024 −$47.58, 2025 −$25.57.
+- Exit breakdown: 2023 235 stop / 12 target / 15 Friday flat; 2024 277 / 26 / 14; 2025 24 / 3 / 1. The collapse to 28 modelled fills in 2025, including 37,893 spread-screened M5 observations, demands caution about broker point/spread conventions and regime comparability. It is NOT evidence the original full EA would trade only 28 times.
+- Fees plus carry do not fully explain the negative results. Before those charges, with slippage still included: 2023 −$206.12, 2024 −$79.83, 2025 −$25.57.
 - Every monthly net, trade, signal and original source receipt is retained in the immutable artifact. **2026 M1 and A track not run.** No untouched OOS remains for the examined 2023–25 years.
 
 ## Scientific verdict
