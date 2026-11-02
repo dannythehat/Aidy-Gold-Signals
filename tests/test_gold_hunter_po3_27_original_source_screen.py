@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from scripts.gold_hunter_po3_27_original_source_screen import (
-    CARRY, GRID, LICENSE_BLOB, ORIGINAL_BLOB, first_exit, load_year,
+    CARRY, GRID, LICENSE_BLOB, ORIGINAL_BLOB, cooldown_active, first_exit, load_year,
     m5_bars, rejects, state_fights,
 )
 
@@ -64,3 +64,15 @@ def test_incomplete_m5_not_admitted():
 def test_no_2026_m1_or_fabricated_source():
     with pytest.raises(ValueError, match="Only 2023/24/25"):
         load_year(Path("/missing"), 2026)
+
+
+def test_original_three_bar_same_level_cooldown():
+    at = pd.Timestamp("2024-03-01T12:00:00Z")
+    assert cooldown_active(27.0, 1, at, 27.0, 1,
+                           at + pd.Timedelta(minutes=10))
+    assert not cooldown_active(27.0, 1, at, 27.0, 1,
+                               at + pd.Timedelta(minutes=15))
+    assert not cooldown_active(27.0, 1, at, 54.0, 1,
+                               at + pd.Timedelta(minutes=5))
+    assert not cooldown_active(27.0, 1, at, 27.0, -1,
+                               at + pd.Timedelta(minutes=5))
