@@ -18,7 +18,7 @@ Read the first two PRs and the original evidence before assigning agent tasks.
    - PYTHONPATH=src python -m scripts.goldthinker_factory.prepare_handoff --input validated_bundle.json --output selected_year.json
    - Fail-closed, output atomic; this does not execute AIDY's independent replay.
 3. MT5 offline config generator: scripts/goldthinker_factory/mt5_job_generator.py
-   - PYTHONPATH=src python -m scripts.goldthinker_factory.mt5_job_generator --system GT_TEST01 --expert Factory\\DemoStrategy --symbol XAUUSD --period M15 --as-of 2026-11-02 --out-dir out/gt-test01 --deposit 10000.00
+   - PYTHONPATH=src python -m scripts.goldthinker_factory.mt5_job_generator --system GT_TEST01 --expert Factory\DemoStrategy --symbol XAUUSD --period M15 --as-of 2026-11-02 --out-dir out/gt-test01 --deposit 10000.00
    - Writes only six year-scoped INI files plus manifest (2026 partial). Official MT5 real-tick Model=4, Optimization=0, UseCloud/Remote=0, ShutdownTerminal=1, no live trading.
    - Does NOT compile the EA, start MT5, provide credentials, qualify data coverage or create reports. Test job status remains NOT_EXECUTED.
 4. Website factory-card draft: scripts/factory-card-contract.mjs and scripts/build-factory-card-preview.mjs in PR #28.
