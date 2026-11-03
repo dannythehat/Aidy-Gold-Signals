@@ -1,0 +1,95 @@
+name: Gold X9 S9 independent real source tick replay (not original v6.2)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/strategy_lab/goldx9_s9_real_tick_replay.py
+      - tests/test_goldx9_s9_real_tick_replay.py
+      - docs/goldx9-s9-tick-replay-status.md
+      - .github/workflows/goldx9-s9-real-source-tick-replay.yml
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-mechanics-not-profit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --quiet pytest
+      - name: Verify quote ordering, causal fractal confirmation and exits
+        run: PYTHONPATH=src:. python -m pytest -q tests/test_goldx9_s9_real_tick_replay.py
+
+  original-histdata-tick-entry-and-exit:
+    needs: synthetic-mechanics-not-profit
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        period: ['202201', '202609']
+        cost: ['baseline', 'double_cost']
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      PERIOD: ${{ matrix.period }}
+      COST: ${{ matrix.cost }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify authenticated R2 source access, fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
+          mkdir -p "$RUNNER_TEMP/goldx9_source"
+      - name: Fetch untouched original HistData XAUUSD BID/ASK tick ZIP from AIDY R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 r2 object get \
+            "aidy-memory-test/strategy-lab/histdata/xauusd/ticks/${PERIOD}/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip" \
+            --remote --file "$RUNNER_TEMP/goldx9_source/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip"
+          sha256sum "$RUNNER_TEMP/goldx9_source/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip"
+      - name: Execute independent tutorial S9 chronological tick entries and exits
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--archive "$RUNNER_TEMP/goldx9_source/HISTDATA_COM_ASCII_XAUUSD_T_${PERIOD}.zip"
+                --output "artifacts/goldx9/${PERIOD}_${COST}"
+                --capital 10000 --lots 0.01 --contract 100 --point 0.01)
+          if [ "$COST" = "baseline" ]; then
+            args+=(--commission-rt 7 --slippage-price 0)
+          else
+            args+=(--commission-rt 14 --slippage-price 0.05)
+          fi
+          PYTHONPATH=src:. python scripts/strategy_lab/goldx9_s9_real_tick_replay.py "${args[@]}"
+          python - "$PERIOD" "$COST" <<'PY'
+          import json,sys
+          from pathlib import Path
+          p=Path(f"artifacts/goldx9/{sys.argv[1]}_{sys.argv[2]}/summary.json")
+          o=json.loads(p.read_text())
+          assert o["source_provenance"][0]["original_ticks"]>1000
+          assert o["account_reconciles"] is True
+          assert o["minute_equity_marks"]>100
+          print("GOLDX9_SOURCE_QUOTED_TICK_REPLAY_RECEIPT",json.dumps(o,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: GOLDX9-S9-SOURCE-${{ matrix.period }}-${{ matrix.cost }}
+          path: artifacts/goldx9/${{ matrix.period }}_${{ matrix.cost }}/
+          retention-days: 90
+          if-no-files-found: warn
