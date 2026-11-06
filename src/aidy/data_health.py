@@ -528,3 +528,83 @@ async def recent_data_health_events(d1: Any, *, limit: int = 120) -> list[dict[s
         row["session_open"] = bool(int(row.get("session_open") or 0))
         row["capture_enabled"] = bool(int(row.get("capture_enabled") or 0))
     return rows
+
+
+async def collect_learning_health(
+    d1: Any,
+    *,
+    now: datetime,
+    session_open: bool | None,
+    max_cycle_age_seconds: int = 180 * 60,
+) -> dict[str, Any]:
+    """Read progress independently of successful requests; never creates learning evidence."""
+    try:
+        row = await d1.prepare("""
+            SELECT
+              (SELECT MAX(decided_at_utc) FROM aidy_gold_expert_shadow_cycles) AS last_cycle,
+              (SELECT observed_at_utc FROM aidy_gold_expert_shadow_sync_health
+               WHERE singleton_id=1) AS last_sync,
+              (SELECT status FROM aidy_gold_expert_shadow_sync_health
+               WHERE singleton_id=1) AS sync_status,
+              (SELECT creation_reason FROM aidy_gold_cycle_sync_health
+               WHERE singleton_id=1) AS creation_reason,
+              (SELECT error_type FROM aidy_gold_expert_shadow_sync_health
+               WHERE singleton_id=1) AS error_type,
+              (SELECT MAX(captured_at) FROM market_snapshots
+               WHERE symbol='XAUUSD' AND market_data_source='twelve_data'
+                 AND capture_status IN ('complete','partial')) AS last_data
+        """).first()
+        row = dict(row or {})
+
+        def age(value):
+            if not value:
+                return None
+            instant = datetime.fromisoformat(str(value))
+            if instant.tzinfo is None:
+                raise ValueError("naive learning timestamp")
+            elapsed = (now - instant).total_seconds()
+            if elapsed < -5:
+                raise ValueError("future learning timestamp")
+            return round(max(0, elapsed), 1)
+
+        cycle_age = age(row.get("last_cycle"))
+        sync_age = age(row.get("last_sync"))
+        data_age = age(row.get("last_data"))
+        reason = None
+        if row.get("sync_status") == "error":
+            reason = "sync_error"
+        elif sync_age is None or sync_age > 30 * 60:
+            reason = "sync_unavailable_or_stale"
+        elif session_open is False:
+            # A closed session does not excuse a cycle frozen for weeks.
+            reason = "learning_not_progressing" if cycle_age is None or cycle_age > 72*60*60 else "market_closed"
+        elif data_age is None or data_age > 10 * 60:
+            reason = "market_data_unavailable_or_stale"
+        elif cycle_age is None or cycle_age > max_cycle_age_seconds:
+            reason = "learning_not_progressing"
+        elif session_open is None:
+            reason = "market_session_unknown"
+        return {
+            "status": (
+                "market_closed" if reason == "market_closed" else "degraded" if reason else "fresh"
+            ),
+            "last_successful_cycle_utc": row.get("last_cycle"),
+            "cycle_elapsed_seconds": cycle_age,
+            "cycle_overdue": cycle_age is None or cycle_age > max_cycle_age_seconds,
+            "last_sync_utc": row.get("last_sync"),
+            "sync_elapsed_seconds": sync_age,
+            "sync_status": row.get("sync_status"),
+            "last_market_snapshot_utc": row.get("last_data"),
+            "data_elapsed_seconds": data_age,
+            "blocked_reason": reason,
+            "parent_creation_reason": row.get("creation_reason"),
+            "error_type": row.get("error_type"),
+            "read_only": True,
+        }
+    except Exception as exc:  # noqa: BLE001 - telemetry must never risk capture
+        return {
+            "status": "unavailable",
+            "blocked_reason": "learning_health_read_failed",
+            "error_type": type(exc).__name__,
+            "read_only": True,
+        }

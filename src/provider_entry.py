@@ -8,7 +8,11 @@ from urllib.parse import urlparse
 from workers import Response
 
 from aidy.config import AidySettings
-from aidy.data_health import collect_and_record_data_health, collect_data_health
+from aidy.data_health import (
+    collect_and_record_data_health,
+    collect_data_health,
+    collect_learning_health,
+)
 from aidy.episode_memory_runtime import sync_aidy_episode_memory_runtime
 from aidy.gold_cycle_environment import GOLD_CYCLE_ENVIRONMENT_VERSION
 from aidy.gold_cycle_memory import GOLD_CYCLE_MEMORY_VERSION, sync_gold_cycle_memory
@@ -95,8 +99,14 @@ async def _public_health_response(env: object):
             "alert": True,
             "reason": "AIDY data-health evidence could not be read",
             "exception_type": type(exc).__name__,
-            "message": str(exc)[:300],
         }
+        overall_status = "degraded"
+
+    learning_health = await collect_learning_health(
+        env.AIDY_OPS, now=datetime.now(UTC),
+        session_open=health_summary.get("session_open"),
+    )
+    if learning_health["status"] not in {"fresh", "market_closed"}:
         overall_status = "degraded"
 
     return Response.json(
@@ -126,6 +136,7 @@ async def _public_health_response(env: object):
             "gold_expert_shadow_version": GOLD_EXPERT_SHADOW_VERSION,
             "gold_expert_scorecard_version": GOLD_EXPERT_SCORECARD_VERSION,
             "data_health": health_summary,
+            "learning_health": learning_health,
         }
     )
 
