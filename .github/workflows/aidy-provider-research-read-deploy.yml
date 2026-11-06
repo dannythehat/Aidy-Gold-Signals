@@ -61,6 +61,9 @@ env:
 
 jobs:
   deploy:
+    # Integration must not deploy as a side effect of merging the health repair.
+    # Existing manual release remains available for separately approved rollout.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 50
     env:

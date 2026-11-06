@@ -60,7 +60,7 @@ async def test_closed_market_retains_last_cycle_age():
     r = await collect_learning_health(
         D1(last_cycle="2026-09-24T03:40:47Z"), now=NOW, session_open=False
     )
-    assert r["status"] == "market_closed" and r["cycle_elapsed_seconds"] > 86400
+    assert r["status"] == "degraded" and r["cycle_elapsed_seconds"] > 86400
 
 
 @pytest.mark.asyncio
@@ -96,19 +96,19 @@ async def test_public_health_degrades_when_request_and_data_are_healthy():
         if isinstance(name, ast.Name) and name.id.isupper()
     }
     scope.update(
-        dict(
-            datetime=datetime,
-            UTC=UTC,
-            _bool_env=lambda *a: False,
-            AidySettings=SimpleNamespace(
+        {
+            "datetime": datetime,
+            "UTC": UTC,
+            "_bool_env": lambda *a: False,
+            "AidySettings": SimpleNamespace(
                 from_worker_env=lambda env: SimpleNamespace(
                     capture_enabled=True,
                     market_data_source="twelve_data",
                     market_data_ownership="fixture",
                 )
             ),
-            Response=SimpleNamespace(json=lambda value: value),
-            collect_data_health=AsyncMock(
+            "Response": SimpleNamespace(json=lambda value: value),
+            "collect_data_health": AsyncMock(
                 return_value=SimpleNamespace(
                     status="fresh",
                     alert=False,
@@ -121,13 +121,26 @@ async def test_public_health_degrades_when_request_and_data_are_healthy():
                     health_version="fixture",
                 )
             ),
-            collect_learning_health=AsyncMock(
+            "collect_learning_health": AsyncMock(
                 return_value={"status": "degraded", "blocked_reason": "learning_not_progressing"}
             ),
-        )
+        }
     )
-    exec(compile(ast.Module(body=[function], type_ignores=[]), "public-health", "exec"), scope)
+    exec(compile(ast.Module(body=[function], type_ignores=[]), "public-health", "exec"), scope)  # noqa: S102 - actual local endpoint only
     result = await scope["_public_health_response"](SimpleNamespace(AIDY_OPS=object()))
     assert result["status"] == "degraded"
     assert result["data_health"]["status"] == "fresh"
     assert result["learning_health"]["blocked_reason"] == "learning_not_progressing"
+
+
+@pytest.mark.asyncio
+async def test_normal_closed_session_keeps_recent_cycle_visible():
+    r = await collect_learning_health(D1(), now=NOW, session_open=False)
+    assert r["status"] == "market_closed" and r["last_successful_cycle_utc"]
+
+
+def test_health_pr_merge_cannot_implicitly_deploy_worker():
+    from pathlib import Path
+
+    workflow = Path(".github/workflows/aidy-provider-research-read-deploy.yml").read_text()
+    assert "if: github.event_name == 'workflow_dispatch'" in workflow

@@ -99,7 +99,6 @@ async def _public_health_response(env: object):
             "alert": True,
             "reason": "AIDY data-health evidence could not be read",
             "exception_type": type(exc).__name__,
-            "message": str(exc)[:300],
         }
         overall_status = "degraded"
 

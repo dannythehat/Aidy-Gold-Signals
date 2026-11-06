@@ -576,7 +576,8 @@ async def collect_learning_health(
         elif sync_age is None or sync_age > 30 * 60:
             reason = "sync_unavailable_or_stale"
         elif session_open is False:
-            reason = "market_closed"
+            # A closed session does not excuse a cycle frozen for weeks.
+            reason = "learning_not_progressing" if cycle_age is None or cycle_age > 72*60*60 else "market_closed"
         elif data_age is None or data_age > 10 * 60:
             reason = "market_data_unavailable_or_stale"
         elif cycle_age is None or cycle_age > max_cycle_age_seconds:
