@@ -49,7 +49,7 @@ AIDY's live reference-price recorder is deliberately independent of trading acco
 - Runtime provenance gate: `AIDY_MARKET_DATA_OWNERSHIP=public_independent`.
 - AIDY stores the Gold reference price as `mid`; it does not invent bid, ask or spread when the upstream does not provide them.
 - AIDY does not fabricate OHLC candles from one-minute price snapshots. Genuine OHLC and deeper historical research data remain a separate ingestion product.
-- The old MetaAPI adapter is historical prototype code only and is not part of the active AIDY runtime path.
+- The retired third-party broker-price prototype and its dedicated recorder have been removed. AIDY uses only its independent public market-data adapters.
 
 ChatGPT is a build tool, not an AIDY runtime dependency. The OpenAI API remains future trading intelligence and is unrelated to storage, broker access or the market-price source.
 
